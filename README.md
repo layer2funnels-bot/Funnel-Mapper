@@ -80,12 +80,20 @@ To invite from **Settings → Team** locally, put the `SERVICE_ROLE_KEY` from `n
 | `npm run db:types` | Regenerate `lib/supabase/database.types.ts` after changing migrations |
 | `npm run gen:sql` | Regenerate the built-in templates migration and `supabase/seed.sql` from `lib/templates.ts` |
 | `npm run gen:fixtures` | Re-run the original prototype’s own maths to regenerate test fixtures |
+| `npm run deploy` | Production deployment to Supabase + Vercel (see [docs/deployment.md](docs/deployment.md)) |
+| `npm run live-check` | End-to-end verification of the live site with temporary accounts it cleans up afterwards |
 
 Browser tests need Playwright’s Chromium (`npx playwright install chromium`). If your machine already has a Chromium, point to it with `PW_CHROMIUM_PATH=/path/to/chromium`.
 
 ---
 
 ## Deploying (Supabase + Vercel)
+
+**Automated (recommended):** with a Supabase access token and a Vercel token in the environment,
+`ADMIN_EMAIL=you@agency.com npm run deploy` sets up everything below and deploys. `npm run live-check` then verifies the
+live site end to end. See [docs/deployment.md](docs/deployment.md).
+
+**By hand:**
 
 ### 1. Supabase project
 
@@ -128,6 +136,7 @@ Browser tests need Playwright’s Chromium (`npx playwright install chromium`). 
 3. In **Settings**, set the agency name, logo and default currency (used on share links and PDF reports).
 4. Invite teammates from **Settings → Team** (if `SUPABASE_SERVICE_ROLE_KEY` is set) or from the Supabase dashboard. Everyone shares the same clients, funnels and templates.
 5. To remove someone: **Settings → Team → Deactivate**. They’re signed out and can’t see anything. Reactivate them any time.
+6. People added in Supabase with **Add user** (instead of an invite) start with no access until an admin activates them in Settings → Team.
 
 ---
 

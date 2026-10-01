@@ -43,6 +43,34 @@ describe("private access", () => {
       expect(data ?? [], t).toEqual([]);
     }
   });
+  it("an account that wasn't invited has no access until an admin activates it", async () => {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) return; // needs the local service key in .env.local
+    const svc = createClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const email = `uninvited-${Date.now()}@example.test`;
+    const created = await svc.auth.admin.createUser({ email, password: "uninvited-pass-1", email_confirm: true });
+    expect(created.error).toBeNull();
+    const u = mk();
+    expect((await u.auth.signInWithPassword({ email, password: "uninvited-pass-1" })).error).toBeNull();
+    expect((await u.from("clients").select("id")).data ?? []).toEqual([]);
+    const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
+    expect(prof.data).toEqual({ active: false, role: "member" });
+    // an admin activates them → they're in
+    await admin.from("profiles").update({ active: true }).eq("email", email);
+    expect(((await u.from("clients").select("id")).data ?? []).length).toBeGreaterThan(0);
+    await svc.auth.admin.deleteUser(created.data.user!.id);
+  });
+  it("an invited account is active straight away", async () => {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) return;
+    const svc = createClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const email = `invited-${Date.now()}@example.test`;
+    const inv = await svc.auth.admin.inviteUserByEmail(email);
+    expect(inv.error).toBeNull();
+    const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
+    expect(prof.data).toEqual({ active: true, role: "member" });
+    await svc.auth.admin.deleteUser(inv.data.user!.id);
+  });
   it("a deactivated member sees nothing and can't write", async () => {
     for (const t of TABLES) {
       const { data } = await former.from(t).select("id");

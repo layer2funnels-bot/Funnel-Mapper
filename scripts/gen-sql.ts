@@ -63,6 +63,8 @@ values ('00000000-0000-0000-0000-000000000000', ${q(USER3)}, 'authenticated', 'a
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 values (gen_random_uuid(), ${q(USER3)}, ${q(USER3)}, jsonb_build_object('sub', ${q(USER3)}, 'email', ${q(EMAIL3)}, 'email_verified', true), 'email', now(), now(), now());
 update public.profiles set active = false where id = ${q(USER3)};
+-- seeded accounts aren't invited through Auth, so activate the teammate explicitly
+update public.profiles set active = true where id = ${q(USER2)};
 
 update public.profiles set full_name = 'Demo Owner' where id = ${q(USER)};
 update public.workspace set agency_name = 'Layer2Funnels', default_currency = 'GBP' where id = 1;

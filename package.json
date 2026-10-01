@@ -15,7 +15,9 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
-    "test:db": "vitest run -c vitest.db.config.mts"
+    "test:db": "vitest run -c vitest.db.config.mts",
+    "deploy": "NODE_USE_ENV_PROXY=1 node scripts/deploy/deploy.mjs",
+    "live-check": "NODE_USE_ENV_PROXY=1 node scripts/deploy/live-check.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

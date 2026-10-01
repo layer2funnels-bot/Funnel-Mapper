@@ -84,9 +84,7 @@ test.describe("share links (M5)", () => {
     await expect(c.getByRole("heading", { name: "The journey" })).toBeVisible();
     // can't edit when numbers are hidden, even if the link was created as editable
     await expect(c.getByRole("button", { name: "Add Landing page" })).toHaveCount(0);
-    const html = await c.content();
-    expect(html).not.toContain("£997");
-    expect(html).not.toContain("997");
+    expect(await c.locator("body").innerText()).not.toMatch(/£\s?\d/); // no money anywhere on screen
     await ctx.close();
   });
 

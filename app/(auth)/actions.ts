@@ -32,31 +32,11 @@ export async function signInWithMagicLink(_: AuthState, fd: FormData): Promise<A
   if (!email.success) return { error: "Enter a valid email" };
   const sb = await supabaseServer();
   const next = safeNext(fd.get("next"));
-  const { error } = await sb.auth.signInWithOtp({ email: email.data, options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(next)}`, shouldCreateUser: true } });
-  if (error) return { error: error.message };
-  return { message: "Check your email for a sign-in link." };
-}
-
-export async function signUp(_: AuthState, fd: FormData): Promise<AuthState> {
-  const p = creds.extend({ full_name: z.string().trim().min(1, "Enter your name"), agency_name: z.string().trim().default("") }).safeParse({
-    email: fd.get("email"),
-    password: fd.get("password"),
-    full_name: fd.get("full_name"),
-    agency_name: fd.get("agency_name") ?? "",
-  });
-  if (!p.success) return { error: p.error.issues[0].message };
-  const sb = await supabaseServer();
-  const { data, error } = await sb.auth.signUp({
-    email: p.data.email,
-    password: p.data.password,
-    options: { data: { full_name: p.data.full_name }, emailRedirectTo: `${await siteUrl()}/auth/callback?next=/` },
-  });
-  if (error) return { error: error.message };
-  if (data.session) {
-    if (p.data.agency_name) await sb.from("profiles").update({ agency_name: p.data.agency_name }).eq("id", data.session.user.id);
-    redirect("/");
-  }
-  return { message: "Account created. Check your email to confirm, then sign in." };
+  // Private team tool: magic links never create accounts. Teammates are invited from the Supabase dashboard.
+  const { error } = await sb.auth.signInWithOtp({ email: email.data, options: { emailRedirectTo: `${await siteUrl()}/auth/callback?next=${encodeURIComponent(next)}`, shouldCreateUser: false } });
+  // Same message whether or not the address has an account, so the form can't be used to discover team emails.
+  if (error && error.status !== 400 && error.status !== 422) return { error: "Couldn’t send the link. Try again in a minute." };
+  return { message: "If that email belongs to a team member, a sign-in link is on its way." };
 }
 
 export async function requestPasswordReset(_: AuthState, fd: FormData): Promise<AuthState> {

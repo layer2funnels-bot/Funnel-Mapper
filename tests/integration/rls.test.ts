@@ -14,11 +14,22 @@ beforeAll(async () => {
   const a = await demo.auth.signInWithPassword({ email: "demo@layer2funnels.test", password: "demo-password" });
   expect(a.error).toBeNull();
   other = mk();
-  const email = `other-${Date.now()}@example.test`;
-  const b = await other.auth.signUp({ email, password: "other-password-123" });
+  const b = await other.auth.signInWithPassword({ email: "teammate@layer2funnels.test", password: "demo-password" });
   expect(b.error).toBeNull();
   otherId = b.data.user!.id;
   anon = mk();
+});
+
+describe("private access", () => {
+  it("public sign-up is disabled", async () => {
+    const { data, error } = await mk().auth.signUp({ email: `stranger-${Date.now()}@example.test`, password: "stranger-password-1" });
+    expect(error).not.toBeNull();
+    expect(data.user).toBeNull();
+  });
+  it("magic links don't create accounts for unknown emails", async () => {
+    const { error } = await mk().auth.signInWithOtp({ email: `stranger-${Date.now()}@example.test`, options: { shouldCreateUser: false } });
+    expect(error).not.toBeNull();
+  });
 });
 
 describe("row level security", () => {
@@ -35,7 +46,7 @@ describe("row level security", () => {
       expect(data, t).toEqual([]);
     }
   });
-  it("profile row created on sign-up and only own profile visible", async () => {
+  it("profile row exists for each team member and only their own is visible", async () => {
     const { data } = await other.from("profiles").select("id");
     expect(data!.map((r) => r.id)).toEqual([otherId]);
   });
@@ -70,6 +81,23 @@ describe("share links", () => {
     expect(data.funnel.name).toBe("PT tripwire funnel");
     expect(data.agency.name).toBe("Layer2Funnels");
     expect(data.client.name).toBe("Sam Carter");
+  });
+  it("hidden-number links strip prices and settings even when the RPC is called directly", async () => {
+    const ins = await demo.from("share_links").insert({ funnel_id: "20000000-0000-4000-8000-000000000003", hide_numbers: true }).select("token").single();
+    expect(ins.error).toBeNull();
+    const { data } = await anon.rpc("get_shared_funnel", { p_token: ins.data!.token });
+    expect(data.link.hide_numbers).toBe(true);
+    const blocks = data.funnel.graph.nodes.filter((n: { type: string }) => !["note", "label", "frame"].includes(n.type));
+    expect(blocks.length).toBeGreaterThan(0);
+    blocks.forEach((n: { p: object }) => expect(n.p).toEqual({}));
+    expect(JSON.stringify(data)).not.toContain("997");
+    expect(data.funnel.settings).toEqual({ currency: "GBP", basis: "first", hideNumbers: true });
+  });
+  it("a share link exposes only its own funnel and no client contact details", async () => {
+    const { data } = await anon.rpc("get_shared_funnel", { p_token: "demo-share-token" });
+    expect(data.funnel.id).toBe("20000000-0000-4000-8000-000000000001");
+    expect(Object.keys(data.client).sort()).toEqual(["business_name", "logo_url", "name"]);
+    expect(JSON.stringify(data)).not.toContain("sam@carterstrength");
   });
   it("unknown token returns null", async () => {
     const { data } = await anon.rpc("get_shared_funnel", { p_token: "nope" });

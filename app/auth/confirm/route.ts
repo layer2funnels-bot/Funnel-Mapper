@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const url = request.nextUrl;
   const token_hash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
-  const nextParam = url.searchParams.get("next") ?? (type === "recovery" ? "/update-password" : "/");
+  const nextParam = url.searchParams.get("next") ?? (type === "recovery" || type === "invite" ? "/update-password" : "/");
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
   if (token_hash && type) {
     const sb = await supabaseServer();

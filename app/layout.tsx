@@ -7,7 +7,9 @@ const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], weight:
 
 export const metadata: Metadata = {
   title: { default: "Funnel Mapper Pro", template: "%s · Funnel Mapper Pro" },
-  description: "Map, model and share sales funnels for your clients.",
+  description: "Layer2Funnels internal funnel mapping tool.",
+  // private internal tool: keep every page out of search engines
+  robots: { index: false, follow: false },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 

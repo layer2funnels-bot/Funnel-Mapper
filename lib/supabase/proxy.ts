@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/s/", "/api/share"];
+// Everything is private except sign-in/recovery and token-checked share links.
+const PUBLIC = ["/login", "/reset-password", "/auth/", "/s/", "/api/share/", "/robots.txt"];
 
 /** Refreshes the Supabase session cookie on every request and guards private pages. */
 export async function updateSession(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function updateSession(request: NextRequest) {
     url.search = path === "/" ? "" : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
-  if (user && (path === "/login" || path === "/signup")) {
+  if (user && path === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

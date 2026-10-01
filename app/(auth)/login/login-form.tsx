@@ -11,7 +11,7 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
   return (
     <>
       <h1 className="mb-1 font-display text-2xl font-bold">Sign in</h1>
-      <p className="mb-5 text-sm text-muted">Welcome back. Your client portfolios are waiting.</p>
+      <p className="mb-5 text-sm text-muted">Layer2Funnels team workspace.</p>
       <div className="tabs" role="tablist" aria-label="Sign-in method">
         <button role="tab" type="button" aria-selected={mode === "password"} onClick={() => setMode("password")}>
           Password
@@ -51,12 +51,7 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
           <Submit>Email me a link</Submit>
         </form>
       )}
-      <p className="mt-5 border-t border-line pt-4 text-center text-sm text-muted">
-        New here?{" "}
-        <Link className="font-bold text-brand underline-offset-2 hover:underline" href="/signup">
-          Create an account
-        </Link>
-      </p>
+      <p className="mt-5 border-t border-line pt-4 text-center text-sm text-muted">Team members only. Ask an admin for an invite.</p>
     </>
   );
 }

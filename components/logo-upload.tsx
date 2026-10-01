@@ -3,15 +3,15 @@ import { useRef, useState } from "react";
 import { Icon } from "./icon";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-/** Uploads an image to the public `logos` bucket under <uid>/ and hands back its public URL. */
-export function LogoUpload({ url, name, onChange, label = "Logo" }: { url: string | null; name: string; onChange: (url: string | null) => Promise<void>; label?: string }) {
+/** Uploads an image to a public Storage bucket under <uid>/ and hands back its public URL. */
+export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logos" }: { url: string | null; name: string; onChange: (url: string | null) => Promise<void>; label?: string; bucket?: "logos" | "screenshots" }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   async function pick(f: File) {
     setErr("");
-    if (f.size > 2 * 1024 * 1024) return setErr("Logo must be under 2 MB");
-    if (!/^image\/(png|jpe?g|webp|svg\+xml|gif)$/.test(f.type)) return setErr("Use a PNG, JPG, WebP, SVG or GIF");
+    if (f.size > (bucket === "logos" ? 2 : 5) * 1024 * 1024) return setErr(`${label} must be under ${bucket === "logos" ? 2 : 5} MB`);
+    if (!(bucket === "logos" ? /^image\/(png|jpe?g|webp|svg\+xml|gif)$/ : /^image\/(png|jpe?g|webp)$/).test(f.type)) return setErr(bucket === "logos" ? "Use a PNG, JPG, WebP, SVG or GIF" : "Use a PNG, JPG or WebP");
     setBusy(true);
     try {
       const sb = supabaseBrowser();
@@ -21,9 +21,9 @@ export function LogoUpload({ url, name, onChange, label = "Logo" }: { url: strin
       if (!user) throw new Error("Not signed in");
       const ext = f.name.split(".").pop()?.toLowerCase() || "png";
       const path = `${user.id}/${name}-${Date.now()}.${ext}`;
-      const { error } = await sb.storage.from("logos").upload(path, f, { upsert: true, contentType: f.type, cacheControl: "3600" });
+      const { error } = await sb.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type, cacheControl: "3600" });
       if (error) throw error;
-      await onChange(sb.storage.from("logos").getPublicUrl(path).data.publicUrl);
+      await onChange(sb.storage.from(bucket).getPublicUrl(path).data.publicUrl);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {

@@ -1,0 +1,705 @@
+/* Funnel editor styles, ported from the prototype and adapted to React Flow. */
+.fm-editor {
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr) 340px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "top top top" "side stage insp" "side kpi kpi";
+  background: var(--bg);
+  overflow: hidden;
+}
+.fm-top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 30;
+}
+.fm-fname {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-weight: 700;
+  min-width: 120px;
+  max-width: 260px;
+}
+.fm-fname:hover,
+.fm-fname:focus {
+  border-color: var(--line);
+  background: var(--bg);
+}
+.fm-saved {
+  font-size: 12px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.fm-saved .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.fm-saved[data-s="saving"] .dot,
+.fm-saved[data-s="dirty"] .dot {
+  background: var(--warn);
+}
+.fm-saved[data-s="offline"] .dot,
+.fm-saved[data-s="error"] .dot {
+  background: var(--bad);
+}
+.fm-saved[data-s="readonly"] .dot {
+  background: var(--muted);
+}
+
+/* palette */
+.fm-side {
+  grid-area: side;
+  background: var(--side);
+  color: var(--side-ink);
+  overflow-y: auto;
+  padding: 14px 12px 24px;
+}
+.fm-side h2 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 16px 4px 8px;
+}
+.fm-psearch {
+  width: 100%;
+  background: var(--side-item);
+  border: 1px solid var(--side-line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--side-ink);
+  min-height: 40px;
+}
+.fm-psearch::placeholder {
+  color: var(--side-muted);
+}
+.fm-side p.hint {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--side-muted);
+  margin: 10px 4px 0;
+}
+.fm-pal {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.fm-pal button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  background: var(--side-item);
+  border: 1px solid var(--side-line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: var(--side-ink);
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 15px;
+  user-select: none;
+  min-height: 44px;
+}
+.fm-pal button:hover {
+  border-color: var(--side-muted);
+}
+.fm-pal .pi {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+/* stage */
+.fm-stage {
+  grid-area: stage;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+.fm-stage .react-flow {
+  --xy-background-color: var(--bg);
+  background: var(--bg);
+}
+.fm-stage .react-flow__pane {
+  cursor: grab;
+}
+.fm-stage .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+.fm-stage .react-flow__node {
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+.fm-stage .react-flow__node:focus-visible {
+  outline: none;
+}
+.fm-stage .react-flow__node:focus-visible > .fm-node {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.fm-stage .react-flow__selection,
+.fm-stage .react-flow__nodesselection-rect {
+  border: 1.5px solid var(--brand);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+}
+
+.fm-node {
+  position: relative;
+  width: 210px;
+  height: 96px;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  cursor: move;
+  user-select: none;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--ink);
+}
+.fm-node::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: -1.5px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--cc);
+}
+.fm-node.sel {
+  border-color: var(--brand);
+  box-shadow:
+    0 0 0 3px var(--brand-soft),
+    var(--shadow);
+}
+.fm-node.warn {
+  border-color: var(--bad);
+}
+.fm-node.sel.warn {
+  border-color: var(--brand);
+}
+.fm-node.dim {
+  opacity: 0.35;
+}
+.fm-node.spot {
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--brand) 40%, transparent),
+    var(--shadow);
+  border-color: var(--brand);
+}
+.fm-nhead {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.fm-nicon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--cc);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.fm-ntitle {
+  min-width: 0;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 18px;
+}
+.fm-ntitle span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-ntitle small {
+  display: block;
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-nstats {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-nstats b {
+  color: var(--ink);
+}
+.fm-nbadge {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.fm-node.logic {
+  width: 170px;
+  border-radius: 16px;
+  background: var(--panel2);
+}
+.fm-node.logic .fm-nicon {
+  transform: rotate(45deg);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  margin: 3px;
+}
+.fm-node.logic .fm-nicon svg {
+  transform: rotate(-45deg);
+}
+.fm-hide-nums .fm-nstats,
+.fm-hide-nums .fm-elabel .n {
+  visibility: hidden;
+}
+
+/* ports (React Flow handles) */
+.fm-stage .react-flow__handle.fm-port {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 2px solid var(--cc);
+  z-index: 2;
+  min-width: 0;
+  min-height: 0;
+}
+.fm-stage .react-flow__handle.fm-port.in {
+  left: -9px;
+}
+.fm-stage .react-flow__handle.fm-port.out {
+  right: -9px;
+  cursor: crosshair;
+}
+.fm-stage .react-flow__handle.fm-port.alt {
+  bottom: -9px;
+  border-color: var(--alt);
+  cursor: crosshair;
+}
+.fm-stage .react-flow__handle.fm-port.out:hover {
+  background: var(--cc);
+}
+.fm-stage .react-flow__handle.fm-port.alt:hover {
+  background: var(--alt);
+}
+.fm-stage .react-flow__handle.connectingto,
+.fm-stage .react-flow__handle.valid {
+  background: var(--brand);
+}
+.fm-readonly .react-flow__handle.fm-port.out,
+.fm-readonly .react-flow__handle.fm-port.alt {
+  cursor: default;
+}
+.fm-plabel {
+  position: absolute;
+  font-size: 10.5px;
+  font-weight: 800;
+  pointer-events: none;
+}
+.fm-plabel.out {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--good);
+}
+
+/* note / heading / frame */
+.fm-node.note {
+  background: #fef3c7;
+  border-color: #f3d98a;
+  color: #3d2e05;
+  height: auto;
+  min-height: 96px;
+  width: 210px;
+}
+.fm-node.note::before,
+.fm-node.label::before {
+  display: none;
+}
+.fm-node.note .ntext {
+  font-size: 13px;
+  line-height: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fm-node.label {
+  background: transparent;
+  border: 1px dashed transparent;
+  box-shadow: none;
+  height: auto;
+  width: auto;
+  max-width: 520px;
+  padding: 4px 8px;
+}
+.fm-node.label.sel {
+  border-color: var(--brand);
+  box-shadow: none;
+}
+.fm-node.label .ntext {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--ink);
+  white-space: pre-wrap;
+  line-height: 1.15;
+}
+.fm-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--fc);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--fc) 7%, transparent);
+  cursor: move;
+}
+.fm-frame.sel {
+  border-style: solid;
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.fm-frame .ftitle {
+  position: absolute;
+  left: 14px;
+  top: -14px;
+  background: var(--fc);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 3px 12px;
+  white-space: nowrap;
+}
+.fm-stage .react-flow__resize-control.handle {
+  width: 14px;
+  height: 14px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 2px solid var(--brand);
+}
+
+/* edges */
+.fm-edge {
+  fill: none;
+  stroke: var(--edge);
+}
+.fm-edge.alt {
+  stroke: var(--alt);
+  stroke-dasharray: 7 6;
+  opacity: 0.9;
+}
+.fm-edge.sel {
+  stroke: var(--brand);
+  opacity: 1;
+}
+.fm-edge.flowing {
+  stroke-dasharray: 8 8;
+  animation: fm-flow 0.8s linear infinite;
+}
+@keyframes fm-flow {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.fm-stage .react-flow__connectionline path,
+.fm-stage .react-flow__connection-path {
+  stroke: var(--brand);
+  stroke-width: 2;
+  stroke-dasharray: 4 5;
+}
+.fm-elabel {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  pointer-events: all;
+  color: var(--ink);
+}
+.fm-elabel.sel {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.fm-elabel .tag {
+  margin-right: 5px;
+  color: var(--good);
+}
+.fm-elabel .tag.alt {
+  color: var(--alt);
+}
+
+.fm-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 4;
+}
+.fm-empty div {
+  max-width: 360px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 22px;
+}
+.fm-empty strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.fm-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+.fm-zoom .btn {
+  border: none;
+  min-height: 34px;
+}
+.fm-zoom output {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fm-stage .react-flow__minimap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin: 14px;
+}
+.fm-stage .react-flow__minimap-mask {
+  fill: color-mix(in srgb, var(--bg) 70%, transparent);
+  stroke: var(--brand);
+  stroke-width: 3;
+}
+.fm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 90;
+  box-shadow: var(--shadow);
+}
+
+/* inspector */
+.fm-insp {
+  grid-area: insp;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 16px 18px 28px;
+}
+.fm-insp h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+.fm-insp h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+.fm-insp .sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.fm-insp .tabs {
+  flex-wrap: wrap;
+}
+.fm-insp .tabs button {
+  flex: 1 0 22%;
+}
+.fm-range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fm-range input {
+  flex: 1;
+  accent-color: var(--brand);
+}
+.fm-range output {
+  min-width: 48px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 13px;
+}
+.fm-tblwrap {
+  overflow-x: auto;
+}
+
+/* kpis */
+.fm-kpis {
+  grid-area: kpi;
+  display: flex;
+  overflow-x: auto;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.fm-kpi {
+  flex: 1 0 auto;
+  min-width: 88px;
+  padding: 8px 14px;
+  border-right: 1px solid var(--line);
+}
+.fm-kpi div {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.fm-kpi b {
+  font-family: var(--font-display);
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.fm-mobile-only {
+  display: none;
+}
+.fm-sheet-close {
+  display: none;
+}
+@media (max-width: 1020px) {
+  .fm-editor {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "top" "stage" "kpi";
+  }
+  .fm-side {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 70;
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  }
+  .fm-insp {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 62%;
+    z-index: 70;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(105%);
+    transition: transform 0.2s;
+    box-shadow: var(--shadow);
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  .fm-editor.show-side .fm-side {
+    transform: none;
+  }
+  .fm-editor.show-insp .fm-insp {
+    transform: none;
+  }
+  .fm-mobile-only {
+    display: inline-flex;
+  }
+  .fm-sheet-close {
+    display: flex;
+    justify-content: flex-end;
+    margin: -6px -6px 4px 0;
+  }
+  .fm-fname {
+    max-width: 150px;
+  }
+  .fm-hide-sm {
+    display: none !important;
+  }
+  .fm-stage .react-flow__minimap {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .fm-hide-xs {
+    display: none !important;
+  }
+}
+
+/* presentation mode */
+.fm-present {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+.fm-present-card {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+  z-index: 10;
+}
+
+/* share links with numbers hidden: sub-labels carry prices/rates, hide them too */
+.fm-hide-all .fm-nstats,
+.fm-hide-all .fm-ntitle small,
+.fm-hide-all .fm-elabel .n {
+  display: none;
+}

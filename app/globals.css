@@ -28,6 +28,8 @@
   --bad: #b91c1c;
   --warn: #b45309;
   --edge: #8b80a8;
+  --chart-1: #5b2fc9;
+  --chart-2: #c2410c;
   --alt: #c2410c;
   --shadow: 0 1px 2px rgba(30, 22, 49, 0.06), 0 6px 18px rgba(30, 22, 49, 0.08);
   color-scheme: light;
@@ -55,6 +57,8 @@
     --bad: #f87171;
     --warn: #f2b544;
     --edge: #7d7398;
+    --chart-1: #9b7bf2;
+    --chart-2: #d9682f;
     --alt: #f08a57;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
@@ -82,6 +86,8 @@
   --bad: #f87171;
   --warn: #f2b544;
   --edge: #7d7398;
+  --chart-1: #9b7bf2;
+  --chart-2: #d9682f;
   --alt: #f08a57;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.35);
   color-scheme: dark;

@@ -37,6 +37,8 @@ export const nodeSchema = z.object({
   h: finite.optional(),
   url: z.string().optional(),
   desc: z.string().optional(),
+  /** Screenshot of the page (public Storage URL). */
+  shot: z.string().optional(),
   p: z.record(z.string(), z.unknown()).default({}),
 });
 
@@ -67,6 +69,7 @@ export interface FunnelNode {
   h?: number;
   url?: string;
   desc?: string;
+  shot?: string;
   p: NodeParams;
 }
 export interface FunnelEdge {

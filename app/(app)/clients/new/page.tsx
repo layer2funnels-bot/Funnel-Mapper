@@ -9,7 +9,7 @@ import { createClientAction } from "../../actions";
 export const metadata: Metadata = { title: "New client" };
 
 export default async function NewClientPage() {
-  const { sb, profile } = await requireUser();
+  const { sb, workspace } = await requireUser();
   const { data } = await sb.from("clients").select("niche");
   const niches = [...new Set((data ?? []).map((c) => c.niche).filter(Boolean))];
   return (
@@ -19,7 +19,7 @@ export default async function NewClientPage() {
       </Link>
       <PageHeader title="New client" sub="Add their details. You can upload a logo and map funnels next." />
       <div className="card p-6">
-        <ClientForm action={createClientAction} defaultCurrency={profile.default_currency} submitLabel="Create client" niches={niches} />
+        <ClientForm action={createClientAction} defaultCurrency={workspace.default_currency} submitLabel="Create client" niches={niches} />
       </div>
     </div>
   );

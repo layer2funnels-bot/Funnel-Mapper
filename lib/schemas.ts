@@ -54,8 +54,3 @@ export const clientFormSchema = z.object({
 });
 export type ClientForm = z.output<typeof clientFormSchema>;
 
-export const profileFormSchema = z.object({
-  full_name: z.string().trim().max(120).default(""),
-  agency_name: z.string().trim().max(120).default(""),
-  default_currency: z.string().default("GBP"),
-});

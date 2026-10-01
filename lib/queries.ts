@@ -11,6 +11,6 @@ export async function templateOptions(sb: SB): Promise<TemplateOption[]> {
   return (data ?? []).map((t) => ({
     value: t.builtin_key ? `builtin:${t.builtin_key}` : `template:${t.id}`,
     label: t.name,
-    group: t.owner_id ? "My templates" : "Built-in templates",
+    group: t.owner_id ? "Team templates" : "Built-in templates",
   }));
 }

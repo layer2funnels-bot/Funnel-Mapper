@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps<"/funnels/[id]">): 
 export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb, user, profile } = await requireUser();
+  const { sb, user, workspace } = await requireUser();
   const { data: f } = await sb.from("funnels").select("*").eq("id", id).maybeSingle();
   if (!f) notFound();
   const [{ data: client }, { data: products }, { data: lastVersion }, { count }] = await Promise.all([
@@ -31,7 +31,7 @@ export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">)
       userId={user.id}
       funnel={{ id: f.id, name: f.name, description: f.description, status: f.status, client_id: f.client_id, graph: parseGraph(f.graph), settings: parseSettings(f.settings), updated_at: f.updated_at }}
       client={client}
-      agency={{ name: profile.agency_name, logo_url: profile.agency_logo_url }}
+      agency={{ name: workspace.agency_name, logo_url: workspace.agency_logo_url }}
       products={(products ?? []) as PaletteProduct[]}
       lastVersionAt={lastVersion ? Date.parse(lastVersion.created_at) : 0}
       unresolvedComments={count ?? 0}

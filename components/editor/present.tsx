@@ -62,7 +62,6 @@ export function Presenter({ onExit }: { onExit: () => void }) {
           <div className="font-display text-2xl font-bold">{n.name}</div>
           <div className="text-sm text-muted">{subLabel(n, cur)}</div>
           {nums && <div className="mt-2 text-[15px]">{nodeStats(n, R, cur).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
-          {n.desc && <p className="mt-2 text-sm whitespace-pre-wrap">{n.desc}</p>}
         </>
       ) : done ? (
         <>

@@ -3098,7 +3098,13 @@
     "w": null,
     "h": null
    }
-  ]
+  ],
+  "exportTotals": {
+   "rev": 10797.254327923203,
+   "profit": 8387.254327923203,
+   "cust": 10.027307520000003,
+   "spend": 2160
+  }
  },
  "call": {
   "name": "Application → call funnel",

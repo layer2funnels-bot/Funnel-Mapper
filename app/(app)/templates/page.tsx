@@ -55,9 +55,9 @@ export default async function TemplatesPage() {
           <Card key={t.id} t={t} />
         ))}
       </ul>
-      <h2 className="mb-3 font-display text-xl font-bold">My templates</h2>
+      <h2 className="mb-3 font-display text-xl font-bold">Team templates</h2>
       {mine.length === 0 ? (
-        <div className="card px-6 py-10 text-center text-sm text-muted">Nothing saved yet. Open a funnel, then File → Save as template.</div>
+        <div className="card px-6 py-10 text-center text-sm text-muted">No team templates yet. Open any funnel, then File → Save as template. Everyone on the team can use them.</div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {mine.map((t) => (

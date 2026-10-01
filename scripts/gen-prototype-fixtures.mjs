@@ -82,5 +82,15 @@ for (const t of ["tripwire", "quiz", "webinar", "call", "sub"]) {
 }
 
 mkdirSync(new URL("../tests/fixtures/", import.meta.url), { recursive: true });
+// A file exactly as the prototype's "Export funnel (.json)" writes it: {...S, app:'funnel-mapper'}
+{
+  const S = { ...P.template("webinar"), cur: "$", basis: "ltv", fixed: 250, whatif: { traffic: 1.2, conv: 0.9 }, target: 20000 };
+  // include a v1-style edge flag to prove migration (no port, no:true)
+  S.edges = S.edges.map((e) => (e.port === "alt" ? (({ port, ...rest }) => ({ ...rest, no: true }))(e) : e));
+  P.setS({ ...S, edges: S.edges.map((e) => ({ ...e, port: e.no ? "alt" : e.port })) });
+  const R = P.compute();
+  writeFileSync(new URL("../tests/fixtures/prototype-export-webinar.json", import.meta.url), JSON.stringify({ ...S, app: "funnel-mapper" }, null, 1) + "\n");
+  out.webinar.exportTotals = { rev: R.rev, profit: R.profit, cust: R.cust, spend: R.spend };
+}
 writeFileSync(new URL("../tests/fixtures/prototype-results.json", import.meta.url), JSON.stringify(out, null, 1) + "\n");
 console.log("wrote tests/fixtures/prototype-results.json for", Object.keys(out).join(", "));

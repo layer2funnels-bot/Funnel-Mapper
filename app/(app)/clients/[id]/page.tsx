@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClientForm } from "@/components/client-form";
 import { Icon } from "@/components/icon";
+import { ImportFunnelButton } from "@/components/import-funnel";
 import { NewFunnelButton } from "@/components/new-funnel-dialog";
 import { StatusPill } from "@/components/status-pill";
 import { money } from "@/lib/format";
@@ -65,6 +66,7 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
               Email
             </a>
           )}
+          <ImportFunnelButton clientId={client.id} />
           <NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} />
         </div>
       </header>

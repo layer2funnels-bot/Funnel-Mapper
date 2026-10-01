@@ -27,10 +27,6 @@ function PublicInspector() {
       <>
         <h3>{node.name}</h3>
         <p className="sub">{typeOf(node.type).label}</p>
-        {node.shot && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={node.shot} alt={`Screenshot of ${node.name}`} className="mb-3 w-full rounded-xl border border-line" />
-        )}
         {node.url && (
           <p className="mb-3 text-sm">
             <a href={node.url} target="_blank" rel="noreferrer" className="text-brand underline">
@@ -38,7 +34,6 @@ function PublicInspector() {
             </a>
           </p>
         )}
-        {node.desc && <p className="text-sm whitespace-pre-wrap">{node.desc}</p>}
       </>
     );
   return (
@@ -188,9 +183,11 @@ function NodeInspector({ n }: { n: FunnelNode }) {
               <LogoUpload bucket="screenshots" label="Screenshot" url={n.shot ?? null} name={`shot-${n.id}`} onChange={async (u) => updateNode(n.id, { shot: u ?? undefined })} />
             </div>
           )}
-          {n.type === "goal" && <TextField label="What counts as done" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
+          {n.type === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
           <NodeStats n={n} />
-          {n.type !== "goal" && <TextField label="Notes" value={n.desc ?? ""} placeholder="Copy ideas, owner, status…" multiline onChange={(v) => updateNode(n.id, { desc: v })} />}
+          {n.type !== "goal" && !shared && (
+            <TextField label="Internal notes" help="Team only. Never shown on client share links, presentations or PDF reports." value={n.desc ?? ""} placeholder="Copy ideas, owner, status…" multiline onChange={(v) => updateNode(n.id, { desc: v })} />
+          )}
         </>
       )}
       <Actions ro={ro} />

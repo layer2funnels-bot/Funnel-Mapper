@@ -107,12 +107,8 @@ function FunnelCard({ f, currency }: { f: FunnelItem; currency: string }) {
   return (
     <li className={`card flex flex-col overflow-hidden ${pending ? "opacity-60" : ""}`}>
       <Link href={`/funnels/${f.id}`} className="block border-b border-line" aria-label={`Open ${f.name}`}>
-        {f.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={f.thumbnail_url} alt="" className="dotgrid h-[150px] w-full object-contain" />
-        ) : (
-          <GraphThumb graph={f.graph} className="h-[150px] w-full" />
-        )}
+        {/* live map thumbnail: always current, works in light and dark */}
+        <GraphThumb graph={f.graph} className="h-[150px] w-full" />
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start gap-2">

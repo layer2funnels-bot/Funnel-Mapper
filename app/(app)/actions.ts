@@ -3,8 +3,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
-import { blankGraph, blankSettings, isCurrency, parseGraph, parseSettings, type CurrencyCode } from "@/lib/graph";
-import { clientFormSchema, FUNNEL_STATUSES, profileFormSchema } from "@/lib/schemas";
+import { blankGraph, blankSettings, importFunnelFile, isCurrency, parseGraph, parseSettings, type CurrencyCode } from "@/lib/graph";
+import { clientFormSchema, FUNNEL_STATUSES } from "@/lib/schemas";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
 
@@ -146,10 +147,10 @@ export async function deleteTemplateAction(id: string) {
   revalidatePath("/templates");
 }
 
-/* ---------------- profile ---------------- */
+/* ---------------- profile & workspace ---------------- */
 export async function updateProfileAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const { sb, user } = await requireUser();
-  const p = profileFormSchema.safeParse(formObject(fd));
+  const p = z.object({ full_name: z.string().trim().max(120) }).safeParse({ full_name: fd.get("full_name") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
   const { error } = await sb.from("profiles").update(p.data).eq("id", user.id);
   if (error) return { error: error.message };
@@ -157,11 +158,52 @@ export async function updateProfileAction(_: ActionResult, fd: FormData): Promis
   return { ok: true };
 }
 
+async function requireAdmin() {
+  const ctx = await requireUser();
+  if (!ctx.isAdmin) throw new Error("Only workspace admins can do that");
+  return ctx;
+}
+
+export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { sb, isAdmin } = await requireUser();
+  if (!isAdmin) return { error: "Only workspace admins can change branding" };
+  const p = z
+    .object({ agency_name: z.string().trim().min(1, "Enter the agency name").max(120), default_currency: z.string().refine(isCurrency, "Pick a currency") })
+    .safeParse({ agency_name: fd.get("agency_name"), default_currency: fd.get("default_currency") });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const { error } = await sb.from("workspace").update(p.data).eq("id", 1);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function updateAgencyLogo(url: string | null) {
-  const { sb, user } = await requireUser();
-  const { error } = await sb.from("profiles").update({ agency_logo_url: z.url().nullable().parse(url) }).eq("id", user.id);
+  const { sb } = await requireAdmin();
+  const { error } = await sb.from("workspace").update({ agency_logo_url: z.url().nullable().parse(url) }).eq("id", 1);
   if (error) throw new Error(error.message);
   revalidatePath("/", "layout");
+}
+
+export async function setMemberAction(id: string, patch: { role?: "admin" | "member"; active?: boolean }): Promise<ActionResult> {
+  const { sb } = await requireAdmin();
+  const p = z.object({ role: z.enum(["admin", "member"]).optional(), active: z.boolean().optional() }).parse(patch);
+  const { error } = await sb.from("profiles").update(p).eq("id", uuid.parse(id));
+  if (error) return { error: error.message.includes("at least one active admin") ? "The workspace needs at least one active admin." : error.message };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const p = z.object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default("") }).safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "" });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const admin = supabaseAdmin();
+  if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
+  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+  const { error } = await admin.auth.admin.inviteUserByEmail(p.data.email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
+  if (error) return { error: /already/i.test(error.message) ? "That person already has an account. Reactivate them in the list below if needed." : error.message };
+  revalidatePath("/settings");
+  return { ok: true };
 }
 
 /* ---------------- products (reusable offers) ---------------- */
@@ -207,4 +249,27 @@ export async function deleteProductAction(id: string, clientId: string | null) {
   const { error } = await sb.from("products").delete().eq("id", uuid.parse(id));
   if (error) throw new Error(error.message);
   if (clientId) revalidatePath(`/clients/${clientId}`);
+}
+
+/* ---------------- import ---------------- */
+/** Create a new funnel for a client from an exported .json file (this app's format or the prototype's). */
+export async function importFunnelAction(clientId: string, json: string): Promise<ActionResult> {
+  const { sb, user } = await requireUser();
+  if (!uuid.safeParse(clientId).success) return { error: "Unknown client" };
+  if (json.length > 5_000_000) return { error: "That file is too large" };
+  let d;
+  try {
+    d = importFunnelFile(JSON.parse(json));
+  } catch {
+    return { error: "That file isn’t a Funnel Mapper .json file" };
+  }
+  const graph = reidGraph(d.graph, newId);
+  const { data, error } = await sb
+    .from("funnels")
+    .insert({ client_id: clientId, owner_id: user.id, name: d.name || "Imported funnel", description: d.description ?? "", graph: graph as never, settings: d.settings as never, summary: summary(compute(graph, d.settings)) as never })
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+  revalidatePath(`/clients/${clientId}`);
+  return { ok: true, id: data.id };
 }

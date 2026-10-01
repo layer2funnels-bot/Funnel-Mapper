@@ -47,6 +47,7 @@ import { KpiBar } from "./kpi-bar";
 import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
 import { ShareDialog } from "./share-dialog";
+import { TemplateDialog } from "./template-dialog";
 import { ShareComments } from "./share-comments";
 import { saveVersion, VersionsPanel } from "./versions";
 
@@ -95,6 +96,7 @@ function EditorInner(props: EditorProps) {
   const shareRef = useRef<HTMLDialogElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const tplRef = useRef<HTMLDialogElement>(null);
 
   const name = useEditor((s) => s.name);
   const readOnly = useEditor((s) => s.readOnly);
@@ -222,17 +224,6 @@ function EditorInner(props: EditorProps) {
     }
   };
 
-  const saveAsTemplate = async () => {
-    const tname = prompt("Template name", useEditor.getState().name);
-    if (!tname) return;
-    const category = prompt("Category (e.g. Webinar, Tripwire, High ticket)", "Custom") || "Custom";
-    const s = editorSnapshot();
-    const { error } = await supabaseBrowser()
-      .from("templates")
-      .insert({ owner_id: props.userId!, name: tname, category, description: funnel.description, graph: { ...s.graph, view: { x: 60, y: 40, k: 1 } } as never, settings: s.settings as never });
-    showToast(error ? `Couldn’t save template: ${error.message}` : "Saved to your templates");
-  };
-
   const manualVersion = async () => {
     try {
       await saveVersion(funnel.id, `Saved ${new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`);
@@ -242,16 +233,17 @@ function EditorInner(props: EditorProps) {
       showToast("Couldn’t save the version");
     }
   };
+  /** Map snapshot for portfolio cards, kept in the private `thumbnails` bucket (path stored on the funnel). */
   const uploadThumbnail = async () => {
     try {
       const s = useEditor.getState();
-      if (!s.nodes.length || !props.userId) return;
+      if (!s.nodes.length) return;
       const png = await svgToPng(mapSvg({ nodes: s.nodes, edges: s.edges }, s.R, { currency: s.settings.currency, nums: false, heightOf }), 0.5);
       const blob = await (await fetch(png.url)).blob();
       const sb = supabaseBrowser();
-      const path = `${props.userId}/${funnel.id}.png`;
+      const path = `${funnel.id}.png`;
       const { error } = await sb.storage.from("thumbnails").upload(path, blob, { upsert: true, contentType: "image/png", cacheControl: "60" });
-      if (!error) await sb.from("funnels").update({ thumbnail_url: `${sb.storage.from("thumbnails").getPublicUrl(path).data.publicUrl}?v=${Date.now()}` }).eq("id", funnel.id);
+      if (!error) await sb.from("funnels").update({ thumbnail_url: path }).eq("id", funnel.id);
     } catch {}
   };
 
@@ -392,7 +384,7 @@ function EditorInner(props: EditorProps) {
                   <button type="button" role="menuitem" onClick={() => (close(), setPanel("versions"), setShowInsp(true))}>
                     Version history
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), saveAsTemplate())}>
+                  <button type="button" role="menuitem" onClick={() => (close(), tplRef.current?.showModal())}>
                     Save as template
                   </button>
                   <hr />
@@ -628,6 +620,7 @@ function EditorInner(props: EditorProps) {
       />
       <HelpDialog ref={helpRef} />
       {owner && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
+      {owner && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
       {toast && (
         <div className="fm-toast" role="status" key={toast.id}>
           {toast.text}

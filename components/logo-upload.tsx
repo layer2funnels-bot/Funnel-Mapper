@@ -2,12 +2,19 @@
 import { useRef, useState } from "react";
 import { Icon } from "./icon";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useSignedUrl } from "./signed-image";
 
-/** Uploads an image to a public Storage bucket under <uid>/ and hands back its public URL. */
+/**
+ * Uploads an image to Storage. `logos` is public (logos appear on client share links) and hands back a public URL;
+ * `screenshots` is private to the team and hands back the file path, previewed through a signed URL.
+ */
 export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logos" }: { url: string | null; name: string; onChange: (url: string | null) => Promise<void>; label?: string; bucket?: "logos" | "screenshots" }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const isPrivate = bucket === "screenshots";
+  const signed = useSignedUrl("screenshots", isPrivate ? url : null);
+  const preview = isPrivate ? signed : url;
   async function pick(f: File) {
     setErr("");
     if (f.size > (bucket === "logos" ? 2 : 5) * 1024 * 1024) return setErr(`${label} must be under ${bucket === "logos" ? 2 : 5} MB`);
@@ -23,7 +30,7 @@ export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logo
       const path = `${user.id}/${name}-${Date.now()}.${ext}`;
       const { error } = await sb.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type, cacheControl: "3600" });
       if (error) throw error;
-      await onChange(sb.storage.from(bucket).getPublicUrl(path).data.publicUrl);
+      await onChange(isPrivate ? path : sb.storage.from(bucket).getPublicUrl(path).data.publicUrl);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -33,9 +40,9 @@ export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logo
   return (
     <div className="flex items-center gap-3">
       <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-bg">
-        {url ? (
+        {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={`${label}`} className="h-full w-full object-contain" />
+          <img src={preview} alt={`${label}`} className="h-full w-full object-contain" />
         ) : (
           <Icon name="upload" className="text-muted" />
         )}

@@ -114,13 +114,13 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "agency_logo_url": string | null,"agency_name": string,"created_at": string,"default_currency": string,"full_name": string,"id": string,"updated_at": string
+                    "active": boolean,"agency_logo_url": string | null,"agency_name": string,"created_at": string,"default_currency": string,"email": string,"full_name": string,"id": string,"role": string,"updated_at": string
                   }
                   Insert: {
-                    "agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"full_name"?: string,"id": string,"updated_at"?: string
+                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id": string,"role"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"full_name"?: string,"id"?: string,"updated_at"?: string
+                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id"?: string,"role"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -182,6 +182,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"workspace": {
+                  Row: {
+                    "agency_logo_url": string | null,"agency_name": string,"default_currency": string,"id": number,"updated_at": string
+                  }
+                  Insert: {
+                    "agency_logo_url"?: string | null,"agency_name"?: string,"default_currency"?: string,"id"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "agency_logo_url"?: string | null,"agency_name"?: string,"default_currency"?: string,"id"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -194,14 +207,17 @@ isOneToOne: false
 "get_shared_funnel":
 { Args: { "p_token": string }; Returns: Json
                            },
-"owns_client":
-{ Args: { "cid": string }; Returns: boolean
+"is_team_admin":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
-"owns_funnel":
-{ Args: { "fid": string }; Returns: boolean
+"is_team_member":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "save_shared_funnel":
 { Args: { "p_graph": Json,"p_settings": Json,"p_token": string }; Returns: boolean
+                           },
+"share_safe_graph":
+{ Args: { "g": Json,"hide_numbers": boolean }; Returns: Json
                            }
           }
           Enums: {

@@ -20,7 +20,7 @@ function byCurrency(rows: { cur: string; v: number }[]) {
 }
 
 export default async function Dashboard() {
-  const { sb, profile } = await requireUser();
+  const { sb, profile, workspace } = await requireUser();
   const [{ data: clients }, { data: funnels }, tpls] = await Promise.all([
     sb.from("clients").select("id, name, status, currency, monthly_retainer, logo_url").order("name"),
     sb.from("funnels").select("id, name, status, client_id, summary, settings, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
@@ -29,7 +29,7 @@ export default async function Dashboard() {
   const cl = clients ?? [];
   const fs = funnels ?? [];
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));
-  const curOf = (f: (typeof fs)[number]) => ((f.settings as { currency?: string })?.currency ?? clientById[f.client_id]?.currency ?? profile.default_currency);
+  const curOf = (f: (typeof fs)[number]) => ((f.settings as { currency?: string })?.currency ?? clientById[f.client_id]?.currency ?? workspace.default_currency);
   const sum = (f: (typeof fs)[number]) => (f.summary ?? {}) as Partial<FunnelSummary>;
   const active = cl.filter((c) => c.status === "active");
   const live = fs.filter((f) => f.status === "live");
@@ -38,7 +38,7 @@ export default async function Dashboard() {
 
   return (
     <>
-      <PageHeader title={`Hi${profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`} sub={`${profile.agency_name || "Your agency"} at a glance.`}>
+      <PageHeader title={`Hi${profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`} sub={`${workspace.agency_name || "Layer2Funnels"} at a glance.`}>
         <Link className="btn" href="/clients/new">
           <Icon name="plus" /> New client
         </Link>

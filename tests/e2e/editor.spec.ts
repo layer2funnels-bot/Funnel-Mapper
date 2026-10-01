@@ -40,10 +40,10 @@ test.describe("funnel editor", () => {
   test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook ads" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 150, y: 200 } });
-    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 500, y: 200 } });
-    await page.getByRole("button", { name: "Add Thank-you page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 850, y: 120 } });
-    await page.getByRole("button", { name: "Add Email sequence" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 850, y: 420 } });
+    await page.getByRole("button", { name: "Add Facebook ads" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
+    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
+    await page.getByRole("button", { name: "Add Thank-you page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
+    await page.getByRole("button", { name: "Add Email sequence" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
     await expect(nodes(page)).toHaveCount(4);
     const fb = node(page, "Facebook ads"),
       lp = node(page, "Landing page"),

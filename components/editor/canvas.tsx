@@ -1,6 +1,6 @@
 "use client";
 import "@xyflow/react/dist/base.css";
-import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type OnSelectionChangeParams, type FinalConnectionState } from "@xyflow/react";
+import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATHEX, typeOf } from "@/lib/catalog";
@@ -70,6 +70,19 @@ export function Canvas() {
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     const pos: Record<string, { x: number; y: number }> = {};
     const sizes: Record<string, { width: number; height: number }> = {};
+    // selection: React Flow asks, the store decides (fully controlled, no feedback loop)
+    const sel = changes.filter((c) => c.type === "select");
+    if (sel.length) {
+      const st = useEditor.getState();
+      const next = new Set(st.selNodes);
+      sel.forEach((c) => (c.selected ? next.add(c.id) : next.delete(c.id)));
+      const ids = st.nodes.map((n) => n.id).filter((id) => next.has(id));
+      if (!same(ids, st.selNodes)) {
+        if (ids.length) selectNodes(ids);
+        else if (!st.selEdge) clearSelection();
+        else useEditor.setState({ selNodes: [] });
+      }
+    }
     for (const c of changes) {
       if (c.type === "position" && c.position) pos[c.id] = { x: Math.round(c.position.x), y: Math.round(c.position.y) };
       if (c.type === "dimensions" && c.dimensions) {
@@ -112,17 +125,10 @@ export function Canvas() {
     frameDrag.current = { frame: n.id, start: { x: n.x, y: n.y }, members };
   }, []);
 
-  // edge removal/selection is handled by the store (keyboard + onSelectionChange)
-  const onEdgesChange = useCallback(() => {}, []);
-
-  const onSelectionChange = useCallback(({ nodes: ns, edges: es }: OnSelectionChangeParams) => {
-    const s = useEditor.getState();
-    const ids = ns.map((n) => n.id);
-    if (ids.length) {
-      if (!same(ids, s.selNodes) || s.selEdge) selectNodes(ids);
-    } else if (es.length === 1) {
-      if (s.selEdge !== es[0].id) selectEdge(es[0].id);
-    } else if (s.selNodes.length || s.selEdge) clearSelection();
+  // Edges are selected only by clicking them (box selection must not hand the selection to an edge);
+  // React Flow's deselect changes still clear it.
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    for (const c of changes) if (c.type === "select" && !c.selected && useEditor.getState().selEdge === c.id) useEditor.setState({ selEdge: null });
   }, []);
 
   const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, c.sourceHandle === "alt" ? "alt" : "main"), []);
@@ -164,9 +170,9 @@ export function Canvas() {
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      onEdgeClick={(_, e) => selectEdge(e.id)}
       onNodeDragStart={onNodeDragStart}
       onNodeDragStop={() => (frameDrag.current = null)}
-      onSelectionChange={onSelectionChange}
       onConnect={onConnect}
       onConnectEnd={onConnectEnd}
       isValidConnection={isValidConnection}

@@ -703,3 +703,12 @@
 .fm-hide-all .fm-elabel .n {
   display: none;
 }
+
+/* React Flow attribution, themed */
+.fm-stage .react-flow__attribution {
+  background: transparent;
+  font-size: 10px;
+}
+.fm-stage .react-flow__attribution a {
+  color: var(--muted);
+}

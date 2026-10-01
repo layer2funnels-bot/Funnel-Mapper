@@ -139,6 +139,8 @@ export function useAutosave({ funnelId, save, saveVersion, lastVersionAt, enable
         e.preventDefault();
       }
     };
+    // changes made before autosave started (e.g. a recovered local draft) are saved straight away
+    if (useEditor.getState().rev !== savedRev.current.rev) timer.current = setTimeout(flush, 300);
     window.addEventListener("online", online);
     window.addEventListener("offline", offline);
     window.addEventListener("beforeunload", beforeUnload);

@@ -16,7 +16,7 @@ describe("JSON import", () => {
     expect(d.settings.target).toBe(20000);
     expect(d.graph.edges.some((e) => e.port === "alt")).toBe(true);
     const R = compute(d.graph, d.settings);
-    const fx = (fixtures as Record<string, { exportTotals: Record<string, number> }>).webinar.exportTotals;
+    const fx = (fixtures as unknown as Record<string, { exportTotals: Record<string, number> }>).webinar.exportTotals;
     expect(R.rev).toBeCloseTo(fx.rev, 6);
     expect(R.profit).toBeCloseTo(fx.profit, 6);
     expect(R.cust).toBeCloseTo(fx.cust, 6);

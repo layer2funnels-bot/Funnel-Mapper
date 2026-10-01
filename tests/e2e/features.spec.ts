@@ -1,0 +1,230 @@
+import { expect, test } from "@playwright/test";
+import { createFunnel, node, nodes, openEditor, waitSaved } from "./helpers";
+
+const WEBINAR_LIVE = "20000000-0000-4000-8000-000000000003"; // seeded, has last month's actuals
+
+test.describe("autosave and offline (M4)", () => {
+  test("edits made offline are kept on this device and sync when back online", async ({ page, context }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    await context.setOffline(true);
+    await node(page, "Live webinar").click();
+    await page.getByLabel("Name", { exact: true }).fill("Offline webinar");
+    await expect(page.locator(".fm-saved")).toContainText("Offline", { timeout: 15_000 });
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await waitSaved(page);
+    await page.reload();
+    await expect(node(page, "Offline webinar")).toBeVisible();
+  });
+
+  test("a local draft is recovered after closing the tab while offline", async ({ page, context }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    await context.setOffline(true);
+    await node(page, "Live webinar").click();
+    await page.getByLabel("Name", { exact: true }).fill("Recovered webinar");
+    await expect(page.locator(".fm-saved")).toContainText("Offline", { timeout: 15_000 });
+    await page.close({ runBeforeUnload: false });
+    await context.setOffline(false);
+    const again = await context.newPage();
+    await again.goto(`/funnels/${id}`);
+    await expect(again.locator(".fm-toast")).toContainText("Restored unsaved changes");
+    await expect(node(again, "Recovered webinar")).toBeVisible();
+    await waitSaved(again);
+    await again.reload();
+    await expect(node(again, "Recovered webinar")).toBeVisible();
+  });
+});
+
+test.describe("share links (M5)", () => {
+  async function makeLink(page: import("@playwright/test").Page, id: string, opts: { edit?: boolean; hide?: boolean } = {}) {
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Share" }).click();
+    const dlg = page.getByRole("dialog", { name: "Share with your client" });
+    if (opts.edit) await dlg.getByLabel("Let them edit the map").check();
+    if (opts.hide) await dlg.getByLabel("Hide numbers (show the journey only)").check();
+    await dlg.getByRole("button", { name: "Create link" }).click();
+    const link = await dlg.getByRole("textbox", { name: "Share link" }).first().inputValue();
+    await dlg.getByRole("button", { name: "Done", exact: true }).click();
+    return link;
+  }
+
+  test("edit links let the client change the map; internal notes stay internal", async ({ page, browser }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    await node(page, "Live webinar").click();
+    await page.getByLabel("Internal notes").fill("SECRET: margin is thin");
+    await waitSaved(page);
+    const link = await makeLink(page, id, { edit: true });
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const c = await ctx.newPage();
+    await c.goto(link);
+    await expect(c.locator(".react-flow__node")).toHaveCount(9);
+    expect(await c.content()).not.toContain("SECRET");
+    await c.getByRole("button", { name: "Add Thank-you page" }).click();
+    await expect(c.locator(".react-flow__node")).toHaveCount(10);
+    await expect(c.locator(".fm-saved")).toHaveText(/Saved/, { timeout: 20_000 });
+    await ctx.close();
+    await page.reload();
+    await expect(nodes(page)).toHaveCount(10);
+    await node(page, "Live webinar").click();
+    await expect(page.getByLabel("Internal notes")).toHaveValue("SECRET: margin is thin");
+  });
+
+  test("hide-numbers links show only the journey", async ({ page, browser }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    const link = await makeLink(page, id, { hide: true, edit: true });
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const c = await ctx.newPage();
+    await c.goto(link);
+    await expect(c.locator(".react-flow__node")).toHaveCount(9);
+    await expect(c.locator(".fm-kpis")).toHaveCount(0);
+    await expect(c.locator(".fm-nstats").first()).toBeHidden();
+    await expect(c.getByRole("heading", { name: "The journey" })).toBeVisible();
+    // can't edit when numbers are hidden, even if the link was created as editable
+    await expect(c.getByRole("button", { name: "Add Landing page" })).toHaveCount(0);
+    const html = await c.content();
+    expect(html).not.toContain("£997");
+    expect(html).not.toContain("997");
+    await ctx.close();
+  });
+
+  test("client comments reach the team", async ({ page, browser }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    const link = await makeLink(page, id);
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const c = await ctx.newPage();
+    await c.goto(link);
+    await c.locator(".react-flow__node", { hasText: "Live webinar" }).click();
+    await c.getByLabel("Your name").fill("Priya");
+    await c.getByLabel(/Comment on “Live webinar”/).fill("Can we run this on Thursdays?");
+    await c.getByRole("button", { name: "Post comment" }).click();
+    await expect(c.getByText("Can we run this on Thursdays?")).toBeVisible();
+    await ctx.close();
+    await page.reload();
+    await page.getByRole("button", { name: /Client comments/ }).click();
+    await expect(page.getByText("Can we run this on Thursdays?")).toBeVisible();
+    await expect(page.getByRole("button", { name: "On “Live webinar”" })).toBeVisible();
+    await page.getByRole("button", { name: "Resolve" }).click();
+    await expect(page.getByText("No comments to resolve.")).toBeVisible();
+  });
+});
+
+test.describe("reports and planning tools", () => {
+  test("costs, scenarios, forecast and goal seek", async ({ page }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    const profit = async () => (await page.locator(".fm-kpis .fm-kpi", { hasText: "Profit" }).locator("b").textContent())!;
+    const before = await profit();
+    // costs
+    await page.getByRole("tab", { name: "Costs" }).click();
+    await page.getByRole("button", { name: "Add expense" }).click();
+    await page.getByLabel("Expense name").fill("Funnel software");
+    await page.getByLabel("Amount").fill("300");
+    await expect.poll(profit).not.toBe(before);
+    await page.getByRole("button", { name: "Add expense" }).click();
+    await page.getByLabel("Expense name").nth(1).fill("Build");
+    await page.getByLabel("Amount").nth(1).fill("5000");
+    await page.getByLabel("How often").nth(1).selectOption("one_time");
+    await expect(page.locator(".statbox", { hasText: "Payback" })).toContainText("periods");
+    // scenarios
+    await page.getByRole("tab", { name: "Scenarios" }).click();
+    await page.getByRole("button", { name: "Add conservative / expected / optimistic" }).click();
+    const table = page.getByRole("table", { name: "Scenario comparison" });
+    await expect(table.getByRole("columnheader")).toHaveCount(5);
+    await expect(table.getByRole("row", { name: /Profit/ })).toBeVisible();
+    // forecast
+    await page.getByRole("tab", { name: "Forecast" }).click();
+    await expect(page.locator(".recharts-surface").first()).toBeVisible();
+    await page.getByLabel("Months").fill("6");
+    await page.getByRole("button", { name: "Show table" }).click();
+    await expect(page.locator("#rbody table tbody tr")).toHaveCount(6);
+    // what-if + goal seek
+    await page.getByRole("tab", { name: "What-if" }).click();
+    await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
+    await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
+    await page.getByRole("button", { name: "Apply to what-if" }).click();
+    await page.getByRole("tab", { name: "Math" }).click();
+    await expect(page.locator(".rline", { hasText: "Profit" }).first()).toContainText("£50,000");
+  });
+
+  test("presentation mode walks through the funnel", async ({ page }) => {
+    const { id } = await createFunnel({ template: "call" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "File" }).click();
+    await page.getByRole("menuitem", { name: "Present" }).click();
+    const card = page.getByRole("region", { name: "Presentation" });
+    await expect(card).toContainText("Overview");
+    await card.getByRole("button", { name: "Next step" }).click();
+    await expect(card).toContainText("Step 1 of 9");
+    await expect(card).toContainText("LinkedIn ads");
+    await page.keyboard.press("ArrowRight");
+    await expect(card).toContainText("Step 2 of 9");
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".fm-top")).toBeVisible();
+  });
+
+  test("client products appear in the palette, ready to drop in", async ({ page }) => {
+    const { id } = await createFunnel();
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Add 6-Week Kickstart" }).click();
+    await expect(nodes(page)).toHaveCount(1);
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("6-Week Kickstart");
+    await expect(page.getByLabel("Price (£)")).toHaveValue("37");
+    await expect(page.getByLabel("Buy rate (%)")).toHaveValue("8");
+  });
+
+  test("planned vs actual", async ({ page }) => {
+    await openEditor(page, WEBINAR_LIVE);
+    await page.getByRole("tab", { name: "Actuals" }).click();
+    await expect(page.locator(".statbox", { hasText: "Revenue actual" })).not.toContainText("–");
+    await expect(page.getByRole("table", { name: "Planned vs actual by step" }).getByRole("row")).toHaveCount(10);
+    await page.getByRole("button", { name: "Enter actuals for this range" }).click();
+    const dlg = page.getByRole("dialog");
+    await dlg.getByLabel("Facebook ads visitors").fill("2000");
+    await dlg.getByRole("button", { name: "Save actuals" }).click();
+    await expect(dlg).toBeHidden();
+    await expect(page.getByRole("table", { name: "Planned vs actual by step" }).getByRole("row", { name: /Facebook ads/ })).toContainText("2,000");
+  });
+});
+
+test.describe("portfolio", () => {
+  test("dashboard totals and client filters", async ({ page }) => {
+    await page.goto("/");
+    const totals = page.getByRole("region", { name: "Totals" });
+    await expect(totals).toContainText("Active clients");
+    await expect(totals).toContainText("Live funnels");
+    await expect(totals).toContainText("Planned revenue");
+    await expect(totals).toContainText("£");
+    await page.goto("/clients");
+    await page.getByLabel("Filter by status").selectOption("proposal");
+    await expect(page.getByRole("list", { name: "Clients" }).getByRole("listitem")).toHaveCount(1);
+    await page.getByLabel("Filter by status").selectOption("");
+    await page.getByLabel("Search clients").fill("calm mind");
+    await expect(page.getByRole("list", { name: "Clients" }).getByRole("listitem")).toHaveCount(1);
+    await page.getByRole("button", { name: "Table view" }).click();
+    await expect(page.getByRole("table")).toContainText("Priya Nair");
+  });
+
+  test("client details, notes and products", async ({ page }) => {
+    const stamp = Date.now();
+    await page.goto("/clients/10000000-0000-4000-8000-000000000004");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("textbox", { name: "Notes", exact: true }).fill(`Prefers WhatsApp ${stamp}`);
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Add product" }).click();
+    const dlg = page.getByRole("dialog");
+    await dlg.getByLabel("Name").fill(`Glow membership ${stamp}`);
+    await dlg.getByLabel("Offer type").selectOption("sub");
+    await dlg.getByLabel("Price per period").fill("39");
+    await dlg.getByRole("button", { name: "Save product" }).click();
+    await expect(page.getByRole("cell", { name: `Glow membership ${stamp}`, exact: true })).toBeVisible();
+    await page.getByLabel("Phone").fill("+971 50 111 2222");
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" }).last()).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(`Prefers WhatsApp ${stamp}`);
+    await expect(page.getByLabel("Phone")).toHaveValue("+971 50 111 2222");
+  });
+});

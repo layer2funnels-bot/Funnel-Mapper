@@ -86,7 +86,12 @@ mkdirSync(new URL("../tests/fixtures/", import.meta.url), { recursive: true });
 {
   const S = { ...P.template("webinar"), cur: "$", basis: "ltv", fixed: 250, whatif: { traffic: 1.2, conv: 0.9 }, target: 20000 };
   // include a v1-style edge flag to prove migration (no port, no:true)
-  S.edges = S.edges.map((e) => (e.port === "alt" ? (({ port, ...rest }) => ({ ...rest, no: true }))(e) : e));
+  S.edges = S.edges.map((e) => {
+    if (e.port !== "alt") return e;
+    const v1 = { ...e, no: true };
+    delete v1.port;
+    return v1;
+  });
   P.setS({ ...S, edges: S.edges.map((e) => ({ ...e, port: e.no ? "alt" : e.port })) });
   const R = P.compute();
   writeFileSync(new URL("../tests/fixtures/prototype-export-webinar.json", import.meta.url), JSON.stringify({ ...S, app: "funnel-mapper" }, null, 1) + "\n");

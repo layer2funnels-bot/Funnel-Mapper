@@ -85,7 +85,7 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
         <input className="input" id="cf-tags" name="tags" defaultValue={(c.tags ?? []).join(", ")} placeholder="tripwire, retainer" />
         <span className="help">Separate tags with commas.</span>
       </div>
-      {client?.id ? <input type="hidden" name="notes" value={c.notes ?? ""} /> : (
+      {client?.id ? null : (
         <div className="field">
           <label htmlFor="cf-notes">Notes</label>
           <textarea className="input" id="cf-notes" name="notes" defaultValue={c.notes ?? ""} />

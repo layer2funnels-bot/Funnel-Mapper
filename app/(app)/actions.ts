@@ -36,7 +36,9 @@ export async function updateClientAction(id: string, _: ActionResult, fd: FormDa
   if (!uuid.safeParse(id).success) return { error: "Unknown client" };
   const p = clientFormSchema.safeParse(formObject(fd));
   if (!p.success) return { error: p.error.issues[0].message };
-  const { error } = await sb.from("clients").update(p.data).eq("id", id);
+  // notes autosave separately on the portfolio page; the details form must never overwrite them
+  const { notes: _notes, ...fields } = p.data; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { error } = await sb.from("clients").update(fd.has("notes") ? p.data : fields).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath(`/clients/${id}`);
   revalidatePath("/clients");

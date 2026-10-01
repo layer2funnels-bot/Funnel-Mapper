@@ -13,7 +13,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    baseURL: process.env.E2E_BASE_URL ?? (process.env.E2E_PROD ? "http://localhost:3100" : "http://localhost:3000"),
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     launchOptions: { executablePath },
@@ -22,10 +22,8 @@ export default defineConfig({
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, storageState: "tests/e2e/.auth/demo.json", launchOptions: { executablePath } }, dependencies: ["setup"] },
   ],
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000/login",
-    reuseExistingServer: true,
-    timeout: 180_000,
-  },
+  // E2E_PROD=1 runs against a production build (`npm run build` first): faster and closest to what teammates use.
+  webServer: process.env.E2E_PROD
+    ? { command: "npm run start -- -p 3100", url: "http://localhost:3100/login", reuseExistingServer: true, timeout: 120_000 }
+    : { command: "npm run dev", url: "http://localhost:3000/login", reuseExistingServer: true, timeout: 180_000 },
 });

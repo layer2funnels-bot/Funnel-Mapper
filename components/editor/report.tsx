@@ -300,7 +300,7 @@ function WhatIfTab() {
               Change<b>{seek >= 1 ? "+" : ""}{pct(seek - 1)}</b>
             </div>
             <div className="col-span-2">
-              <button type="button" className="btn sm" onClick={() => set(lever)(Math.round(seek * 100) / 100)}>
+              <button type="button" className="btn sm" onClick={() => set(lever)(seek)}>
                 Apply to what-if
               </button>
             </div>

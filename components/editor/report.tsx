@@ -59,7 +59,8 @@ function MathTab() {
   const cur = useEditor((s) => s.settings.currency);
   const ro = useEditor((s) => s.readOnly);
   const m = useM();
-  const w = useMemo(() => warnings({ nodes, edges }), [nodes, edges]);
+  const shared = useEditor((s) => s.shared);
+  const w = useMemo(() => (shared ? [] : warnings({ nodes, edges })), [nodes, edges, shared]);
   const rows: [string, React.ReactNode, string][] = [
     ["Revenue", m(R.rev), basis === "ltv" ? "Lifetime value of every sale, after refunds" : "First payment of every sale, after refunds"],
     ["Ad spend", m(R.spend), "Total spent on traffic"],

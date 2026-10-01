@@ -6,7 +6,8 @@ export function KpiBar() {
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const basis = useEditor((s) => s.settings.basis);
-  const warn = useEditor((s) => s.warnIds.size);
+  // warnings are for the team, not for clients viewing a share link
+  const warn = useEditor((s) => (s.shared ? 0 : s.warnIds.size));
   const hasTraffic = useEditor((s) => s.nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label"));
   const m = (v: number) => money(v, cur);
   const k: [string, React.ReactNode][] = [
@@ -27,7 +28,7 @@ export function KpiBar() {
     ["LTV / customer", m(R.ltvc)],
   ];
   return (
-    <footer className="fm-kpis" aria-label="Funnel numbers">
+    <footer className="fm-kpis" aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && warn > 0 && (
         <button
           type="button"

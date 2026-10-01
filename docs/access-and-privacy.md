@@ -8,7 +8,13 @@ Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members can
   and the sign-in form gives the same answer whether or not an email belongs to the team.
 - **Every page needs a session** except sign-in / password recovery (`/login`, `/reset-password`, `/auth/*`)
   and token-checked share links (`/s/<token>`, `/api/share/<token>`). See `lib/supabase/proxy.ts`.
-- **Row Level Security** is on for every table; users only see rows they own (`supabase/migrations`).
+- **Shared workspace with Row Level Security** on every table: every *active* team member can read and edit all clients,
+  funnels, templates and data; deactivated members and anonymous visitors see nothing. Members can't change their own role;
+  the workspace always keeps an active admin.
+- **Storage:** `thumbnails` and `screenshots` are private (team only, short-lived signed URLs). `logos` is public because
+  client share links display the client's and agency's logo.
+- **Internal block notes and screenshots never leave the database on share links** (stripped in `get_shared_funnel()`),
+  and saving from an editable link keeps them. Presentation mode and PDF reports don't show them either.
 - **Share links** go through `get_shared_funnel()`, which returns only that one funnel plus the client's name and logo
   (no contact details). With *Hide numbers* on, the database strips every price, rate and cost before anything leaves it.
   Links can expire or be revoked at any time.
@@ -24,13 +30,18 @@ Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members can
 3. **Authentication → URL Configuration:** set *Site URL* to the deployed app URL and add `https://<your-domain>/**`
    to the redirect allow list.
 
-## Adding a team member
+## Adding and removing team members
 
-Authentication → Users → **Invite user** → enter their email. They get an invite email, click it, and choose a password.
-To remove someone, delete the user (their own clients and funnels are deleted with them) or ban them in the dashboard.
+- **Invite:** Settings → Team → *Invite a teammate* (needs `SUPABASE_SERVICE_ROLE_KEY` on the server), or
+  Supabase → Authentication → Users → **Invite user**. They get an email, click it, and choose a password.
+  The first account in a new project becomes the admin automatically.
+- **Remove:** Settings → Team → **Deactivate**. They're signed out and see nothing; their work stays in the workspace.
+  Reactivate any time. (Deleting a user in the Supabase dashboard also deletes the clients and funnels they created.)
+- **Admins** can change roles, deactivate members and edit the workspace branding.
 
 ## Local development
 
-`supabase/config.toml` already has sign-ups disabled and the templates wired in. The seed creates two accounts:
-`demo@layer2funnels.test` (sample portfolio) and `teammate@layer2funnels.test` (empty), both with password `demo-password`.
+`supabase/config.toml` already has sign-ups disabled and the templates wired in. The seed creates
+`demo@layer2funnels.test` (admin), `teammate@layer2funnels.test` (member) and `former@layer2funnels.test` (deactivated),
+all with password `demo-password`.
 Invite emails sent locally appear in Mailpit at http://127.0.0.1:54324.

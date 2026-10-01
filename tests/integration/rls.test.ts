@@ -1,7 +1,7 @@
 // Workspace access rules (RLS), storage privacy and share-link RPCs against the local Supabase stack.
 // Requires `npx supabase start` and `npx supabase db reset` (seed). Run: npm run test:db
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -142,8 +142,13 @@ describe("share links", () => {
     expect(data.agency.name).toBe("Layer2Funnels");
     expect(data.client.name).toBe("Sam Carter");
   });
+  let original: unknown;
+  afterAll(async () => {
+    if (original) await admin.from("funnels").update({ graph: original }).eq("id", TRIPWIRE);
+  });
   it("internal block notes and screenshots never leave the database", async () => {
     const f = await admin.from("funnels").select("graph").eq("id", TRIPWIRE).single();
+    original = structuredClone(f.data!.graph);
     const g = f.data!.graph as { nodes: Record<string, unknown>[] };
     g.nodes[2] = { ...g.nodes[2], desc: "INTERNAL: client is price sensitive", shot: "screens/x.png" };
     await admin.from("funnels").update({ graph: g }).eq("id", TRIPWIRE);

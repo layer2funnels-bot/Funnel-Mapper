@@ -117,6 +117,7 @@
   --shadow-card: var(--shadow);
 }
 
+@layer base {
 *,
 *::before,
 *::after {
@@ -149,6 +150,8 @@ button {
 .font-display {
   font-family: var(--font-display);
 }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
@@ -516,30 +519,53 @@ button {
   }
 }
 
-/* status colours */
+/* status colours (text tones chosen for >= 4.5:1 on their tinted backgrounds) */
+:root {
+  --st-muted: #4f4766;
+  --st-blue: #1d4ed8;
+  --st-good: #166534;
+  --st-warn: #92400e;
+  --st-bad: #991b1b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-muted: #c4bcd9;
+    --st-blue: #93b4f9;
+    --st-good: #4ade80;
+    --st-warn: #f2b544;
+    --st-bad: #fca5a5;
+  }
+}
+:root[data-theme="dark"] {
+  --st-muted: #c4bcd9;
+  --st-blue: #93b4f9;
+  --st-good: #4ade80;
+  --st-warn: #f2b544;
+  --st-bad: #fca5a5;
+}
 .st-lead,
 .st-draft {
   background: color-mix(in srgb, var(--muted) 14%, transparent);
-  color: var(--muted);
+  color: var(--st-muted);
 }
 .st-proposal,
 .st-proposed {
   background: color-mix(in srgb, var(--c-traffic) 14%, transparent);
-  color: var(--c-traffic);
+  color: var(--st-blue);
 }
 .st-active,
 .st-live {
   background: color-mix(in srgb, var(--good) 14%, transparent);
-  color: var(--good);
+  color: var(--st-good);
 }
 .st-paused {
   background: color-mix(in srgb, var(--warn) 16%, transparent);
-  color: var(--warn);
+  color: var(--st-warn);
 }
 .st-past,
 .st-archived {
   background: color-mix(in srgb, var(--bad) 10%, transparent);
-  color: var(--bad);
+  color: var(--st-bad);
 }
 
 .dotgrid {

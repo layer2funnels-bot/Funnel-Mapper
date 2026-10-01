@@ -103,7 +103,7 @@ export function MemberRow({ member: m, me, canManage }: { member: Member; me: bo
       if (r?.error) setErr(r.error);
     });
   return (
-    <li className={`flex flex-wrap items-center gap-3 border-b border-line py-3 last:border-0 ${m.active ? "" : "opacity-60"}`}>
+    <li className={`flex flex-wrap items-center gap-3 border-b border-line py-3 last:border-0 ${m.active ? "" : "bg-bg"}`}>
       <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-soft font-bold text-brand" aria-hidden="true">
         {(m.full_name || m.email).slice(0, 1).toUpperCase()}
       </span>

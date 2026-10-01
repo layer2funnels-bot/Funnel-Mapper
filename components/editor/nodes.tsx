@@ -14,7 +14,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
-  const warn = useEditor((s) => s.warnIds.has(id));
+  const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const spot = useEditor((s) => s.spot);
   if (!n) return null;
   const T = typeOf(n.type);

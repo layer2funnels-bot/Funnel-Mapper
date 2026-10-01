@@ -712,3 +712,9 @@
 .fm-stage .react-flow__attribution a {
   color: var(--muted);
 }
+
+/* presentation mode: the stage fills the screen (its grid-area name only exists in the editor grid) */
+.fm-present .fm-stage {
+  grid-area: auto;
+  height: 100dvh;
+}

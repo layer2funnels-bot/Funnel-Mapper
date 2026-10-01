@@ -71,12 +71,12 @@ export default async function Dashboard() {
                 <thead>
                   <tr>
                     <th className="pl-5">Funnel</th>
-                    <th>Client</th>
+                    <th className="hidden sm:table-cell">Client</th>
                     <th>Status</th>
                     <th className="r">Revenue</th>
-                    <th className="r">Profit</th>
-                    <th className="r">ROAS</th>
-                    <th className="r pr-5">Updated</th>
+                    <th className="r hidden md:table-cell">Profit</th>
+                    <th className="r hidden md:table-cell">ROAS</th>
+                    <th className="r hidden pr-5 sm:table-cell">Updated</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,7 +87,7 @@ export default async function Dashboard() {
                           {f.name}
                         </Link>
                       </td>
-                      <td>
+                      <td className="hidden sm:table-cell">
                         <Link href={`/clients/${f.client_id}`} className="text-muted hover:text-brand">
                           {clientById[f.client_id]?.name}
                         </Link>
@@ -96,9 +96,9 @@ export default async function Dashboard() {
                         <StatusPill status={f.status} />
                       </td>
                       <td className="r">{money(sum(f).rev, curOf(f))}</td>
-                      <td className={`r ${(sum(f).profit ?? 0) >= 0 ? "pos" : "neg"}`}>{money(sum(f).profit, curOf(f))}</td>
-                      <td className="r">{ratio(sum(f).roas)}</td>
-                      <td className="r pr-5 text-muted">{timeAgo(f.updated_at)}</td>
+                      <td className={`r hidden md:table-cell ${(sum(f).profit ?? 0) >= 0 ? "pos" : "neg"}`}>{money(sum(f).profit, curOf(f))}</td>
+                      <td className="r hidden md:table-cell">{ratio(sum(f).roas)}</td>
+                      <td className="r hidden pr-5 text-muted sm:table-cell">{timeAgo(f.updated_at)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -256,7 +256,11 @@ export function moveNodes(pos: Record<string, { x: number; y: number; w?: number
 }
 
 export function setDims(d: Record<string, { width: number; height: number }>) {
-  set((s) => ({ dims: { ...s.dims, ...d } }));
+  // Only store real changes: React Flow re-reports sizes on re-render, and a fresh object each time would loop.
+  const cur = get().dims;
+  const changed = Object.entries(d).filter(([id, v]) => cur[id]?.width !== v.width || cur[id]?.height !== v.height);
+  if (!changed.length) return;
+  set({ dims: { ...cur, ...Object.fromEntries(changed) } });
 }
 
 export function deleteSelection() {

@@ -19,6 +19,7 @@ import {
   selectNodes,
   setName,
   setPositionsTransient,
+  setDims,
   setReadOnly,
   undo,
   updateEdge,
@@ -219,6 +220,16 @@ describe("editor store", () => {
     undo();
     expect(S().nodes[0].x).toBe(n.x);
     expect(S().name).toBe("x");
+  });
+
+  it("setDims ignores unchanged sizes (no render loop)", () => {
+    load();
+    setDims({ a: { width: 210, height: 96 } });
+    const d = S().dims;
+    setDims({ a: { width: 210, height: 96 } });
+    expect(S().dims).toBe(d);
+    setDims({ a: { width: 210, height: 120 } });
+    expect(S().dims).not.toBe(d);
   });
 
   it("view-only mode blocks edits", () => {

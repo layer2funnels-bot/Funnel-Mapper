@@ -67,16 +67,20 @@ test.describe("funnel editor", () => {
   test("edit an edge: share and path", async ({ page }) => {
     const { id } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
-    const label = page.locator(".fm-elabel", { hasText: "2,400" }).first();
-    await label.click();
+    // registration → thank-you page carries the 720 people who registered (2,400 × 30%)
+    await page.locator(".fm-elabel", { hasText: "720" }).first().click();
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await page.getByLabel("Share of them (%)").fill("50");
-    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("1,200");
+    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("360");
     await page.getByRole("button", { name: "People who didn’t convert" }).click();
-    // facebook ads (traffic) has no non-converters, so the path now carries 0
-    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("0");
+    // now half of the 1,680 who didn't register
+    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("840");
+    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("No");
     await page.getByRole("button", { name: "Delete connection" }).click();
     await expect(edgeLabels(page)).toHaveCount(8);
+    // traffic sources have no "didn't convert" path, so the option isn't offered
+    await page.locator(".fm-elabel", { hasText: "2,400" }).first().click();
+    await expect(page.getByRole("button", { name: "People who didn’t convert" })).toHaveCount(0);
   });
 
   test("box select with shift-drag, then group actions", async ({ page }) => {

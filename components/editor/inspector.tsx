@@ -1,7 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { LogoUpload } from "@/components/logo-upload";
-import { CATS, FRAME_COLORS, INT_LABEL, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { CATS, FRAME_COLORS, INT_LABEL, portsFor, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf } from "@/lib/format";
 import { num, offerVals } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
@@ -335,6 +335,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
       <p className="sub">
         {a?.name} → {b?.name}
       </p>
+      {a && portsFor(a.type).hasAlt && (
       <div className="field">
         <span className="lbl">Who goes this way</span>
         <Seg<"main" | "alt">
@@ -347,6 +348,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
           onChange={(v) => updateEdge(e.id, { port: v })}
         />
       </div>
+      )}
       <Field label="Share of them (%)" help="Split one group between several next steps, for example 60% email and 40% retargeting.">
         {(id) => <NumInput id={id} value={num(e.share ?? 100)} min={0} max={100} onChange={(v) => updateEdge(e.id, { share: v })} />}
       </Field>

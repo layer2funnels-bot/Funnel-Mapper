@@ -34,8 +34,8 @@ export interface EditorState {
   settings: FunnelSettings;
   R: FunnelResult;
   warnIds: Set<string>;
-  /** Measured DOM heights (notes grow with text); used by layout and frame wrapping. */
-  heights: Record<string, number>;
+  /** Measured DOM sizes (notes and headings grow with text); used by React Flow, layout and frame wrapping. */
+  dims: Record<string, { width: number; height: number }>;
   selNodes: string[];
   selEdge: string | null;
   tab: ReportTab;
@@ -83,7 +83,7 @@ export const useEditor = create<EditorState>(() => ({
   settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false },
   R: blankResult,
   warnIds: new Set(),
-  heights: {},
+  dims: {},
   selNodes: [],
   selEdge: null,
   tab: "math",
@@ -109,8 +109,8 @@ const set = useEditor.setState;
 const snapshot = (s: EditorState = get()): Snapshot => ({ nodes: s.nodes, edges: s.edges, settings: s.settings, name: s.name });
 const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => ({ R: compute({ nodes, edges }, settings), warnIds: warnNodeIds({ nodes, edges }) });
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
-export const heightOf = (n: FunnelNode) => get().heights[n.id] ?? (n.type === "label" ? 40 : NH);
-export const widthOf = (n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type));
+export const heightOf = (n: FunnelNode) => get().dims[n.id]?.height ?? (n.type === "label" ? 40 : NH);
+export const widthOf = (n: FunnelNode) => n.w ?? get().dims[n.id]?.width ?? (n.type === "label" ? 300 : nodeW(n.type));
 
 let histTimer: ReturnType<typeof setTimeout> | undefined;
 function commitHistory() {
@@ -130,8 +130,13 @@ function touched() {
   histTimer = setTimeout(commitHistory, 350);
 }
 
-function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" | "name">>, opts: { math?: boolean } = {}) {
+/**
+ * Apply a content change. Continuous edits (typing, dragging) coalesce into one undo step after 350 ms of quiet;
+ * `discrete` actions (add, delete, paste, connect, align, layout…) always get their own undo step.
+ */
+function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" | "name">>, opts: { math?: boolean; discrete?: boolean } = {}) {
   if (get().readOnly) return;
+  if (opts.discrete) commitHistory();
   const s = get();
   const nodes = patch.nodes ?? s.nodes,
     edges = patch.edges ?? s.edges,
@@ -139,6 +144,7 @@ function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" |
   const math = opts.math ?? true;
   set({ ...patch, ...(math ? recompute(nodes, edges, settings) : {}) });
   touched();
+  if (opts.discrete) commitHistory();
 }
 
 export function showToast(text: string) {
@@ -170,14 +176,14 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     spot: null,
     saveStatus: p.readOnly ? "readonly" : "saved",
     opts: loadOpts(),
-    heights: {},
+    dims: {},
   });
 }
 
 /** Replace the whole graph/settings (version restore, import). Undoable. */
 export function replaceContent(graph: Pick<FunnelGraph, "nodes" | "edges">, settings?: FunnelSettings, name?: string) {
   commitHistory();
-  apply({ nodes: graph.nodes, edges: graph.edges, settings: settings ?? get().settings, ...(name != null ? { name } : {}) });
+  apply({ nodes: graph.nodes, edges: graph.edges, settings: settings ?? get().settings, ...(name != null ? { name } : {}) }, { discrete: true });
   set({ selNodes: [], selEdge: null });
   commitHistory();
 }
@@ -228,7 +234,7 @@ export function addNode(type: string, x: number, y: number, extra: { p?: NodePar
     n.h = 300;
   }
   // frames render below everything else
-  apply({ nodes: type === "frame" ? [n, ...get().nodes] : [...get().nodes, n] });
+  apply({ nodes: type === "frame" ? [n, ...get().nodes] : [...get().nodes, n] }, { discrete: true });
   selectNodes([n.id]);
   return n;
 }
@@ -245,21 +251,21 @@ export function updateParams(id: string, patch: NodeParams) {
 }
 
 /** Move nodes (drag, nudge, align, layout). Positions don't affect the maths, so no recompute. */
-export function moveNodes(pos: Record<string, { x: number; y: number; w?: number; h?: number }>) {
-  apply({ nodes: get().nodes.map((n) => (pos[n.id] ? { ...n, ...pos[n.id] } : n)) }, { math: false });
+export function moveNodes(pos: Record<string, { x: number; y: number; w?: number; h?: number }>, opts: { discrete?: boolean } = {}) {
+  apply({ nodes: get().nodes.map((n) => (pos[n.id] ? { ...n, ...pos[n.id] } : n)) }, { math: false, discrete: opts.discrete });
 }
 
-export function setHeights(h: Record<string, number>) {
-  set((s) => ({ heights: { ...s.heights, ...h } }));
+export function setDims(d: Record<string, { width: number; height: number }>) {
+  set((s) => ({ dims: { ...s.dims, ...d } }));
 }
 
 export function deleteSelection() {
   const s = get();
   if (s.selNodes.length) {
     const ids = new Set(s.selNodes);
-    apply({ nodes: s.nodes.filter((n) => !ids.has(n.id)), edges: s.edges.filter((e) => !ids.has(e.from) && !ids.has(e.to)) });
+    apply({ nodes: s.nodes.filter((n) => !ids.has(n.id)), edges: s.edges.filter((e) => !ids.has(e.from) && !ids.has(e.to)) }, { discrete: true });
   } else if (s.selEdge) {
-    apply({ edges: s.edges.filter((e) => e.id !== s.selEdge) });
+    apply({ edges: s.edges.filter((e) => e.id !== s.selEdge) }, { discrete: true });
   } else return;
   clearSelection();
 }
@@ -286,7 +292,7 @@ export function duplicateSelection() {
   const ids = get().selNodes;
   if (!ids.length) return;
   const c = cloneSet(ids, 33, 33);
-  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] });
+  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] }, { discrete: true });
   selectNodes(c.nodes.map((n) => n.id));
 }
 
@@ -306,7 +312,7 @@ export function paste() {
     44,
     clip,
   );
-  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] });
+  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] }, { discrete: true });
   set({ clip: c });
   selectNodes(c.nodes.map((n) => n.id));
 }
@@ -350,7 +356,7 @@ export function align(kind: "left" | "top" | "hdist" | "vdist" | "center" | "mid
       y1 = s[s.length - 1].y;
     s.forEach((n, i) => (pos[n.id] = { x: n.x, y: Math.round(y0 + ((y1 - y0) * i) / (s.length - 1)) }));
   }
-  moveNodes(pos);
+  moveNodes(pos, { discrete: true });
 }
 
 export function wrapInFrame() {
@@ -362,7 +368,7 @@ export function wrapInFrame() {
     x1 = Math.max(...ns.map((n) => n.x + widthOf(n))) + 30,
     y1 = Math.max(...ns.map((n) => n.y + heightOf(n))) + 40;
   const f: FunnelNode = { id: nid(), type: "frame", name: "Stage", x: x0, y: y0, w: x1 - x0, h: y1 - y0, p: { color: FRAME_COLORS[0][0] } };
-  apply({ nodes: [f, ...get().nodes] }, { math: false });
+  apply({ nodes: [f, ...get().nodes] }, { math: false, discrete: true });
   selectNodes([f.id]);
 }
 
@@ -392,7 +398,7 @@ export function canConnect(from: string, to: string, port: "main" | "alt") {
 export function connect(from: string, port: "main" | "alt", to: string) {
   if (!canConnect(from, to, port)) return;
   const e: FunnelEdge = { id: "e" + nid(), from, to, share: 100, port };
-  apply({ edges: [...get().edges, e] });
+  apply({ edges: [...get().edges, e] }, { discrete: true });
   selectEdge(e.id);
 }
 export function updateEdge(id: string, patch: Partial<Omit<FunnelEdge, "id">>) {

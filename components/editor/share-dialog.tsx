@@ -19,7 +19,6 @@ export const ShareDialog = forwardRef<HTMLDialogElement, { funnelId: string; ope
     setLinks(data ?? []);
   }, [funnelId]);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading external data
     if (open) load();
   }, [open, load]);
   const create = async () => {

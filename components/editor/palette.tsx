@@ -13,6 +13,9 @@ export interface PaletteProduct {
   params: NodeParams;
 }
 
+/** Small random offset so blocks added by tap don't stack exactly on top of each other. */
+const jitter = () => Math.random() * 80 - 40;
+
 export function Palette({ products, onPicked }: { products: PaletteProduct[]; onPicked?: () => void }) {
   const [q, setQ] = useState("");
   const rf = useReactFlow();
@@ -20,7 +23,7 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
   const addAtCentre = (type: string, extra: { p?: NodeParams; name?: string } = {}) => {
     const el = document.querySelector(".fm-stage")?.getBoundingClientRect();
     const c = el ? rf.screenToFlowPosition({ x: el.left + el.width / 2, y: el.top + el.height / 2 }) : { x: 200, y: 200 };
-    addNode(type, c.x - 105 + (Math.random() * 80 - 40), c.y - 48 + (Math.random() * 80 - 40), extra);
+    addNode(type, c.x - 105 + jitter(), c.y - 48 + jitter(), extra);
     onPicked?.();
   };
   const item = (key: string, label: string, color: string, icon: Parameters<typeof Icon>[0]["name"], payload: { type: string; p?: NodeParams; name?: string }) => (

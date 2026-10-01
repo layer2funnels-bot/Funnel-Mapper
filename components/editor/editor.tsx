@@ -84,7 +84,8 @@ function EditorInner(props: EditorProps) {
   const { mode, funnel, client, agency, share } = props;
   const owner = mode === "owner";
   const rf = useReactFlow();
-  const [ready, setReady] = useState(false);
+  // the store is initialised for this funnel (set synchronously by initEditor in the effect below)
+  const ready = useEditor((s) => s.funnelId === funnel.id);
   const [showSide, setShowSide] = useState(false);
   const [showInsp, setShowInsp] = useState(false);
   const [presenting, setPresenting] = useState(false);
@@ -105,7 +106,6 @@ function EditorInner(props: EditorProps) {
   const canUndo = useEditor((s) => s.past.length > 0 || (s.committed !== null && s.committed.nodes !== s.nodes));
   const canRedo = useEditor((s) => s.future.length > 0);
   const toast = useEditor((s) => s.toast);
-  const selCount = useEditor((s) => s.selNodes.length + (s.selEdge ? 1 : 0));
   const hasNodes = useEditor((s) => s.nodes.length > 0);
 
   /* ---------- init ---------- */
@@ -132,9 +132,6 @@ function EditorInner(props: EditorProps) {
       markDirty();
       showToast("Restored unsaved changes from this device. Syncing…");
     }
-    setReady(true);
-    const v = graph.view;
-    if (graph.nodes.length && v.x === 60 && v.y === 40 && v.k === 1) requestAnimationFrame(() => rf.fitView({ padding: 0.15, maxZoom: 1.2 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funnel.id]);
 
@@ -184,7 +181,7 @@ function EditorInner(props: EditorProps) {
         requestAnimationFrame(step);
       });
       useEditor.setState({ nodes: s.nodes.map((n) => ({ ...n, x: from[n.id].x, y: from[n.id].y })) });
-      moveNodes(Object.fromEntries(next.map((n) => [n.id, { x: n.x, y: n.y, ...(n.type === "frame" ? { w: n.w, h: n.h } : {}) }])));
+      moveNodes(Object.fromEntries(next.map((n) => [n.id, { x: n.x, y: n.y, ...(n.type === "frame" ? { w: n.w, h: n.h } : {}) }])), { discrete: true });
       requestAnimationFrame(() => rf.fitView({ padding: 0.15, duration: 300, maxZoom: 1.2 }));
       showToast(`Layout tidied${kind === "elk" ? " (ELK layered)" : ""}. Ctrl Z to undo.`);
     },
@@ -333,9 +330,13 @@ function EditorInner(props: EditorProps) {
   }, [presenting, runTidy, owner]);
 
   // open the inspector sheet on small screens when something gets selected
-  useEffect(() => {
-    if (selCount) setShowInsp(true);
-  }, [selCount]);
+  useEffect(
+    () =>
+      useEditor.subscribe((s, p) => {
+        if ((s.selNodes !== p.selNodes || s.selEdge !== p.selEdge) && (s.selNodes.length || s.selEdge)) setShowInsp(true);
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!toast) return;

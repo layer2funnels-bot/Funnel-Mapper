@@ -1,10 +1,10 @@
 "use client";
 import "@xyflow/react/dist/base.css";
-import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type OnSelectionChangeParams, type EdgeChange } from "@xyflow/react";
-import { useCallback, useMemo, useRef } from "react";
+import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type OnSelectionChangeParams, type FinalConnectionState } from "@xyflow/react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATHEX, typeOf } from "@/lib/catalog";
-import { addNode, canConnect, clearSelection, connect, frameMembers, moveNodes, selectEdge, selectNodes, setHeights, setView, useEditor } from "@/lib/editor/store";
+import { addNode, canConnect, clearSelection, connect, frameMembers, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
@@ -22,14 +22,19 @@ export function Canvas() {
   const readOnly = useEditor((s) => s.readOnly);
   const view = useEditor((s) => s.view);
   const rf = useReactFlow();
-  const dims = useRef<Record<string, { width: number; height: number }>>({});
+  // a funnel that has never been panned/zoomed (default view) is fitted to the screen on first load
+  const [fitOnInit] = useState(() => {
+    const s = useEditor.getState();
+    return s.nodes.length > 0 && s.view.x === 60 && s.view.y === 40 && s.view.k === 1;
+  });
+  const dims = useEditor((s) => s.dims);
   const frameDrag = useRef<{ frame: string; start: { x: number; y: number }; members: Record<string, { x: number; y: number }> } | null>(null);
 
   const rfNodes: Node[] = useMemo(() => {
     const sel = new Set(selNodes);
     return nodes.map((n) => {
       const frame = n.type === "frame";
-      const m = dims.current[n.id];
+      const m = dims[n.id];
       return {
         id: n.id,
         type: rfType(n.type),
@@ -44,7 +49,7 @@ export function Canvas() {
         ariaLabel: `${typeOf(n.type)?.label}: ${n.name}`,
       } satisfies Node;
     });
-  }, [nodes, selNodes, readOnly]);
+  }, [nodes, selNodes, readOnly, dims]);
 
   const rfEdges: Edge[] = useMemo(() => {
     const B = Object.fromEntries(nodes.map((n) => [n.id, n]));
@@ -64,7 +69,7 @@ export function Canvas() {
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     const pos: Record<string, { x: number; y: number }> = {};
-    const heights: Record<string, number> = {};
+    const sizes: Record<string, { width: number; height: number }> = {};
     for (const c of changes) {
       if (c.type === "position" && c.position) pos[c.id] = { x: Math.round(c.position.x), y: Math.round(c.position.y) };
       if (c.type === "dimensions" && c.dimensions) {
@@ -73,11 +78,10 @@ export function Canvas() {
           if (c.resizing) moveNodes({ [c.id]: { x: node.x, y: node.y, w: Math.round(c.dimensions.width), h: Math.round(c.dimensions.height) } });
           continue;
         }
-        dims.current[c.id] = c.dimensions;
-        heights[c.id] = Math.round(c.dimensions.height);
+        sizes[c.id] = { width: Math.round(c.dimensions.width), height: Math.round(c.dimensions.height) };
       }
     }
-    if (Object.keys(heights).length) setHeights(heights);
+    if (Object.keys(sizes).length) setDims(sizes);
     if (!Object.keys(pos).length) return;
     // dragging a frame carries the blocks inside it
     const fd = frameDrag.current;
@@ -108,9 +112,8 @@ export function Canvas() {
     frameDrag.current = { frame: n.id, start: { x: n.x, y: n.y }, members };
   }, []);
 
-  const onEdgesChange = useCallback((_: EdgeChange[]) => {
-    // edge removal/selection is handled by the store (keyboard + onSelectionChange)
-  }, []);
+  // edge removal/selection is handled by the store (keyboard + onSelectionChange)
+  const onEdgesChange = useCallback(() => {}, []);
 
   const onSelectionChange = useCallback(({ nodes: ns, edges: es }: OnSelectionChangeParams) => {
     const s = useEditor.getState();
@@ -124,6 +127,15 @@ export function Canvas() {
 
   const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, c.sourceHandle === "alt" ? "alt" : "main"), []);
   const onConnect = useCallback((c: Connection) => connect(c.source, c.sourceHandle === "alt" ? "alt" : "main", c.target), []);
+  // Like the prototype: dropping a connection anywhere on a block (not just its input dot) connects to it.
+  const onConnectEnd = useCallback((ev: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    if (state.isValid || !state.fromNode || state.fromHandle?.type !== "source") return;
+    const pt = "changedTouches" in ev ? ev.changedTouches[0] : ev;
+    const target = document.elementFromPoint(pt.clientX, pt.clientY)?.closest(".react-flow__node")?.getAttribute("data-id");
+    if (!target) return;
+    const port = state.fromHandle.id === "alt" ? "alt" : "main";
+    if (canConnect(state.fromNode.id, target, port)) connect(state.fromNode.id, port, target);
+  }, []);
 
   const onDrop = useCallback(
     (ev: React.DragEvent) => {
@@ -139,6 +151,7 @@ export function Canvas() {
 
   const miniColor = useCallback((n: Node) => {
     const node = useEditor.getState().nodes.find((x) => x.id === n.id);
+    if (node?.type === "frame") return `${String(node.p.color ?? "#6D3FD9")}26`;
     const T = node && typeOf(node.type);
     return T ? CATHEX[T.color ?? T.cat] : "#888";
   }, []);
@@ -155,6 +168,7 @@ export function Canvas() {
       onNodeDragStop={() => (frameDrag.current = null)}
       onSelectionChange={onSelectionChange}
       onConnect={onConnect}
+      onConnectEnd={onConnectEnd}
       isValidConnection={isValidConnection}
       onPaneClick={() => clearSelection()}
       onDrop={onDrop}
@@ -165,6 +179,8 @@ export function Canvas() {
         }
       }}
       defaultViewport={{ x: view.x, y: view.y, zoom: view.k }}
+      fitView={fitOnInit}
+      fitViewOptions={{ padding: 0.15, maxZoom: 1.2 }}
       onMoveEnd={(_, vp) => setView({ x: Math.round(vp.x), y: Math.round(vp.y), k: Math.round(vp.zoom * 1000) / 1000 })}
       minZoom={0.2}
       maxZoom={2.5}
@@ -180,7 +196,7 @@ export function Canvas() {
       elementsSelectable
       zoomOnDoubleClick={false}
       connectionRadius={30}
-      proOptions={{ hideAttribution: true }}
+      attributionPosition="top-right"
       aria-label="Funnel canvas"
     >
       <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="var(--dot)" />

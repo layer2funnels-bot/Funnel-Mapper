@@ -1,0 +1,246 @@
+import { expect, test } from "@playwright/test";
+import fixtures from "../fixtures/prototype-results.json";
+import { money } from "../../lib/format";
+import { compute } from "../../lib/funnel-math";
+import { blankSettings } from "../../lib/graph";
+import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved } from "./helpers";
+
+const FX = fixtures as Record<string, { tidy: { x: number; y: number }[] }>;
+const mod = process.platform === "darwin" ? "Meta" : "Control";
+
+test.describe("funnel editor", () => {
+  test("renders a template with the prototype's numbers", async ({ page }) => {
+    const { id } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    await expect(nodes(page)).toHaveCount(11);
+    await expect(edgeLabels(page)).toHaveCount(7);
+    // KPI bar: tripwire revenue £7,485 / profit £6,825 (same as the prototype)
+    await expect(page.locator(".fm-kpis")).toContainText("£7,485");
+    await expect(page.locator(".fm-kpis")).toContainText("£6,825");
+    await expect(node(page, "Fitness quiz")).toContainText("1,035");
+  });
+
+  test("drag a block from the palette, and tap to add", async ({ page }) => {
+    const { id } = await createFunnel();
+    await openEditor(page, id);
+    await expect(page.locator(".fm-empty")).toBeVisible();
+    const stage = await centre(page, ".fm-stage");
+    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
+    await expect(nodes(page)).toHaveCount(1);
+    await expect(page.locator(".fm-insp h3")).toHaveText("Landing page");
+    await expect(page.locator(".fm-empty")).toBeHidden();
+    // dropped where the mouse was (± snapping), not at the centre
+    const box = (await nodes(page).first().boundingBox())!;
+    expect(box.x).toBeLessThan(stage.x);
+    await page.getByRole("button", { name: "Add Facebook ads" }).click();
+    await expect(nodes(page)).toHaveCount(2);
+    await expect(page.locator(".fm-insp h3")).toHaveText("Facebook ads");
+  });
+
+  test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
+    const { id } = await createFunnel();
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Add Facebook ads" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 150, y: 200 } });
+    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 500, y: 200 } });
+    await page.getByRole("button", { name: "Add Thank-you page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 850, y: 120 } });
+    await page.getByRole("button", { name: "Add Email sequence" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 850, y: 420 } });
+    await expect(nodes(page)).toHaveCount(4);
+    const fb = node(page, "Facebook ads"),
+      lp = node(page, "Landing page"),
+      ty = node(page, "Thank-you page"),
+      seq = node(page, "Email sequence");
+    await drag(page, await centre(page, fb.locator(".fm-port.out")), await centre(page, lp));
+    await expect(edgeLabels(page)).toHaveCount(1);
+    await expect(edgeLabels(page).first()).toContainText("1,000");
+    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
+    await drag(page, await centre(page, lp.locator(".fm-port.alt")), await centre(page, seq));
+    await expect(edgeLabels(page)).toHaveCount(3);
+    // landing converts 30%: 300 go right, 700 go down (labelled No)
+    await expect(page.locator(".fm-elabel", { hasText: "300" })).toBeVisible();
+    await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("700");
+    // can't connect into a traffic source or to the same target twice
+    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, fb));
+    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
+    await expect(edgeLabels(page)).toHaveCount(3);
+  });
+
+  test("edit an edge: share and path", async ({ page }) => {
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    const label = page.locator(".fm-elabel", { hasText: "2,400" }).first();
+    await label.click();
+    await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
+    await page.getByLabel("Share of them (%)").fill("50");
+    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("1,200");
+    await page.getByRole("button", { name: "People who didn’t convert" }).click();
+    // facebook ads (traffic) has no non-converters, so the path now carries 0
+    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("0");
+    await page.getByRole("button", { name: "Delete connection" }).click();
+    await expect(edgeLabels(page)).toHaveCount(8);
+  });
+
+  test("box select with shift-drag, then group actions", async ({ page }) => {
+    const { id } = await createFunnel({ template: "call" });
+    await openEditor(page, id);
+    const a = (await node(page, "LinkedIn ads").boundingBox())!;
+    const b = (await node(page, "Application").boundingBox())!;
+    await drag(page, { x: a.x - 20, y: a.y - 30 }, { x: b.x + b.width + 10, y: b.y + b.height + 20 }, { shift: true });
+    await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks selected");
+    await page.getByRole("button", { name: "Put in a stage frame" }).click();
+    await expect(page.locator(".fm-frame")).toHaveCount(1);
+  });
+
+  test("copy / paste, duplicate, delete, select all and undo / redo", async ({ page }) => {
+    const { id } = await createFunnel({ template: "sub" });
+    await openEditor(page, id);
+    await expect(nodes(page)).toHaveCount(6);
+    await node(page, "TikTok ads").click();
+    await page.keyboard.press(`${mod}+c`);
+    await expect(page.locator(".fm-toast")).toHaveText("Copied");
+    await page.keyboard.press(`${mod}+v`);
+    await expect(nodes(page)).toHaveCount(7);
+    await page.keyboard.press(`${mod}+d`);
+    await expect(nodes(page)).toHaveCount(8);
+    await page.keyboard.press("Delete");
+    await expect(nodes(page)).toHaveCount(7);
+    // undo / redo with the keyboard and the toolbar
+    await page.keyboard.press(`${mod}+z`);
+    await expect(nodes(page)).toHaveCount(8);
+    await page.keyboard.press(`${mod}+Shift+z`);
+    await expect(nodes(page)).toHaveCount(7);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(nodes(page)).toHaveCount(8);
+    await page.getByRole("button", { name: "Redo" }).click();
+    await expect(nodes(page)).toHaveCount(7);
+    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 20 } });
+    await page.keyboard.press(`${mod}+a`);
+    await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks selected");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("tab", { name: "Math" })).toBeVisible();
+  });
+
+  test("dragging a frame carries the blocks inside it", async ({ page }) => {
+    const { id, graph } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    const ig = graph.nodes.find((n) => n.name === "Instagram ads")!;
+    const before = await pos(page, ig.id);
+    const title = page.locator(".fm-frame .ftitle", { hasText: "Get attention" });
+    const t = await centre(page, title);
+    await drag(page, t, { x: t.x + 120, y: t.y + 60 });
+    const after = await pos(page, ig.id);
+    expect(after.x - before.x).toBeGreaterThan(100);
+    expect(after.y - before.y).toBeGreaterThan(40);
+    // blocks outside the frame stay put
+    const quiz = graph.nodes.find((n) => n.name === "Fitness quiz")!;
+    expect(await pos(page, quiz.id)).toEqual({ x: quiz.x, y: quiz.y });
+  });
+
+  test("Tidy up gives the prototype's layout, and undoes in one step", async ({ page }) => {
+    const { id, graph } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    const first = graph.nodes[0];
+    await page.getByRole("button", { name: "Tidy up" }).click();
+    await expect(page.locator(".fm-toast")).toContainText("Layout tidied");
+    for (const [i, n] of graph.nodes.entries()) expect(await pos(page, n.id), n.name).toEqual({ x: FX.quiz.tidy[i].x, y: FX.quiz.tidy[i].y });
+    await page.keyboard.press(`${mod}+z`);
+    await expect.poll(() => pos(page, first.id)).toEqual({ x: first.x, y: first.y });
+    // keyboard shortcut + ELK alternative
+    await page.keyboard.press(`${mod}+Shift+l`);
+    await expect.poll(() => pos(page, first.id)).toEqual({ x: FX.quiz.tidy[0].x, y: FX.quiz.tidy[0].y });
+    await page.getByRole("button", { name: "View" }).click();
+    await page.getByRole("menuitem", { name: "Tidy up (ELK layered)" }).click();
+    await expect(page.locator(".fm-toast")).toContainText("ELK");
+  });
+
+  test("keyboard: nudge, help, shortcuts don't fire while typing", async ({ page }) => {
+    const { id, graph } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    const op = graph.nodes.find((n) => n.name === "Webinar registration")!;
+    await node(page, "Webinar registration").click();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Shift+ArrowDown");
+    await expect.poll(() => pos(page, op.id)).toEqual({ x: op.x + 11, y: op.y + 33 });
+    // typing in the inspector must not delete the block
+    const name = page.getByLabel("Name", { exact: true });
+    await name.fill("Registration page");
+    await name.press("Backspace");
+    await expect(node(page, "Registration pag")).toHaveCount(1);
+    await page.locator(".react-flow__pane").click({ position: { x: 10, y: 10 } });
+    await page.keyboard.press("?");
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    await page.keyboard.press("Escape");
+  });
+
+  test("inspector edits update maths live and autosave", async ({ page }) => {
+    const { id, graph } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    await node(page, "Program checkout").click();
+    await page.getByLabel("Price (£)").fill("1997");
+    const ck = graph.nodes.find((n) => n.name === "Program checkout")!;
+    const expected = money(compute({ nodes: graph.nodes.map((n) => (n.id === ck.id ? { ...n, p: { ...n.p, price: 1997 } } : n)), edges: graph.edges }, blankSettings()).rev, "GBP");
+    await expect(page.locator(".fm-kpis")).toContainText(expected);
+    await waitSaved(page);
+    await page.reload();
+    await expect(page.locator(".fm-kpis")).toContainText(expected);
+  });
+
+  test("dark mode", async ({ page }) => {
+    const { id } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "View" }).click();
+    await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
+    const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+    expect(["dark", "light"]).toContain(theme);
+    if (theme !== "dark") {
+      await page.getByRole("button", { name: "View" }).click();
+      await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
+    }
+    const bg = await page.locator(".fm-insp").evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg).toBe("rgb(28, 23, 41)");
+    const nodeBg = await page.locator(".fm-node").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(nodeBg).toBe("rgb(28, 23, 41)");
+    await page.screenshot({ path: "test-results/editor-dark.png" });
+    // persists across reloads
+    await page.reload();
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("dark");
+    await page.evaluate(() => localStorage.removeItem("fm-theme"));
+  });
+});
+
+test.describe("tablet and phone", () => {
+  test("tablet: palette and inspector become drawers", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 820, height: 1180 }, hasTouch: true });
+    const page = await ctx.newPage();
+    const { id } = await createFunnel({ template: "webinar" });
+    await openEditor(page, id);
+    await expect(page.locator(".fm-side")).not.toBeInViewport();
+    await page.getByRole("button", { name: "Show building blocks" }).click();
+    await expect(page.locator(".fm-side")).toBeInViewport();
+    await page.getByRole("button", { name: "Add Landing page" }).click();
+    await expect(page.locator(".fm-side")).not.toBeInViewport();
+    await expect(nodes(page)).toHaveCount(10);
+    // selecting opens the inspector sheet
+    await expect(page.locator(".fm-insp")).toBeInViewport({ ratio: 0.5 });
+    await page.getByRole("button", { name: "Close details" }).click();
+    await expect(page.locator(".fm-insp")).not.toBeInViewport();
+    await page.getByRole("button", { name: "Show numbers and details" }).click();
+    await expect(page.locator(".fm-insp")).toBeInViewport({ ratio: 0.5 });
+    await page.screenshot({ path: "test-results/editor-tablet.png" });
+    await ctx.close();
+  });
+
+  test("phone: opens view-only, can switch to editing", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    const { id } = await createFunnel({ template: "tripwire" });
+    await page.goto(`/funnels/${id}`);
+    await expect(nodes(page)).toHaveCount(11);
+    await expect(page.getByRole("button", { name: "Show building blocks" })).toHaveCount(0);
+    await expect(page.locator(".fm-kpis")).toBeVisible();
+    await page.screenshot({ path: "test-results/editor-phone.png" });
+    await page.getByRole("button", { name: "View" }).click();
+    await page.getByText("View only (lock editing)").click();
+    await expect(page.getByRole("button", { name: "Show building blocks" })).toBeVisible();
+    await ctx.close();
+  });
+});

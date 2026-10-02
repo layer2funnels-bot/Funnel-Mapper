@@ -3,12 +3,13 @@ import "@xyflow/react/dist/base.css";
 import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { CATHEX, typeOf } from "@/lib/catalog";
-import { addNode, canConnect, clearSelection, connect, frameMembers, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
+import { CATDARK, SIZED_TYPES, WIDTH_TYPES, typeOf } from "@/lib/catalog";
+import { addNode, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
-const rfType = (t: string) => (t === "note" || t === "label" || t === "frame" ? t : "block");
+const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist"]);
+const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 export const DND_MIME = "application/x-funnel-block";
@@ -33,7 +34,7 @@ export function Canvas() {
   const rfNodes: Node[] = useMemo(() => {
     const sel = new Set(selNodes);
     return nodes.map((n) => {
-      const frame = n.type === "frame";
+      const sized = SIZED_TYPES.has(n.type);
       const m = dims[n.id];
       return {
         id: n.id,
@@ -41,12 +42,14 @@ export function Canvas() {
         position: { x: n.x, y: n.y },
         data: { id: n.id },
         selected: sel.has(n.id),
-        zIndex: frame ? -1 : 0,
-        ...(frame ? { width: n.w ?? 520, height: n.h ?? 300, style: { width: n.w ?? 520, height: n.h ?? 300 } } : {}),
-        ...(m && !frame ? { measured: m } : {}),
-        draggable: !readOnly,
+        zIndex: layerOf(n),
+        ...(sized ? { width: n.w ?? 200, height: n.h ?? 120, style: { width: n.w ?? 200, height: n.h ?? 120 } } : {}),
+        ...(!sized && WIDTH_TYPES.has(n.type) && n.w ? { style: { width: n.w } } : {}),
+        ...(m && !sized ? { measured: m } : {}),
+        draggable: !readOnly && !n.locked,
+        deletable: !n.locked,
         connectable: !readOnly,
-        ariaLabel: `${typeOf(n.type)?.label}: ${n.name}`,
+        ariaLabel: `${typeOf(n.type)?.label}: ${n.name}${n.locked ? " (locked)" : ""}`,
       } satisfies Node;
     });
   }, [nodes, selNodes, readOnly, dims]);
@@ -63,7 +66,7 @@ export function Canvas() {
         targetHandle: "in",
         type: "flow",
         selected: selEdge === e.id,
-        data: { port: e.port, fromType: B[e.from]?.type, share: e.share },
+        data: { port: e.port, fromType: B[e.from]?.type, share: e.share, s: e.s },
       }));
   }, [edges, nodes, selEdge]);
 
@@ -87,10 +90,12 @@ export function Canvas() {
       if (c.type === "position" && c.position) pos[c.id] = { x: Math.round(c.position.x), y: Math.round(c.position.y) };
       if (c.type === "dimensions" && c.dimensions) {
         const node = useEditor.getState().nodes.find((n) => n.id === c.id);
-        if (node?.type === "frame") {
+        if (node && SIZED_TYPES.has(node.type)) {
           if (c.resizing) moveNodes({ [c.id]: { x: node.x, y: node.y, w: Math.round(c.dimensions.width), h: Math.round(c.dimensions.height) } });
           continue;
         }
+        // width-only elements: follow the handle live; their height is measured from the content
+        if (node && WIDTH_TYPES.has(node.type) && c.resizing) moveNodes({ [c.id]: { x: node.x, y: node.y, w: Math.round(c.dimensions.width) } });
         sizes[c.id] = { width: Math.round(c.dimensions.width), height: Math.round(c.dimensions.height) };
       }
     }
@@ -116,7 +121,7 @@ export function Canvas() {
     const sel = new Set(s.selNodes);
     const members = Object.fromEntries(
       frameMembers(n.id)
-        .filter((id) => !sel.has(id))
+        .filter((id) => !sel.has(id) && !s.nodes.find((x) => x.id === id)?.locked)
         .map((id) => {
           const m = s.nodes.find((x) => x.id === id)!;
           return [id, { x: m.x, y: m.y }];
@@ -157,9 +162,9 @@ export function Canvas() {
 
   const miniColor = useCallback((n: Node) => {
     const node = useEditor.getState().nodes.find((x) => x.id === n.id);
-    if (node?.type === "frame") return `${String(node.p.color ?? "#6D3FD9")}26`;
+    if (node?.type === "frame") return `${String(node.p.color ?? "#10B981")}26`;
     const T = node && typeOf(node.type);
-    return T ? CATHEX[T.color ?? T.cat] : "#888";
+    return T ? CATDARK[T.color ?? T.cat] : "#888";
   }, []);
 
   return (

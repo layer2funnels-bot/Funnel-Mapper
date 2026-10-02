@@ -2,12 +2,14 @@
 // Editor state (Zustand). Holds the funnel graph + settings, selection, undo/redo history and view options.
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
-import { defaultsFor, FRAME_COLORS, isAnnot, nodeW, NH, typeOf, canReceive, type NodeParams } from "../catalog";
+import { DEFAULT_SIZE, defaultsFor, FRAME_COLORS, isAnnot, nodeW, NH, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
-import type { FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
+import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
+import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
 export type SidePanel = "inspector" | "versions" | "comments";
+export type InspTab = "details" | "style" | "plan";
 export type SaveStatus = "saved" | "dirty" | "saving" | "offline" | "error" | "readonly";
 
 export interface ViewOpts {
@@ -40,6 +42,8 @@ export interface EditorState {
   selEdge: string | null;
   tab: ReportTab;
   panel: SidePanel;
+  /** Element inspector tab, remembered across selections. */
+  inspTab: InspTab;
   opts: ViewOpts;
   readOnly: boolean;
   saveStatus: SaveStatus;
@@ -88,6 +92,7 @@ export const useEditor = create<EditorState>(() => ({
   selEdge: null,
   tab: "math",
   panel: "inspector",
+  inspTab: "details",
   opts: { nums: true, thick: true, snap: true, mini: true },
   readOnly: false,
   saveStatus: "saved",
@@ -109,7 +114,7 @@ const set = useEditor.setState;
 const snapshot = (s: EditorState = get()): Snapshot => ({ nodes: s.nodes, edges: s.edges, settings: s.settings, name: s.name });
 const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => ({ R: compute({ nodes, edges }, settings), warnIds: warnNodeIds({ nodes, edges }) });
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
-export const heightOf = (n: FunnelNode) => get().dims[n.id]?.height ?? (n.type === "label" ? 40 : NH);
+export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : NH));
 export const widthOf = (n: FunnelNode) => n.w ?? get().dims[n.id]?.width ?? (n.type === "label" ? 300 : nodeW(n.type));
 
 let histTimer: ReturnType<typeof setTimeout> | undefined;
@@ -222,17 +227,19 @@ export function setTab(tab: ReportTab) {
 export function setPanel(panel: SidePanel) {
   set({ panel });
 }
+export function setInspTab(inspTab: InspTab) {
+  set({ inspTab });
+}
 
 /* ---------------- nodes ---------------- */
 export function addNode(type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; desc?: string } = {}) {
   const T = typeOf(type);
   if (!T) return null;
   const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y), p: { ...defaultsFor(type), ...(extra.p ?? {}) }, ...(extra.desc ? { desc: extra.desc } : {}) };
-  if (type === "frame") {
-    n.name = "Stage";
-    n.w = 520;
-    n.h = 300;
-  }
+  if (type === "frame") n.name = "Stage";
+  const size = DEFAULT_SIZE[type];
+  if (size) Object.assign(n, size);
+  if (type === "checklist" && !extra.p?.items) n.p.items = [{ id: nid(), text: "First task", done: false }];
   // frames render below everything else
   apply({ nodes: type === "frame" ? [n, ...get().nodes] : [...get().nodes, n] }, { discrete: true });
   selectNodes([n.id]);
@@ -266,7 +273,10 @@ export function setDims(d: Record<string, { width: number; height: number }>) {
 export function deleteSelection() {
   const s = get();
   if (s.selNodes.length) {
-    const ids = new Set(s.selNodes);
+    // locked elements stay put until they're unlocked
+    const ids = new Set(s.selNodes.filter((id) => !s.nodes.find((n) => n.id === id)?.locked));
+    if (!ids.size) return showToast("Locked: unlock it first to delete");
+    if (ids.size < s.selNodes.length) showToast("Locked items were kept");
     apply({ nodes: s.nodes.filter((n) => !ids.has(n.id)), edges: s.edges.filter((e) => !ids.has(e.from) && !ids.has(e.to)) }, { discrete: true });
   } else if (s.selEdge) {
     apply({ edges: s.edges.filter((e) => e.id !== s.selEdge) }, { discrete: true });
@@ -285,6 +295,7 @@ function cloneSet(ids: string[], dx: number, dy: number, from: { nodes: FunnelNo
     c.id = nid();
     c.x += dx;
     c.y += dy;
+    delete c.locked; // copies start unlocked
     map[i] = c.id;
     nodes.push(c);
   });
@@ -324,12 +335,91 @@ export function paste() {
 export function nudge(dx: number, dy: number) {
   const ids = new Set(get().selNodes);
   if (!ids.size) return;
-  moveNodes(Object.fromEntries(get().nodes.filter((n) => ids.has(n.id)).map((n) => [n.id, { x: n.x + dx, y: n.y + dy }])));
+  moveNodes(Object.fromEntries(get().nodes.filter((n) => ids.has(n.id) && !n.locked).map((n) => [n.id, { x: n.x + dx, y: n.y + dy }])));
 }
+
+/* ---------------- lock / layer order / style ---------------- */
+/** Lock or unlock the selection (locked: no moving, resizing or deleting). Toggles when `on` is omitted. */
+export function setLocked(on?: boolean, ids: string[] = get().selNodes) {
+  const sel = new Set(ids);
+  const ns = get().nodes.filter((n) => sel.has(n.id));
+  if (!ns.length) return;
+  const v = on ?? !ns.every((n) => n.locked);
+  const lock = (n: FunnelNode): FunnelNode => {
+    if (v) return { ...n, locked: true };
+    const c = { ...n };
+    delete c.locked;
+    return c;
+  };
+  apply({ nodes: get().nodes.map((n) => (sel.has(n.id) ? lock(n) : n)) }, { math: false, discrete: true });
+}
+
+/** Effective layer: stored z, else frames below everything. */
+export const layerOf = (n: FunnelNode) => n.z ?? (n.type === "frame" ? -1 : 0);
+
+export function reorder(kind: "front" | "forward" | "backward" | "back", ids: string[] = get().selNodes) {
+  const sel = new Set(ids);
+  const all = get().nodes;
+  if (!all.some((n) => sel.has(n.id))) return;
+  const others = all.filter((n) => !sel.has(n.id)).map(layerOf);
+  const hi = Math.max(0, ...others),
+    lo = Math.min(0, ...others);
+  const z = (n: FunnelNode) => (kind === "front" ? hi + 1 : kind === "back" ? lo - 1 : layerOf(n) + (kind === "forward" ? 1 : -1));
+  apply({ nodes: all.map((n) => (sel.has(n.id) ? { ...n, z: z(n) } : n)) }, { math: false, discrete: true });
+}
+
+/** Merge into an element's style; empty values reset that property. */
+export function setNodeStyle(id: string, patch: Partial<NodeStyle>, ids: string[] = [id]) {
+  const sel = new Set(ids);
+  apply({ nodes: get().nodes.map((n) => (sel.has(n.id) ? withStyle(n, cleanStyle({ ...n.s, ...patch })) : n)) }, { math: false });
+}
+const withStyle = (n: FunnelNode, st: NodeStyle | undefined): FunnelNode => {
+  const c = { ...n };
+  if (st) c.s = st;
+  else delete c.s;
+  return c;
+};
+export function setEdgeStyle(id: string, patch: Partial<EdgeStyle>) {
+  apply(
+    {
+      edges: get().edges.map((e) => {
+        if (e.id !== id) return e;
+        const st = cleanStyle({ ...e.s, ...patch });
+        const c = { ...e };
+        if (st) c.s = st;
+        else delete c.s;
+        return c;
+      }),
+    },
+    { math: false },
+  );
+}
+
+/* ---------------- checklists ---------------- */
+/** Element checklist (`node.checklist`, internal) or a canvas checklist element's items (`p.items`). */
+export function checklistOf(n: FunnelNode): ChecklistItem[] {
+  return n.type === "checklist" ? ((n.p.items as ChecklistItem[] | undefined) ?? []) : (n.checklist ?? []);
+}
+export function setChecklist(id: string, items: ChecklistItem[], opts: { discrete?: boolean } = {}) {
+  apply(
+    {
+      nodes: get().nodes.map((n) => {
+        if (n.id !== id) return n;
+        if (n.type === "checklist") return { ...n, p: { ...n.p, items } };
+        const c = { ...n };
+        if (items.length) c.checklist = items;
+        else delete c.checklist;
+        return c;
+      }),
+    },
+    { math: false, discrete: opts.discrete },
+  );
+}
+export const newChecklistItem = (text = ""): ChecklistItem => ({ id: nid(), text, done: false });
 
 export function align(kind: "left" | "top" | "hdist" | "vdist" | "center" | "middle") {
   const ids = new Set(get().selNodes);
-  const ns = get().nodes.filter((n) => ids.has(n.id));
+  const ns = get().nodes.filter((n) => ids.has(n.id) && !n.locked);
   if (ns.length < 2) return;
   const pos: Record<string, { x: number; y: number }> = {};
   if (kind === "left") {

@@ -37,8 +37,7 @@ import {
   setSettings,
   showToast,
   undo,
-  useEditor,
-} from "@/lib/editor/store";
+  useEditor, reorder, setLocked } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { CommentsPanel } from "./comments";
 import { download, downloadPng, pdfReport, svgToPng } from "./exporters";
@@ -165,10 +164,17 @@ function EditorInner(props: EditorProps) {
   /* ---------- layout ---------- */
   const runTidy = useCallback(
     async (kind: "tidy" | "elk" = "tidy") => {
+      if (useEditor.getState().readOnly) return;
+      // lay out with real sizes: wait for web fonts (text wraps change note/heading heights) and one re-measure
+      await document.fonts?.ready;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const s = useEditor.getState();
       if (s.readOnly) return;
       if (!s.nodes.some((n) => !isAnnot(n.type))) return showToast("Add some blocks first");
-      const next = kind === "elk" ? await elkLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap }) : tidyLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap });
+      const laid = kind === "elk" ? await elkLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap }) : tidyLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap });
+      // locked elements keep their place
+      const keep = Object.fromEntries(s.nodes.filter((n) => n.locked).map((n) => [n.id, n]));
+      const next = laid.map((n) => (keep[n.id] ? { ...n, x: keep[n.id].x, y: keep[n.id].y, w: keep[n.id].w, h: keep[n.id].h } : n));
       const from = Object.fromEntries(s.nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const T = reduce ? 0 : 420,
@@ -297,6 +303,17 @@ function EditorInner(props: EditorProps) {
       if (mod && k === "d") {
         ev.preventDefault();
         duplicateSelection();
+        return;
+      }
+      // layer order: Ctrl ] / Ctrl [ (with Shift: to front / to back); lock: Ctrl Shift K
+      if (mod && (ev.code === "BracketRight" || ev.code === "BracketLeft") && useEditor.getState().selNodes.length) {
+        ev.preventDefault();
+        reorder(ev.code === "BracketRight" ? (ev.shiftKey ? "front" : "forward") : ev.shiftKey ? "back" : "backward");
+        return;
+      }
+      if (mod && ev.shiftKey && k === "k" && useEditor.getState().selNodes.length) {
+        ev.preventDefault();
+        setLocked();
         return;
       }
       if (mod && k === "s") {

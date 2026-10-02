@@ -220,10 +220,11 @@ test.describe("funnel editor", () => {
       await page.getByRole("button", { name: "View" }).click();
       await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     }
+    // locked Emerald dark tokens: panels #1E293B, workspace chrome / blocks #111827
     const bg = await page.locator(".fm-insp").evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(bg).toBe("rgb(28, 23, 41)");
+    expect(bg).toBe("rgb(30, 41, 59)");
     const nodeBg = await page.locator(".fm-node").first().evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(nodeBg).toBe("rgb(28, 23, 41)");
+    expect(nodeBg).toBe("rgb(17, 24, 39)");
     await page.screenshot({ path: "test-results/editor-dark.png" });
     // persists across reloads
     await page.reload();

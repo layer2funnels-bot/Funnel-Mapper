@@ -1,6 +1,7 @@
 // Strongly typed funnel graph + settings, with Zod validation for anything loaded from the DB or a file.
 import { z } from "zod";
 import { defaultsFor, isBlockType, type NodeParams } from "./catalog";
+import type { EdgeStyle, NodeStyle } from "./style";
 
 /* ---------------- currencies ---------------- */
 export const CURRENCIES = {
@@ -27,6 +28,15 @@ export function currencyFromSymbol(sym: unknown): CurrencyCode {
 /* ---------------- graph ---------------- */
 const finite = z.number().finite();
 
+export const checklistItemSchema = z.object({
+  id: z.string(),
+  text: z.string().default(""),
+  done: z.boolean().default(false),
+  /** Indentation level 0–3. */
+  indent: z.number().int().min(0).max(3).optional(),
+});
+export type ChecklistItem = z.infer<typeof checklistItemSchema>;
+
 export const nodeSchema = z.object({
   id: z.string().min(1),
   type: z.string(),
@@ -40,6 +50,14 @@ export const nodeSchema = z.object({
   /** Screenshot of the page (public Storage URL). */
   shot: z.string().optional(),
   p: z.record(z.string(), z.unknown()).default({}),
+  /** Visual style (lib/style.ts NodeStyle). */
+  s: z.record(z.string(), z.unknown()).optional(),
+  /** Locked: can't be moved, resized or deleted until unlocked. */
+  locked: z.boolean().optional(),
+  /** Layer order (higher draws on top). */
+  z: finite.optional(),
+  /** Element-level checklist (internal: never shown on share links). */
+  checklist: z.array(checklistItemSchema).optional(),
 });
 
 export const edgeSchema = z.object({
@@ -48,6 +66,8 @@ export const edgeSchema = z.object({
   to: z.string(),
   share: finite.default(100),
   port: z.enum(["main", "alt"]).default("main"),
+  /** Visual style (lib/style.ts EdgeStyle). */
+  s: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const viewSchema = z.object({ x: finite, y: finite, k: finite.positive() });
@@ -71,6 +91,10 @@ export interface FunnelNode {
   desc?: string;
   shot?: string;
   p: NodeParams;
+  s?: NodeStyle;
+  locked?: boolean;
+  z?: number;
+  checklist?: ChecklistItem[];
 }
 export interface FunnelEdge {
   id: string;
@@ -80,6 +104,7 @@ export interface FunnelEdge {
   share: number;
   /** main = converted / Yes / A (right port); alt = didn't convert / No / B (bottom port). */
   port: "main" | "alt";
+  s?: EdgeStyle;
 }
 export interface Viewport {
   x: number;

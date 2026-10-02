@@ -1,7 +1,7 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
-**Updated after Batch 1 (core correctness + P0 fixes), 2 Oct 2026:** modal centring, golden maths test, a reliable password-reset test,
+**Updated after Batch 2 (Emerald reskin + canvas completeness), 2 Oct 2026.** Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
@@ -30,13 +30,13 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Golden regression funnel | PASS | `tests/unit/golden.test.ts`: literal handoff values (89.1 / 6,032.11 / 5,582.11 / 13.40x), every step and branch, and agreement of the editor store, summary, scenario, forecast, CSV and JSON round-trip; plus `tests/unit/funnel-math.test.ts` prototype fixtures |
 | Canvas: infinite canvas, grid, zoom, minimap, fit, snap, undo/redo | PASS | `canvas.tsx`, store `undo/redo/snapV`; e2e `editor.spec.ts` |
 | Canvas: multi-select, copy/paste, duplicate, delete, align, nudge, frames | PASS | store `copySelection/paste/duplicateSelection/align/wrapInFrame`; e2e |
-| Canvas: lock/unlock per element, layer ordering, resize of blocks | FAIL | only a global "View only" lock; no z-order controls |
-| Canvas primitives: shapes, images/logos, checklists, callouts, video/link | FAIL | annotation types are only `note`, `label` (heading), `frame` |
+| Canvas: lock/unlock per element, layer ordering, resize | PASS | Batch 2: `locked` (no move, resize, nudge, align, delete or Tidy; badge on canvas), `z` order (front, forward, backward, back; Ctrl ] / Ctrl [), resize handles for shapes, images and frames, width handles for text, notes and checklists. Flow blocks keep the standard size (by design, for Tidy and exports) |
+| Canvas primitives: shapes, images/logos, checklists | PASS (video/link/callout: not built) | Batch 2: `shape` (rect, rounded, ellipse, diamond, with text), `image` (upload, downscaled and kept in the funnel so share links and exports show it, or a URL; alt text; fit), `checklist` element; notes, headings and frames kept |
 | Block library (searchable, categorised, drag + tap) | PARTIAL | 69 blocks (24 traffic, 19 pages, 9 offers, 10 actions, 4 logic, 3 annotation); no Communication or Sales/CRM groups, no recents/favourites/custom icons |
-| Element Style tab (fill, border, font, alignment, opacity…) | FAIL | inspector only has frame colour and heading "Size (px)" (`inspector.tsx:98`) |
-| Plan / Analytics tabs per element | PARTIAL | per-block internal notes, "what counts as done", numbers; no per-element checklist, forecast or goal |
+| Element Style tab (fill, border, font, alignment, opacity…) | PASS | Batch 2 `components/editor/style-panel.tsx`: icon library with search (blocks), font family, Font Size, weight (Regular/Medium/Semibold/Bold), line height, letter spacing, alignment, italic/underline/strikethrough, text colour, fill, border colour/width/style, radius, opacity, shadow, padding, size/position, Arrange (lock, order, duplicate, copy, delete). Multi-select gets Arrange too |
+| Plan / Analytics tabs per element | PARTIAL | Details / Style / **Plan** tabs (Plan = element checklist + internal notes); no per-element Analytics tab yet (numbers stay in Details) |
 | Connections: main/alt port, share %, people labels | PASS | `flow-edge.tsx`, e2e "connect ports", "edit an edge" |
-| Connection styles (straight/elbow, dashed, colour, arrows, skip/no-data, semantic types) | FAIL | one bezier style; only main/alt and a thickness option |
+| Connection styles | PASS | Batch 2: curved/straight/elbow, solid/dashed/dotted, colour, thickness, arrow none/end/both with size, label, "Skip step" and "No data" types. Presentation only: port, share % and flow maths are unchanged (unit-tested). The map export draws path, colour and dash |
 | Layers/views (Map/Numbers/Flow/Notes/Checklist; Clean vs Performance) | PARTIAL | View menu: "Show numbers on map", "Line thickness shows traffic", snap, minimap |
 | Tidy Up | PASS | `lib/layout.ts`: flow blocks are laid out exactly as the prototype does; notes and headings keep their exact offset from their nearest block, use measured sizes (`widthOf`/`heightOf`), and are nudged only to avoid overlapping blocks or each other; frames refit around their blocks. Tests: `tests/unit/layout.test.ts` and e2e "Tidy up keeps notes and headings…" |
 | What-if, goal seek, revenue target | PASS | `report.tsx` "What-if" tab, `goalSeek`, `targetPlan` |
@@ -46,7 +46,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Expenses / Costs | PASS | Costs tab, `expenseTotals`, payback |
 | Actuals (planned vs actual) | PASS | `actuals.tsx`, `planVsActual`, e2e |
 | Notes (canvas-level and element-level, rich text) | PARTIAL | plain-text element notes and a funnel description; no rich text or canvas notes |
-| Checklists | FAIL | none |
+| Checklists | PASS | Batch 2: canvas checklist element (toggle on the canvas) and element-level checklists (Plan tab; ✓ n/m badge on the block): add, edit, complete, reorder, indent. Element checklists are internal: stripped from share links by `share_safe_graph` (migration `20261006000000`) and preserved when a client saves |
 | Reports / Insights as a first-class area | PARTIAL | editor right-panel tabs (Math, Steps, Sources, What-if, Costs, Scenarios, Forecast, Actuals) and dashboard KPIs; no report navigation, traffic reinvestment, month-to-month report, published/completion status, or revenue-by-product and expense charts |
 | Clients: portfolio, search, status, tags, details, logo, autosaved notes, products | PASS | `app/(app)/clients/*`, `logo-upload.tsx`, `products.tsx`; logo upload has no e2e test |
 | Client pricing model (Fixed/One-time/Hourly/Commission/Retainer/Other) | PASS | migration `20261005000000_client_pricing.sql`; `lib/pricing.ts`; dynamic fields in `components/client-form.tsx`; shown on client page, list and dashboard (Agency MRR counts retainer, hourly, commission base fee and recurring "other"); existing clients read as retainers unchanged. Tests: `tests/unit/pricing.test.ts`, e2e "client pricing model…" |
@@ -63,9 +63,9 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Exports: CSV / JSON / import round-trip | PASS | `lib/export.ts`, `lib/graph.ts` import/export, `tests/unit/import.test.ts`, e2e exports |
 | Export: SVG / PNG | PARTIAL | the map is re-drawn as SVG (`lib/export.ts mapSvg`); web fonts aren't embedded (falls back to Arial in PNG), heading width is approximated; no light/dark/transparent choice. Visual fidelity not verified pixel by pixel (UNKNOWN) |
 | Export: PDF report | PARTIAL | `exporters.ts pdfReport`: branded header, KPI cards, map image, steps table; **missing** scenario comparison, forecast chart, sources, products, expenses and goals |
-| Locked Emerald UI direction | FAIL | `app/globals.css`: `--brand: #5b2fc9` (purple); category colours differ from the locked tokens; layout is card-heavy, not dark-first chrome |
+| Locked Emerald UI direction | PASS | Batch 2 `app/globals.css`: dark-first locked tokens (canvas #0B1220, library #0F172A, chrome #111827, panels #1E293B, borders #334155, text #E2E8F0/#94A3B8, Emerald #10B981/#059669/#047857/#34D399, semantic category colours); light theme kept as an option. Layout unchanged |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
-| Deployment | PARTIAL | Batch 1's pricing migration is applied to the demo database (additive only). Demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 6 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
+| Deployment | PARTIAL | Batch 1 and Batch 2 migrations are applied to the demo database. Demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 7 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
 
 ## C. Gap matrix
 
@@ -75,18 +75,18 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | 2. Complete enough | Tidy Up for flow blocks; scenario side-by-side; monthly forecast; responsive layouts |
 | 3. Broken | none known after Batch 1 |
 | 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in exports); PDF (missing sections); PNG/SVG fidelity; roles (admin/member); archive; reports area |
-| 5. Missing but required | Emerald design system; Style tab and text styling; checklists; connection styles; canvas shapes/images; per-element lock and layer order; Reports navigation with reinvestment, MRR, month-to-month and published status; PDF scenario/forecast/sources/expenses sections; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
+| 5. Missing but required | connection styles; canvas shapes/images; per-element lock and layer order; Reports navigation with reinvestment, MRR, month-to-month and published status; PDF scenario/forecast/sources/expenses sections; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
 | 6. Missing but clearly implied | PDF/PNG consistency test (CSV/JSON now covered by the golden test); e2e for logo upload; recents/favourites in the library |
 | 7. Out of scope (handoff §18) | AI features, multiplayer, tracking scripts, deep ad/CRM integrations, marketplace, benchmark DB, white-label portal |
 
 ## D. Test status
 
-| Suite | Before Batch 1 (audit) | After Batch 1 |
-|---|---|---|
-| Unit (Vitest) | 73/73 | **91/91** (+7 golden, +5 pricing, +6 Tidy Up annotations) |
-| Database/RLS (Vitest, local Supabase) | 22/22 | **22/22** |
-| E2E (Playwright, production build, fresh `db reset`) | 58/59 (password reset hit the email throttle) | **62/62** (+ modal placement, pricing model, Tidy Up annotations) |
-| Typecheck / ESLint / `next build` | clean | clean |
+| Suite | Audit | After Batch 1 | After Batch 2 |
+|---|---|---|---|
+| Unit (Vitest) | 73/73 | 91/91 | **102/102** (+11 canvas: lock, layers, styles, connection styles, checklists, persistence, Tidy carrying new elements) |
+| Database/RLS | 22/22 | 22/22 | **22/22** (now also asserts element checklists never reach share links and survive a client save) |
+| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | **67/67** (+ canvas text styling, block style/icon/lock/order, connection styles, checklists, shapes and images) |
+| Typecheck / ESLint / `next build` | clean | clean | clean |
 
 ## E. Maths status: PASS
 
@@ -133,9 +133,10 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - Share links go through RPCs that strip internal notes and screenshots, and hidden-number links strip all figures.
 - Gaps: no Owner/Editor/Viewer roles, no independent-user workspaces and therefore no cross-tenant tests, and no private sign-up URL.
 
-## H. UI/UX status: FAIL against the locked Emerald direction
+## H. UI/UX status: PASS for the locked Emerald tokens (Batch 2)
 
-- The current design is purple (`--brand #5b2fc9`), uses Bricolage/DM Sans, is light-first with a dark mode, and leans on cards.
+- The locked Emerald tokens are applied, dark-first (light theme kept as an option). Fonts: Bricolage (display) and DM Sans.
+- Not yet done: a deliberate pass to reduce the card-heavy dashboard and list layouts towards "editorial / spatial" (structure was kept as instructed).
 - The layout follows the required structure:
   - top toolbar
   - left library (drawer on small screens)
@@ -153,19 +154,32 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - **Tidy Up:** see table.
 - **Also fixed:** the share edit-link e2e now checks that internal notes survive a client edit in the stored funnel, instead of clicking a block that the client's new block could land on.
 
+## Batch 2 (done)
+
+- **Emerald reskin:** `app/globals.css` tokens (dark-first, light option), `components/theme-toggle.tsx`, `components/app-nav.tsx` active marker, `components/editor/editor.css` (inspector on panel colour, note paper, frame titles, icon contrast).
+- **Data model** (additive, optional; old funnels unchanged): node `s` style, `locked`, `z`, `checklist`; edge `s` style (`lib/graph.ts`, `lib/style.ts`). New annotation types in `lib/catalog.ts`: `shape`, `image`, `checklist`.
+- **Store** (`lib/editor/store.ts`): `setLocked`, `reorder`, `layerOf`, `setNodeStyle`, `setEdgeStyle`, `setChecklist`. Lock-aware delete, nudge and align; copies start unlocked; inspector tab remembered.
+- **Canvas** (`canvas.tsx`, `nodes.tsx`, `flow-edge.tsx`): styled rendering, new node types, z-order, lock (non-draggable, non-deletable), resizing. Edges: path, dash, colour, width, arrows, skip/no-data.
+- **Inspector** (`inspector.tsx`, new `style-panel.tsx`): Details / Style / Plan tabs; "Size (px)" renamed "Font Size"; connection Line style section; multi-select Arrange.
+- **Tidy Up:** carries shapes, images and checklists like notes. Locked elements stay put. Waits for web fonts and one re-measure before laying out, which fixed an intermittent note overlap.
+- **Shortcuts:** Ctrl ] / Ctrl [ (with Shift: to front / to back), Ctrl Shift K lock.
+- **Share privacy:** migration `20261006000000_canvas_elements_share.sql` (functions replaced in place, no drops).
+- **Map export:** basic drawing of shapes, images, checklists and connection styles (no export redesign).
+
+**Known limits:**
+- flow blocks can't be resized (standard size keeps Tidy and exports aligned)
+- no rich-text notes yet
+- no per-element Analytics tab
+- PDF/PNG don't apply block fill/border styles
+- the built-in "PT tripwire" template still has a purple stage frame (template content)
+
 ## I. Recommended order for the remaining budget
 
-1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1)
+1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)
 4. **Exports:**
    - embed fonts and fix bounds in the SVG/PNG
    - add scenario comparison, forecast chart, sources and expenses to the PDF, all from the same `compute` results
-5. **Emerald re-skin:** swap the tokens in `app/globals.css` and the category colours, keeping the components. Low risk, high visual impact.
-6. **Canvas completeness:**
-   - a Style tab (text: font size and weight, alignment, colour; fill and border for frames and notes)
-   - connection styles (dashed, colour, arrow, skip/no-data)
-   - per-element lock and layer order
-   - checklists (canvas and element level)
-   - image block
+5. ~~Emerald re-skin~~ · 6. ~~Canvas completeness~~ (Batch 2). Follow-ups: rich-text notes, per-element Analytics tab, an editorial pass on card-heavy pages.
 7. **Reports area:** a report view built from existing `compute`/`project` output, adding traffic reinvestment, MRR, month-to-month, published status and required numbers per period.
 8. **Roles and independent users** (an architectural decision: confirm before building):
    - Owner/Admin/Editor/Viewer

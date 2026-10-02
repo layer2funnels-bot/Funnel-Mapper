@@ -1,96 +1,88 @@
 @import "tailwindcss";
 
-/* Design tokens from the prototype. Light by default, dark via prefers-color-scheme or [data-theme="dark"]. */
+/* Locked Emerald design tokens (docs/MASTER_HANDOFF.md §5). Dark-first; a light variant via [data-theme="light"]. */
 :root {
-  --bg: #f7f5fc;
-  --dot: #d9d1ec;
+  /* surfaces */
+  --bg: #0b1220; /* canvas / page */
+  --dot: #1c2738;
+  --library: #0f172a; /* left block library, app sidebar */
+  --chrome: #111827; /* top / bottom workspace chrome, cards */
+  --panel: #111827;
+  --panel2: #1e293b; /* inspector / panels / inputs */
+  --line: #334155;
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  /* brand */
+  --brand: #10b981;
+  --brand-hover: #059669;
+  --brand-press: #047857;
+  --brand-light: #34d399; /* links, icons and highlights on dark surfaces */
+  --brand-ink: #0b1220; /* text on emerald (8.5:1) */
+  --brand-soft: rgba(16, 185, 129, 0.12);
+  --side: #0f172a;
+  --side-ink: #e2e8f0;
+  --side-muted: #94a3b8;
+  --side-item: #1e293b;
+  --side-line: #1e293b;
+  /* semantic category colours */
+  --c-traffic: #60a5fa;
+  --c-page: #a78bfa;
+  --c-offer: #fb923c;
+  --c-action: #2dd4bf;
+  --c-logic: #fbbf24;
+  --c-goal: #84cc16;
+  --c-note: #fde68a;
+  --cat-ink: #0b1220; /* icons on category colours */
+  --good: #22c55e;
+  --bad: #f87171;
+  --warn: #fbbf24;
+  --edge: #64748b;
+  --chart-1: #10b981;
+  --chart-2: #fb923c;
+  --alt: #fb923c;
+  --backdrop: rgba(2, 6, 23, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --dot: #d6dde7;
+  --library: #ffffff;
+  --chrome: #ffffff;
   --panel: #ffffff;
-  --panel2: #faf8fe;
-  --line: #e4def1;
-  --ink: #1e1631;
-  --muted: #5e5577;
-  --brand: #5b2fc9;
+  --panel2: #f1f5f9;
+  --line: #dbe2ea;
+  --ink: #0f172a;
+  --muted: #475569;
+  --brand: #047857; /* pressed emerald: 5.5:1 with white text on light surfaces */
+  --brand-hover: #065f46;
+  --brand-press: #064e3b;
+  --brand-light: #047857;
   --brand-ink: #ffffff;
-  --brand-soft: #efe9fc;
-  --side: #24133f;
-  --side-ink: #ede7fb;
-  --side-muted: #b8a9dd;
-  --side-item: #321c57;
-  --side-line: #3e2a66;
+  --brand-soft: #d1fae5;
+  --side: #0f172a;
+  --side-ink: #e2e8f0;
+  --side-muted: #94a3b8;
+  --side-item: #1e293b;
+  --side-line: #1e293b;
   --c-traffic: #2563eb;
-  --c-page: #6d3fd9;
+  --c-page: #7c3aed;
   --c-offer: #c2410c;
   --c-action: #0f766e;
   --c-logic: #b45309;
-  --c-goal: #15803d;
+  --c-goal: #4d7c0f;
   --c-note: #a16207;
+  --cat-ink: #ffffff;
   --good: #15803d;
   --bad: #b91c1c;
   --warn: #b45309;
-  --edge: #8b80a8;
-  --chart-1: #5b2fc9;
+  --edge: #94a3b8;
+  --chart-1: #047857;
   --chart-2: #c2410c;
   --alt: #c2410c;
-  --shadow: 0 1px 2px rgba(30, 22, 49, 0.06), 0 6px 18px rgba(30, 22, 49, 0.08);
+  --backdrop: rgba(15, 23, 42, 0.45);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #14101e;
-    --dot: #2c2441;
-    --panel: #1c1729;
-    --panel2: #211b30;
-    --line: #30284a;
-    --ink: #eeeaf7;
-    --muted: #a69cc0;
-    --brand: #9b7bf2;
-    --brand-ink: #14101e;
-    --brand-soft: #2a2142;
-    --c-traffic: #6b9bf7;
-    --c-page: #a386f5;
-    --c-offer: #f08a57;
-    --c-action: #3fb8a6;
-    --c-logic: #f2b544;
-    --c-goal: #4ade80;
-    --c-note: #e0b04a;
-    --good: #4ade80;
-    --bad: #f87171;
-    --warn: #f2b544;
-    --edge: #7d7398;
-    --chart-1: #9b7bf2;
-    --chart-2: #d9682f;
-    --alt: #f08a57;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.35);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #14101e;
-  --dot: #2c2441;
-  --panel: #1c1729;
-  --panel2: #211b30;
-  --line: #30284a;
-  --ink: #eeeaf7;
-  --muted: #a69cc0;
-  --brand: #9b7bf2;
-  --brand-ink: #14101e;
-  --brand-soft: #2a2142;
-  --c-traffic: #6b9bf7;
-  --c-page: #a386f5;
-  --c-offer: #f08a57;
-  --c-action: #3fb8a6;
-  --c-logic: #f2b544;
-  --c-goal: #4ade80;
-  --c-note: #e0b04a;
-  --good: #4ade80;
-  --bad: #f87171;
-  --warn: #f2b544;
-  --edge: #7d7398;
-  --chart-1: #9b7bf2;
-  --chart-2: #d9682f;
-  --alt: #f08a57;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.35);
-  color-scheme: dark;
 }
 
 @theme inline {
@@ -103,6 +95,10 @@
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-light: var(--brand-light);
+  --color-library: var(--library);
+  --color-chrome: var(--chrome);
   --color-side: var(--side);
   --color-side-ink: var(--side-ink);
   --color-side-muted: var(--side-muted);
@@ -190,6 +186,14 @@ button {
     color: var(--brand-ink);
     border-color: var(--brand);
     font-weight: 700;
+  }
+  .btn.primary:hover:not(:disabled) {
+    background: var(--brand-hover);
+    border-color: var(--brand-hover);
+  }
+  .btn.primary:active:not(:disabled) {
+    background: var(--brand-press);
+    border-color: var(--brand-press);
   }
   .btn.danger {
     color: var(--bad);
@@ -515,7 +519,7 @@ button {
     overscroll-behavior: contain;
   }
   dialog.modal::backdrop {
-    background: rgba(20, 16, 30, 0.45);
+    background: var(--backdrop);
   }
   dialog.modal h3 {
     font-family: var(--font-display);
@@ -527,27 +531,18 @@ button {
 
 /* status colours (text tones chosen for >= 4.5:1 on their tinted backgrounds) */
 :root {
-  --st-muted: #4f4766;
+  --st-muted: #cbd5e1;
+  --st-blue: #93c5fd;
+  --st-good: #4ade80;
+  --st-warn: #fcd34d;
+  --st-bad: #fca5a5;
+}
+:root[data-theme="light"] {
+  --st-muted: #334155;
   --st-blue: #1d4ed8;
   --st-good: #166534;
   --st-warn: #92400e;
   --st-bad: #991b1b;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --st-muted: #c4bcd9;
-    --st-blue: #93b4f9;
-    --st-good: #4ade80;
-    --st-warn: #f2b544;
-    --st-bad: #fca5a5;
-  }
-}
-:root[data-theme="dark"] {
-  --st-muted: #c4bcd9;
-  --st-blue: #93b4f9;
-  --st-good: #4ade80;
-  --st-warn: #f2b544;
-  --st-bad: #fca5a5;
 }
 .st-lead,
 .st-draft {

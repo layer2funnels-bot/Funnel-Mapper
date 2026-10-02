@@ -4,6 +4,7 @@ import { nf } from "./format";
 import { stepRows, type FunnelResult } from "./funnel-math";
 import type { FunnelEdge, FunnelNode } from "./graph";
 import { curve, nodeStats, segText, subLabel } from "./editor/labels";
+import { DASH, edgeLook } from "./style";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -86,7 +87,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
   g.nodes
     .filter((n) => n.type === "frame")
     .forEach((f) => {
-      const c = esc(f.p.color ?? "#6D3FD9");
+      const c = esc(f.p.color ?? "#10B981");
       o += `<rect x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" rx="18" fill="${c}" fill-opacity=".07" stroke="${c}" stroke-width="2" stroke-dasharray="8 6"/><text x="${f.x + 16}" y="${f.y - 8}" font-size="14" font-weight="700" fill="${c}">${esc(f.name)}</text>`;
     });
   const B = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
@@ -103,17 +104,55 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
     if (!a || !b) return;
     const [sx, sy] = portXY(a, e.port === "alt" ? "alt" : "out"),
       [tx, ty] = portXY(b, "in");
-    const [d, [mx, my]] = curve(sx, sy, e.port, tx, ty);
-    o += `<path d="${d}" fill="none" stroke="${e.port === "alt" ? P.alt : P.edge}" stroke-width="2"${e.port === "alt" ? ' stroke-dasharray="7 6"' : ""}/>`;
+    const look = edgeLook(e.s);
+    let [d, [mx, my]] = curve(sx, sy, e.port, tx, ty);
+    if (look.path === "straight") [d, mx, my] = [`M ${sx} ${sy} L ${tx} ${ty}`, (sx + tx) / 2, (sy + ty) / 2];
+    if (look.path === "elbow") {
+      const ex = e.port === "alt" ? sx : (sx + tx) / 2;
+      [d, mx, my] = e.port === "alt" ? [`M ${sx} ${sy} L ${sx} ${ty} L ${tx} ${ty}`, (sx + tx) / 2, ty] : [`M ${sx} ${sy} L ${ex} ${sy} L ${ex} ${ty} L ${tx} ${ty}`, ex, (sy + ty) / 2];
+    }
+    const dash = look.dash ? DASH[look.dash] : e.port === "alt" ? "7 6" : undefined;
+    o += `<path d="${d}" fill="none" stroke="${esc(look.color ?? (e.port === "alt" ? P.alt : P.edge))}" stroke-width="${look.width ?? 2}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+    if (look.kind === "nodata") return;
     if (opts.nums) o += `<text x="${mx}" y="${my + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="${P.ink}" stroke="${P.bg}" stroke-width="4" paint-order="stroke">${nf(R.flows[e.id] || 0)}</text>`;
   });
   g.nodes.forEach((n) => {
     const T = typeOf(n.type);
     if (!T || n.type === "frame") return;
+    const w0 = n.w ?? nodeW(n.type),
+      h0 = n.h ?? H0(n);
+    if (n.type === "shape") {
+      const fill = esc(n.s?.fill ?? P.panel),
+        stroke = esc(n.s?.border ?? P.line),
+        sw = n.s?.borderW ?? 1.5,
+        shape = String(n.p.shape ?? "rounded");
+      o +=
+        shape === "ellipse"
+          ? `<ellipse cx="${n.x + w0 / 2}" cy="${n.y + h0 / 2}" rx="${w0 / 2}" ry="${h0 / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`
+          : shape === "diamond"
+            ? `<polygon points="${n.x + w0 / 2},${n.y} ${n.x + w0},${n.y + h0 / 2} ${n.x + w0 / 2},${n.y + h0} ${n.x},${n.y + h0 / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`
+            : `<rect x="${n.x}" y="${n.y}" width="${w0}" height="${h0}" rx="${n.s?.radius ?? (shape === "rect" ? 0 : 16)}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+      String(n.p.text ?? "")
+        .split("\n")
+        .forEach((l, i, all) => (o += `<text x="${n.x + w0 / 2}" y="${n.y + h0 / 2 + (i - (all.length - 1) / 2) * 18 + 5}" text-anchor="middle" font-size="${n.s?.fontSize ?? 14}" font-weight="${n.s?.weight ?? 600}" fill="${esc(n.s?.color ?? P.ink)}">${esc(l)}</text>`));
+      return;
+    }
+    if (n.type === "image") {
+      const src = String(n.p.src ?? "");
+      if (src) o += `<image href="${esc(src)}" x="${n.x}" y="${n.y}" width="${w0}" height="${h0}" preserveAspectRatio="${n.p.fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"}"/>`;
+      return;
+    }
+    if (n.type === "checklist") {
+      const items = (n.p.items as { text: string; done: boolean; indent?: number }[] | undefined) ?? [];
+      const h = 40 + items.length * 20;
+      o += `<rect x="${n.x}" y="${n.y}" width="${w0}" height="${h}" rx="14" fill="${P.panel}" stroke="${P.line}" stroke-width="1.5"/><text x="${n.x + 12}" y="${n.y + 24}" font-size="14" font-weight="700" fill="${P.ink}">${esc(String(n.p.title ?? "Checklist"))}</text>`;
+      items.forEach((it, i) => (o += `<text x="${n.x + 12 + (it.indent ?? 0) * 16}" y="${n.y + 46 + i * 20}" font-size="13" fill="${it.done ? P.muted : P.ink}"${it.done ? ' text-decoration="line-through"' : ""}>${it.done ? "☑" : "☐"} ${esc(it.text)}</text>`));
+      return;
+    }
     if (n.type === "note" || n.type === "label") {
       const lines = String(n.p.text ?? "").split("\n");
       const fs = n.type === "label" ? Number(n.p.size) || 28 : 13;
-      if (n.type === "note") o += `<rect x="${n.x}" y="${n.y}" width="210" height="${Math.max(96, H0(n))}" rx="14" fill="#FEF3C7" stroke="#F3D98A"/>`;
+      if (n.type === "note") o += `<rect x="${n.x}" y="${n.y}" width="${n.w ?? 210}" height="${Math.max(96, H0(n))}" rx="14" fill="#FDE68A" stroke="#FCD34D"/>`;
       lines.forEach((l, i) => (o += `<text x="${n.x + (n.type === "note" ? 12 : 8)}" y="${n.y + (n.type === "note" ? 24 : fs) + i * fs * 1.3}" font-size="${fs}" font-weight="${n.type === "label" ? 800 : 500}" fill="${n.type === "note" ? "#3D2E05" : P.ink}">${esc(l)}</text>`));
       return;
     }

@@ -14,7 +14,7 @@ export interface LayoutOptions {
 
 /** Fallback annotation sizes when nothing was measured (matches the editor's defaults). */
 const annotW = (n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type));
-const defaultH = (n: FunnelNode) => (n.type === "label" ? 40 : NH);
+const defaultH = (n: FunnelNode) => n.h ?? (n.type === "label" ? 40 : NH);
 
 const GRID = 11;
 const snapper = (on: boolean) => (v: number) => (on ? Math.round(v / GRID) * GRID : Math.round(v));
@@ -40,7 +40,7 @@ function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<s
         .map((n) => n.id),
     }));
   const anchors = nodes
-    .filter((n) => n.type === "note" || n.type === "label")
+    .filter((n) => isAnnot(n.type) && n.type !== "frame")
     .sort((p, q) => p.y - q.y || p.x - q.x)
     .map((a) => {
       const [ax, ay] = center(a);

@@ -27,7 +27,7 @@ export function GraphThumb({ graph, className = "" }: { graph: unknown; classNam
       {nodes
         .filter((n) => n.type === "frame")
         .map((f) => (
-          <rect key={f.id} x={f.x} y={f.y} width={f.w} height={f.h} rx={18} style={{ fill: String(f.p.color ?? "#6D3FD9"), fillOpacity: 0.08, stroke: String(f.p.color ?? "#6D3FD9"), strokeWidth: 3, strokeDasharray: "10 8" }} />
+          <rect key={f.id} x={f.x} y={f.y} width={f.w} height={f.h} rx={18} style={{ fill: String(f.p.color ?? "#10B981"), fillOpacity: 0.08, stroke: String(f.p.color ?? "#6D3FD9"), strokeWidth: 3, strokeDasharray: "10 8" }} />
         ))}
       {g.edges.map((e) => {
         const a = B[e.from],

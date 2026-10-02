@@ -1,14 +1,56 @@
 "use client";
-import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
+import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
 import { memo } from "react";
 import { Icon } from "@/components/icon";
 import { CATCOLOR, portsFor, typeOf } from "@/lib/catalog";
-import { moveNodes, useEditor } from "@/lib/editor/store";
+import type { ChecklistItem, FunnelNode } from "@/lib/graph";
+import type { IconName } from "@/lib/icons";
+import { checklistOf, moveNodes, setChecklist, useEditor } from "@/lib/editor/store";
 import { nodeStats, subLabel } from "@/lib/editor/labels";
+import { boxCss, textCss } from "@/lib/style";
 
 type P = NodeProps & { data: { id: string } };
 
 const useNode = (id: string) => useEditor((s) => s.nodes.find((n) => n.id === id));
+const useEditable = (n: FunnelNode | undefined) => useEditor((s) => !s.readOnly && !!n && !n.locked);
+
+function LockBadge({ n }: { n: FunnelNode }) {
+  if (!n.locked) return null;
+  return (
+    <span className="fm-lock" title="Locked" aria-hidden="true">
+      <Icon name="lock" size={12} />
+    </span>
+  );
+}
+
+/** Full resize handles (shapes, images, frames). */
+function Resizer({ n, selected, minW = 40, minH = 30 }: { n: FunnelNode; selected: boolean; minW?: number; minH?: number }) {
+  const editable = useEditable(n);
+  return (
+    <NodeResizer
+      isVisible={selected && editable}
+      minWidth={minW}
+      minHeight={minH}
+      lineStyle={{ borderColor: "transparent" }}
+      onResizeEnd={(_, p) => moveNodes({ [n.id]: { x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.width), h: Math.round(p.height) } }, { discrete: true })}
+    />
+  );
+}
+
+/** Width-only handle (text, notes, checklists: their height follows the content). */
+function WidthResizer({ n, selected, minW = 80 }: { n: FunnelNode; selected: boolean; minW?: number }) {
+  const editable = useEditable(n);
+  if (!selected || !editable) return null;
+  return (
+    <NodeResizeControl
+      position="right"
+      variant={ResizeControlVariant.Line}
+      minWidth={minW}
+      style={{ borderColor: "transparent", borderWidth: 6 }}
+      onResizeEnd={(_, p) => moveNodes({ [n.id]: { x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.width) } }, { discrete: true })}
+    />
+  );
+}
 
 export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
@@ -22,21 +64,28 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const logic = T.cat === "logic";
   const cc = CATCOLOR[T.color ?? T.cat];
   const stats = nodeStats(n, R, cur);
+  const tasks = n.checklist ?? [];
   const cls = ["fm-node", logic && "logic", selected && "sel", warn && "warn", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
   return (
-    <div className={cls} style={{ ["--cc" as string]: cc }} aria-label={`${T.label}: ${n.name}`}>
+    <div className={cls} style={{ ["--cc" as string]: cc, ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`}>
       {hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />}
+      <LockBadge n={n} />
       <div className="fm-nhead">
         <span className="fm-nicon">
-          <Icon name={T.icon} />
+          <Icon name={(n.s?.icon as IconName) || T.icon} />
         </span>
         <div className="fm-ntitle">
-          <span>{n.name}</span>
+          <span style={textCss(n.s)}>{n.name}</span>
           <small>{subLabel(n, cur)}</small>
         </div>
       </div>
       <div className="fm-nstats">
         {stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}
+        {tasks.length > 0 && (
+          <span className="fm-ntasks" title="Checklist">
+            ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
+          </span>
+        )}
       </div>
       {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
       {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
@@ -49,9 +98,15 @@ export const NoteNode = memo(function NoteNode({ id, selected }: P) {
   const n = useNode(id);
   if (!n) return null;
   return (
-    <div className={`fm-node note${selected ? " sel" : ""}`} aria-label="Sticky note">
-      <div className="ntext">{String(n.p.text ?? "")}</div>
-    </div>
+    <>
+      <WidthResizer n={n} selected={selected} minW={120} />
+      <div className={`fm-node note${selected ? " sel" : ""}`} style={{ ...(n.w ? { width: n.w } : {}), ...boxCss(n.s) }} aria-label="Sticky note">
+        <LockBadge n={n} />
+        <div className="ntext" style={textCss(n.s)}>
+          {String(n.p.text ?? "")}
+        </div>
+      </div>
+    </>
   );
 });
 
@@ -59,32 +114,117 @@ export const LabelNode = memo(function LabelNode({ id, selected }: P) {
   const n = useNode(id);
   if (!n) return null;
   return (
-    <div className={`fm-node label${selected ? " sel" : ""}`} aria-label="Heading">
-      <div className="ntext" style={{ fontSize: Number(n.p.size) || 28 }}>
-        {String(n.p.text ?? "")}
-      </div>
-    </div>
-  );
-});
-
-export const FrameNode = memo(function FrameNode({ id, selected }: P) {
-  const n = useNode(id);
-  const readOnly = useEditor((s) => s.readOnly);
-  if (!n) return null;
-  return (
     <>
-      <NodeResizer
-        isVisible={selected && !readOnly}
-        minWidth={160}
-        minHeight={100}
-        lineStyle={{ borderColor: "transparent" }}
-        onResizeEnd={(_, p) => moveNodes({ [id]: { x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.width), h: Math.round(p.height) } })}
-      />
-      <div className={`fm-frame${selected ? " sel" : ""}`} style={{ ["--fc" as string]: String(n.p.color ?? "#6D3FD9") }} aria-label={`Stage frame: ${n.name}`}>
-        <span className="ftitle">{n.name}</span>
+      <WidthResizer n={n} selected={selected} />
+      <div className={`fm-node label${selected ? " sel" : ""}${n.w ? " fixed" : ""}`} style={{ ...(n.w ? { width: n.w } : {}), ...boxCss(n.s) }} aria-label="Heading">
+        <LockBadge n={n} />
+        <div className="ntext" style={textCss(n.s, Number(n.p.size) || 28)}>
+          {String(n.p.text ?? "")}
+        </div>
       </div>
     </>
   );
 });
 
-export const nodeTypes = { block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode };
+export const FrameNode = memo(function FrameNode({ id, selected }: P) {
+  const n = useNode(id);
+  if (!n) return null;
+  return (
+    <>
+      <Resizer n={n} selected={selected} minW={160} minH={100} />
+      <div className={`fm-frame${selected ? " sel" : ""}`} style={{ ["--fc" as string]: String(n.p.color ?? "#10B981"), ...boxCss(n.s) }} aria-label={`Stage frame: ${n.name}`}>
+        <LockBadge n={n} />
+        <span className="ftitle" style={textCss(n.s)}>
+          {n.name}
+        </span>
+      </div>
+    </>
+  );
+});
+
+export const ShapeNode = memo(function ShapeNode({ id, selected }: P) {
+  const n = useNode(id);
+  if (!n) return null;
+  const shape = String(n.p.shape ?? "rounded");
+  const s = n.s ?? {};
+  const text = String(n.p.text ?? "");
+  const box = boxCss(s);
+  return (
+    <>
+      <Resizer n={n} selected={selected} />
+      <div className={`fm-shape ${shape}${selected ? " sel" : ""}`} style={shape === "diamond" ? { opacity: box.opacity, boxShadow: undefined } : box} aria-label={`Shape: ${text || shape}`}>
+        {shape === "diamond" && (
+          <svg className="fm-diamond" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <polygon points="50,1 99,50 50,99 1,50" style={{ fill: s.fill, stroke: s.border, strokeWidth: s.borderW ?? 1.5, strokeDasharray: s.borderStyle === "dashed" ? "6 4" : s.borderStyle === "dotted" ? "1.5 3" : undefined }} vectorEffect="non-scaling-stroke" />
+          </svg>
+        )}
+        <LockBadge n={n} />
+        {text && (
+          <div className="stext" style={textCss(s)}>
+            {text}
+          </div>
+        )}
+      </div>
+    </>
+  );
+});
+
+export const ImageNode = memo(function ImageNode({ id, selected }: P) {
+  const n = useNode(id);
+  if (!n) return null;
+  const src = String(n.p.src ?? "");
+  return (
+    <>
+      <Resizer n={n} selected={selected} minW={40} minH={40} />
+      <div className={`fm-image${selected ? " sel" : ""}${src ? "" : " empty"}`} style={boxCss(n.s)}>
+        <LockBadge n={n} />
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element -- user images (data/remote URLs) on the canvas
+          <img src={src} alt={String(n.p.alt ?? "")} draggable={false} style={{ objectFit: n.p.fit === "cover" ? "cover" : "contain" }} />
+        ) : (
+          <span className="ph">
+            <Icon name="image" />
+            Add an image in the inspector
+          </span>
+        )}
+      </div>
+    </>
+  );
+});
+
+export const ChecklistNode = memo(function ChecklistNode({ id, selected }: P) {
+  const n = useNode(id);
+  const ro = useEditor((s) => s.readOnly);
+  if (!n) return null;
+  const items = checklistOf(n);
+  const done = items.filter((i) => i.done).length;
+  const toggle = (it: ChecklistItem) => setChecklist(n.id, items.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)), { discrete: true });
+  return (
+    <>
+      <WidthResizer n={n} selected={selected} minW={160} />
+      <div className={`fm-node checklist${selected ? " sel" : ""}`} style={{ ...(n.w ? { width: n.w } : {}), ...boxCss(n.s) }} aria-label={`Checklist: ${String(n.p.title ?? "")}`}>
+        <LockBadge n={n} />
+        <div className="ctitle" style={textCss(n.s)}>
+          {String(n.p.title ?? "Checklist")}
+          <small>
+            {done}/{items.length}
+          </small>
+        </div>
+        <ul>
+          {items.map((it) => (
+            <li key={it.id} style={{ paddingLeft: (it.indent ?? 0) * 16 }}>
+              <label className="nodrag">
+                <input type="checkbox" checked={it.done} disabled={ro} onChange={() => toggle(it)} aria-label={it.text || "Checklist item"} />
+                <span className={it.done ? "done" : ""} style={textCss(n.s)}>
+                  {it.text}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
+  );
+});
+
+export const nodeTypes = { block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode, shape: ShapeNode, image: ImageNode, checklist: ChecklistNode };

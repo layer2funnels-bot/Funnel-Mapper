@@ -28,7 +28,7 @@ export function AppNav({ agency, user, logo }: { agency: string; user: string; l
           href={n.href}
           onClick={() => setOpen(false)}
           aria-current={active(n.href) ? "page" : undefined}
-          className={`flex min-h-[42px] items-center gap-3 rounded-[10px] px-3 text-[14.5px] font-medium no-underline ${active(n.href) ? "bg-side-item text-side-ink ring-1 ring-side-line" : "text-side-muted hover:bg-side-item hover:text-side-ink"}`}
+          className={`flex min-h-[42px] items-center gap-3 rounded-[10px] px-3 text-[14.5px] font-medium no-underline ${active(n.href) ? "bg-side-item text-side-ink shadow-[inset_3px_0_0_var(--brand)]" : "text-side-muted hover:bg-side-item hover:text-side-ink"}`}
         >
           <Icon name={n.icon} /> {n.label}
         </Link>

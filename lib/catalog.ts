@@ -25,7 +25,18 @@ export const CATCOLOR: Record<ColorKey, string> = {
   annot: "var(--c-note)",
 };
 
-/** Light-mode hex values, used where CSS variables are unavailable (PDF, PNG export, minimap). */
+/** Locked category hex values for dark surfaces (minimap). */
+export const CATDARK: Record<ColorKey, string> = {
+  traffic: "#60A5FA",
+  page: "#A78BFA",
+  offer: "#FB923C",
+  action: "#2DD4BF",
+  logic: "#FBBF24",
+  goal: "#84CC16",
+  annot: "#FDE68A",
+};
+
+/** Light-mode hex values, used where CSS variables are unavailable (PDF, PNG export on white). */
 export const CATHEX: Record<ColorKey, string> = {
   traffic: "#2563EB",
   page: "#6D3FD9",
@@ -169,7 +180,10 @@ export const TYPES = {
 
   note: { cat: "annot", label: "Sticky note", icon: "note", d: { text: "Write a note…" } },
   label: { cat: "annot", label: "Heading text", icon: "text", d: { text: "Stage name", size: 28 } },
-  frame: { cat: "annot", label: "Stage frame", icon: "frame", d: { color: "#6D3FD9" } },
+  frame: { cat: "annot", label: "Stage frame", icon: "frame", d: { color: "#10B981" } },
+  shape: { cat: "annot", label: "Shape", icon: "shape", d: { shape: "rounded", text: "" } },
+  image: { cat: "annot", label: "Image / logo", icon: "image", d: { src: "", alt: "", fit: "contain" } },
+  checklist: { cat: "annot", label: "Checklist", icon: "task", d: { title: "Checklist", items: [] } },
 } satisfies Record<string, BlockType>;
 
 export type BlockTypeKey = keyof typeof TYPES;
@@ -181,6 +195,23 @@ export const isAnnot = (t: string) => typeOf(t)?.cat === "annot";
 
 export const PER_MONTH: Record<Interval, number> = { weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, yearly: 1 / 12 };
 export const INT_LABEL: Record<Interval, string> = { weekly: "week", monthly: "month", quarterly: "quarter", yearly: "year" };
+
+/** Annotation types drawn at a stored size (w × h) and resizable in both directions. */
+export const SIZED_TYPES = new Set(["frame", "shape", "image"]);
+/** Annotation types with a stored width only (height follows the content). */
+export const WIDTH_TYPES = new Set(["label", "note", "checklist"]);
+export const DEFAULT_SIZE: Record<string, { w: number; h?: number }> = {
+  frame: { w: 520, h: 300 },
+  shape: { w: 200, h: 120 },
+  image: { w: 320, h: 200 },
+  checklist: { w: 260 },
+};
+export const SHAPES: [string, string][] = [
+  ["rect", "Rectangle"],
+  ["rounded", "Rounded"],
+  ["ellipse", "Ellipse"],
+  ["diamond", "Diamond"],
+];
 
 /** Default node height (px). Notes and headings can be taller; the editor uses measured heights when available. */
 export const NH = 96;
@@ -200,6 +231,7 @@ export function portsFor(type: string) {
 export const canReceive = (type: string) => !["traffic", "annot"].includes(typeOf(type)?.cat);
 
 export const FRAME_COLORS: [string, string][] = [
+  ["#10B981", "Emerald"],
   ["#6D3FD9", "Purple"],
   ["#2563EB", "Blue"],
   ["#0F766E", "Teal"],

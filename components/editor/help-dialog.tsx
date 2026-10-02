@@ -6,6 +6,8 @@ const KEYS: [string, string][] = [
   ["Ctrl Z / Ctrl Shift Z", "Undo / redo"],
   ["Ctrl C / Ctrl V", "Copy / paste blocks"],
   ["Ctrl D", "Duplicate selection"],
+  ["Ctrl ] / Ctrl [", "Bring forward / send backward (add Shift: to front / to back)"],
+  ["Ctrl Shift K", "Lock or unlock the selection"],
   ["Ctrl A", "Select all blocks"],
   ["Arrow keys", "Nudge selection (Shift for bigger steps)"],
   ["Shift + click", "Add a block to the selection"],

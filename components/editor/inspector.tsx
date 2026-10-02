@@ -1,12 +1,13 @@
 "use client";
 import { useMemo } from "react";
 import { LogoUpload } from "@/components/logo-upload";
-import { CATS, FRAME_COLORS, INT_LABEL, portsFor, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { CATS, FRAME_COLORS, INT_LABEL, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf } from "@/lib/format";
 import { num, offerVals } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { sym } from "@/lib/format";
-import { align, deleteSelection, selectNodes, duplicateSelection, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, deleteSelection, selectNodes, duplicateSelection, setInspTab, setLocked, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
 
@@ -64,21 +65,65 @@ function FullInspector() {
   return <Report />;
 }
 
-function Actions({ ro }: { ro: boolean }) {
+function Actions({ ro, n }: { ro: boolean; n: FunnelNode }) {
   if (ro) return null;
   return (
     <div className="flex flex-wrap gap-2">
       <button type="button" className="btn" onClick={duplicateSelection}>
         Duplicate
       </button>
-      <button type="button" className="btn danger" onClick={deleteSelection}>
+      <button type="button" className="btn" onClick={() => setLocked(!n.locked, [n.id])} aria-pressed={!!n.locked}>
+        {n.locked ? "Unlock" : "Lock"}
+      </button>
+      <button type="button" className="btn danger" onClick={deleteSelection} disabled={!!n.locked}>
         Delete
       </button>
     </div>
   );
 }
 
+
 function NodeInspector({ n }: { n: FunnelNode }) {
+  const T = typeOf(n.type);
+  const ro = useEditor((s) => s.readOnly);
+  const shared = useEditor((s) => s.shared);
+  const tab = useEditor((s) => s.inspTab);
+  const tabs: [InspTab, string][] = [["details", "Details"], ["style", "Style"], ...(!shared && n.type !== "checklist" ? ([["plan", "Plan"]] as [InspTab, string][]) : [])];
+  const cur = tabs.some(([k]) => k === tab) ? tab : "details";
+  const choose = setInspTab;
+  return (
+    <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+      <h3>
+        {T.label}
+        {n.locked && <span className="ml-2 align-middle text-xs font-semibold text-muted">· Locked</span>}
+      </h3>
+      <p className="sub">{CATS[T.cat]}</p>
+      <div className="fm-insp-tabs" role="tablist" aria-label="Element panels">
+        {tabs.map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => choose(k)}>
+            {l}
+          </button>
+        ))}
+      </div>
+      {cur === "details" && <NodeDetails n={n} />}
+      {cur === "style" && (
+        <>
+          <StylePanel n={n} />
+          {!ro && <ArrangeBar ids={[n.id]} />}
+        </>
+      )}
+      {cur === "plan" && (
+        <>
+          <ChecklistEditor n={n} />
+          <TextField label="Internal notes" help="Team only. Never shown on client share links, presentations or PDF reports." value={n.desc ?? ""} placeholder="Copy ideas, owner, status…" multiline onChange={(v) => updateNode(n.id, { desc: v })} />
+          <p className="text-xs text-muted">The checklist and notes are internal: they never appear on client share links.</p>
+        </>
+      )}
+    </fieldset>
+  );
+}
+
+function NodeDetails({ n }: { n: FunnelNode }) {
   const T = typeOf(n.type);
   const cur = useEditor((s) => s.settings.currency);
   const ro = useEditor((s) => s.readOnly);
@@ -87,15 +132,36 @@ function NodeInspector({ n }: { n: FunnelNode }) {
   const p = n.p;
   const P = (k: string) => (v: number | string | boolean) => updateParams(n.id, { [k]: v });
   return (
-    <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
-      <h3>{T.label}</h3>
-      <p className="sub">{CATS[T.cat]}</p>
+    <>
       {n.type === "note" ? (
         <TextField label="Note" value={String(p.text ?? "")} onChange={P("text")} multiline />
       ) : n.type === "label" ? (
         <>
           <TextField label="Text" value={String(p.text ?? "")} onChange={P("text")} multiline />
-          <NumField label="Size (px)" value={num(p.size)} onChange={P("size")} min={12} max={96} />
+          <NumField label="Font Size" value={num(p.size)} onChange={P("size")} min={8} max={160} />
+          <p className="mb-3 text-xs text-muted">Font, weight, spacing, colour and alignment are in the Style tab.</p>
+        </>
+      ) : n.type === "shape" ? (
+        <>
+          <Field label="Shape">
+            {(id) => (
+              <select id={id} className="input" value={String(p.shape ?? "rounded")} onChange={(e) => P("shape")(e.target.value)}>
+                {SHAPES.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <TextField label="Text inside" value={String(p.text ?? "")} onChange={P("text")} multiline />
+        </>
+      ) : n.type === "image" ? (
+        <ImageFields n={n} />
+      ) : n.type === "checklist" ? (
+        <>
+          <TextField label="Title" value={String(p.title ?? "")} onChange={P("title")} />
+          <ChecklistEditor n={n} label="Items" />
         </>
       ) : n.type === "frame" ? (
         <>
@@ -190,8 +256,8 @@ function NodeInspector({ n }: { n: FunnelNode }) {
           )}
         </>
       )}
-      <Actions ro={ro} />
-    </fieldset>
+      <Actions ro={ro} n={n} />
+    </>
   );
 }
 
@@ -350,6 +416,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
         {(id) => <NumInput id={id} value={num(e.share ?? 100)} min={0} max={100} onChange={(v) => updateEdge(e.id, { share: v })} />}
       </Field>
       <StatBox items={[["People on this path", nf(flow, 1)]]} />
+      <EdgeStyleFields e={e} />
       {!ro && (
         <button type="button" className="btn danger" onClick={deleteSelection}>
           Delete connection
@@ -391,15 +458,15 @@ function MultiInspector({ count }: { count: number }) {
             <button type="button" className="btn" onClick={wrapInFrame}>
               Put in a stage frame
             </button>
-            <button type="button" className="btn" onClick={duplicateSelection}>
-              Duplicate
-            </button>
-            <button type="button" className="btn danger" onClick={deleteSelection}>
-              Delete
-            </button>
           </div>
+          <MultiArrange />
         </>
       )}
     </>
   );
+}
+
+function MultiArrange() {
+  const ids = useEditor((s) => s.selNodes);
+  return <ArrangeBar ids={ids} />;
 }

@@ -178,7 +178,7 @@ describe("share links", () => {
     const f = await admin.from("funnels").select("graph").eq("id", TRIPWIRE).single();
     original = structuredClone(f.data!.graph);
     const g = f.data!.graph as { nodes: Record<string, unknown>[] };
-    g.nodes[2] = { ...g.nodes[2], desc: "INTERNAL: client is price sensitive", shot: "screens/x.png" };
+    g.nodes[2] = { ...g.nodes[2], desc: "INTERNAL: client is price sensitive", shot: "screens/x.png", checklist: [{ id: "t1", text: "INTERNAL TASK: chase invoice", done: false }] };
     await admin.from("funnels").update({ graph: g }).eq("id", TRIPWIRE);
     const { data } = await anon.rpc("get_shared_funnel", { p_token: "demo-share-token" });
     const s = JSON.stringify(data);
@@ -187,6 +187,7 @@ describe("share links", () => {
     data.funnel.graph.nodes.forEach((n: Record<string, unknown>) => {
       expect(n.desc).toBeUndefined();
       expect(n.shot).toBeUndefined();
+      expect(n.checklist).toBeUndefined();
     });
   });
   it("saving from an editable link keeps the internal notes", async () => {
@@ -201,6 +202,7 @@ describe("share links", () => {
     expect(n.name).toBe("Renamed by client");
     expect(n.desc).toBe("INTERNAL: client is price sensitive");
     expect(n.shot).toBe("screens/x.png");
+    expect(n.checklist).toEqual([{ id: "t1", text: "INTERNAL TASK: chase invoice", done: false }]);
   });
   it("hidden-number links strip prices and settings even when the RPC is called directly, and can't edit", async () => {
     const ins = await admin.from("share_links").insert({ funnel_id: WEBINAR, hide_numbers: true, can_edit: true }).select("token").single();
@@ -208,7 +210,7 @@ describe("share links", () => {
     const { data } = await anon.rpc("get_shared_funnel", { p_token: ins.data!.token });
     expect(data.link.hide_numbers).toBe(true);
     expect(data.link.can_edit).toBe(false);
-    const blocks = data.funnel.graph.nodes.filter((n: { type: string }) => !["note", "label", "frame"].includes(n.type));
+    const blocks = data.funnel.graph.nodes.filter((n: { type: string }) => !["note", "label", "frame", "shape", "image", "checklist"].includes(n.type));
     expect(blocks.length).toBeGreaterThan(0);
     blocks.forEach((n: { p: object }) => expect(n.p).toEqual({}));
     expect(JSON.stringify(data)).not.toContain("997");

@@ -25,13 +25,13 @@ export type Database = {
           Tables: {
             "clients": {
                   Row: {
-                    "business_name": string,"country": string,"created_at": string,"currency": string,"email": string,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"status": string,"tags": (string)[],"updated_at": string,"website": string
+                    "billing_frequency": string,"business_name": string,"commission_pct": number,"country": string,"created_at": string,"currency": string,"email": string,"hours_per_month": number,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"pricing_amount": number,"pricing_model": string,"pricing_notes": string,"project_end": string | null,"project_start": string | null,"status": string,"tags": (string)[],"updated_at": string,"website": string
                   }
                   Insert: {
-                    "business_name"?: string,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
+                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
                   }
                   Update: {
-                    "business_name"?: string,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
+                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
                   }
                   Relationships: [
                     

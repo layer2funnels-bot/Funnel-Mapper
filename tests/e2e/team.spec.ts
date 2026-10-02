@@ -1,4 +1,6 @@
 import { expect, test, type Browser } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
+import { env } from "./helpers";
 
 const MAILPIT = "http://127.0.0.1:54324";
 
@@ -12,19 +14,23 @@ async function signIn(browser: Browser, email: string, password = "demo-password
   return { ctx, page };
 }
 
-/** Latest email to `to` from the local Mailpit inbox. */
-async function latestMail(to: string) {
+/** Latest email to `to` from the local Mailpit inbox, ignoring anything sent before `since` (ms epoch). */
+async function latestMail(to: string, since = 0) {
   for (let i = 0; i < 30; i++) {
     const r = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
-    const j = (await r.json()) as { messages: { ID: string }[] };
-    if (j.messages?.length) {
-      const m = await (await fetch(`${MAILPIT}/api/v1/message/${j.messages[0].ID}`)).json();
+    const j = (await r.json()) as { messages: { ID: string; Created: string }[] };
+    const fresh = (j.messages ?? []).find((m) => Date.parse(m.Created) >= since - 1000);
+    if (fresh) {
+      const m = await (await fetch(`${MAILPIT}/api/v1/message/${fresh.ID}`)).json();
       return m as { Subject: string; HTML: string };
     }
     await new Promise((res) => setTimeout(res, 500));
   }
   throw new Error(`no email for ${to}`);
 }
+
+/** Service-role client for test setup only (local stack). */
+const admin = () => createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
 
 test.describe("team workspace", () => {
   test("a teammate sees the shared portfolio but no admin controls", async ({ browser }) => {
@@ -92,9 +98,10 @@ test.describe("team workspace", () => {
     await page.goto("/login");
     await page.getByRole("tab", { name: "Magic link" }).click();
     await page.getByLabel("Email").fill("teammate@layer2funnels.test");
+    const sent = Date.now();
     await page.getByRole("button", { name: "Email me a link" }).click();
     await expect(page.getByRole("status")).toContainText("sign-in link is on its way");
-    const mail = await latestMail("teammate@layer2funnels.test");
+    const mail = await latestMail("teammate@layer2funnels.test", sent);
     const href = mail.HTML.match(/href="([^"]*\/auth\/confirm[^"]*)"/)![1].replace(/&amp;/g, "&");
     const url = new URL(href);
     await page.goto(url.pathname + url.search);
@@ -104,28 +111,45 @@ test.describe("team workspace", () => {
   });
 
   test("password reset by email", async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-    const page = await ctx.newPage();
-    await page.goto("/reset-password");
-    await page.getByLabel("Email").fill("teammate@layer2funnels.test");
-    await page.getByRole("button", { name: "Send reset link" }).click();
-    await expect(page.getByRole("status")).toContainText("reset link is on its way");
-    const mail = await latestMail("teammate@layer2funnels.test");
-    expect(mail.Subject).toContain("Reset");
-    const href = mail.HTML.match(/href="([^"]*\/auth\/confirm[^"]*)"/)![1].replace(/&amp;/g, "&");
-    const url = new URL(href);
-    await page.goto(url.pathname + url.search);
-    await expect(page).toHaveURL(/\/update-password/);
-    await page.getByLabel("New password").fill("a-brand-new-pass-1");
-    await page.getByLabel("Confirm password").fill("a-brand-new-pass-1");
-    await page.getByRole("button", { name: "Save password" }).click();
-    await expect(page).toHaveURL("/");
-    // change it back (Settings → Change password) so the demo account keeps its documented password
-    await page.goto("/update-password");
-    await page.getByLabel("New password").fill("demo-password");
-    await page.getByLabel("Confirm password").fill("demo-password");
-    await page.getByRole("button", { name: "Save password" }).click();
-    await expect(page).toHaveURL("/");
-    await ctx.close();
+    // A dedicated account per run: Supabase allows one auth email per address per 60 s, and the magic-link test
+    // above has just emailed the shared demo teammate. A fresh address keeps this test independent of ordering
+    // without touching the app's own rate limits.
+    const email = `reset.${Date.now()}@layer2funnels.test`;
+    const sb = admin();
+    const { data: created, error } = await sb.auth.admin.createUser({ email, password: "original-pass-1", email_confirm: true });
+    if (error) throw error;
+    const id = created.user.id;
+    try {
+      // accounts created outside an invite start with no access; activate it as an admin would
+      await sb.from("profiles").update({ active: true }).eq("id", id);
+      const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const page = await ctx.newPage();
+      await page.goto("/reset-password");
+      await page.getByLabel("Email").fill(email);
+      const sent = Date.now();
+      await page.getByRole("button", { name: "Send reset link" }).click();
+      await expect(page.getByRole("status")).toContainText("reset link is on its way");
+      const mail = await latestMail(email, sent);
+      expect(mail.Subject).toContain("Reset");
+      const href = mail.HTML.match(/href="([^"]*\/auth\/confirm[^"]*)"/)![1].replace(/&amp;/g, "&");
+      const url = new URL(href);
+      await page.goto(url.pathname + url.search);
+      await expect(page).toHaveURL(/\/update-password/);
+      await page.getByLabel("New password").fill("a-brand-new-pass-1");
+      await page.getByLabel("Confirm password").fill("a-brand-new-pass-1");
+      await page.getByRole("button", { name: "Save password" }).click();
+      await expect(page).toHaveURL("/");
+      await ctx.close();
+      // the new password works and the old one doesn't
+      const { ctx: c2, page: p2 } = await signIn(browser, email, "a-brand-new-pass-1");
+      await expect(p2).toHaveURL("/");
+      await c2.close();
+      const { ctx: c3, page: p3 } = await signIn(browser, email, "original-pass-1");
+      await expect(p3.locator('form p[role="alert"]')).toBeVisible();
+      await expect(p3).toHaveURL(/\/login/);
+      await c3.close();
+    } finally {
+      await sb.auth.admin.deleteUser(id);
+    }
   });
 });

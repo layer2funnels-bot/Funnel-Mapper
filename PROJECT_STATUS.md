@@ -1,6 +1,8 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
+**Updated after Batch 1 (core correctness + P0 fixes), 2 Oct 2026:** modal centring, golden maths test, a reliable password-reset test,
+client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
 ## A. Executive summary
@@ -25,7 +27,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 |---|---|---|
 | Architecture (Next.js 16, Supabase, React Flow, Zustand, Zod) | PASS | `app/`, `components/editor/`, `lib/`, `supabase/migrations/` |
 | Authoritative maths engine | PASS | `lib/funnel-math.ts`; consumers: `lib/editor/store.ts`, `saver.ts`, `report.tsx`, `actions.ts`, `templates/page.tsx`, `exporters.ts`/`lib/export.ts` (use the store's `R`) |
-| Golden regression funnel | PASS | `tests/unit/funnel-math.test.ts` checks every built-in template (quiz included) node by node against `tests/fixtures/prototype-results.json` |
+| Golden regression funnel | PASS | `tests/unit/golden.test.ts`: literal handoff values (89.1 / 6,032.11 / 5,582.11 / 13.40x), every step and branch, and agreement of the editor store, summary, scenario, forecast, CSV and JSON round-trip; plus `tests/unit/funnel-math.test.ts` prototype fixtures |
 | Canvas: infinite canvas, grid, zoom, minimap, fit, snap, undo/redo | PASS | `canvas.tsx`, store `undo/redo/snapV`; e2e `editor.spec.ts` |
 | Canvas: multi-select, copy/paste, duplicate, delete, align, nudge, frames | PASS | store `copySelection/paste/duplicateSelection/align/wrapInFrame`; e2e |
 | Canvas: lock/unlock per element, layer ordering, resize of blocks | FAIL | only a global "View only" lock; no z-order controls |
@@ -36,7 +38,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Connections: main/alt port, share %, people labels | PASS | `flow-edge.tsx`, e2e "connect ports", "edit an edge" |
 | Connection styles (straight/elbow, dashed, colour, arrows, skip/no-data, semantic types) | FAIL | one bezier style; only main/alt and a thickness option |
 | Layers/views (Map/Numbers/Flow/Notes/Checklist; Clean vs Performance) | PARTIAL | View menu: "Show numbers on map", "Line thickness shows traffic", snap, minimap |
-| Tidy Up | PARTIAL | `lib/layout.ts`: annotations are excluded from the flow layout (good), but notes and headings are **re-anchored below the nearest block** (original placement is not preserved), heading width is assumed to be 300px, and annotation-to-annotation collisions aren't checked |
+| Tidy Up | PASS | `lib/layout.ts`: flow blocks are laid out exactly as the prototype does; notes and headings keep their exact offset from their nearest block, use measured sizes (`widthOf`/`heightOf`), and are nudged only to avoid overlapping blocks or each other; frames refit around their blocks. Tests: `tests/unit/layout.test.ts` and e2e "Tidy up keeps notes and headings…" |
 | What-if, goal seek, revenue target | PASS | `report.tsx` "What-if" tab, `goalSeek`, `targetPlan` |
 | Goals (name/type/step, required daily/weekly/monthly/yearly numbers) | PARTIAL | one revenue target plus goal seek, and a `goal` block counts conversions; no named goals and no period breakdown |
 | Forecast | PARTIAL | `project()`: monthly, 1–60 months, growth %, active subs, MRR, cumulative; no daily/weekly/custom periods |
@@ -47,12 +49,12 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Checklists | FAIL | none |
 | Reports / Insights as a first-class area | PARTIAL | editor right-panel tabs (Math, Steps, Sources, What-if, Costs, Scenarios, Forecast, Actuals) and dashboard KPIs; no report navigation, traffic reinvestment, month-to-month report, published/completion status, or revenue-by-product and expense charts |
 | Clients: portfolio, search, status, tags, details, logo, autosaved notes, products | PASS | `app/(app)/clients/*`, `logo-upload.tsx`, `products.tsx`; logo upload has no e2e test |
-| Client pricing model (Fixed/One-time/Hourly/Commission/Retainer/Other) | FAIL | only `monthly_retainer` (`lib/schemas.ts:47`) |
+| Client pricing model (Fixed/One-time/Hourly/Commission/Retainer/Other) | PASS | migration `20261005000000_client_pricing.sql`; `lib/pricing.ts`; dynamic fields in `components/client-form.tsx`; shown on client page, list and dashboard (Agency MRR counts retainer, hourly, commission base fee and recurring "other"); existing clients read as retainers unchanged. Tests: `tests/unit/pricing.test.ts`, e2e "client pricing model…" |
 | Archive / past clients | PARTIAL | `past` status filter; no archive action |
 | Templates (5 built-in plus save as template) | PASS | `lib/templates.ts`, e2e |
 | Autosave, offline draft, version history and restore | PASS | `lib/editor/saver.ts`, `versions.tsx`, e2e |
 | Sharing (view/edit links, hide numbers, expiry, comments, notes never shared) | PASS | `share_safe_graph` RPC, e2e `privacy.spec.ts`, DB tests |
-| Share modal centred | FAIL | measured box at (0,0) with `margin: 0px` at 1440×900; the CSS reset overrides the native dialog centring for all `dialog.modal` elements |
+| Share modal / all modals centred | PASS | `app/globals.css` `dialog.modal { margin: auto; max-height; overflow }` restores native centring that Tailwind's reset removed; e2e "dialogs open centred and inside the viewport" (1440×900 and 390×640) |
 | Presentation mode | PASS | `present.tsx` |
 | Auth: invite-only, no public sign-up, password reset, magic link | PASS | `app/(auth)/*`, `access_hardening` migration, e2e `team.spec.ts` |
 | Roles | PARTIAL | `admin` / `member` only; no Owner/Editor/Viewer |
@@ -63,7 +65,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Export: PDF report | PARTIAL | `exporters.ts pdfReport`: branded header, KPI cards, map image, steps table; **missing** scenario comparison, forecast chart, sources, products, expenses and goals |
 | Locked Emerald UI direction | FAIL | `app/globals.css`: `--brand: #5b2fc9` (purple); category colours differ from the locked tokens; layout is card-heavy, not dark-first chrome |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
-| Deployment | PARTIAL | demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 5 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
+| Deployment | PARTIAL | Batch 1's pricing migration is applied to the demo database (additive only). Demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 6 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
 
 ## C. Gap matrix
 
@@ -71,20 +73,20 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 |---|---|
 | 1. Working, preserve | maths engine and tests; canvas core (drag, connect, select, copy/paste, align, frames, undo, minimap, snap); inspector numbers; KPI bar; report tabs; what-if/goal seek; costs; actuals; forecast; templates; autosave/offline/versions; sharing/comments/privacy; auth/invite/RLS/private storage; CSV/JSON import/export; presentation mode; dashboard; clients/products/logo |
 | 2. Complete enough | Tidy Up for flow blocks; scenario side-by-side; monthly forecast; responsive layouts |
-| 3. Broken | Share/other modals not centred; Tidy Up repositions headings and notes instead of preserving them |
+| 3. Broken | none known after Batch 1 |
 | 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in exports); PDF (missing sections); PNG/SVG fidelity; roles (admin/member); archive; reports area |
-| 5. Missing but required | Emerald design system; Style tab and text styling; client pricing model; checklists; connection styles; canvas shapes/images; per-element lock and layer order; Reports navigation with reinvestment, MRR, month-to-month and published status; PDF scenario/forecast/sources/expenses sections; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
-| 6. Missing but clearly implied | literal golden-value test from the handoff (current coverage is via prototype fixtures); export/report consistency test; e2e for logo upload; recents/favourites in the library |
+| 5. Missing but required | Emerald design system; Style tab and text styling; checklists; connection styles; canvas shapes/images; per-element lock and layer order; Reports navigation with reinvestment, MRR, month-to-month and published status; PDF scenario/forecast/sources/expenses sections; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
+| 6. Missing but clearly implied | PDF/PNG consistency test (CSV/JSON now covered by the golden test); e2e for logo upload; recents/favourites in the library |
 | 7. Out of scope (handoff §18) | AI features, multiplayer, tracking scripts, deep ad/CRM integrations, marketplace, benchmark DB, white-label portal |
 
-## D. Test status (run 2 Oct 2026)
+## D. Test status
 
-| Suite | Result |
-|---|---|
-| Unit (Vitest) | **73/73 pass** |
-| Database/RLS (Vitest, local Supabase) | **22/22 pass** |
-| E2E (Playwright, production build) | **58/59 pass**: "password reset by email" fails on Supabase's 60-second per-account email throttle (an earlier test emailed the same account); a test-ordering issue, not an app defect. It passed 59/59 earlier in the project |
-| Typecheck / ESLint | clean |
+| Suite | Before Batch 1 (audit) | After Batch 1 |
+|---|---|---|
+| Unit (Vitest) | 73/73 | **91/91** (+7 golden, +5 pricing, +6 Tidy Up annotations) |
+| Database/RLS (Vitest, local Supabase) | 22/22 | **22/22** |
+| E2E (Playwright, production build, fresh `db reset`) | 58/59 (password reset hit the email throttle) | **62/62** (+ modal placement, pricing model, Tidy Up annotations) |
+| Typecheck / ESLint / `next build` | clean | clean |
 
 ## E. Maths status: PASS
 
@@ -111,11 +113,11 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 | Bug | Current status |
 |---|---|
 | Maths discrepancy (70.2 / 4,709) | **Not reproducible.** The engine and the editor show 89.1 / 6,032 |
-| Tidy Up and canvas text | **PARTIAL.** Annotations aren't laid out as flow nodes, but they're re-anchored below the nearest block |
+| Tidy Up and canvas text | **FIXED** in Batch 1 (placement preserved, measured sizes, no overlaps) |
 | PNG export fidelity | **PARTIAL / UNKNOWN.** Re-drawn SVG without embedded fonts |
 | PDF export fidelity and composition | **PARTIAL.** Correct title and branding; missing report sections |
-| Share modal centring | **CONFIRMED BUG** (affects all `dialog.modal`) |
-| Client pricing model | **CONFIRMED MISSING** |
+| Share modal centring | **FIXED** in Batch 1 (shared `dialog.modal` rule) |
+| Client pricing model | **DONE** in Batch 1 |
 | Client logo | **PASS** (upload, preview, persist); no e2e test |
 | Import/export round-trip | **PASS** (unit-tested) |
 | Auth/RLS cross-tenant | **PASS** for the team model; independent tenants are not implemented |
@@ -142,14 +144,18 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
   - bottom KPI bar
 - Accessible and responsive, with e2e and axe checks passing.
 
+## Batch 1 (done)
+
+- **Modals:** shared `dialog.modal` CSS restores centring (Tailwind's reset set `margin: 0`), and tall dialogs scroll inside the viewport.
+- **Golden maths test:** `tests/unit/golden.test.ts`, with no formula changes.
+- **Password-reset e2e:** uses its own throwaway account per run (created and removed with the service role on the local stack) and ignores emails sent before the request. The app's reset flow and Supabase rate limits are unchanged. Also checks that the new password works and the old one doesn't. The magic-link test got the same "fresh email only" filter.
+- **Client pricing model:** the six models above, with their fields. Additive migration; legacy rows read as retainers; switching model clears the old model's fields on save; end-before-start dates are rejected (form and database).
+- **Tidy Up:** see table.
+- **Also fixed:** the share edit-link e2e now checks that internal notes survive a client edit in the stored funnel, instead of clicking a block that the client's new block could land on.
+
 ## I. Recommended order for the remaining budget
 
-1. **Quick P0 fixes (small):**
-   - centre all modals (one CSS rule)
-   - add a literal golden-value test
-   - make the password-reset test robust to the email throttle
-2. **Client pricing model:** one migration plus schema, form and display; keep existing retainers.
-3. **Tidy Up:** keep annotations at their original relative offsets, measure real sizes, and check annotation-to-annotation collisions.
+1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1)
 4. **Exports:**
    - embed fonts and fix bounds in the SVG/PNG
    - add scenario comparison, forecast chart, sources and expenses to the PDF, all from the same `compute` results

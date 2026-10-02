@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
 import { blankGraph, blankSettings, importFunnelFile, isCurrency, parseGraph, parseSettings, type CurrencyCode } from "@/lib/graph";
-import { clientFormSchema, FUNNEL_STATUSES } from "@/lib/schemas";
+import { normalisePricing } from "@/lib/pricing";
+import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schemas";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
@@ -20,10 +21,19 @@ function formObject(fd: FormData) {
 }
 
 /* ---------------- clients ---------------- */
-export async function createClientAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+/** Validated client form → row values: only the fields of the chosen pricing model are kept. */
+function clientValues(fd: FormData): { error: string } | { data: ClientForm } {
   const p = clientFormSchema.safeParse(formObject(fd));
   if (!p.success) return { error: p.error.issues[0].message };
+  const d = normalisePricing(p.data);
+  if (d.project_start && d.project_end && d.project_end < d.project_start) return { error: "The project end date is before its start date" };
+  return { data: d };
+}
+
+export async function createClientAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { sb, user } = await requireUser();
+  const p = clientValues(fd);
+  if ("error" in p) return { error: p.error };
   const { data, error } = await sb.from("clients").insert({ ...p.data, owner_id: user.id }).select("id").single();
   if (error) return { error: error.message };
   revalidatePath("/clients");
@@ -34,8 +44,8 @@ export async function createClientAction(_: ActionResult, fd: FormData): Promise
 export async function updateClientAction(id: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
   const { sb } = await requireUser();
   if (!uuid.safeParse(id).success) return { error: "Unknown client" };
-  const p = clientFormSchema.safeParse(formObject(fd));
-  if (!p.success) return { error: p.error.issues[0].message };
+  const p = clientValues(fd);
+  if ("error" in p) return { error: p.error };
   // notes autosave separately on the portfolio page; the details form must never overwrite them
   const { notes: _notes, ...fields } = p.data; // eslint-disable-line @typescript-eslint/no-unused-vars
   const { error } = await sb.from("clients").update(fd.has("notes") ? p.data : fields).eq("id", id);

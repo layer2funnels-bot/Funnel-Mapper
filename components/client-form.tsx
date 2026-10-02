@@ -1,8 +1,9 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FormMessage, Submit } from "./form-bits";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
 import { CLIENT_STATUSES, STATUS_LABEL, type ClientRow } from "@/lib/schemas";
+import { BILLING_FREQUENCIES, FREQUENCY_LABEL, PRICING_LABEL, PRICING_MODELS, pricingModel, type PricingModel } from "@/lib/pricing";
 import type { ActionResult } from "@/app/(app)/actions";
 
 type Action = (s: ActionResult, fd: FormData) => Promise<ActionResult>;
@@ -10,6 +11,7 @@ type Action = (s: ActionResult, fd: FormData) => Promise<ActionResult>;
 export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabel = "Save client", niches = [] }: { action: Action; client?: Partial<ClientRow>; defaultCurrency?: string; submitLabel?: string; niches?: string[] }) {
   const [state, formAction] = useActionState(action, undefined);
   const c = client ?? {};
+  const [model, setModel] = useState<PricingModel>(pricingModel(c));
   return (
     <form action={formAction} noValidate>
       <FormMessage state={state?.error ? state : undefined} />
@@ -76,10 +78,17 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           </select>
         </div>
         <div className="field">
-          <label htmlFor="cf-retainer">Monthly retainer</label>
-          <input className="input" id="cf-retainer" name="monthly_retainer" type="number" min="0" step="any" defaultValue={c.monthly_retainer ?? 0} />
+          <label htmlFor="cf-pricing">Pricing model</label>
+          <select className="input" id="cf-pricing" name="pricing_model" value={model} onChange={(e) => setModel(e.target.value as PricingModel)}>
+            {PRICING_MODELS.map((m) => (
+              <option key={m} value={m}>
+                {PRICING_LABEL[m]}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+      <PricingFields model={model} c={c} />
       <div className="field">
         <label htmlFor="cf-tags">Tags</label>
         <input className="input" id="cf-tags" name="tags" defaultValue={(c.tags ?? []).join(", ")} placeholder="tripwire, retainer" />
@@ -98,5 +107,88 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
         </span>
       </div>
     </form>
+  );
+}
+
+const amountProps = { className: "input", type: "number", min: "0", step: "any" } as const;
+
+/** The inputs that apply to the chosen pricing model (the server clears the others on save). */
+function PricingFields({ model, c }: { model: PricingModel; c: Partial<ClientRow> }) {
+  const amount = (id: string, label: string, help?: string) => (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input {...amountProps} id={id} name="pricing_amount" defaultValue={c.pricing_amount || ""} placeholder="0" />
+      {help && <span className="help">{help}</span>}
+    </div>
+  );
+  const date = (id: string, name: "project_start" | "project_end", label: string) => (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input className="input" id={id} name={name} type="date" defaultValue={c[name] ?? ""} />
+    </div>
+  );
+  return (
+    <>
+      {model === "retainer" && (
+        <div className="row2">
+          <div className="field">
+            <label htmlFor="cf-retainer">Monthly retainer</label>
+            <input {...amountProps} id="cf-retainer" name="monthly_retainer" defaultValue={c.monthly_retainer ?? 0} />
+          </div>
+        </div>
+      )}
+      {model === "fixed" && (
+        <>
+          <div className="row2">{amount("cf-amount", "Project fee")}</div>
+          <div className="row2">
+            {date("cf-start", "project_start", "Project start")}
+            {date("cf-end", "project_end", "Project end")}
+          </div>
+        </>
+      )}
+      {model === "one_time" && (
+        <div className="row2">
+          {amount("cf-amount", "Amount")}
+          {date("cf-start", "project_start", "Date")}
+        </div>
+      )}
+      {model === "hourly" && (
+        <div className="row2">
+          {amount("cf-amount", "Hourly rate")}
+          <div className="field">
+            <label htmlFor="cf-hours">Estimated hours per month</label>
+            <input {...amountProps} id="cf-hours" name="hours_per_month" defaultValue={c.hours_per_month || ""} placeholder="0" />
+          </div>
+        </div>
+      )}
+      {model === "commission" && (
+        <div className="row2">
+          <div className="field">
+            <label htmlFor="cf-commission">Commission (% of revenue)</label>
+            <input {...amountProps} id="cf-commission" name="commission_pct" max="100" defaultValue={c.commission_pct || ""} placeholder="0" />
+          </div>
+          {amount("cf-amount", "Base fee per month (optional)")}
+        </div>
+      )}
+      {model === "other" && (
+        <div className="row2">
+          {amount("cf-amount", "Amount")}
+          <div className="field">
+            <label htmlFor="cf-frequency">Billed</label>
+            <select className="input" id="cf-frequency" name="billing_frequency" defaultValue={c.billing_frequency ?? "monthly"}>
+              {BILLING_FREQUENCIES.map((f) => (
+                <option key={f} value={f}>
+                  {FREQUENCY_LABEL[f]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+      <div className="field">
+        <label htmlFor="cf-pricing-notes">Pricing notes</label>
+        <input className="input" id="cf-pricing-notes" name="pricing_notes" defaultValue={c.pricing_notes ?? ""} placeholder="Payment terms, milestones, what the commission is on…" maxLength={500} autoComplete="off" />
+      </div>
+    </>
   );
 }

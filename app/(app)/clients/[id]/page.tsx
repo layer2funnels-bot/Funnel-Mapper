@@ -6,7 +6,7 @@ import { Icon } from "@/components/icon";
 import { ImportFunnelButton } from "@/components/import-funnel";
 import { NewFunnelButton } from "@/components/new-funnel-dialog";
 import { StatusPill } from "@/components/status-pill";
-import { money } from "@/lib/format";
+import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
 import { updateClientAction } from "../../actions";
@@ -52,7 +52,7 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
           </h1>
           <p className="text-sm text-muted">
             {[client.business_name, client.niche, client.country].filter(Boolean).join(" · ") || "No details yet"}
-            {Number(client.monthly_retainer) > 0 && <> · {money(Number(client.monthly_retainer), client.currency)}/month retainer</>}
+            {pricingSummary(client, client.currency) && <> · {pricingSummary(client, client.currency)}</>}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -3,11 +3,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
-import { money, timeAgo } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
+import { pricingShort, pricingSummary, pricingValue } from "@/lib/pricing";
 import { CLIENT_STATUSES, STATUS_LABEL, type ClientRow } from "@/lib/schemas";
 
 export type ClientListItem = ClientRow & { funnels: number; liveFunnels: number };
-type Sort = "updated" | "name" | "retainer" | "created" | "funnels";
+type Sort = "updated" | "name" | "value" | "created" | "funnels";
 
 function useViewPref() {
   const [view, setView] = useState<"cards" | "table">(() => {
@@ -61,7 +62,7 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
       updated: (a, b) => b.updated_at.localeCompare(a.updated_at),
       created: (a, b) => b.created_at.localeCompare(a.created_at),
       name: (a, b) => a.name.localeCompare(b.name),
-      retainer: (a, b) => Number(b.monthly_retainer) - Number(a.monthly_retainer),
+      value: (a, b) => pricingValue(b) - pricingValue(a),
       funnels: (a, b) => b.funnels - a.funnels,
     };
     return out.sort(cmp[sort]);
@@ -99,7 +100,7 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
           <option value="updated">Recently updated</option>
           <option value="created">Newest</option>
           <option value="name">Name A–Z</option>
-          <option value="retainer">Highest retainer</option>
+          <option value="value">Highest value</option>
           <option value="funnels">Most funnels</option>
         </select>
         <div className="seg" role="group" aria-label="View">
@@ -137,7 +138,10 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
                     Live<b className="block font-display text-[15px] text-ink">{c.liveFunnels}</b>
                   </div>
                   <div>
-                    Retainer<b className="block font-display text-[15px] text-ink">{money(Number(c.monthly_retainer), c.currency)}</b>
+                    Pricing
+                    <b className="block truncate font-display text-[15px] text-ink" title={pricingSummary(c, c.currency) || undefined}>
+                      {pricingShort(c, c.currency)}
+                    </b>
                   </div>
                 </div>
                 {c.tags.length > 0 && (
@@ -166,7 +170,7 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
                 <th>Status</th>
                 <th>Tags</th>
                 <th className="r">Funnels</th>
-                <th className="r">Retainer</th>
+                <th className="r">Pricing</th>
                 <th className="r pr-4">Updated</th>
               </tr>
             </thead>
@@ -190,7 +194,9 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
                   <td className="r">
                     {c.funnels} <span className="text-muted">({c.liveFunnels} live)</span>
                   </td>
-                  <td className="r">{money(Number(c.monthly_retainer), c.currency)}</td>
+                  <td className="r" title={pricingSummary(c, c.currency) || undefined}>
+                    {pricingShort(c, c.currency)}
+                  </td>
                   <td className="r pr-4 text-muted">{timeAgo(c.updated_at)}</td>
                 </tr>
               ))}

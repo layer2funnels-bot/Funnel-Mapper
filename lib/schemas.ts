@@ -1,6 +1,7 @@
 // Zod schemas for forms and DB rows outside the funnel graph.
 import { z } from "zod";
 import type { Database } from "./supabase/database.types";
+import { BILLING_FREQUENCIES, PRICING_MODELS } from "./pricing";
 
 export const CLIENT_STATUSES = ["lead", "proposal", "active", "paused", "past"] as const;
 export const FUNNEL_STATUSES = ["draft", "proposed", "live", "archived"] as const;
@@ -34,6 +35,11 @@ const optUrl = z
   .transform((s) => (s && !/^https?:\/\//i.test(s) ? `https://${s}` : s))
   .pipe(z.union([z.literal(""), z.url("Enter a valid website")]));
 
+const optDate = z
+  .union([z.literal(""), z.iso.date("Enter a valid date")])
+  .default("")
+  .transform((d) => d || null);
+
 export const clientFormSchema = z.object({
   name: z.string().trim().min(1, "Client name is required").max(120),
   business_name: z.string().trim().max(160).default(""),
@@ -45,6 +51,14 @@ export const clientFormSchema = z.object({
   currency: z.string().default("GBP"),
   status: z.enum(CLIENT_STATUSES).default("lead"),
   monthly_retainer: z.coerce.number().min(0, "Retainer can’t be negative").default(0),
+  pricing_model: z.enum(PRICING_MODELS).default("retainer"),
+  pricing_amount: z.coerce.number().min(0, "Amounts can’t be negative").default(0),
+  billing_frequency: z.enum(BILLING_FREQUENCIES).default("monthly"),
+  hours_per_month: z.coerce.number().min(0, "Hours can’t be negative").default(0),
+  commission_pct: z.coerce.number().min(0, "Commission must be between 0 and 100%").max(100, "Commission must be between 0 and 100%").default(0),
+  project_start: optDate,
+  project_end: optDate,
+  pricing_notes: z.string().trim().max(500).default(""),
   notes: z.string().max(20000).default(""),
   tags: z
     .union([z.array(z.string()), z.string()])

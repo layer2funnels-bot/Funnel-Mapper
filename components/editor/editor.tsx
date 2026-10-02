@@ -20,6 +20,7 @@ import {
   duplicateSelection,
   editorSnapshot,
   heightOf,
+  widthOf,
   initEditor,
   markDirty,
   moveNodes,
@@ -167,7 +168,7 @@ function EditorInner(props: EditorProps) {
       const s = useEditor.getState();
       if (s.readOnly) return;
       if (!s.nodes.some((n) => !isAnnot(n.type))) return showToast("Add some blocks first");
-      const next = kind === "elk" ? await elkLayout(s.nodes, s.edges, { heightOf, snap: s.opts.snap }) : tidyLayout(s.nodes, s.edges, { heightOf, snap: s.opts.snap });
+      const next = kind === "elk" ? await elkLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap }) : tidyLayout(s.nodes, s.edges, { heightOf, widthOf, snap: s.opts.snap });
       const from = Object.fromEntries(s.nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const T = reduce ? 0 : 420,

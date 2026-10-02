@@ -5,7 +5,7 @@ import { compute, summary } from "../../lib/funnel-math";
 import { blankGraph, blankSettings, type FunnelGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
 
-function env(k: string) {
+export function env(k: string) {
   if (process.env[k]) return process.env[k]!;
   for (const f of [".env.local", ".env.example"]) {
     try {

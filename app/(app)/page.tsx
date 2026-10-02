@@ -6,6 +6,7 @@ import { PageHeader, Stat } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, moneyShort, ratio, timeAgo } from "@/lib/format";
+import { monthlyValue } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
 
@@ -22,7 +23,7 @@ function byCurrency(rows: { cur: string; v: number }[]) {
 export default async function Dashboard() {
   const { sb, profile, workspace } = await requireUser();
   const [{ data: clients }, { data: funnels }, tpls] = await Promise.all([
-    sb.from("clients").select("id, name, status, currency, monthly_retainer, logo_url").order("name"),
+    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").order("name"),
     sb.from("funnels").select("id, name, status, client_id, summary, settings, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
     templateOptions(sb),
   ]);
@@ -50,8 +51,8 @@ export default async function Dashboard() {
         <Stat label="Live funnels" value={live.length} hint={`${proposed.length} proposed · ${fs.length} total`} />
         <Stat label="Planned revenue (live funnels)" value={byCurrency(live.map((f) => ({ cur: curOf(f), v: sum(f).rev ?? 0 })))} hint={`Profit ${byCurrency(live.map((f) => ({ cur: curOf(f), v: sum(f).profit ?? 0 })))}`} />
         <Stat
-          label="Agency MRR (retainers)"
-          value={byCurrency(active.map((c) => ({ cur: c.currency, v: Number(c.monthly_retainer) })))}
+          label="Agency MRR"
+          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })))}
           hint={`Client funnel MRR ${byCurrency(live.map((f) => ({ cur: curOf(f), v: sum(f).mrr ?? 0 })))}`}
         />
       </section>

@@ -37,6 +37,39 @@ test.describe("autosave and offline (M4)", () => {
   });
 });
 
+test.describe("modals", () => {
+  /** Centre of the open dialog relative to the viewport centre, and whether it fits on screen. */
+  async function placement(page: import("@playwright/test").Page) {
+    const vp = page.viewportSize()!;
+    const b = (await page.locator("dialog[open]").boundingBox())!;
+    return { dx: Math.abs(b.x + b.width / 2 - vp.width / 2), dy: Math.abs(b.y + b.height / 2 - vp.height / 2), fits: b.x >= 0 && b.y >= 0 && b.x + b.width <= vp.width && b.y + b.height <= vp.height };
+  }
+
+  test("dialogs open centred and inside the viewport (desktop and phone)", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Share" }).click();
+    await expect(page.getByRole("dialog", { name: "Share with your client" })).toBeVisible();
+    let p = await placement(page);
+    expect(p.dx).toBeLessThanOrEqual(2);
+    expect(p.dy).toBeLessThanOrEqual(2);
+    expect(p.fits).toBe(true);
+    await page.keyboard.press("Escape");
+
+    for (const size of [{ width: 1440, height: 900 }, { width: 390, height: 640 }]) {
+      await page.setViewportSize(size);
+      await page.goto("/");
+      await page.getByRole("button", { name: "New funnel" }).first().click();
+      await expect(page.locator("dialog[open]")).toBeVisible();
+      p = await placement(page);
+      expect(p.dx, `${size.width}px horizontal`).toBeLessThanOrEqual(2);
+      expect(p.fits, `${size.width}px fits`).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(page.locator("dialog[open]")).toHaveCount(0);
+    }
+  });
+});
+
 test.describe("share links (M5)", () => {
   async function makeLink(page: import("@playwright/test").Page, id: string, opts: { edit?: boolean; hide?: boolean } = {}) {
     await openEditor(page, id);
@@ -51,7 +84,7 @@ test.describe("share links (M5)", () => {
   }
 
   test("edit links let the client change the map; internal notes stay internal", async ({ page, browser }) => {
-    const { id } = await createFunnel({ template: "webinar" });
+    const { id, sb } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
     await node(page, "Live webinar").click();
     await page.getByLabel("Internal notes").fill("SECRET: margin is thin");
@@ -68,8 +101,12 @@ test.describe("share links (M5)", () => {
     await ctx.close();
     await page.reload();
     await expect(nodes(page)).toHaveCount(10);
-    await node(page, "Live webinar").click();
-    await expect(page.getByLabel("Internal notes")).toHaveValue("SECRET: margin is thin");
+    // the client's save kept the internal note (checked in the stored funnel: the client's new block can land
+    // anywhere on screen, possibly on top of "Live webinar", so clicking it isn't a reliable check)
+    const { data } = await sb.from("funnels").select("graph").eq("id", id).single();
+    const stored = (data!.graph as { nodes: { name: string; desc?: string }[] }).nodes;
+    expect(stored).toHaveLength(10);
+    expect(stored.find((n) => n.name === "Live webinar")?.desc).toBe("SECRET: margin is thin");
   });
 
   test("hide-numbers links show only the journey", async ({ page, browser }) => {
@@ -224,5 +261,49 @@ test.describe("portfolio", () => {
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(`Prefers WhatsApp ${stamp}`);
     await expect(page.getByLabel("Phone")).toHaveValue("+971 50 111 2222");
+  });
+
+  test("client pricing model: existing retainers, switching models, dynamic fields", async ({ page }) => {
+    // an existing (pre-pricing-model) retainer client still reads as a retainer
+    await page.goto("/clients/10000000-0000-4000-8000-000000000001");
+    await expect(page.getByText("£1,500/month retainer")).toBeVisible();
+    await expect(page.getByLabel("Pricing model")).toHaveValue("retainer");
+    await expect(page.getByLabel("Monthly retainer")).toHaveValue("1500");
+
+    const name = `Pricing client ${Date.now()}`;
+    await page.goto("/clients/new");
+    await page.getByLabel("Client name *").fill(name);
+    await page.getByLabel("Pricing model").selectOption("hourly");
+    await expect(page.getByLabel("Monthly retainer")).toHaveCount(0);
+    await page.getByLabel("Hourly rate").fill("80");
+    await page.getByLabel("Estimated hours per month").fill("10");
+    await page.getByRole("button", { name: "Create client" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
+    await expect(page.getByText("£80.00/hour · ~10 h/month")).toBeVisible();
+
+    await page.getByLabel("Pricing model").selectOption("fixed");
+    await page.getByLabel("Project fee").fill("5000");
+    await page.getByLabel("Project start").fill("2026-01-05");
+    await page.getByLabel("Project end").fill("2026-03-31");
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" }).last()).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("£5,000 fixed project (5 Jan 2026 – 31 Mar 2026)")).toBeVisible();
+    await expect(page.getByLabel("Project fee")).toHaveValue("5000");
+
+    // end before start is rejected, and nothing changes
+    await page.getByLabel("Project end").fill("2025-12-01");
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "end date is before its start" })).toBeVisible();
+
+    // switching back to a retainer starts from a clean slate (the old project fee no longer counts)
+    await page.reload();
+    await page.getByLabel("Pricing model").selectOption("retainer");
+    await page.getByLabel("Monthly retainer").fill("900");
+    await page.getByRole("button", { name: "Save details" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" }).last()).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("£900/month retainer")).toBeVisible();
+    await expect(page.getByText(/£5,000 fixed project/)).toHaveCount(0);
   });
 });

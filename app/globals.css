@@ -499,7 +499,10 @@ button {
     height: 16px;
     accent-color: var(--brand);
   }
+  /* Tailwind's preflight resets every element's margin to 0, which removes the native centring of modal
+     dialogs; restore it, and keep tall dialogs inside the viewport (they scroll instead). */
   dialog.modal {
+    margin: auto;
     border: 1px solid var(--line);
     border-radius: 16px;
     background: var(--panel);
@@ -507,6 +510,9 @@ button {
     padding: 22px 24px;
     max-width: 560px;
     width: calc(100% - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    overscroll-behavior: contain;
   }
   dialog.modal::backdrop {
     background: rgba(20, 16, 30, 0.45);

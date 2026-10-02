@@ -156,6 +156,27 @@ test.describe("funnel editor", () => {
     await expect(page.locator(".fm-toast")).toContainText("ELK");
   });
 
+  test("Tidy up keeps notes and headings where they were placed, clear of the blocks", async ({ page }) => {
+    const { id, graph } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    const note = graph.nodes.find((n) => n.type === "note")!;
+    const coaching = graph.nodes.find((n) => n.name === "Monthly coaching")!; // the block the note sits under
+    const before = { dx: note.x - coaching.x, dy: note.y - coaching.y };
+    await page.getByRole("button", { name: "Tidy up" }).click();
+    await expect(page.locator(".fm-toast")).toContainText("Layout tidied");
+    const n = await pos(page, note.id),
+      c = await pos(page, coaching.id);
+    expect(n.x - c.x, "same horizontal offset").toBe(before.dx);
+    expect(n.y - c.y, "still below that block, not re-anchored").toBeGreaterThanOrEqual(before.dy);
+    // on screen, the note overlaps no funnel block (frames are containers and may enclose it)
+    const box = (await page.locator(`.react-flow__node[data-id="${note.id}"]`).boundingBox())!;
+    for (const b of graph.nodes.filter((x) => !["note", "label", "frame"].includes(x.type))) {
+      const r = (await page.locator(`.react-flow__node[data-id="${b.id}"]`).boundingBox())!;
+      const hit = box.x < r.x + r.width && box.x + box.width > r.x && box.y < r.y + r.height && box.y + box.height > r.y;
+      expect(hit, `note overlaps ${b.name}`).toBe(false);
+    }
+  });
+
   test("keyboard: nudge, help, shortcuts don't fire while typing", async ({ page }) => {
     const { id, graph } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);

@@ -7,15 +7,27 @@ import type { FunnelEdge, FunnelNode } from "./graph";
 export interface LayoutOptions {
   /** Measured node heights (notes grow with text). Defaults to NH. */
   heightOf?: (n: FunnelNode) => number;
+  /** Measured node widths (headings size to their text). Defaults to the catalog width. */
+  widthOf?: (n: FunnelNode) => number;
   snap?: boolean;
 }
+
+/** Fallback annotation sizes when nothing was measured (matches the editor's defaults). */
+const annotW = (n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type));
+const defaultH = (n: FunnelNode) => (n.type === "label" ? 40 : NH);
 
 const GRID = 11;
 const snapper = (on: boolean) => (v: number) => (on ? Math.round(v / GRID) * GRID : Math.round(v));
 
-/** Records where notes/headings/frames sit relative to flow blocks, then re-applies that after a layout moves the blocks. */
-function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<string, FunnelNode>, nodeH: (n: FunnelNode) => number) {
-  const center = (n: FunnelNode): [number, number] => [n.x + nodeW(n.type) / 2, n.y + nodeH(n) / 2];
+/**
+ * Records where notes/headings/frames sit relative to flow blocks, then re-applies that after a layout moves the blocks.
+ * Frames are refitted around the blocks inside them. Notes and headings are not part of the flow: each keeps its exact
+ * offset from the nearest block (so text placed above, beside or below a step stays there), and is only nudged when the
+ * new layout would make it overlap a block or another annotation.
+ */
+function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<string, FunnelNode>, nodeH: (n: FunnelNode) => number, widthOf: (n: FunnelNode) => number) {
+  const W = (n: FunnelNode) => (isAnnot(n.type) ? widthOf(n) : nodeW(n.type));
+  const center = (n: FunnelNode): [number, number] => [n.x + W(n) / 2, n.y + nodeH(n) / 2];
   const frames = nodes
     .filter((n) => n.type === "frame")
     .map((f) => ({
@@ -29,34 +41,56 @@ function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<s
     }));
   const anchors = nodes
     .filter((n) => n.type === "note" || n.type === "label")
+    .sort((p, q) => p.y - q.y || p.x - q.x)
     .map((a) => {
+      const [ax, ay] = center(a);
       let best: FunnelNode | null = null,
-        bd = 1e18;
+        bd = Infinity;
       for (const n of flow) {
         const [cx, cy] = center(n),
-          d = (cx - a.x) ** 2 + (cy - a.y) ** 2;
+          d = (cx - ax) ** 2 + (cy - ay) ** 2;
         if (d < bd) {
           bd = d;
           best = n;
         }
       }
-      const b = best as FunnelNode | null;
-      return { a: B[a.id], to: b?.id, dx: b ? a.x - b.x : 0 };
+      return { a: B[a.id], to: best?.id, dx: best ? a.x - best.x : 0, dy: best ? a.y - best.y : 0 };
     });
   return () => {
-    const flowAfter = flow.map((n) => B[n.id]);
-    const hit = (a: FunnelNode) => {
-      const aw = a.type === "note" ? 210 : 300,
-        ah = a.type === "note" ? Math.max(96, nodeH(a)) : 60;
-      return flowAfter.some((n) => a.x < n.x + nodeW(n.type) + 16 && a.x + aw > n.x - 16 && a.y < n.y + nodeH(n) + 16 && a.y + ah > n.y - 16);
+    type Box = { x: number; y: number; w: number; h: number };
+    const box = (n: FunnelNode, pad = 0): Box => ({ x: n.x - pad, y: n.y - pad, w: W(n) + 2 * pad, h: nodeH(n) + 2 * pad });
+    const hits = (p: Box, q: Box) => p.x < q.x + q.w && p.x + p.w > q.x && p.y < q.y + q.h && p.y + p.h > q.y;
+    const blocks = flow.map((n) => box(B[n.id], 12));
+    const placed: Box[] = [];
+    // annotations keep 8px apart from each other and 12px from blocks
+    const free = (a: FunnelNode) => {
+      const r = box(a, 8);
+      return !blocks.some((q) => hits(box(a), q)) && !placed.some((q) => hits(r, q));
     };
-    anchors.forEach(({ a, to, dx }) => {
-      if (!to) return;
-      const t = B[to];
-      a.x = t.x + Math.max(-40, Math.min(40, dx));
-      a.y = t.y + nodeH(t) + 24;
-      let g = 0;
-      while (hit(a) && g++ < 40) a.y += 40;
+    anchors.forEach(({ a, to, dx, dy }) => {
+      if (to) {
+        a.x = B[to].x + dx;
+        a.y = B[to].y + dy;
+      }
+      if (!free(a)) {
+        // nearest free spot: try small vertical shifts first (alternating down/up), then sideways
+        const x0 = a.x,
+          y0 = a.y;
+        let found = false;
+        for (let k = 1; k <= 60 && !found; k++) {
+          const d = Math.ceil(k / 2) * 16 * (k % 2 ? 1 : -1);
+          for (const [ox, oy] of [[0, d], [d, 0]]) {
+            a.x = x0 + ox;
+            a.y = y0 + oy;
+            if (free(a)) {
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) Object.assign(a, { x: x0, y: y0 });
+      }
+      placed.push(box(a));
     });
     frames.forEach(({ f, members }) => {
       const ms = members.map((i) => B[i]).filter(Boolean);
@@ -72,7 +106,8 @@ function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<s
 
 /** Returns a new node list with flow blocks re-positioned and notes / headings / frames carried along. */
 export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: LayoutOptions = {}): FunnelNode[] {
-  const nodeH = opts.heightOf ?? (() => NH);
+  const nodeH = opts.heightOf ?? defaultH;
+  const widthOf = opts.widthOf ?? annotW;
   const snap = snapper(opts.snap ?? true);
   const flow = nodes.filter((n) => !isAnnot(n.type));
   if (!flow.length) return nodes;
@@ -80,8 +115,8 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   const ids = new Set(flow.map((n) => n.id));
   const E = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
 
-  // remember annotations: frames by membership, notes/labels by nearest block
-  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH);
+  // remember annotations: frames by membership, notes/labels by their offset from the nearest block
+  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf);
 
   // 1. break cycles (DFS, traffic first, main paths before alt)
   const out: Record<string, FunnelEdge[]> = {},
@@ -233,7 +268,8 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
  * Async because elkjs runs its solver asynchronously. Annotations are carried along with the same rules as tidyLayout.
  */
 export async function elkLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: LayoutOptions = {}): Promise<FunnelNode[]> {
-  const nodeH = opts.heightOf ?? (() => NH);
+  const nodeH = opts.heightOf ?? defaultH;
+  const widthOf = opts.widthOf ?? annotW;
   const snap = snapper(opts.snap ?? true);
   const flow = nodes.filter((n) => !isAnnot(n.type));
   if (!flow.length) return nodes;
@@ -272,7 +308,7 @@ export async function elkLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: 
   res.children?.forEach((c) => (pos[c.id] = { x: c.x ?? 0, y: c.y ?? 0 }));
 
   const B: Record<string, FunnelNode> = Object.fromEntries(nodes.map((n) => [n.id, { ...n }]));
-  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH);
+  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf);
   flow.forEach((n) => {
     B[n.id].x = snap(80 + pos[n.id].x);
     B[n.id].y = snap(80 + pos[n.id].y);

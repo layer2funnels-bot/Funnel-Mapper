@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { compute, summary } from "../../lib/funnel-math";
-import { blankGraph, blankSettings, type FunnelGraph } from "../../lib/graph";
+import { blankGraph, blankSettings, type FunnelGraph, type FunnelSettings } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
 
 export function env(k: string) {
@@ -19,13 +19,13 @@ export function env(k: string) {
 export const DEMO_CLIENT = "10000000-0000-4000-8000-000000000001";
 
 /** Creates a funnel for the demo client straight through the API and returns its id. */
-export async function createFunnel(opts: { template?: string; graph?: FunnelGraph; name?: string } = {}) {
+export async function createFunnel(opts: { template?: string; graph?: FunnelGraph; name?: string; settings?: Partial<FunnelSettings> } = {}) {
   const sb = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
   const { error: authErr } = await sb.auth.signInWithPassword({ email: "demo@layer2funnels.test", password: "demo-password" });
   if (authErr) throw authErr;
   const t = opts.template ? builtinTemplate(opts.template) : null;
   const graph = opts.graph ?? t?.graph ?? blankGraph();
-  const settings = blankSettings();
+  const settings = { ...blankSettings(), ...opts.settings };
   const { data, error } = await sb
     .from("funnels")
     .insert({ client_id: DEMO_CLIENT, name: opts.name ?? `E2E ${t?.name ?? "blank"} ${Date.now()}`, graph, settings, summary: summary(compute(graph, settings)) })

@@ -1,9 +1,11 @@
 // Text shown on blocks and edges, ported from the prototype's subLabel() / nodeStats().
 // Returns plain segments (bold or not) so React, SVG and PDF exports can all render them.
+import { getSmoothStepPath, getStraightPath, Position } from "@xyflow/react";
 import { INT_LABEL, typeOf, type Interval } from "../catalog";
 import { money, nf } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
 import type { FunnelNode } from "../graph";
+import type { edgeLook } from "../style";
 
 export type Seg = { t: string; b?: boolean };
 
@@ -49,4 +51,18 @@ export function curve(x1: number, y1: number, port: "main" | "alt", x2: number, 
   const c1 = port === "alt" ? [x1, y1 + Math.max(60, Math.abs(y2 - y1) / 2)] : [x1 + dx, y1];
   const c2 = [x2 - dx, y2];
   return [`M ${x1} ${y1} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${x2} ${y2}`, [(x1 + 3 * c1[0] + 3 * c2[0] + x2) / 8, (y1 + 3 * c1[1] + 3 * c2[1] + y2) / 8]];
+}
+
+/** Path + label point for the connection's line style (curved is the prototype's own bezier). Shared by the canvas and the map export. */
+export function edgePath(look: Pick<ReturnType<typeof edgeLook>, "path">, port: "main" | "alt", sx: number, sy: number, tx: number, ty: number): [string, number, number] {
+  if (look.path === "straight") {
+    const [d, lx, ly] = getStraightPath({ sourceX: sx, sourceY: sy, targetX: tx, targetY: ty });
+    return [d, lx, ly];
+  }
+  if (look.path === "elbow") {
+    const [d, lx, ly] = getSmoothStepPath({ sourceX: sx, sourceY: sy, sourcePosition: port === "alt" ? Position.Bottom : Position.Right, targetX: tx, targetY: ty, targetPosition: Position.Left, borderRadius: 10 });
+    return [d, lx, ly];
+  }
+  const [d, [mx, my]] = curve(sx, sy, port, tx, ty);
+  return [d, mx, my];
 }

@@ -1,9 +1,10 @@
 "use client";
-// Browser-side exports: file download, PNG (rasterised map SVG) and the one-page PDF client report.
-import { money, nf, pct, ratio } from "@/lib/format";
+// Browser-side exports: file download, the map as SVG/PNG (with the canvas fonts embedded) and the PDF client report.
+import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
 import { stepRows, type FunnelResult } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
-import { mapSvg } from "@/lib/export";
+import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
+import { reportData, type ReportSettings } from "@/lib/report-data";
 
 export function download(name: string, data: Blob | string, type = "application/octet-stream") {
   const blob = typeof data === "string" ? new Blob([data], { type }) : data;
@@ -37,6 +38,9 @@ export async function svgToPng(svg: string, scale = 2): Promise<{ url: string; w
   const c = document.createElement("canvas");
   c.width = Math.round(w * k);
   c.height = Math.round(h * k);
+  try {
+    await img.decode();
+  } catch {}
   const ctx = c.getContext("2d")!;
   ctx.drawImage(img, 0, 0, c.width, c.height);
   return { url: c.toDataURL("image/png"), width: c.width, height: c.height };
@@ -67,6 +71,92 @@ async function logoPng(url: string | null | undefined) {
   }
 }
 
+/* ---------------- map image: the app's fonts, real text widths, inlined images ---------------- */
+
+const firstFamily = (stack: string) => stack.split(",")[0]?.trim().replace(/^["']|["']$/g, "") ?? "";
+const toDataUrl = (b: Blob) =>
+  new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(b);
+  });
+
+let fontCache: Promise<{ sans: string; display: string; css: string }> | null = null;
+/**
+ * The canvas fonts (DM Sans, Bricolage) as @font-face rules with the font files inlined, so the SVG renders with the
+ * same fonts when it is rasterised (an SVG drawn as an image can't fetch fonts) or opened elsewhere. Latin subset only.
+ */
+function appFonts() {
+  fontCache ??= (async () => {
+    const cs = getComputedStyle(document.documentElement);
+    const sans = cs.getPropertyValue("--font-sans").trim() || "Arial, sans-serif";
+    const display = cs.getPropertyValue("--font-display").trim() || sans;
+    const want = new Set([firstFamily(sans), firstFamily(display)]);
+    const rules: string[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let list: CSSRuleList;
+      try {
+        list = sheet.cssRules;
+      } catch {
+        continue; // cross-origin sheet
+      }
+      for (const rule of Array.from(list)) {
+        if (!(rule instanceof CSSFontFaceRule)) continue;
+        const st = rule.style;
+        if (!want.has(firstFamily(st.getPropertyValue("font-family")))) continue;
+        const range = st.getPropertyValue("unicode-range");
+        if (range && !/U\+0+-0*FF\b/i.test(range)) continue;
+        const url = st.getPropertyValue("src").match(/url\(["']?([^"')]+)["']?\)/)?.[1];
+        if (!url) continue;
+        try {
+          const data = await toDataUrl(await (await fetch(new URL(url, sheet.href ?? document.baseURI))).blob());
+          rules.push(`@font-face{font-family:"${firstFamily(st.getPropertyValue("font-family"))}";src:url(${data});font-weight:${st.getPropertyValue("font-weight") || "normal"};font-style:${st.getPropertyValue("font-style") || "normal"}${range ? `;unicode-range:${range}` : ""}}`);
+        } catch {}
+      }
+    }
+    return { sans, display, css: rules.join("") };
+  })();
+  return fontCache;
+}
+
+/** Text widths from the browser's own font engine (after the web fonts have loaded). */
+function canvasMeasure(): Measure {
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return (t, size) => t.length * size * 0.55;
+  return (t, size, weight, family) => {
+    ctx.font = `${weight} ${size}px ${family}`;
+    return ctx.measureText(t).width;
+  };
+}
+
+/** Remote image URLs → data URLs (an SVG drawn as an image can't load external files). Unreachable ones stay as URLs. */
+async function inlineImages(nodes: FunnelNode[]) {
+  return Promise.all(
+    nodes.map(async (n) => {
+      const src = n.type === "image" ? String(n.p.src ?? "") : "";
+      if (!src || src.startsWith("data:")) return n;
+      try {
+        const r = await fetch(src, { mode: "cors" });
+        if (!r.ok) return n;
+        return { ...n, p: { ...n.p, src: await toDataUrl(await r.blob()) } };
+      } catch {
+        return n;
+      }
+    }),
+  );
+}
+
+/** The map as a self-contained SVG: canvas fonts embedded, text measured with them, images inlined. */
+export async function renderMapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, opts: Omit<MapSvgOptions, "fonts" | "measure"> & { embedFonts?: boolean }) {
+  await document.fonts?.ready;
+  const fonts = await appFonts();
+  const nodes = await inlineImages(g.nodes);
+  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
+}
+
+/* ---------------- PDF client report ---------------- */
+
 export interface PdfInfo {
   funnelName: string;
   description?: string;
@@ -77,24 +167,116 @@ export interface PdfInfo {
   currency: string;
   basis: "first" | "ltv";
   hideNumbers?: boolean;
+  /** Funnel settings: scenarios, forecast, expenses and target feed the report pages. */
+  settings: ReportSettings;
+  /** Map drawing options (measured sizes, line thickness). */
+  map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick">;
 }
 
-/** One-page A4 landscape client report: branding, the map, key numbers and the step table. */
-export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, info: PdfInfo, heightOf?: (n: FunnelNode) => number) {
+type RGB = [number, number, number];
+const C = {
+  chrome: [17, 24, 39] as RGB,
+  chromeInk: [226, 232, 240] as RGB,
+  chromeMuted: [148, 163, 184] as RGB,
+  brand: [4, 120, 87] as RGB,
+  emerald: [16, 185, 129] as RGB,
+  ink: [15, 23, 42] as RGB,
+  muted: [71, 85, 105] as RGB,
+  line: [219, 226, 234] as RGB,
+  soft: [241, 245, 249] as RGB,
+  bg: [248, 250, 252] as RGB,
+  good: [21, 128, 61] as RGB,
+  bad: [185, 28, 28] as RGB,
+  orange: [194, 65, 12] as RGB,
+};
+
+/** jsPDF's built-in fonts only cover Windows-1252: swap the few non-Latin characters the app itself produces. */
+const pdfText = (s: string) =>
+  s
+    .replace(/₹/g, "Rs ")
+    .replace(/[−–]/g, "-")
+    .replace(/→/g, "->")
+    .replace(/✓/g, "v")
+    .replace(/[^\x00-\xFF€…‘’“”•—™]/g, "?");
+
+type Cell = string | { t: string; c?: RGB; b?: boolean };
+interface Col {
+  h: string;
+  w: number;
+  a?: "left" | "right";
+}
+const ROW = 4.8,
+  HEAD = 6,
+  TITLE = 8;
+
+/** Multi-page A4 landscape client report: cover page (branding, map, key numbers, steps) then the report sections. */
+export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, info: PdfInfo) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const W = 297,
     H = 210,
     M = 12;
-  const brand: [number, number, number] = [91, 47, 201];
-  const ink: [number, number, number] = [30, 22, 49];
-  const muted: [number, number, number] = [94, 85, 119];
   const nums = !info.hideNumbers;
-  const m = (v: number) => money(v, info.currency).replace("₹", "Rs ");
+  const m = (v: number) => pdfText(money(v, info.currency));
+  const ms = (v: number) => pdfText(moneyShort(v, info.currency));
+  const fill = (c: RGB) => doc.setFillColor(...c);
+  const ink = (c: RGB) => doc.setTextColor(...c);
+  const font = (size: number, bold = false) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+  };
+  const fit = (t: string, w: number) => {
+    t = pdfText(t);
+    if (doc.getTextWidth(t) <= w) return t;
+    let k = t.length;
+    while (k > 0 && doc.getTextWidth(t.slice(0, k) + "…") > w) k--;
+    return t.slice(0, k).trimEnd() + "…";
+  };
+  const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
-  // header band
-  doc.setFillColor(36, 19, 63);
+  /** Table at (x, y), width w. Returns its height. `total` = last row is a bold total line. */
+  const table = (x: number, y: number, w: number, cols: Col[], rows: Cell[][], opts: { total?: boolean } = {}) => {
+    const sum = cols.reduce((a, c) => a + c.w, 0);
+    const cw = cols.map((c) => (c.w / sum) * w);
+    font(7.5, true);
+    ink(C.muted);
+    let cx = x;
+    cols.forEach((c, j) => {
+      const a = c.a ?? (j ? "right" : "left");
+      doc.text(fit(c.h, cw[j] - 2), a === "right" ? cx + cw[j] - 1 : cx + 1, y + 4, { align: a });
+      cx += cw[j];
+    });
+    doc.setDrawColor(...C.line);
+    doc.setLineWidth(0.3);
+    doc.line(x, y + HEAD - 0.5, x + w, y + HEAD - 0.5);
+    rows.forEach((r, i) => {
+      const ry = y + HEAD + i * ROW;
+      const isTotal = opts.total && i === rows.length - 1;
+      if (isTotal) doc.line(x, ry, x + w, ry);
+      else if (i % 2) {
+        fill(C.bg);
+        doc.rect(x, ry, w, ROW, "F");
+      }
+      let cx2 = x;
+      r.forEach((cell, j) => {
+        const c = typeof cell === "string" ? { t: cell } : cell;
+        const a = cols[j].a ?? (j ? "right" : "left");
+        font(8, isTotal || !!c.b);
+        ink(c.c ?? C.ink);
+        doc.text(fit(c.t, cw[j] - 2), a === "right" ? cx2 + cw[j] - 1 : cx2 + 1, ry + ROW - 1.4, { align: a });
+        cx2 += cw[j];
+      });
+    });
+    return HEAD + rows.length * ROW;
+  };
+  const tableH = (rows: number) => HEAD + rows * ROW;
+  const signed = (v: number): RGB => (v >= 0 ? C.good : C.bad);
+
+  /* ================= page 1: cover, map, key numbers, steps ================= */
+  fill(C.chrome);
   doc.rect(0, 0, W, 24, "F");
+  fill(C.emerald);
+  doc.rect(0, 24, W, 0.8, "F");
   let hx = M;
   const agencyLogo = await logoPng(info.agencyLogo);
   if (agencyLogo) {
@@ -105,14 +287,12 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     doc.addImage(agencyLogo.url, "PNG", hx, 6, lw, lh);
     hx += lw + 5;
   }
-  doc.setTextColor(237, 231, 251);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(info.agencyName || "Funnel plan", hx, 12.5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(184, 169, 221);
-  doc.text(`Prepared for ${info.clientName} · ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`, hx, 18);
+  ink(C.chromeInk);
+  font(14, true);
+  doc.text(pdfText(info.agencyName || "Funnel plan"), hx, 12.5);
+  font(9);
+  ink(C.chromeMuted);
+  doc.text(pdfText(`Prepared for ${info.clientName} · ${dateStr}`), hx, 18);
   const clientLogo = await logoPng(info.clientLogo);
   if (clientLogo) {
     const lh = 14,
@@ -122,41 +302,55 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     doc.addImage(clientLogo.url, "PNG", W - M - lw, 5, lw, lh);
   }
 
-  // title
-  doc.setTextColor(...ink);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text(info.funnelName, M, 35);
+  ink(C.ink);
+  font(18, true);
+  doc.text(fit(info.funnelName, W - 2 * M), M, 35);
   if (info.description) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...muted);
-    doc.text(doc.splitTextToSize(info.description, 180).slice(0, 2), M, 41);
+    font(9);
+    ink(C.muted);
+    doc.text(doc.splitTextToSize(pdfText(info.description), 180).slice(0, 2), M, 41);
   }
 
   // map
   const mapX = M,
     mapY = 47,
     mapW = nums ? 190 : W - 2 * M,
-    mapH = 100;
-  doc.setDrawColor(228, 222, 241);
-  doc.setFillColor(247, 245, 252);
+    mapH = nums ? 100 : H - mapY - 14;
+  doc.setDrawColor(...C.line);
+  fill(C.bg);
   doc.roundedRect(mapX, mapY, mapW, mapH, 3, 3, "FD");
   if (g.nodes.length) {
-    const png = await svgToPng(mapSvg(g, R, { currency: info.currency, nums, heightOf }), 2);
+    const svg = await renderMapSvg(g, R, { currency: info.currency, nums, ...info.map });
+    const sz = svg.match(/width="([\d.]+)" height="([\d.]+)"/);
+    const sw = Number(sz?.[1] ?? 1200),
+      sh = Number(sz?.[2] ?? 800);
+    // raster density: ~300 dpi on the printed size, capped by the PNG limit
+    const k0 = Math.min((mapW - 4) / sw, (mapH - 4) / sh);
+    const png = await svgToPng(svg, Math.max(1, Math.min(4, (k0 * 300) / 25.4)));
     const k = Math.min((mapW - 4) / png.width, (mapH - 4) / png.height);
     const iw = png.width * k,
       ih = png.height * k;
-    doc.addImage(png.url, "PNG", mapX + (mapW - iw) / 2, mapY + (mapH - ih) / 2, iw, ih);
+    doc.addImage(png.url, "PNG", mapX + (mapW - iw) / 2, mapY + (mapH - ih) / 2, iw, ih, undefined, "FAST");
   }
 
+  const steps = stepRows(g, R);
+  const stepCols: Col[] = [
+    { h: "Step", w: 70, a: "left" },
+    { h: "Type", w: 50, a: "left" },
+    { h: "In", w: 30 },
+    { h: "Out", w: 30 },
+    { h: "Conversion", w: 30 },
+    { h: "Revenue", w: 32 },
+    { h: "Cost", w: 31 },
+  ];
+  const stepCells = (r: (typeof steps)[number]): Cell[] => [r.name, r.label, nf(r.inn), nf(r.out, 1), r.cat === "traffic" ? "–" : pct(r.convPct), r.cat === "offer" ? m(r.rev) : "", r.cost ? m(r.cost) : ""];
+  let overflow = 0;
   if (nums) {
-    // KPI grid
     const kx = mapX + mapW + 6,
       kw = W - M - kx;
-    const kpis: [string, string][] = [
+    const kpis: [string, string, RGB?][] = [
       [info.basis === "ltv" ? "Revenue (lifetime)" : "Revenue", m(R.rev)],
-      ["Profit", m(R.profit)],
+      ["Profit", m(R.profit), signed(R.profit)],
       ["Ad spend", m(R.spend)],
       ["ROAS", ratio(R.roas)],
       ["Traffic", nf(R.traffic)],
@@ -170,67 +364,381 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     ];
     const cw = (kw - 3) / 2,
       ch = 15.6;
-    kpis.forEach(([l, v], i) => {
+    kpis.forEach(([l, v, c], i) => {
       const x = kx + (i % 2) * (cw + 3),
         y = mapY + Math.floor(i / 2) * (ch + 1.3);
-      doc.setFillColor(239, 233, 252);
+      fill(C.soft);
       doc.roundedRect(x, y, cw, ch, 2, 2, "F");
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...muted);
+      font(7.5);
+      ink(C.muted);
       doc.text(l, x + 3, y + 5.5);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      if (l === "Profit") doc.setTextColor(...((R.profit >= 0 ? [21, 128, 61] : [185, 28, 28]) as [number, number, number]));
-      else doc.setTextColor(...ink);
-      doc.text(v, x + 3, y + 12.2);
+      font(12, true);
+      ink(c ?? C.ink);
+      doc.text(fit(v, cw - 5), x + 3, y + 12.2);
     });
 
-    // step table
-    const rows = stepRows(g, R);
-    const ty = mapY + mapH + 8;
-    const cols: [string, number, "left" | "right"][] = [
-      ["Step", 70, "left"],
-      ["Type", 50, "left"],
-      ["In", 30, "right"],
-      ["Out", 30, "right"],
-      ["Conversion", 30, "right"],
-      ["Revenue", 32, "right"],
-      ["Cost", 31, "right"],
-    ];
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...muted);
-    let x = M;
-    cols.forEach(([h, w, a]) => {
-      doc.text(h, a === "right" ? x + w - 2 : x, ty, { align: a });
-      x += w;
-    });
-    doc.setDrawColor(228, 222, 241);
-    doc.line(M, ty + 1.5, W - M, ty + 1.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...ink);
-    const maxRows = Math.floor((H - M - ty - 4) / 4.6);
-    rows.slice(0, maxRows).forEach((r, i) => {
-      const y = ty + 6 + i * 4.6;
-      const vals = [r.name.slice(0, 40), r.label, nf(r.inn), nf(r.out, 1), r.cat === "traffic" ? "–" : pct(r.convPct), r.cat === "offer" ? m(r.rev) : "", r.cost ? m(r.cost) : ""];
-      let cx = M;
-      cols.forEach(([, w, a], j) => {
-        doc.text(String(vals[j]), a === "right" ? cx + w - 2 : cx, y, { align: a });
-        cx += w;
-      });
-    });
-    if (rows.length > maxRows) {
-      doc.setTextColor(...muted);
-      doc.text(`+ ${rows.length - maxRows} more steps`, M, ty + 6 + maxRows * 4.6);
+    const ty = mapY + mapH + 5;
+    const maxRows = Math.floor((H - 12 - ty - HEAD) / ROW);
+    const shown = steps.length > maxRows ? maxRows - 1 : steps.length;
+    table(M, ty, W - 2 * M, stepCols, steps.slice(0, shown).map(stepCells));
+    overflow = steps.length - shown;
+    if (overflow > 0) {
+      font(8);
+      ink(C.muted);
+      doc.text(`+ ${overflow} more steps: see "Funnel data" in this report`, M + 1, ty + HEAD + shown * ROW + ROW - 1.4);
     }
   }
 
-  // footer
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text("Planned figures are estimates based on the assumptions in this funnel map.", M, H - 5);
-  doc.setTextColor(...brand);
-  doc.text(info.agencyName || "", W - M, H - 5, { align: "right" });
+  /* ================= report pages ================= */
+  if (nums) {
+    const D = reportData(g, info.settings, R);
+    interface Section {
+      title: string;
+      h: number;
+      full?: boolean;
+      draw: (x: number, y: number, w: number) => void;
+    }
+    const sections: Section[] = [];
+    const TOP = 24,
+      BOTTOM = H - 12,
+      GAP = 8,
+      COLW = (W - 2 * M - GAP) / 2;
+    const maxTableRows = Math.floor((BOTTOM - TOP - TITLE - HEAD) / ROW);
+    /** A table section, split over pages when it is too long. */
+    const tableSection = (title: string, cols: Col[], rows: Cell[][], opts: { full?: boolean; total?: boolean; note?: string } = {}) => {
+      for (let i = 0, part = 0; i < rows.length || (i === 0 && !rows.length); i += maxTableRows, part++) {
+        const chunk = rows.slice(i, i + maxTableRows);
+        const last = i + maxTableRows >= rows.length;
+        sections.push({
+          title: part ? `${title} (continued)` : title,
+          full: opts.full,
+          h: TITLE + tableH(chunk.length) + (last && opts.note ? 5 : 0),
+          draw: (x, y, w) => {
+            const th = table(x, y, w, cols, chunk, { total: last && opts.total });
+            if (last && opts.note) {
+              font(7.5);
+              ink(C.muted);
+              doc.text(fit(opts.note, w), x + 1, y + th + 4);
+            }
+          },
+        });
+        if (!rows.length) break;
+      }
+    };
+
+    // --- forecast (charts, as in the editor's Forecast tab); placed below the scenario and month tables
+    const F = D.forecast;
+    const forecastSection = (): Section => ({
+        title: `Revenue & profit forecast: ${F.months} months${F.growth ? `, traffic ${F.growth > 0 ? "+" : ""}${nf(F.growth, 1)}% a month` : ""}`,
+        full: true,
+        h: TITLE + 14 + 4 + 52,
+        draw: (x, y, w) => {
+          const stats: [string, string, RGB?][] = [
+            [`Revenue (${F.months} mo)`, m(F.revenue)],
+            [`Profit (${F.months} mo)`, m(F.profit), signed(F.profit)],
+            [`MRR at month ${F.months}`, m(F.mrr)],
+            [`Active subscriptions at month ${F.months}`, nf(F.activeSubs, 1)],
+            ["Cash break-even", F.breakEven ? `Month ${F.breakEven}` : "Not within range"],
+          ];
+          const sw = (w - 4 * 3) / 5;
+          stats.forEach(([l, v, c], i) => {
+            const sx = x + i * (sw + 3);
+            fill(C.soft);
+            doc.roundedRect(sx, y, sw, 14, 2, 2, "F");
+            font(7);
+            ink(C.muted);
+            doc.text(fit(l, sw - 5), sx + 3, y + 5);
+            font(11, true);
+            ink(c ?? C.ink);
+            doc.text(fit(v, sw - 5), sx + 3, y + 11);
+          });
+          const cy = y + 18,
+            chW = (w - 8) / 2;
+          lineChart(x, cy, chW, 52, "Revenue and costs per month", [
+            { name: "Revenue", c: C.emerald, v: F.rows.map((r) => r.revenue) },
+            { name: "Costs", c: C.orange, v: F.rows.map((r) => r.costs), dash: true },
+          ]);
+          lineChart(x + chW + 8, cy, chW, 52, "Cumulative profit", [{ name: "Cumulative profit", c: C.emerald, v: F.rows.map((r) => r.cumulative), area: true }]);
+        },
+      });
+
+    // --- scenario comparison
+    if (D.scenarios.length > 1) {
+      const cols = D.scenarios.slice(0, 9);
+      const metrics: [string, (r: FunnelResult) => Cell][] = [
+        ["Traffic", (r) => nf(r.traffic)],
+        ["Leads", (r) => nf(r.leads, 1)],
+        ["Customers", (r) => nf(r.cust, 1)],
+        ["Revenue", (r) => m(r.rev)],
+        ["Ad spend", (r) => m(r.spend)],
+        ["Total costs", (r) => m(r.costs)],
+        ["Profit", (r) => ({ t: m(r.profit), c: signed(r.profit), b: true })],
+        ["ROAS", (r) => ratio(r.roas)],
+        ["CPA", (r) => m(r.cpa)],
+        ["CPL", (r) => m(r.cpl)],
+        ["AOV", (r) => m(r.aov)],
+        ["MRR", (r) => m(r.mrr)],
+      ];
+      const base = cols[0].R;
+      const delta = (r: FunnelResult) => (base.profit ? (r.profit - base.profit) / Math.abs(base.profit) : NaN);
+      const rows: Cell[][] = metrics.map(([l, f]) => [{ t: l, b: true }, ...cols.map((c) => f(c.R))]);
+      rows.push([{ t: "Profit vs as mapped", b: true }, "–", ...cols.slice(1).map((c) => ({ t: Number.isFinite(delta(c.R)) ? `${delta(c.R) >= 0 ? "+" : ""}${pct(delta(c.R))}` : "–", c: signed(c.R.profit - base.profit) }))]);
+      tableSection("Scenario comparison", [{ h: "", w: 1.3, a: "left" }, ...cols.map((c) => ({ h: c.name, w: 1 }))], rows, {
+        full: cols.length > 4,
+        note: `Scenarios scale traffic, conversion, prices and ad cost on top of the mapped funnel.${D.scenarios.length > 9 ? ` First ${cols.length - 1} scenarios shown.` : ""}`,
+      });
+    }
+
+    // --- forecast table
+    if (F.rows.length)
+      tableSection(
+        "Month by month",
+        [{ h: "Month", w: 0.7, a: "left" }, { h: "Traffic", w: 1 }, { h: "Revenue", w: 1.2 }, { h: "Costs", w: 1.2 }, { h: "Profit", w: 1.2 }, { h: "Cumulative", w: 1.2 }, { h: "MRR", w: 1 }],
+        F.rows.map((r) => [String(r.month), nf(r.traffic), m(r.revenue), m(r.costs), { t: m(r.profit), c: signed(r.profit) }, { t: m(r.cumulative), c: signed(r.cumulative) }, m(r.mrr)]),
+      );
+
+    if (F.rows.length) sections.push(forecastSection());
+
+    // --- traffic sources
+    if (D.sources.length)
+      tableSection(
+        "Traffic source performance",
+        [{ h: "Source", w: 2, a: "left" }, { h: "Visitors", w: 1 }, { h: "Customers", w: 1 }, { h: "Revenue", w: 1.1 }, { h: "Ad spend", w: 1.1 }, { h: "CPA", w: 1 }, { h: "ROAS", w: 0.8 }],
+        [
+          ...D.sources.map((s): Cell[] => [s.name, nf(s.traffic), nf(s.cust, 1), m(s.rev), s.spend ? m(s.spend) : "free", m(s.cpa), ratio(s.roas)]),
+          ...(D.sources.length > 1 ? [["All sources", nf(R.traffic), nf(R.cust, 1), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)] as Cell[]] : []),
+        ],
+        { total: D.sources.length > 1 },
+      );
+
+    // --- offers / products
+    if (D.offers.length)
+      sections.push({
+        title: "Offer & product revenue",
+        h: TITLE + tableH(D.offers.length + 1),
+        draw: (x, y, w) => {
+          table(
+            x,
+            y,
+            w,
+            [{ h: "Offer", w: 2, a: "left" }, { h: "Type", w: 1.3, a: "left" }, { h: "Buyers", w: 0.8 }, { h: "Revenue", w: 1.1 }, { h: "Share", w: 1.3 }],
+            [...D.offers.map((o): Cell[] => [o.name, o.label, nf(o.buyers, 1), m(o.revenue), pct(o.share)]), ["Total", "", nf(R.orders, 1), m(R.rev), R.rev ? "100%" : "–"]],
+            { total: true },
+          );
+          // share bars in the Share column
+          const sum = 2 + 1.3 + 0.8 + 1.1 + 1.3,
+            bx = x + (w * (sum - 1.3)) / sum + 1,
+            bw = (w * 1.3) / sum - 14;
+          D.offers.forEach((o, i) => {
+            fill(C.soft);
+            doc.rect(bx, y + HEAD + i * ROW + 1.4, bw, 2, "F");
+            fill(C.emerald);
+            doc.rect(bx, y + HEAD + i * ROW + 1.4, bw * Math.max(0, Math.min(1, o.share)), 2, "F");
+          });
+        },
+      });
+
+    // --- expenses
+    const E = D.expenses;
+    sections.push({
+      title: "Expenses (per month)",
+      h: TITLE + (E.lines.length + 1) * 5.4 + 2 + (E.oneTime ? 5 : 0) + (E.items.length ? 4 + tableH(E.items.length) : 0),
+      draw: (x, y, w) => {
+        const lw = w * 0.36,
+          vw = w * 0.22,
+          bw = w - lw - vw - 4;
+        let yy = y;
+        E.lines.forEach(([l, v]) => {
+          font(8);
+          ink(C.ink);
+          doc.text(l, x + 1, yy + 4);
+          fill(C.soft);
+          doc.rect(x + lw, yy + 1.6, bw, 2.4, "F");
+          fill(C.orange);
+          doc.rect(x + lw, yy + 1.6, bw * (E.total > 0 ? Math.max(0, Math.min(1, v / E.total)) : 0), 2.4, "F");
+          doc.text(m(v), x + w - 1, yy + 4, { align: "right" });
+          yy += 5.4;
+        });
+        doc.setDrawColor(...C.line);
+        doc.line(x, yy + 0.5, x + w, yy + 0.5);
+        font(8.5, true);
+        doc.text("Total costs", x + 1, yy + 4.6);
+        doc.text(m(E.total), x + w - 1, yy + 4.6, { align: "right" });
+        yy += 7.4;
+        if (E.oneTime) {
+          font(7.5);
+          ink(C.muted);
+          doc.text(pdfText(`Plus one-time (launch) costs of ${m(E.oneTime)}, counted in month 1 of the forecast.`), x + 1, yy + 3);
+          yy += 5;
+        }
+        if (E.items.length) {
+          yy += 4;
+          table(x, yy, w, [{ h: "Expense", w: 2, a: "left" }, { h: "Category", w: 1.3, a: "left" }, { h: "How often", w: 1.1, a: "left" }, { h: "Amount", w: 1 }, { h: "Per month", w: 1 }], E.items.map((e) => [e.name, e.category, e.kind, m(e.amount), e.perPeriod ? m(e.perPeriod) : "–"]));
+        }
+      },
+    });
+
+    // --- goals / required numbers
+    const G = D.goals;
+    if (G.plan || G.blocks.length) {
+      const goalH = G.blocks.length ? 4 + tableH(G.blocks.length) : 0;
+      sections.push({
+        title: "Goals & required numbers",
+        h: TITLE + (G.plan ? 11 + tableH(G.required.length) : 0) + goalH,
+        draw: (x, y, w) => {
+          let yy = y;
+          if (G.plan) {
+            font(8.5, true);
+            ink(C.ink);
+            doc.text(pdfText(`Revenue target: ${m(G.target)} per month`), x + 1, yy + 3.5);
+            font(7.5);
+            ink(C.muted);
+            doc.text(pdfText(`Currently planned: ${m(R.rev)} per month (${pct(R.rev / G.target)} of target). Needed at today's conversion rates and costs:`), x + 1, yy + 8);
+            yy += 11;
+            yy += table(x, yy, w, [{ h: "Period", w: 1.1, a: "left" }, { h: "Revenue", w: 1.2 }, { h: "Visitors", w: 1.1 }, { h: "Ad spend", w: 1.2 }, { h: "Customers", w: 1.1 }], G.required.map(([p, rev, vis, spend, cust]) => [{ t: p, b: true }, m(rev), nf(vis), m(spend), nf(cust, 1)]));
+          }
+          if (G.blocks.length) {
+            yy += 4;
+            table(x, yy, w, [{ h: "Goal", w: 3, a: "left" }, { h: "People reaching it (per month)", w: 2 }], G.blocks.map((b) => [b.name, nf(b.people, 1)]));
+          }
+        },
+      });
+    }
+
+    // --- full funnel data when the cover page could not fit every step
+    if (overflow > 0) tableSection("Funnel data", stepCols, steps.map(stepCells), { full: true });
+
+    /* line chart: series over months, nice y ticks, legend */
+    function lineChart(x: number, y: number, w: number, h: number, title: string, series: { name: string; c: RGB; v: number[]; dash?: boolean; area?: boolean }[]) {
+      font(8, true);
+      ink(C.ink);
+      doc.text(title, x, y + 3);
+      // legend
+      let lx = x + w;
+      font(7);
+      [...series].reverse().forEach((s) => {
+        const tw = doc.getTextWidth(s.name);
+        lx -= tw;
+        ink(C.muted);
+        doc.text(s.name, lx, y + 3);
+        lx -= 5;
+        doc.setDrawColor(...s.c);
+        doc.setLineWidth(0.6);
+        if (s.dash) doc.setLineDashPattern([1, 0.8], 0);
+        doc.line(lx, y + 2, lx + 3.5, y + 2);
+        doc.setLineDashPattern([], 0);
+        lx -= 4;
+      });
+      const all = series.flatMap((s) => s.v).filter(Number.isFinite);
+      let lo = Math.min(0, ...all),
+        hi = Math.max(0, ...all);
+      if (hi === lo) hi = lo + 1;
+      const raw = (hi - lo) / 4,
+        mag = Math.pow(10, Math.floor(Math.log10(raw))),
+        step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((k) => k >= raw) ?? raw;
+      lo = Math.floor(lo / step) * step;
+      hi = Math.ceil(hi / step) * step;
+      const px = x + 16,
+        py = y + 7,
+        pw = w - 18,
+        ph = h - 14;
+      const Y = (v: number) => py + ph - ((v - lo) / (hi - lo)) * ph;
+      const n = series[0]?.v.length ?? 0;
+      const X = (i: number) => (n <= 1 ? px + pw / 2 : px + (i / (n - 1)) * pw);
+      font(6.5);
+      ink(C.muted);
+      doc.setLineWidth(0.2);
+      for (let v = lo; v <= hi + step / 2; v += step) {
+        doc.setDrawColor(...(Math.abs(v) < step / 1e6 ? C.muted : C.line));
+        doc.line(px, Y(v), px + pw, Y(v));
+        doc.text(Math.abs(v) < step / 1e6 ? ms(0).replace(/\.00$/, "") : ms(v), px - 1.5, Y(v) + 1, { align: "right" });
+      }
+      const every = Math.max(1, Math.ceil(n / 12));
+      for (let i = 0; i < n; i++) if (i % every === 0 || i === n - 1) doc.text(String(i + 1), X(i), py + ph + 4, { align: "center" });
+      doc.text("Month", px + pw, py + ph + 7.5, { align: "right" });
+      series.forEach((s) => {
+        const pts = s.v.map((v, i) => [X(i), Y(Number.isFinite(v) ? v : 0)] as [number, number]);
+        if (!pts.length) return;
+        if (s.area && pts.length > 1) {
+          const z = Y(Math.max(lo, Math.min(hi, 0)));
+          doc.setGState(doc.GState({ opacity: 0.14 }));
+          fill(s.c);
+          const segs: [number, number][] = pts.slice(1).map((p, i) => [p[0] - pts[i][0], p[1] - pts[i][1]]);
+          doc.lines([[0, pts[0][1] - z], ...segs, [0, z - pts[pts.length - 1][1]]], pts[0][0], z, [1, 1], "F", true);
+          doc.setGState(doc.GState({ opacity: 1 }));
+        }
+        doc.setDrawColor(...s.c);
+        doc.setLineWidth(0.6);
+        if (s.dash) doc.setLineDashPattern([1.6, 1.2], 0);
+        for (let i = 1; i < pts.length; i++) doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+        doc.setLineDashPattern([], 0);
+        if (pts.length === 1) {
+          fill(s.c);
+          doc.circle(pts[0][0], pts[0][1], 0.8, "F");
+        }
+      });
+    }
+
+    /* place the sections: two columns, full-width sections span both, new pages as needed */
+    const pageHead = () => {
+      doc.addPage();
+      fill(C.chrome);
+      doc.rect(0, 0, W, 14, "F");
+      fill(C.emerald);
+      doc.rect(0, 14, W, 0.6, "F");
+      font(11, true);
+      ink(C.chromeInk);
+      doc.text(fit(info.funnelName, W / 2), M, 9);
+      font(8);
+      ink(C.chromeMuted);
+      doc.text(fit(`${info.agencyName ? `${info.agencyName} · ` : ""}Prepared for ${info.clientName} · ${dateStr}`, W / 2 - M - 6), W - M, 9, { align: "right" });
+    };
+    const head = (t: string, x: number, y: number, w: number) => {
+      font(10, true);
+      ink(C.ink);
+      doc.text(fit(t, w), x, y + 4.5);
+      fill(C.emerald);
+      doc.rect(x, y + 6, 10, 0.6, "F");
+    };
+    let ys = [TOP, TOP];
+    pageHead();
+    for (const s of sections) {
+      if (s.full) {
+        let y = Math.max(...ys);
+        if (y + s.h > BOTTOM && y > TOP) {
+          pageHead();
+          y = TOP;
+        }
+        head(s.title, M, y, W - 2 * M);
+        s.draw(M, y + TITLE, W - 2 * M);
+        ys = [y + s.h + 7, y + s.h + 7];
+      } else {
+        let c = ys[0] <= ys[1] ? 0 : 1;
+        if (ys[c] + s.h > BOTTOM) {
+          if (ys[1 - c] + s.h <= BOTTOM) c = 1 - c;
+          else {
+            pageHead();
+            ys = [TOP, TOP];
+            c = 0;
+          }
+        }
+        const x = M + c * (COLW + GAP);
+        head(s.title, x, ys[c], COLW);
+        s.draw(x, ys[c] + TITLE, COLW);
+        ys[c] += s.h + 7;
+      }
+    }
+  }
+
+  // footer on every page
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    font(7.5);
+    ink(C.muted);
+    doc.text("Planned figures are estimates based on the assumptions in this funnel map.", M, H - 5);
+    ink(C.brand);
+    doc.text(pdfText(`${info.agencyName ? `${info.agencyName} · ` : ""}Page ${p} of ${pages}`), W - M, H - 5, { align: "right" });
+  }
   return doc.output("blob");
 }

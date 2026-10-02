@@ -8,7 +8,7 @@ import { Menu } from "@/components/menu";
 import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelSettings } from "@/lib/graph";
-import { fileName, mapSvg, stepsCsv } from "@/lib/export";
+import { fileName, stepsCsv } from "@/lib/export";
 import { elkLayout, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -40,7 +40,7 @@ import {
   useEditor, reorder, setLocked } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { CommentsPanel } from "./comments";
-import { download, downloadPng, pdfReport, svgToPng } from "./exporters";
+import { download, downloadPng, pdfReport, renderMapSvg, svgToPng } from "./exporters";
 import { HelpDialog } from "./help-dialog";
 import { Inspector } from "./inspector";
 import { KpiBar } from "./kpi-bar";
@@ -206,11 +206,12 @@ function EditorInner(props: EditorProps) {
       try {
         if (kind === "json") download(fileName(s.name, "json"), JSON.stringify(exportFunnelFile({ ...editorSnapshot(), description: funnel.description }), null, 1), "application/json");
         if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R), "text/csv");
-        if (kind === "svg") download(fileName(s.name, "svg"), mapSvg(g, s.R, { currency: s.settings.currency, nums, heightOf }), "image/svg+xml");
-        if (kind === "png") await downloadPng(fileName(s.name, "png"), mapSvg(g, s.R, { currency: s.settings.currency, nums, heightOf }));
+        const map = { heightOf, widthOf, thick: s.opts.thick };
+        if (kind === "svg") download(fileName(s.name, "svg"), await renderMapSvg(g, s.R, { currency: s.settings.currency, nums, ...map }), "image/svg+xml");
+        if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(g, s.R, { currency: s.settings.currency, nums, ...map }));
         if (kind === "pdf") {
           showToast("Building PDF…");
-          const blob = await pdfReport(g, s.R, { funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums }, heightOf);
+          const blob = await pdfReport(g, s.R, { funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
           download(fileName(s.name, "pdf"), blob);
         }
       } catch (e) {
@@ -245,7 +246,7 @@ function EditorInner(props: EditorProps) {
     try {
       const s = useEditor.getState();
       if (!s.nodes.length) return;
-      const png = await svgToPng(mapSvg({ nodes: s.nodes, edges: s.edges }, s.R, { currency: s.settings.currency, nums: false, heightOf }), 0.5);
+      const png = await svgToPng(await renderMapSvg({ nodes: s.nodes, edges: s.edges }, s.R, { currency: s.settings.currency, nums: false, heightOf, widthOf, embedFonts: false }), 0.5);
       const blob = await (await fetch(png.url)).blob();
       const sb = supabaseBrowser();
       const path = `${funnel.id}.png`;

@@ -1,1 +1,2 @@
 @AGENTS.md
+@docs/MASTER_HANDOFF.md

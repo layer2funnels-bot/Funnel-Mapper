@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { FormMessage, Submit } from "@/components/form-bits";
 import { signInWithMagicLink, signInWithPassword } from "../actions";
 
@@ -8,6 +8,10 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
   const [mode, setMode] = useState<"password" | "magic">("password");
   const [pwState, pwAction] = useActionState(signInWithPassword, error ? { error } : undefined);
   const [mlState, mlAction] = useActionState(signInWithMagicLink, undefined);
+  // an invite/recovery link that fell back to the site root arrives here with the session in the fragment
+  useEffect(() => {
+    if (/[#&](access_token|error_description)=/.test(window.location.hash)) window.location.replace(`/auth/accept${window.location.hash}`);
+  }, []);
   return (
     <>
       <h1 className="mb-1 font-display text-2xl font-bold">Sign in</h1>

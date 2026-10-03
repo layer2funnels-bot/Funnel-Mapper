@@ -254,6 +254,17 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
   - Production (`kyhlhacbmlbkiibvpsel`) still needs the pending migrations, including 20261007 + 20261008, before this code is deployed there.
   - Until this follow-up is deployed to the demo, an independent sign-up there leaves its (harmless) pending row behind.
 
+## Workspace/auth completion pass (done)
+
+- **Invite acceptance:**
+  - Supabase's standard invite link returns the session in the URL fragment, which the server-side `/auth/callback` couldn't read. The invitee's account was created and activated in the team workspace, but they were bounced to "link invalid" and never got a session.
+  - New `app/auth/accept/page.tsx` stores the fragment session and continues to choose-password. `/auth/callback` (no `code`) and `/login` (Site URL fallback) forward such links to it.
+  - Invite redirects use the request's own address when `NEXT_PUBLIC_SITE_URL` isn't set.
+- **Workspace identity:** Settings → Workspace says "You're in <name>" with a Layer2Funnels team workspace / Private workspace label. The sidebar footer shows "Team workspace" or "Private workspace". There's no switcher: one workspace per account.
+- **Private sign-up:** `/join/<INDEPENDENT_SIGNUP_CODE>` is unchanged; it only needs configuration.
+- **No migration.**
+- **Tests:** e2e `workspaces` + `team` 15/15 (new: both standard-invite-link paths, workspace identity); DB 37/37.
+
 ## I. Recommended order for the remaining budget
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)

@@ -21,8 +21,10 @@ values ('00000000-0000-0000-0000-000000000000', '00000000-0000-4000-8000-0000000
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 values (gen_random_uuid(), '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000003', jsonb_build_object('sub', '00000000-0000-4000-8000-000000000003', 'email', 'former@layer2funnels.test', 'email_verified', true), 'email', now(), now(), now());
 update public.profiles set active = false where id = '00000000-0000-4000-8000-000000000003';
+update public.workspace_members set active = false where user_id = '00000000-0000-4000-8000-000000000003';
 -- seeded accounts aren't invited through Auth, so activate the teammate explicitly
 update public.profiles set active = true where id = '00000000-0000-4000-8000-000000000002';
+update public.workspace_members set active = true where user_id = '00000000-0000-4000-8000-000000000002';
 
 update public.profiles set full_name = 'Demo Owner' where id = '00000000-0000-4000-8000-000000000001';
 update public.workspaces set agency_name = 'Layer2Funnels', default_currency = 'GBP' where kind = 'team';

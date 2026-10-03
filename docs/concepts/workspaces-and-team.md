@@ -97,3 +97,22 @@ That is a permission-system pass, not a small extension. The secure Admin/Member
   columns to the team workspace.
 - Functions are replaced in place and policies are changed with `ALTER POLICY`. That is also compatible
   with the Supabase connector, which hangs on SQL containing `DROP`.
+
+## Update: several workspaces per person (migration 20261009000000)
+
+- **Who:** admins (of the workspace they're working in) create workspaces from the left menu's workspace picker.
+  A new workspace starts empty, with its creator as its admin.
+- **Membership:** `workspace_members` holds one row per (workspace, person) with that person's role and active
+  flag there. It replaces `profiles.role/active` for access; those columns are kept, but nothing reads them for
+  access any more.
+- **Current workspace:** `profiles.workspace_id` is the workspace the person is working in.
+  - `current_workspace_id()` returns it only while they're an active member, so every data policy isolates
+    workspaces exactly as before.
+  - Switching goes through `switch_workspace()`, which checks membership. The profile guard refuses any other
+    move.
+- **Per workspace:**
+  - The team list, invites, roles, deactivation and removal all apply to the current workspace.
+  - Inviting someone who already has an account adds them directly.
+  - Removing someone deletes their account only if they belong to no other workspace. Their work in that
+    workspace goes to the admin who removed them.
+- **Independent accounts:** still created from the team workspace or `/join/<code>`, each with its own workspace.

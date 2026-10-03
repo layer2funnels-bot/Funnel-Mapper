@@ -265,6 +265,18 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - **No migration.**
 - **Tests:** e2e `workspaces` + `team` 15/15 (new: both standard-invite-link paths, workspace identity); DB 37/37.
 
+## Multiple workspaces (done)
+
+- **What:**
+  - Admins create workspaces from the left menu. Each has its own clients, funnels, templates, files and teammates.
+  - People switch between the workspaces they're active members of. Nobody can switch into one without access, which the database enforces.
+  - The Settings team list, invites (existing accounts are added directly), roles, deactivate and remove all work per workspace.
+- **Migration:** `20261009000000_workspace_members.sql` (additive; backfilled from profiles, so access is unchanged).
+  - It's compatible with the previous app code, so it can be applied before the new code deploys.
+  - It contains no DROP/DELETE statements, so the Supabase connector can apply it.
+- **Tests:** database 38/38 (new: create/switch/membership/isolation between created workspaces); unit 115/115; full e2e 80/80 (new: create and switch from the left menu; members can't create).
+- **Deferred:** an uploader's private screenshots are readable by every workspace they belong to (stored per user, not per workspace).
+
 ## I. Recommended order for the remaining budget
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)

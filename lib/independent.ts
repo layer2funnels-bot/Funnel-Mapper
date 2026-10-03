@@ -12,7 +12,7 @@ export async function startIndependentSignup(d: { email: string; full_name: stri
   const admin = supabaseAdmin();
   if (!admin) return { error: "Independent accounts need SUPABASE_SERVICE_ROLE_KEY on the server." };
   const email = d.email.trim().toLowerCase();
-  const pending = await admin.from("workspace_signups").upsert({ email, full_name: d.full_name, workspace_name: d.workspace_name });
+  const pending = await admin.from("workspace_signups").upsert({ email, full_name: d.full_name, workspace_name: d.workspace_name, join_workspace_id: null });
   if (pending.error) return { error: pending.error.message };
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: d.full_name, workspace_kind: "personal" },

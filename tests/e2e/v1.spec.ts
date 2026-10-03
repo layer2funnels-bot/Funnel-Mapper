@@ -157,7 +157,7 @@ test.describe("notes, layers, analytics and the library", () => {
     await page.keyboard.press("Enter");
     await expect(nodes(page)).toHaveCount(before + 1);
     await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
-    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 20 } });
+    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
     await page.keyboard.press("/");
     await expect(page.getByLabel("Search blocks to add")).toBeFocused();
     await page.keyboard.press("Escape");

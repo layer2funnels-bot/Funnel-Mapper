@@ -4,7 +4,9 @@ import { useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icon";
 import { BLOCK_TYPES, CATCOLOR, LIB_GROUPS, libOf, typeOf, type BlockTypeKey, type LibGroup, type NodeParams } from "@/lib/catalog";
 import type { IconName } from "@/lib/icons";
-import { addNode } from "@/lib/editor/store";
+import { money } from "@/lib/format";
+import { addNode, useEditor } from "@/lib/editor/store";
+import { BlockTile } from "./block-visual";
 import { DND_MIME } from "./canvas";
 
 export interface PaletteProduct {
@@ -106,13 +108,10 @@ const useList = (k: string) =>
 /** Small random offset so blocks added by tap don't stack exactly on top of each other. */
 const jitter = () => Math.random() * 80 - 40;
 
-export const colorOf = (type: string) => {
-  const T = typeOf(type);
-  return CATCOLOR[T.color ?? T.cat];
-};
-
 export function Palette({ products, onPicked }: { products: PaletteProduct[]; onPicked?: () => void }) {
   const [q, setQ] = useState("");
+  const [cat, setCat] = useState<LibGroup | "">("");
+  const cur = useEditor((x) => x.settings.currency);
   const recent = useList(RECENT_KEY);
   const fav = useList(FAV_KEY);
   const rf = useReactFlow();
@@ -147,13 +146,12 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
     },
   });
 
-  const item = (it: { key: string; label: string; icon: IconName; payload: LibPayload }, favKey?: string) => (
+  const item = (it: { key: string; label: string; icon: IconName; payload: LibPayload; price?: number }, favKey?: string) => (
     <div key={it.key} className="fm-pitem">
       <button type="button" {...dragProps(it.payload, favKey)} onClick={() => addAtCentre(it.payload, favKey)} aria-label={`Add ${it.label}`}>
-        <span className="pi" style={{ background: colorOf(it.payload.type) }}>
-          <Icon name={it.icon} size={16} />
-        </span>
-        {it.label}
+        <BlockTile type={it.payload.type} icon={it.icon} />
+        <span className="fm-pname">{it.label}</span>
+        {it.price ? <span className="fm-pprice">{money(it.price, cur)}</span> : null}
       </button>
       {favKey && (
         <button type="button" className={`fm-pfav${fav.includes(favKey) ? " on" : ""}`} aria-pressed={fav.includes(favKey)} aria-label={`Favourite ${it.label}`} title={fav.includes(favKey) ? "Remove from favourites" : "Add to favourites"} onClick={() => toggleFav(favKey)}>
@@ -171,10 +169,8 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
           {keys.map((k) => {
             const it = BY_KEY[k];
             return (
-              <button key={k} type="button" {...dragProps(it.payload, k)} onClick={() => addAtCentre(it.payload, k)} aria-label={`${title === "Favourites" ? "Favourite" : "Recent"}: ${it.label}`} title={`Add ${it.label}`}>
-                <span className="pi" style={{ background: colorOf(it.payload.type) }}>
-                  <Icon name={it.icon} size={13} />
-                </span>
+              <button key={k} type="button" {...dragProps(it.payload, k)} onClick={() => addAtCentre(it.payload, k)} aria-label={`${title === "Pinned" ? "Favourite" : "Recent"}: ${it.label}`} title={`Add ${it.label}`}>
+                <BlockTile type={it.payload.type} icon={it.icon} size={13} />
                 {it.label}
               </button>
             );
@@ -185,6 +181,7 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
 
   const prods = products.filter((p) => typeOf(p.type) && (!s || p.name.toLowerCase().includes(s)));
   const groups = (Object.keys(LIB_GROUPS) as LibGroup[])
+    .filter((g) => !cat || g === cat)
     .map((g) => ({ g, items: ITEMS.filter((it) => it.group === g && (!s || `${it.label} ${it.kw} ${LIB_GROUPS[g]}`.toLowerCase().includes(s))) }))
     .filter((x) => x.items.length);
   return (
@@ -193,12 +190,23 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
         <span className="sr-only">Search blocks</span>
         <input className="fm-psearch" type="search" placeholder={`Search ${ITEMS.length} blocks`} value={q} onChange={(e) => setQ(e.target.value)} />
       </label>
-      {!s && chips("Favourites", fav)}
+      <div className="fm-pcats" role="group" aria-label="Block categories">
+        <button type="button" aria-pressed={!cat} onClick={() => setCat("")}>
+          All
+        </button>
+        {(Object.keys(LIB_GROUPS) as LibGroup[]).map((g) => (
+          <button key={g} type="button" aria-pressed={cat === g} onClick={() => setCat(cat === g ? "" : g)}>
+            <i style={{ background: CATCOLOR[g === "comms" || g === "sales" ? "action" : g] }} aria-hidden="true" />
+            {LIB_GROUPS[g]}
+          </button>
+        ))}
+      </div>
+      {!s && chips("Pinned", fav)}
       {!s && chips("Recent", recent.filter((k) => !fav.includes(k)))}
       {prods.length > 0 && (
         <>
           <h2>Client products</h2>
-          <div className="fm-pal">{prods.map((p) => item({ key: p.id, label: p.name, icon: typeOf(p.type).icon, payload: { type: p.type, p: p.params, name: p.name } }))}</div>
+          <div className="fm-pal">{prods.map((p) => item({ key: p.id, label: p.name, icon: typeOf(p.type).icon, payload: { type: p.type, p: p.params, name: p.name }, price: Number(p.params.price) || undefined }))}</div>
         </>
       )}
       {groups.map(({ g, items }) => (

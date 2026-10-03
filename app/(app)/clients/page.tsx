@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Icon } from "@/components/icon";
 import { PageHeader } from "@/components/page-header";
 import { requireUser } from "@/lib/supabase/server";
 import { ClientsBrowser, type ClientListItem } from "./clients-browser";
@@ -9,7 +7,7 @@ export const metadata: Metadata = { title: "Clients" };
 
 export default async function ClientsPage({ searchParams }: PageProps<"/clients">) {
   const sp = await searchParams;
-  const { sb, canEdit } = await requireUser();
+  const { sb } = await requireUser();
   const [{ data: clients }, { data: funnels }] = await Promise.all([
     sb.from("clients").select("*").order("updated_at", { ascending: false }),
     sb.from("funnels").select("client_id, status"),
@@ -24,13 +22,8 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
   return (
     <>
       <PageHeader title="Clients" sub={`${items.length} client${items.length === 1 ? "" : "s"} in your portfolio`}>
-        {canEdit && (
-          <Link className="btn primary" href="/clients/new">
-            <Icon name="plus" /> New client
-          </Link>
-        )}
       </PageHeader>
-      <ClientsBrowser clients={items} initialStatus={typeof sp.status === "string" ? sp.status : ""} />
+      <ClientsBrowser clients={items} initialStatus={typeof sp.status === "string" ? sp.status : ""} initialQuery={typeof sp.q === "string" ? sp.q : ""} />
     </>
   );
 }

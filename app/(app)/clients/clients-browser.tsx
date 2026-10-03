@@ -39,8 +39,8 @@ function Avatar({ c, size = 44 }: { c: ClientRow; size?: number }) {
   );
 }
 
-export function ClientsBrowser({ clients, initialStatus = "" }: { clients: ClientListItem[]; initialStatus?: string }) {
-  const [q, setQ] = useState("");
+export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" }: { clients: ClientListItem[]; initialStatus?: string; initialQuery?: string }) {
+  const [q, setQ] = useState(initialQuery);
   const [status, setStatus] = useState(initialStatus);
   const [niche, setNiche] = useState("");
   const [tag, setTag] = useState("");

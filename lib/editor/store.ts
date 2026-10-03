@@ -87,7 +87,10 @@ const OPTS_KEY = "fm-editor-opts";
 const loadOpts = (): ViewOpts => {
   const d: ViewOpts = { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
-    return { ...d, ...JSON.parse(localStorage.getItem(OPTS_KEY) || "{}") };
+    const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
+    // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
+    if (saved.hideSide === undefined && window.innerWidth <= 1439) d.hideSide = true;
+    return { ...d, ...saved };
   } catch {
     return d;
   }

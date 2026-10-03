@@ -2,7 +2,9 @@
 import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
 import { memo } from "react";
 import { Icon } from "@/components/icon";
-import { CATCOLOR, portsFor, typeOf } from "@/lib/catalog";
+import { baseOf, CATCOLOR, portsFor, typeOf } from "@/lib/catalog";
+import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
+import { offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, useEditor } from "@/lib/editor/store";
@@ -68,23 +70,29 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
   const logic = T.cat === "logic";
   const cc = CATCOLOR[T.color ?? T.cat];
+  const V = visualOf(n.type),
+    F = FAMILIES[V.family];
   const stats = nodeStats(n, R, cur, periodFactor(period));
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
-  const cls = ["fm-node", logic && "logic", selected && "sel", warn && "warn", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
+  const cls = ["fm-node", `fam-${V.family}`, logic && "logic", V.brand && "brand", selected && "sel", warn && "warn", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
   return (
-    <div className={cls} style={{ ["--cc" as string]: cc, ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`}>
+    <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`}>
       {hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />}
       <LockBadge n={n} />
+      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} />}
+      {F.price && <span className="fm-price">{priceTab(n, cur)}</span>}
+      {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
         <span className="fm-nicon">
           <Icon name={(n.s?.icon as IconName) || T.icon} />
         </span>
         <div className="fm-ntitle">
           <span style={textCss(n.s)}>{n.name}</span>
-          <small>{subLabel(n, cur)}</small>
+          <small>{V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur)}</small>
         </div>
       </div>
+      {hasSplitBar(n.type) && <SplitBar pct={Number(n.p.pct) || 0} test={baseOf(n.type) === "split"} />}
       <div className="fm-nstats">
         {stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}
         {internal && (

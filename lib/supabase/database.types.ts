@@ -25,26 +25,32 @@ export type Database = {
           Tables: {
             "clients": {
                   Row: {
-                    "billing_frequency": string,"business_name": string,"commission_pct": number,"country": string,"created_at": string,"currency": string,"email": string,"hours_per_month": number,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"pricing_amount": number,"pricing_model": string,"pricing_notes": string,"project_end": string | null,"project_start": string | null,"status": string,"tags": (string)[],"updated_at": string,"website": string
+                    "billing_frequency": string,"business_name": string,"commission_pct": number,"country": string,"created_at": string,"currency": string,"email": string,"hours_per_month": number,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"pricing_amount": number,"pricing_model": string,"pricing_notes": string,"project_end": string | null,"project_start": string | null,"status": string,"tags": (string)[],"updated_at": string,"website": string,"workspace_id": string
                   }
                   Insert: {
-                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
+                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
                   }
                   Update: {
-                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string
+                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "clients_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"funnel_actuals": {
                   Row: {
-                    "conversions": number | null,"created_at": string,"funnel_id": string,"id": string,"node_id": string,"owner_id": string,"period_end": string,"period_start": string,"revenue": number | null,"spend": number | null,"visitors": number | null
+                    "conversions": number | null,"created_at": string,"funnel_id": string,"id": string,"node_id": string,"owner_id": string,"period_end": string,"period_start": string,"revenue": number | null,"spend": number | null,"visitors": number | null,"workspace_id": string
                   }
                   Insert: {
-                    "conversions"?: number | null,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id": string,"owner_id"?: string,"period_end": string,"period_start": string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null
+                    "conversions"?: number | null,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id": string,"owner_id"?: string,"period_end": string,"period_start": string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null,"workspace_id"?: string
                   }
                   Update: {
-                    "conversions"?: number | null,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string,"owner_id"?: string,"period_end"?: string,"period_start"?: string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null
+                    "conversions"?: number | null,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string,"owner_id"?: string,"period_end"?: string,"period_start"?: string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -53,17 +59,23 @@ export type Database = {
 isOneToOne: false
       referencedRelation: "funnels"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "funnel_actuals_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"funnel_versions": {
                   Row: {
-                    "auto": boolean,"created_at": string,"funnel_id": string,"graph": NonNullable<Json>,"id": string,"label": string,"owner_id": string,"settings": NonNullable<Json>
+                    "auto": boolean,"created_at": string,"funnel_id": string,"graph": NonNullable<Json>,"id": string,"label": string,"owner_id": string,"settings": NonNullable<Json>,"workspace_id": string
                   }
                   Insert: {
-                    "auto"?: boolean,"created_at"?: string,"funnel_id": string,"graph": NonNullable<Json>,"id"?: string,"label"?: string,"owner_id"?: string,"settings": NonNullable<Json>
+                    "auto"?: boolean,"created_at"?: string,"funnel_id": string,"graph": NonNullable<Json>,"id"?: string,"label"?: string,"owner_id"?: string,"settings": NonNullable<Json>,"workspace_id"?: string
                   }
                   Update: {
-                    "auto"?: boolean,"created_at"?: string,"funnel_id"?: string,"graph"?: NonNullable<Json>,"id"?: string,"label"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>
+                    "auto"?: boolean,"created_at"?: string,"funnel_id"?: string,"graph"?: NonNullable<Json>,"id"?: string,"label"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -72,17 +84,23 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "funnels"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "funnel_versions_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"funnels": {
                   Row: {
-                    "client_id": string,"created_at": string,"description": string,"graph": NonNullable<Json>,"id": string,"name": string,"owner_id": string,"settings": NonNullable<Json>,"status": string,"summary": NonNullable<Json>,"thumbnail_url": string | null,"updated_at": string
+                    "client_id": string,"created_at": string,"description": string,"graph": NonNullable<Json>,"id": string,"name": string,"owner_id": string,"settings": NonNullable<Json>,"status": string,"summary": NonNullable<Json>,"thumbnail_url": string | null,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "client_id": string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>,"status"?: string,"summary"?: NonNullable<Json>,"thumbnail_url"?: string | null,"updated_at"?: string
+                    "client_id": string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>,"status"?: string,"summary"?: NonNullable<Json>,"thumbnail_url"?: string | null,"updated_at"?: string,"workspace_id"?: string
                   }
                   Update: {
-                    "client_id"?: string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>,"status"?: string,"summary"?: NonNullable<Json>,"thumbnail_url"?: string | null,"updated_at"?: string
+                    "client_id"?: string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string,"settings"?: NonNullable<Json>,"status"?: string,"summary"?: NonNullable<Json>,"thumbnail_url"?: string | null,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -91,17 +109,23 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clients"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "funnels_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"products": {
                   Row: {
-                    "client_id": string | null,"created_at": string,"id": string,"name": string,"notes": string,"owner_id": string,"params": NonNullable<Json>,"type": string,"updated_at": string
+                    "client_id": string | null,"created_at": string,"id": string,"name": string,"notes": string,"owner_id": string,"params": NonNullable<Json>,"type": string,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "client_id"?: string | null,"created_at"?: string,"id"?: string,"name": string,"notes"?: string,"owner_id"?: string,"params"?: NonNullable<Json>,"type"?: string,"updated_at"?: string
+                    "client_id"?: string | null,"created_at"?: string,"id"?: string,"name": string,"notes"?: string,"owner_id"?: string,"params"?: NonNullable<Json>,"type"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Update: {
-                    "client_id"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"notes"?: string,"owner_id"?: string,"params"?: NonNullable<Json>,"type"?: string,"updated_at"?: string
+                    "client_id"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"notes"?: string,"owner_id"?: string,"params"?: NonNullable<Json>,"type"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -110,30 +134,42 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "clients"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "products_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"profiles": {
                   Row: {
-                    "active": boolean,"agency_logo_url": string | null,"agency_name": string,"created_at": string,"default_currency": string,"email": string,"full_name": string,"id": string,"role": string,"updated_at": string
+                    "active": boolean,"agency_logo_url": string | null,"agency_name": string,"created_at": string,"default_currency": string,"email": string,"full_name": string,"id": string,"role": string,"updated_at": string,"workspace_id": string
                   }
                   Insert: {
-                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id": string,"role"?: string,"updated_at"?: string
+                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id": string,"role"?: string,"updated_at"?: string,"workspace_id": string
                   }
                   Update: {
-                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id"?: string,"role"?: string,"updated_at"?: string
+                    "active"?: boolean,"agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"email"?: string,"full_name"?: string,"id"?: string,"role"?: string,"updated_at"?: string,"workspace_id"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "profiles_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"share_comments": {
                   Row: {
-                    "author_name": string,"body": string,"created_at": string,"funnel_id": string,"id": string,"node_id": string | null,"owner_id": string,"resolved": boolean,"share_link_id": string
+                    "author_name": string,"body": string,"created_at": string,"funnel_id": string,"id": string,"node_id": string | null,"owner_id": string,"resolved": boolean,"share_link_id": string,"workspace_id": string
                   }
                   Insert: {
-                    "author_name"?: string,"body": string,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id"?: string | null,"owner_id": string,"resolved"?: boolean,"share_link_id": string
+                    "author_name"?: string,"body": string,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id"?: string | null,"owner_id": string,"resolved"?: boolean,"share_link_id": string,"workspace_id"?: string
                   }
                   Update: {
-                    "author_name"?: string,"body"?: string,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string | null,"owner_id"?: string,"resolved"?: boolean,"share_link_id"?: string
+                    "author_name"?: string,"body"?: string,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string | null,"owner_id"?: string,"resolved"?: boolean,"share_link_id"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -148,17 +184,23 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "share_links"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "share_comments_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"share_links": {
                   Row: {
-                    "allow_comments": boolean,"can_edit": boolean,"created_at": string,"expires_at": string | null,"funnel_id": string,"hide_numbers": boolean,"id": string,"owner_id": string,"token": string
+                    "allow_comments": boolean,"can_edit": boolean,"created_at": string,"expires_at": string | null,"funnel_id": string,"hide_numbers": boolean,"id": string,"owner_id": string,"token": string,"workspace_id": string
                   }
                   Insert: {
-                    "allow_comments"?: boolean,"can_edit"?: boolean,"created_at"?: string,"expires_at"?: string | null,"funnel_id": string,"hide_numbers"?: boolean,"id"?: string,"owner_id"?: string,"token"?: string
+                    "allow_comments"?: boolean,"can_edit"?: boolean,"created_at"?: string,"expires_at"?: string | null,"funnel_id": string,"hide_numbers"?: boolean,"id"?: string,"owner_id"?: string,"token"?: string,"workspace_id"?: string
                   }
                   Update: {
-                    "allow_comments"?: boolean,"can_edit"?: boolean,"created_at"?: string,"expires_at"?: string | null,"funnel_id"?: string,"hide_numbers"?: boolean,"id"?: string,"owner_id"?: string,"token"?: string
+                    "allow_comments"?: boolean,"can_edit"?: boolean,"created_at"?: string,"expires_at"?: string | null,"funnel_id"?: string,"hide_numbers"?: boolean,"id"?: string,"owner_id"?: string,"token"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -167,20 +209,32 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "funnels"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "share_links_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
     }
                   ]
                 },"templates": {
                   Row: {
-                    "builtin_key": string | null,"category": string,"created_at": string,"description": string,"graph": NonNullable<Json>,"id": string,"name": string,"owner_id": string | null,"settings": NonNullable<Json>
+                    "builtin_key": string | null,"category": string,"created_at": string,"description": string,"graph": NonNullable<Json>,"id": string,"name": string,"owner_id": string | null,"settings": NonNullable<Json>,"workspace_id": string | null
                   }
                   Insert: {
-                    "builtin_key"?: string | null,"category"?: string,"created_at"?: string,"description"?: string,"graph": NonNullable<Json>,"id"?: string,"name": string,"owner_id"?: string | null,"settings"?: NonNullable<Json>
+                    "builtin_key"?: string | null,"category"?: string,"created_at"?: string,"description"?: string,"graph": NonNullable<Json>,"id"?: string,"name": string,"owner_id"?: string | null,"settings"?: NonNullable<Json>,"workspace_id"?: string | null
                   }
                   Update: {
-                    "builtin_key"?: string | null,"category"?: string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string | null,"settings"?: NonNullable<Json>
+                    "builtin_key"?: string | null,"category"?: string,"created_at"?: string,"description"?: string,"graph"?: NonNullable<Json>,"id"?: string,"name"?: string,"owner_id"?: string | null,"settings"?: NonNullable<Json>,"workspace_id"?: string | null
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "templates_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"workspace": {
                   Row: {
@@ -195,6 +249,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"workspace_signups": {
+                  Row: {
+                    "created_at": string,"email": string,"full_name": string,"workspace_name": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string,"full_name"?: string,"workspace_name"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"full_name"?: string,"workspace_name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"workspaces": {
+                  Row: {
+                    "agency_logo_url": string | null,"agency_name": string,"created_at": string,"default_currency": string,"id": string,"kind": string,"updated_at": string
+                  }
+                  Insert: {
+                    "agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"id"?: string,"kind"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "agency_logo_url"?: string | null,"agency_name"?: string,"created_at"?: string,"default_currency"?: string,"id"?: string,"kind"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -203,6 +283,9 @@ isOneToOne: false
           Functions: {
             "add_share_comment":
 { Args: { "p_author": string,"p_body": string,"p_node_id": string,"p_token": string }; Returns: string
+                           },
+"current_workspace_id":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "get_shared_funnel":
 { Args: { "p_token": string }; Returns: Json
@@ -218,6 +301,12 @@ isOneToOne: false
                            },
 "share_safe_graph":
 { Args: { "g": Json,"hide_numbers": boolean }; Returns: Json
+                           },
+"storage_object_in_my_workspace":
+{ Args: { "bucket": string,"object_name": string }; Returns: boolean
+                           },
+"team_workspace_id":
+{ Args: Record<PropertyKey, never>; Returns: string
                            }
           }
           Enums: {

@@ -17,6 +17,9 @@ export interface ViewOpts {
   thick: boolean;
   snap: boolean;
   mini: boolean;
+  /** Desktop: block library / details panel collapsed so the canvas gets the space. */
+  hideSide: boolean;
+  hideInsp: boolean;
 }
 
 interface Snapshot {
@@ -63,7 +66,7 @@ export interface EditorState {
 
 const OPTS_KEY = "fm-editor-opts";
 const loadOpts = (): ViewOpts => {
-  const d = { nums: true, thick: true, snap: true, mini: true };
+  const d = { nums: true, thick: true, snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     return { ...d, ...JSON.parse(localStorage.getItem(OPTS_KEY) || "{}") };
   } catch {
@@ -93,7 +96,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: true, snap: true, mini: true },
+  opts: { nums: true, thick: true, snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,

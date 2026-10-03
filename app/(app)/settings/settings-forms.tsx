@@ -3,7 +3,7 @@ import { useActionState, useState, useTransition } from "react";
 import { FormMessage, Submit } from "@/components/form-bits";
 import { LogoUpload } from "@/components/logo-upload";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
-import { inviteMemberAction, setMemberAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction } from "../actions";
+import { createIndependentAccountAction, inviteMemberAction, setMemberAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction } from "../actions";
 
 export function ProfileForm({ fullName, email, role }: { fullName: string; email: string; role: string }) {
   const [state, action] = useActionState(updateProfileAction, undefined);
@@ -87,6 +87,30 @@ export function InviteForm() {
         </div>
       </div>
       <Submit className="btn primary">Send invite</Submit>
+    </form>
+  );
+}
+
+export function IndependentForm() {
+  const [state, action] = useActionState(createIndependentAccountAction, undefined);
+  return (
+    <form action={action}>
+      <FormMessage state={state?.error ? state : state?.ok ? { message: "Account created. They’ll get an email to choose a password and open their private workspace." } : undefined} />
+      <div className="row2">
+        <div className="field">
+          <label htmlFor="ind-email">Email</label>
+          <input className="input" id="ind-email" name="email" type="email" required autoComplete="off" />
+        </div>
+        <div className="field">
+          <label htmlFor="ind-name">Name (optional)</label>
+          <input className="input" id="ind-name" name="full_name" autoComplete="off" />
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="ind-ws">Workspace name (optional)</label>
+        <input className="input" id="ind-ws" name="workspace_name" autoComplete="off" />
+      </div>
+      <Submit className="btn primary">Create independent account</Submit>
     </form>
   );
 }

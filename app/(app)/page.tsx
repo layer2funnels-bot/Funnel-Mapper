@@ -21,11 +21,11 @@ function byCurrency(rows: { cur: string; v: number }[]) {
 }
 
 export default async function Dashboard() {
-  const { sb, profile, workspace } = await requireUser();
+  const { sb, profile, workspace, isTeam } = await requireUser();
   const [{ data: clients }, { data: funnels }, tpls] = await Promise.all([
     sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").order("name"),
     sb.from("funnels").select("id, name, status, client_id, summary, settings, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
-    templateOptions(sb),
+    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
   ]);
   const cl = clients ?? [];
   const fs = funnels ?? [];

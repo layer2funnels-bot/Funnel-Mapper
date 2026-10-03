@@ -1,6 +1,13 @@
 # Access and privacy
 
-Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members can sign in; nothing internal is public.
+Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members and independent users created by the
+team can sign in; nothing internal is public.
+
+There are two separate access worlds (see `docs/concepts/workspaces-and-team.md`):
+
+- **The Layer2Funnels team workspace:** the whole team shares its clients, funnels, templates and files.
+- **Independent users:** each has a private workspace. They can't see Layer2Funnels data or each other's,
+  and the team can't see theirs.
 
 ## What is enforced in code
 
@@ -8,11 +15,16 @@ Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members can
   and the sign-in form gives the same answer whether or not an email belongs to the team.
 - **Every page needs a session** except sign-in / password recovery (`/login`, `/reset-password`, `/auth/*`)
   and token-checked share links (`/s/<token>`, `/api/share/<token>`). See `lib/supabase/proxy.ts`.
-- **Shared workspace with Row Level Security** on every table: every *active* team member can read and edit all clients,
-  funnels, templates and data; deactivated members and anonymous visitors see nothing. Members can't change their own role;
-  the workspace always keeps an active admin.
-- **Storage:** `thumbnails` and `screenshots` are private (team only, short-lived signed URLs). `logos` is public because
-  client share links display the client's and agency's logo.
+- **Workspace-scoped Row Level Security** on every table:
+  - Every row carries a `workspace_id`, and an *active* member can read and edit only their own workspace's rows.
+  - Child rows (funnels, versions, actuals, share links, comments, client products) always inherit their
+    parent's workspace, so nothing can be attached across workspaces.
+  - Deactivated members and anonymous visitors see nothing.
+  - Members can't change their own role or workspace, and each workspace always keeps an active admin.
+- **Storage:**
+  - `thumbnails` and `screenshots` are private to their workspace (short-lived signed URLs).
+  - `logos` is public because client share links display the client's and agency's logo.
+  - Uploads go only into your own folder.
 - **Internal block notes and screenshots never leave the database on share links** (stripped in `get_shared_funnel()`),
   and saving from an editable link keeps them. Presentation mode and PDF reports don't show them either.
 - **Share links** go through `get_shared_funnel()`, which returns only that one funnel plus the client's name and logo
@@ -39,9 +51,22 @@ Funnel Mapper Pro is a private Layer2Funnels tool. Only invited team members can
   Reactivate any time. (Deleting a user in the Supabase dashboard also deletes the clients and funnels they created.)
 - **Admins** can change roles, deactivate members and edit the workspace branding.
 
+## Independent accounts
+
+- **Owner/admin workflow:** Settings → **Independent accounts**. Only admins of the team workspace see it.
+  Enter the email; the person gets an email to choose a password and lands in their own empty workspace.
+- **Private sign-up URL:** set `INDEPENDENT_SIGNUP_CODE` (server-only, at least 8 characters) to enable
+  `/join/<code>`. Admins see the full link in Settings. Unknown codes return 404, and the main app never
+  links to it.
+- Both paths need `SUPABASE_SERVICE_ROLE_KEY` on the server. The database creates the personal workspace in
+  the same transaction that creates the account.
+- To remove an independent user, delete them in Supabase → Authentication → Users. Their clients and funnels
+  go with them.
+
 ## Local development
 
 `supabase/config.toml` already has sign-ups disabled and the templates wired in. The seed creates
 `demo@layer2funnels.test` (admin), `teammate@layer2funnels.test` (member) and `former@layer2funnels.test` (deactivated),
+and two independent users, `solo@independent.test` and `solo2@independent.test` (each with a private workspace),
 all with password `demo-password`.
 Invite emails sent locally appear in Mailpit at http://127.0.0.1:54324.

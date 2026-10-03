@@ -1,7 +1,7 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
-**Updated after Batch 3 (client-facing exports), 2 Oct 2026.** Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
+**Updated after Batch 4 (workspaces, team, editor panels), 3 Oct 2026.** Before that, Batch 3 (client-facing exports). Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
@@ -56,10 +56,11 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Sharing (view/edit links, hide numbers, expiry, comments, notes never shared) | PASS | `share_safe_graph` RPC, e2e `privacy.spec.ts`, DB tests |
 | Share modal / all modals centred | PASS | `app/globals.css` `dialog.modal { margin: auto; max-height; overflow }` restores native centring that Tailwind's reset removed; e2e "dialogs open centred and inside the viewport" (1440×900 and 390×640) |
 | Presentation mode | PASS | `present.tsx` |
-| Auth: invite-only, no public sign-up, password reset, magic link | PASS | `app/(auth)/*`, `access_hardening` migration, e2e `team.spec.ts` |
-| Roles | PARTIAL | `admin` / `member` only; no Owner/Editor/Viewer |
-| Independent users (separate workspace, private sign-up URL, owner-created accounts) | FAIL | single shared workspace model |
-| RLS / data isolation | PASS (for the current model) | `is_team_member()` policies on every table, private storage; 22 DB tests cover anonymous, uninvited and deactivated users, self-promotion and share-link leakage. Cross-tenant tests are N/A until independent users exist |
+| Auth: invite-only, no public sign-up, password reset, magic link | PASS | `app/(auth)/*`, `access_hardening` migration, e2e `team.spec.ts`. Team invites from Settings → Team (team admins) land in the team workspace |
+| Editor panel collapse (block library / details panel) | PASS | Batch 4: desktop toolbar toggles; the canvas takes the space; remembered in the editor view options; tablet and phone keep their drawers. e2e `workspaces.spec.ts` "editor panels" |
+| Roles | PARTIAL (deferred) | `admin` / `member` per workspace. Owner/Editor/Viewer are deferred: a real Viewer needs read-only RLS plus read-only handling of every UI write path. See `docs/concepts/workspaces-and-team.md` |
+| Independent users (separate workspace, private sign-up URL, owner-created accounts) | PASS | Batch 4: `workspaces` table (team + personal), `workspace_id` on every data table; created from Settings → Independent accounts (team admins) or the private `/join/<INDEPENDENT_SIGNUP_CODE>` URL (404 otherwise). Tests: `tests/integration/workspaces.test.ts`, e2e `workspaces.spec.ts` |
+| RLS / data isolation | PASS | Batch 4: every policy is `workspace_id = current_workspace_id()`. Child rows inherit their parent's workspace via trigger. Storage is scoped by owner folder and thumbnail funnel. 37 DB tests, including cross-tenant reads, writes, attach and move attempts, storage, share links and templates |
 | Exports: CSV / JSON / import round-trip | PASS | `lib/export.ts`, `lib/graph.ts` import/export, `tests/unit/import.test.ts`, e2e exports |
 | Export: SVG / PNG | PASS | Batch 3: `lib/export.ts mapSvg` draws the canvas as it is: true bounds (measured element sizes, frame titles, sampled connection curves, labels), the app's fonts embedded as @font-face with text measured in the browser (`exporters.ts renderMapSvg`), wrapped notes/headings/shapes, block icons, element styles (fill, border, dash, radius, opacity, font, size, weight, colour, alignment, italic/underline/strike, letter spacing), shapes, images (remote ones inlined), checklists, frames, layer order, and connection styles (path via the canvas's own `edgePath`, dash, colour, width, traffic thickness, arrows, Yes/No, Skip, custom labels, No data). PNG = SVG × 2. Checked visually against the canvas. Light background only (no dark/transparent option) |
 | Export: PDF report | PASS | Batch 3: cover page (Emerald branding, map, 12 KPIs, steps) plus report pages: scenario comparison (as mapped, current what-if, every scenario, profit change), revenue & profit forecast (stats + revenue/costs and cumulative-profit charts), month by month, traffic sources, offer/product revenue (share bars), expenses (breakdown + items + one-time), goals & required numbers (day/week/month/year for the revenue target, goal blocks), full funnel data when the cover can't fit every step; page numbers. Every figure comes from `lib/report-data.ts`, which only assembles `compute`/`computeScenario`/`project`/`sourceRows`/`stepRows`/`targetPlan` results. Map image compressed (≈200 KB report) |
@@ -75,18 +76,18 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | 2. Complete enough | Tidy Up for flow blocks; scenario side-by-side; monthly forecast; responsive layouts |
 | 3. Broken | none known after Batch 1 |
 | 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in CSV); roles (admin/member); archive; reports area |
-| 5. Missing but required | Reports navigation with reinvestment, MRR, month-to-month and published status; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
+| 5. Missing but required | Reports navigation with reinvestment, MRR, month-to-month and published status; Owner/Admin/Editor/Viewer roles (deferred in Batch 4) |
 | 6. Missing but clearly implied | e2e for logo upload; recents/favourites in the library |
 | 7. Out of scope (handoff §18) | AI features, multiplayer, tracking scripts, deep ad/CRM integrations, marketplace, benchmark DB, white-label portal |
 
 ## D. Test status
 
-| Suite | Audit | After Batch 1 | After Batch 2 | After Batch 3 |
-|---|---|---|---|---|
-| Unit (Vitest) | 73/73 | 91/91 | 102/102 | **115/115** (+13 `tests/unit/export-report.test.ts`: report data equals the engine on the golden funnel, map SVG keeps elements/styles/bounds, text wrap) |
-| Database/RLS | 22/22 | 22/22 | 22/22 | **22/22** |
-| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | 67/67 | **68/68** (+ `exports.spec.ts`: PDF sections and values vs the engine, SVG elements and embedded fonts, PNG size, KPIs unchanged) |
-| Typecheck / ESLint / `next build` | clean | clean | clean | clean |
+| Suite | Audit | After Batch 1 | After Batch 2 | After Batch 3 | After Batch 4 |
+|---|---|---|---|---|---|
+| Unit (Vitest) | 73/73 | 91/91 | 102/102 | 115/115 (+13 `tests/unit/export-report.test.ts`: report data equals the engine on the golden funnel, map SVG keeps elements/styles/bounds, text wrap) | **115/115** (maths unchanged) |
+| Database/RLS | 22/22 | 22/22 | 22/22 | 22/22 | **37/37** (+15 `tests/integration/workspaces.test.ts`) |
+| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | 67/67 | 68/68 (+ `exports.spec.ts`: PDF sections and values vs the engine, SVG elements and embedded fonts, PNG size, KPIs unchanged) | **73/74** (+6 `workspaces.spec.ts`). The 1 failure is the pre-existing intermittent "Tidy up keeps notes…" overlap: it also fails on the Batch 3 editor code (1 of 5 runs) |
+| Typecheck / ESLint / `next build` | clean | clean | clean | clean | clean |
 
 ## E. Maths status: PASS
 
@@ -131,7 +132,8 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - Members can't change roles or activate themselves.
 - Screenshots and thumbnails are private.
 - Share links go through RPCs that strip internal notes and screenshots, and hidden-number links strip all figures.
-- Gaps: no Owner/Editor/Viewer roles, no independent-user workspaces and therefore no cross-tenant tests, and no private sign-up URL.
+- Independent users have isolated workspaces (Batch 4), covered by cross-tenant DB tests. The private sign-up URL is `/join/<code>`.
+- Remaining gap: Owner/Editor/Viewer roles (deferred).
 
 ## H. UI/UX status: PASS for the locked Emerald tokens (Batch 2)
 
@@ -187,13 +189,45 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - Remote images that block cross-origin requests can't be inlined: they show in the .svg file but not in the PNG/PDF.
 - The required-numbers table covers the revenue target (`targetPlan`); goal-seek inputs are not saved, so they aren't in the PDF.
 
+## Batch 4 (done): workspaces, team, editor panels
+
+- **Concept:** `docs/concepts/workspaces-and-team.md`.
+- **Migration** `20261007000000_workspaces.sql` (additive; no DROP; applied cleanly over the seeded data before a fresh reset, and every existing row was backfilled to the team workspace):
+  - new `workspaces` (one `team`, many `personal`) and `workspace_signups` (service-role only);
+  - `profiles.workspace_id` (membership = profile: one workspace per account, next to role/active);
+  - `workspace_id` on clients, funnels, versions, actuals, share links, comments, products and templates (built-ins stay global);
+  - inherit-from-parent triggers;
+  - `current_workspace_id()`, with all policies changed via `ALTER POLICY`;
+  - storage policies scoped by workspace;
+  - share pages branded from the funnel's workspace;
+  - `handle_new_user()` creates a personal workspace for pending independent sign-ups;
+  - profile guard: nobody but the service role changes an account's workspace, and last admin is checked per workspace.
+  - The legacy single-row `workspace` table is kept, frozen and team-only.
+- **App:**
+  - `requireUser()` returns `workspace` (from `workspaces`) and `isTeam`. Branding and logo actions update the caller's workspace.
+  - Team invites are restricted to the team workspace.
+  - `lib/independent.ts` (server-only) handles independent account creation.
+  - Settings → Independent accounts: form plus the private link.
+  - `/join/[code]` private sign-up, which is public in the proxy and returns 404 without the code.
+  - Personal workspaces see "Private workspace" and "Your templates".
+  - Neutral sign-in and magic-link copy; invite email has personal wording; email buttons are Emerald.
+- **Editor:** desktop toggles to collapse/expand the block library and the details panel. They are stored in `ViewOpts` (`hideSide`/`hideInsp`, `fm-editor-opts`). Version history and comments re-open the right panel.
+- **Seed:** `solo@independent.test` and `solo2@independent.test` with private workspaces, a client, a funnel, a share link and a product.
+- **Deploy notes:**
+  - Apply the migration to production (no `DROP`, so the Supabase connector can run it).
+  - Paste the updated `supabase/templates/invite.html`.
+  - Optionally set `INDEPENDENT_SIGNUP_CODE`.
+- **Known/deferred:**
+  - Owner/Editor/Viewer roles.
+  - No in-app list or deletion of independent accounts (use the Supabase dashboard).
+  - A person can't belong to two workspaces.
+  - Pre-existing intermittent Tidy Up note overlap (e2e "Tidy up keeps notes…", reproduced on the Batch 3 code; likely a measurement race in `lib/layout.ts` collision avoidance). Not touched, per the scope rules.
+
 ## I. Recommended order for the remaining budget
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)
 4. ~~Exports~~ (Batch 3)
 5. ~~Emerald re-skin~~ · 6. ~~Canvas completeness~~ (Batch 2). Follow-ups: rich-text notes, per-element Analytics tab, an editorial pass on card-heavy pages.
 7. **Reports area:** a report view built from existing `compute`/`project` output, adding traffic reinvestment, MRR, month-to-month, published status and required numbers per period.
-8. **Roles and independent users** (an architectural decision: confirm before building):
-   - Owner/Admin/Editor/Viewer
-   - per-workspace tenancy with cross-tenant RLS tests
+8. ~~Independent users / per-workspace tenancy~~ (Batch 4). **Roles** Owner/Admin/Editor/Viewer remain: a permission-system pass (read-only RLS + every UI write path).
 9. **Final QA and deploy:** finish the production migrations, run the full test suites and the live check.

@@ -23,12 +23,12 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
 export default async function ClientPage({ params }: PageProps<"/clients/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb } = await requireUser();
+  const { sb, isTeam } = await requireUser();
   const [{ data: client }, { data: funnels }, { data: allClients }, tpls, { data: products }] = await Promise.all([
     sb.from("clients").select("*").eq("id", id).maybeSingle(),
     sb.from("funnels").select("id, name, description, status, summary, settings, graph, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
     sb.from("clients").select("id, name, niche").order("name"),
-    templateOptions(sb),
+    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
     sb.from("products").select("*").or(`client_id.eq.${id},client_id.is.null`).order("name"),
   ]);
   if (!client) notFound();

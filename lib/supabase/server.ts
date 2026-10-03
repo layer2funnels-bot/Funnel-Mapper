@@ -22,12 +22,12 @@ export async function supabaseServer() {
   });
 }
 
-export type Workspace = Database["public"]["Tables"]["workspace"]["Row"];
-const DEFAULT_WORKSPACE: Workspace = { id: 1, agency_name: "Layer2Funnels", agency_logo_url: null, default_currency: "GBP", updated_at: "" };
+export type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
 
 /**
- * Current team member, their profile and the shared workspace, or redirect to /login.
- * A user without an active profile (deactivated, or not part of the team) is signed out. Cached per request.
+ * Current member, their profile and their workspace (the Layer2Funnels team workspace, or an independent user's
+ * private one), or redirect to /login. A user without an active profile (deactivated, or never invited) is
+ * signed out. Cached per request. RLS scopes every query to this workspace; `isTeam` only drives the UI.
  */
 export const requireUser = cache(async () => {
   const sb = await supabaseServer();
@@ -35,10 +35,8 @@ export const requireUser = cache(async () => {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const [{ data: profile }, { data: workspace }] = await Promise.all([
-    sb.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    sb.from("workspace").select("*").eq("id", 1).maybeSingle(),
-  ]);
-  if (!profile || !profile.active) redirect("/auth/removed");
-  return { sb, user, profile, workspace: workspace ?? DEFAULT_WORKSPACE, isAdmin: profile.role === "admin" };
+  const { data } = await sb.from("profiles").select("*, workspace:workspaces(*)").eq("id", user.id).maybeSingle();
+  if (!data || !data.active || !data.workspace) redirect("/auth/removed");
+  const { workspace, ...profile } = data;
+  return { sb, user, profile, workspace, isAdmin: profile.role === "admin", isTeam: workspace.kind === "team" };
 });

@@ -145,7 +145,8 @@ describe("shared workspace", () => {
 describe("storage", () => {
   it("thumbnails and screenshots are private to the team; logos are public", async () => {
     const png = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: "image/png" });
-    const path = `test/${Date.now()}.png`;
+    // uploads go into the uploader's own folder (<uid>/…), as the app does
+    const path = `${(await mate.auth.getUser()).data.user!.id}/test-${Date.now()}.png`;
     const up = await mate.storage.from("screenshots").upload(path, png, { contentType: "image/png" });
     expect(up.error).toBeNull();
     const signed = await admin.storage.from("screenshots").createSignedUrl(path, 60);

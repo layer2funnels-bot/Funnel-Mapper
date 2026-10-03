@@ -137,6 +137,10 @@ function EditorInner(props: EditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funnel.id]);
 
+  // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
+  const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
+  const togglePanel = (which: "side" | "insp", value?: boolean) => setOpt(which === "side" ? "hideSide" : "hideInsp", value ?? !collapsed[which]);
+
   /* ---------- saving ---------- */
   const save: SaveFn = useCallback(
     async (p) => {
@@ -357,7 +361,7 @@ function EditorInner(props: EditorProps) {
 
   const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
   const canEdit = owner || !!share?.canEdit;
-  const cls = ["fm-editor", showSide && "show-side", showInsp && "show-insp", !opts.nums && "fm-hide-nums", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
+  const cls = ["fm-editor", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
   if (presenting)
     return (
@@ -372,6 +376,17 @@ function EditorInner(props: EditorProps) {
   return (
     <div className={cls}>
       <header className="fm-top">
+        <button
+          type="button"
+          className="btn icon ghost fm-hide-sm"
+          aria-label={`${collapsed.side ? "Expand" : "Collapse"} ${readOnly ? "side panel" : "block library"}`}
+          title={`${collapsed.side ? "Show" : "Hide"} ${readOnly ? "side panel" : "block library"}`}
+          aria-expanded={!collapsed.side}
+          aria-controls="fm-side"
+          onClick={() => togglePanel("side")}
+        >
+          <Icon name="panelLeft" />
+        </button>
         {!readOnly && (
           <button type="button" className="btn icon fm-mobile-only" aria-label="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
             <Icon name="plus" />
@@ -544,12 +559,23 @@ function EditorInner(props: EditorProps) {
         <button type="button" className="btn icon fm-mobile-only" aria-label="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
           <Icon name="chart" />
         </button>
+        <button
+          type="button"
+          className="btn icon ghost fm-hide-sm"
+          aria-label={`${collapsed.insp ? "Expand" : "Collapse"} details panel`}
+          title={`${collapsed.insp ? "Show" : "Hide"} details panel`}
+          aria-expanded={!collapsed.insp}
+          aria-controls="fm-insp"
+          onClick={() => togglePanel("insp")}
+        >
+          <Icon name="panelRight" />
+        </button>
         {owner && (
           <>
-            <button type="button" className="btn icon fm-hide-sm" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true))}>
+            <button type="button" className="btn icon fm-hide-sm" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="history" />
             </button>
-            <button type="button" className="btn fm-hide-sm relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true))}>
+            <button type="button" className="btn fm-hide-sm relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="comment" />
               {commentCount > 0 && <span className="pill bg-brand px-1.5! py-0! text-brand-ink">{commentCount}</span>}
             </button>
@@ -573,7 +599,7 @@ function EditorInner(props: EditorProps) {
         )}
       </header>
 
-      <aside className="fm-side" aria-label="Building blocks">
+      <aside className="fm-side" id="fm-side" aria-label="Building blocks">
         {readOnly ? (
           <div className="px-1 py-2">
             <h2>{client.name}</h2>
@@ -606,7 +632,7 @@ function EditorInner(props: EditorProps) {
         <ZoomControls />
       </section>
 
-      <aside className="fm-insp" aria-label="Details">
+      <aside className="fm-insp" id="fm-insp" aria-label="Details">
         <div className="fm-sheet-close">
           <button type="button" className="btn icon ghost" aria-label="Close details" onClick={() => setShowInsp(false)}>
             <Icon name="close" />

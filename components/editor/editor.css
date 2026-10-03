@@ -896,6 +896,22 @@
 .fm-sheet-close {
   display: none;
 }
+/* desktop: collapsed side panels give their column to the canvas (React Flow resizes itself) */
+@media (min-width: 1021px) {
+  .fm-editor.fm-collapse-side {
+    grid-template-columns: 0 minmax(0, 1fr) 340px;
+  }
+  .fm-editor.fm-collapse-insp {
+    grid-template-columns: 256px minmax(0, 1fr) 0;
+  }
+  .fm-editor.fm-collapse-side.fm-collapse-insp {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+  }
+  .fm-collapse-side .fm-side,
+  .fm-collapse-insp .fm-insp {
+    display: none;
+  }
+}
 @media (max-width: 1020px) {
   .fm-editor {
     grid-template-columns: minmax(0, 1fr);

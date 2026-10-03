@@ -180,7 +180,7 @@ test.describe("reports and planning tools", () => {
     await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
     await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
     await page.getByRole("button", { name: "Apply to what-if" }).click();
-    await page.getByRole("tab", { name: "Math" }).click();
+    await page.getByRole("tab", { name: "Overview" }).click();
     await expect(page.locator(".rline", { hasText: "Profit" }).first()).toContainText("£50,000");
   });
 

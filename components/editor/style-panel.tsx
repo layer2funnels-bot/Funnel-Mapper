@@ -6,7 +6,7 @@ import { Icon } from "@/components/icon";
 import { typeOf } from "@/lib/catalog";
 import type { ChecklistItem, FunnelEdge, FunnelNode } from "@/lib/graph";
 import { ICONS, type IconName } from "@/lib/icons";
-import { FONT_FAMILIES, FONT_WEIGHTS, type EdgeStyle, type FontFamily, type NodeStyle } from "@/lib/style";
+import { EDGE_PRESETS, FONT_FAMILIES, FONT_WEIGHTS, type EdgeStyle, type FontFamily, type NodeStyle } from "@/lib/style";
 import { checklistOf, copySelection, deleteSelection, duplicateSelection, moveNodes, newChecklistItem, reorder, setChecklist, setEdgeStyle, setLocked, setNodeStyle, showToast, updateParams, useEditor } from "@/lib/editor/store";
 import { Field, Seg } from "./fields";
 
@@ -458,6 +458,17 @@ export function EdgeStyleFields({ e }: { e: FunnelEdge }) {
     <div className="fm-sec">
       <h4>Line style</h4>
       <div className="field">
+        <span className="lbl">Kind of line</span>
+        <div className="fm-chips" role="group" aria-label="Connection presets">
+          {Object.entries(EDGE_PRESETS).map(([k, p]) => (
+            <button key={k} type="button" className="chip" aria-pressed={st.preset === k} onClick={() => S(st.preset === k ? { preset: undefined, label: undefined, color: undefined, dash: undefined, arrow: undefined } : { preset: undefined, label: undefined, color: undefined, dash: undefined, arrow: undefined, ...p.style })}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <span className="help">Presets set the label and look. Presentation only.</span>
+      </div>
+      <div className="field">
         <span className="lbl">Type</span>
         <Seg<string>
           label="Connection type"
@@ -512,6 +523,17 @@ export function EdgeStyleFields({ e }: { e: FunnelEdge }) {
             </>
           )}
         </Field>
+      </div>
+      <OptNum label="Opacity (%)" value={st.opacity != null ? Math.round(st.opacity * 100) : undefined} min={10} max={100} placeholder="100" onChange={(v) => S({ opacity: v == null || v >= 100 ? undefined : v / 100 })} />
+      <div className="field">
+        <span className="lbl">Also show on the line</span>
+        <label className="check">
+          <input type="checkbox" checked={!!st.showPct} onChange={(ev) => S({ showPct: ev.target.checked || undefined })} /> Conversion % at the source step
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={!!st.showRev} onChange={(ev) => S({ showRev: ev.target.checked || undefined })} /> Revenue that flows through
+        </label>
+        <span className="help">People are always shown. Hidden in Clean map.</span>
       </div>
       <div className="field">
         <span className="lbl">Arrow</span>

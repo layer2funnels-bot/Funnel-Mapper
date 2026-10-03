@@ -1,15 +1,18 @@
 "use client";
 import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { baseOf, CATCOLOR, portsFor, typeOf } from "@/lib/catalog";
+import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
 import { offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
-import { checklistOf, moveNodes, setChecklist, useEditor } from "@/lib/editor/store";
-import { nodeStats, subLabel } from "@/lib/editor/labels";
+import { checklistOf, moveNodes, setChecklist, startRename, updateNode, useEditor } from "@/lib/editor/store";
+import { frameTotals, nodeStats, perfLine, subLabel } from "@/lib/editor/labels";
+import { goalCurrent } from "@/lib/report-data";
+import { nf } from "@/lib/format";
 import { periodFactor } from "@/lib/funnel-math";
+import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
 import { hostOf, isVideoUrl } from "@/lib/rich-text";
 import { RichText } from "@/components/rich-text";
@@ -57,11 +60,62 @@ function WidthResizer({ n, selected, minW = 80 }: { n: FunnelNode; selected: boo
   );
 }
 
+/** Zoom-dependent detail: far = icon + short name; mid = name + type; near = key numbers too. */
+export const zoomBand = (k: number): "far" | "mid" | "near" => (k < 0.4 ? "far" : k <= 0.75 ? "mid" : "near");
+
+function RenameInput({ id, value }: { id: string; value: string }) {
+  const [v, setV] = useState(value);
+  const done = (save: boolean) => {
+    if (save && v.trim() && v !== value) updateNode(id, { name: v.trim() });
+    startRename(null);
+  };
+  return (
+    <input
+      className="fm-rename nodrag nopan"
+      autoFocus
+      aria-label="Block name"
+      value={v}
+      maxLength={120}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => done(true)}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") done(true);
+        if (e.key === "Escape") done(false);
+      }}
+      onDoubleClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+/** Progress of the goal attached to a goal block (target comes from Plan / Reports goals, never invented). */
+function GoalBar({ n }: { n: FunnelNode }) {
+  const goals = useEditor((s) => s.settings.goals);
+  const nodes = useEditor((s) => s.nodes);
+  const R = useEditor((s) => s.R);
+  const g = goals.find((x) => x.nodeId === n.id && x.value > 0);
+  if (!g) return null;
+  const cur = goalCurrent(nodes, R, g);
+  const p = Number.isFinite(cur) ? Math.max(0, Math.min(1, cur / g.value)) : 0;
+  return (
+    <div className="fm-goalbar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p * 100)} aria-label={`${g.name || "Goal"} progress`}>
+      <i style={{ width: `${p * 100}%` }} />
+      <span>{nf(p * 100)}%</span>
+    </div>
+  );
+}
+
 export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
+  const leak = useEditor((s) => s.keyLeak === id && s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
+  const perf = useEditor((s) => s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
+  const band = useEditor((s) => zoomBand(s.view.k));
+  const renaming = useEditor((s) => s.renaming === id);
+  const multi = useEditor((s) => s.selNodes.length > 1 && s.selNodes.includes(id));
   const spot = useEditor((s) => s.spot);
   const period = useEditor((s) => s.opts.period);
   const shared = useEditor((s) => s.shared);
@@ -72,15 +126,25 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const cc = CATCOLOR[T.color ?? T.cat];
   const V = visualOf(n.type),
     F = FAMILIES[V.family];
-  const stats = nodeStats(n, R, cur, periodFactor(period));
+  const k = periodFactor(period);
+  const stats = nodeStats(n, R, cur, k);
+  const pl = perf ? perfLine(n, R, cur, k) : null;
+  const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
+  const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
-  const cls = ["fm-node", `fam-${V.family}`, logic && "logic", V.brand && "brand", selected && "sel", warn && "warn", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
+  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", n.locked && "locked", n.status === "done" && "live", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
+  const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
-    <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`}>
+    <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
       {hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />}
       <LockBadge n={n} />
-      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} />}
+      {leak && (
+        <span className="fm-leak" title="Key leak: the step that loses the most people">
+          Key leak
+        </span>
+      )}
+      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} />}
       {F.price && <span className="fm-price">{priceTab(n, cur)}</span>}
       {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
@@ -88,13 +152,29 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           <Icon name={(n.s?.icon as IconName) || T.icon} />
         </span>
         <div className="fm-ntitle">
-          <span style={textCss(n.s)}>{n.name}</span>
-          <small>{V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur)}</small>
+          {renaming ? <RenameInput id={n.id} value={n.name} /> : <span style={textCss(n.s)}>{n.name}</span>}
+          {pl ? (
+            <small className="fm-perf-line">
+              <b>{pl.headline}</b> {pl.caption}
+            </small>
+          ) : (
+            <small>{sub}</small>
+          )}
         </div>
       </div>
       {hasSplitBar(n.type) && <SplitBar pct={Number(n.p.pct) || 0} test={baseOf(n.type) === "split"} />}
+      {pl && pl.ratio != null && (
+        <div className="fm-conv" aria-hidden="true">
+          <i style={{ width: `${pl.ratio * 100}%` }} />
+        </div>
+      )}
+      {V.family === "goal" && <GoalBar n={n} />}
       <div className="fm-nstats">
-        {stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}
+        {nodata ? (
+          <span className="fm-nodata">No data yet</span>
+        ) : (
+          stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))
+        )}
         {internal && (
           <span className="fm-nnote" title="Has internal notes (Plan tab)">
             <Icon name="note" size={11} />
@@ -108,7 +188,11 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       </div>
       {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
       {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
-      {labels && <span className="fm-plabel out">{labels[0]}</span>}
+      {labels && (
+        <span className="fm-plabel out" aria-hidden="true">
+          {labels[0]}
+        </span>
+      )}
     </div>
   );
 });
@@ -145,6 +229,14 @@ export const LabelNode = memo(function LabelNode({ id, selected }: P) {
 
 export const FrameNode = memo(function FrameNode({ id, selected }: P) {
   const n = useNode(id);
+  const perf = useEditor((s) => s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
+  const totals = useEditor((s) => {
+    if (!(s.opts.nums && s.opts.thick) || s.settings.hideNumbers) return "";
+    const f = s.nodes.find((x) => x.id === id);
+    if (!f || f.type !== "frame") return "";
+    const members = s.nodes.filter((m) => m.type !== "frame" && !isAnnot(m.type) && m.x + nodeW(m.type) / 2 > f.x && m.x + nodeW(m.type) / 2 < f.x + (f.w ?? 0) && m.y + blockH(m.type) / 2 > f.y && m.y + blockH(m.type) / 2 < f.y + (f.h ?? 0));
+    return frameTotals(members, s.R, s.settings.currency, periodFactor(s.opts.period)).text;
+  });
   if (!n) return null;
   return (
     <>
@@ -153,6 +245,7 @@ export const FrameNode = memo(function FrameNode({ id, selected }: P) {
         <LockBadge n={n} />
         <span className="ftitle" style={textCss(n.s)}>
           {n.name}
+          {perf && totals && <span className="ftotal"> {totals}</span>}
         </span>
       </div>
     </>

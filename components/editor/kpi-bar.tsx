@@ -1,10 +1,10 @@
 "use client";
-import { useReactFlow } from "@xyflow/react";
+import { useFocusBlock } from "./focus";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio } from "@/lib/format";
-import { warnings } from "@/lib/funnel-math";
-import { setTab, clearSelection, selectNodes, useEditor } from "@/lib/editor/store";
+import { healthChecks } from "@/lib/health";
+import { setTab, clearSelection, useEditor } from "@/lib/editor/store";
 
 /** Popover above the strip; closes on outside click and Escape. */
 function Pop({ label, button, children, wide }: { label: string; button: (open: boolean) => React.ReactNode; children: (close: () => void) => React.ReactNode; wide?: boolean }) {
@@ -44,9 +44,9 @@ export function KpiBar() {
   const edges = useEditor((s) => s.edges);
   const warnIds = useEditor((s) => s.warnIds);
   const shared = useEditor((s) => s.shared);
-  const rf = useReactFlow();
+  const focus = useFocusBlock();
   // checks are for the team, not for clients viewing a share link
-  const checks = shared ? [] : warnings({ nodes, edges });
+  const checks = shared ? [] : healthChecks({ nodes, edges });
   const hasTraffic = nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label");
   const m = (v: number) => money(v, cur);
   const main: [string, React.ReactNode][] = [
@@ -97,7 +97,7 @@ export function KpiBar() {
                 <>
                   <ul>
                     {checks.map((c) => (
-                      <li key={c}>{c}</li>
+                      <li key={c.id}>{c.text}</li>
                     ))}
                   </ul>
                   {named.length > 0 && (
@@ -108,8 +108,7 @@ export function KpiBar() {
                           type="button"
                           onClick={() => {
                             close();
-                            selectNodes([n.id]);
-                            rf.fitView({ nodes: [{ id: n.id }], padding: 1.6, duration: 350, maxZoom: 1.2 });
+                            focus(n.id);
                           }}
                         >
                           Show “{n.name}”

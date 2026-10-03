@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { LogoUpload } from "@/components/logo-upload";
 import { baseOf, isAnnot, isShareLogic, CATS, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf, pct } from "@/lib/format";
@@ -9,7 +9,9 @@ import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } 
 import { STEP_STATUSES, type FunnelEdge, type FunnelNode, type StepStatus } from "@/lib/graph";
 import { safeUrl } from "@/lib/rich-text";
 import { sym } from "@/lib/format";
-import { align, nid, setSection, setSettings, deleteSelection, selectNodes, duplicateSelection, setInspTab, setLocked, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, nid, setSection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { edgeConversion, edgeRevenue } from "@/lib/editor/labels";
+import { openInsertStep } from "./quick-add";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
@@ -552,39 +554,79 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
   const a = useEditor((s) => s.nodes.find((n) => n.id === e.from));
   const b = useEditor((s) => s.nodes.find((n) => n.id === e.to));
   const flow = useEditor((s) => s.R.flows[e.id] ?? 0);
+  const R = useEditor((s) => s.R);
+  const cur = useEditor((s) => s.settings.currency);
   const ro = useEditor((s) => s.readOnly);
+  const [tab, setTab] = useState<"flow" | "style">("flow");
   const labels: [string, string] = (a && typeOf(a.type).ports) || ["People who converted", "People who didn’t convert"];
+  const conv = edgeConversion(e.from, flow, R);
+  const rev = edgeRevenue(e.to, flow, R);
   return (
-    <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+    <>
       <h3>Connection</h3>
       <p className="sub">
         {a?.name} → {b?.name}
       </p>
-      {a && portsFor(a.type).hasAlt && (
-      <div className="field">
-        <span className="lbl">Who goes this way</span>
-        <Seg<"main" | "alt">
-          label="Who goes this way"
-          value={e.port === "alt" ? "alt" : "main"}
-          options={[
-            ["main", labels[0]],
-            ["alt", labels[1]],
-          ]}
-          onChange={(v) => updateEdge(e.id, { port: v })}
-        />
+      <div className="fm-insp-tabs" role="tablist" aria-label="Connection panels">
+        {(
+          [
+            ["flow", "Flow"],
+            ["style", "Style"],
+          ] as const
+        ).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>
+            {l}
+          </button>
+        ))}
       </div>
-      )}
-      <Field label="Share of them (%)" help="Split one group between several next steps, for example 60% email and 40% retargeting.">
-        {(id) => <NumInput id={id} value={num(e.share ?? 100)} min={0} max={100} onChange={(v) => updateEdge(e.id, { share: v })} />}
-      </Field>
-      <StatBox items={[["People on this path", nf(flow, 1)]]} />
-      <EdgeStyleFields e={e} />
-      {!ro && (
-        <button type="button" className="btn danger" onClick={deleteSelection}>
-          Delete connection
-        </button>
-      )}
-    </fieldset>
+      <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+        {tab === "flow" ? (
+          <>
+            {a && portsFor(a.type).hasAlt && (
+              <div className="field">
+                <span className="lbl">Who goes this way</span>
+                <Seg<"main" | "alt">
+                  label="Who goes this way"
+                  value={e.port === "alt" ? "alt" : "main"}
+                  options={[
+                    ["main", labels[0]],
+                    ["alt", labels[1]],
+                  ]}
+                  onChange={(v) => updateEdge(e.id, { port: v })}
+                />
+              </div>
+            )}
+            <Field label="Share of them (%)" help="Split one group between several next steps, for example 60% email and 40% retargeting.">
+              {(id) => <NumInput id={id} value={num(e.share ?? 100)} min={0} max={100} onChange={(v) => updateEdge(e.id, { share: v })} />}
+            </Field>
+            <StatBox
+              items={[
+                ["People on this path", nf(flow, 1)],
+                ["Conversion at the source step", conv == null ? "No data yet" : `${nf(conv * 100, 1)}%`],
+                ["Revenue through this path", rev > 0 ? money(rev, cur) : "No data yet"],
+              ]}
+            />
+            {!ro && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                <button type="button" className="btn" onClick={() => flipEdge(e.id)}>
+                  Flip direction
+                </button>
+                <button type="button" className="btn" onClick={() => openInsertStep(e.id) || showToast("Scroll the connection into view first")}>
+                  Insert step on line
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <EdgeStyleFields e={e} />
+        )}
+        {!ro && (
+          <button type="button" className="btn danger" onClick={deleteSelection}>
+            Delete connection
+          </button>
+        )}
+      </fieldset>
+    </>
   );
 }
 

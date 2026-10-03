@@ -5,6 +5,8 @@ import { stepRows, type FunnelResult } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
 import { reportData, type ReportSettings } from "@/lib/report-data";
+import { typeOf } from "@/lib/catalog";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 export function download(name: string, data: Blob | string, type = "application/octet-stream") {
   const blob = typeof data === "string" ? new Blob([data], { type }) : data;
@@ -147,12 +149,36 @@ async function inlineImages(nodes: FunnelNode[]) {
   );
 }
 
+/** Page screenshots (private bucket paths, or URLs) → data URLs by node id, so the strip shows the capture in every export. */
+async function loadShots(nodes: FunnelNode[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  await Promise.all(
+    nodes
+      .filter((n) => n.shot && typeOf(n.type) && ["page", "offer"].includes(typeOf(n.type).cat))
+      .map(async (n) => {
+        try {
+          let url = n.shot!;
+          if (!/^(https?:|data:)/.test(url)) {
+            const { data } = await supabaseBrowser().storage.from("screenshots").createSignedUrl(url, 120);
+            if (!data?.signedUrl) return;
+            url = data.signedUrl;
+          }
+          if (url.startsWith("data:")) return void (out[n.id] = url);
+          const r = await fetch(url, { mode: "cors" });
+          if (r.ok) out[n.id] = await toDataUrl(await r.blob());
+        } catch {}
+      }),
+  );
+  return out;
+}
+
 /** The map as a self-contained SVG: canvas fonts embedded, text measured with them, images inlined. */
 export async function renderMapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, opts: Omit<MapSvgOptions, "fonts" | "measure"> & { embedFonts?: boolean }) {
   await document.fonts?.ready;
   const fonts = await appFonts();
   const nodes = await inlineImages(g.nodes);
-  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
+  const shots = opts.shots ?? (await loadShots(g.nodes));
+  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, shots, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
 }
 
 /* ---------------- PDF client report ---------------- */
@@ -170,7 +196,7 @@ export interface PdfInfo {
   /** Funnel settings: scenarios, forecast, expenses and target feed the report pages. */
   settings: ReportSettings;
   /** Map drawing options (measured sizes, line thickness). */
-  map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick">;
+  map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick" | "keyLeak" | "goals">;
 }
 
 type RGB = [number, number, number];

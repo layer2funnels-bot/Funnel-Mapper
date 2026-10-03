@@ -60,7 +60,23 @@ export interface EdgeStyle {
   /** skip = an indirect / skipped step (drawn dashed); nodata = no tracking data (numbers hidden on the line). */
   kind?: EdgeKind;
   label?: string;
+  /** Line opacity 0.1–1 (1 = solid). */
+  opacity?: number;
+  /** Also show the conversion % (people who move on ÷ people who arrive at the source block) / the revenue that flows through on the line label. */
+  showPct?: boolean;
+  showRev?: boolean;
+  /** Semantic preset the line was given (Yes, No, Purchase, No thanks, Retargeting). Presentation only. */
+  preset?: string;
 }
+
+/** Semantic connection presets: a label plus a look. Applying one only sets edge style; the maths is untouched. */
+export const EDGE_PRESETS: Record<string, { label: string; style: Partial<EdgeStyle> }> = {
+  yes: { label: "Yes", style: { label: "Yes", color: "#22C55E", preset: "yes" } },
+  no: { label: "No", style: { label: "No", color: "#F97316", dash: "dashed", preset: "no" } },
+  purchase: { label: "Purchase", style: { label: "Purchase", color: "#10B981", preset: "purchase" } },
+  nothanks: { label: "No thanks", style: { label: "No thanks", color: "#94A3B8", dash: "dashed", preset: "nothanks" } },
+  retarget: { label: "Retargeting", style: { label: "Retargeting", color: "#F97316", dash: "dotted", arrow: "end", preset: "retarget" } },
+};
 
 const SHADOWS: Record<ShadowKind, string> = {
   none: "none",
@@ -110,7 +126,7 @@ export const ARROW_SIZE = { sm: 6, md: 9, lg: 13 } as const;
 export function edgeLook(s: EdgeStyle | undefined) {
   const kind = s?.kind ?? "flow";
   const dash = s?.dash ?? (kind === "skip" ? "dashed" : kind === "nodata" ? "dotted" : undefined);
-  return { kind, path: s?.path ?? "curve", dash, color: s?.color, width: s?.width, arrow: s?.arrow ?? "none", arrowSize: ARROW_SIZE[s?.arrowSize ?? "md"], label: s?.label?.trim() || "" };
+  return { kind, path: s?.path ?? "curve", dash, color: s?.color, width: s?.width, arrow: s?.arrow ?? "none", arrowSize: ARROW_SIZE[s?.arrowSize ?? "md"], label: s?.label?.trim() || "", opacity: s?.opacity != null && s.opacity < 1 ? Math.max(0.1, s.opacity) : undefined, showPct: !!s?.showPct, showRev: !!s?.showRev };
 }
 
 /** Drop keys whose value is undefined/empty so stored styles stay small (and "reset" really resets). */
@@ -159,3 +175,13 @@ export function shapeGeom(kind: string, w: number, h: number, dir = "h", sw = 2)
   return null;
 }
 const r2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Built-in quick styles (Style tab, context menu). `style` replaces the block's style; Default clears it. */
+export const QUICK_STYLES: { key: string; label: string; style: NodeStyle | null }[] = [
+  { key: "default", label: "Default", style: null },
+  { key: "emphasis", label: "Emphasis", style: { border: "#10B981", borderW: 2, shadow: "soft" } },
+  { key: "muted", label: "Muted", style: { opacity: 0.6, color: "#94A3B8" } },
+  { key: "offer", label: "Offer", style: { border: "#FB923C", borderW: 2 } },
+  { key: "warning", label: "Warning", style: { border: "#FBBF24", borderW: 2, borderStyle: "dashed" } },
+  { key: "ghost", label: "L2F Ghost", style: { fill: "transparent", border: "#10B981", borderW: 1, borderStyle: "dashed", opacity: 0.9 } },
+];

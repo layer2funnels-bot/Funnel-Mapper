@@ -1,11 +1,10 @@
 import { expect, test } from "@playwright/test";
-import fixtures from "../fixtures/prototype-results.json";
 import { money } from "../../lib/format";
 import { compute } from "../../lib/funnel-math";
 import { blankSettings } from "../../lib/graph";
+import { tidyLayout } from "../../lib/layout";
 import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved } from "./helpers";
 
-const FX = fixtures as Record<string, { tidy: { x: number; y: number }[] }>;
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
 test.describe("funnel editor", () => {
@@ -120,7 +119,7 @@ test.describe("funnel editor", () => {
     await page.keyboard.press(`${mod}+a`);
     await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks selected");
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("tab", { name: "Math" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
   });
 
   test("dragging a frame carries the blocks inside it", async ({ page }) => {
@@ -145,12 +144,14 @@ test.describe("funnel editor", () => {
     const first = graph.nodes[0];
     await page.getByRole("button", { name: "Tidy up" }).click();
     await expect(page.locator(".fm-toast")).toContainText("Layout tidied");
-    for (const [i, n] of graph.nodes.entries()) expect(await pos(page, n.id), n.name).toEqual({ x: FX.quiz.tidy[i].x, y: FX.quiz.tidy[i].y });
+    // the app's canonical footprint (200 x 76, page and offer 114): the same layout the unit tests pin, centre-aligned rows
+    const laid = tidyLayout(graph.nodes, graph.edges);
+    for (const [i, n] of graph.nodes.entries()) expect(await pos(page, n.id), n.name).toEqual({ x: laid[i].x, y: laid[i].y });
     await page.keyboard.press(`${mod}+z`);
     await expect.poll(() => pos(page, first.id)).toEqual({ x: first.x, y: first.y });
     // keyboard shortcut + ELK alternative
     await page.keyboard.press(`${mod}+Shift+l`);
-    await expect.poll(() => pos(page, first.id)).toEqual({ x: FX.quiz.tidy[0].x, y: FX.quiz.tidy[0].y });
+    await expect.poll(() => pos(page, first.id)).toEqual({ x: laid[0].x, y: laid[0].y });
     await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByRole("menuitem", { name: "Tidy up (ELK layered)" }).click();
     await expect(page.locator(".fm-toast")).toContainText("ELK");

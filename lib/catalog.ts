@@ -348,9 +348,34 @@ export const LINE_DIRS: [string, string][] = [
   ["d2", "Diagonal ↗"],
 ];
 
-/** Default node height (px). Notes and headings can be taller; the editor uses measured heights when available. */
-export const NH = 96;
-export const nodeW = (type: string) => (typeOf(type)?.cat === "logic" ? 170 : 210);
+/**
+ * Canonical block footprint (V2 handoff, "Canonical dimensions"): every flow block is 200px wide; page and offer
+ * blocks carry a preview strip and are 38px taller than the rest. Library, canvas, Performance map, Presentation,
+ * Shared view, Tidy Up and every export read these three values. Layout only: it never touches the maths.
+ */
+export const NH = 76;
+export const NH_TALL = 114;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept so callers can stay per-type if a family ever differs
+export const nodeW = (type?: string): number => 200;
+/** Height of a flow block (px). Notes and headings can be taller; the editor uses measured heights when available. */
+export const blockH = (type: string) => {
+  const c = typeOf(type)?.cat;
+  return c === "page" || c === "offer" ? NH_TALL : NH;
+};
+
+/**
+ * Block types a block can be switched to without changing how its numbers are calculated: same maths category and the
+ * same special behaviour (recurring billing, instalments, Yes/No, A/B, goal, exit). Wait only changes into itself.
+ */
+export function retypeTargets(type: string): string[] {
+  const T = typeOf(type);
+  if (!T || T.cat === "annot" || type === "wait") return [];
+  const cls = (t: string) => {
+    const b = baseOf(t);
+    return ["sub", "plan", "cond", "split", "goal", "exit"].includes(b) ? b : "plain";
+  };
+  return (Object.keys(TYPES) as BlockTypeKey[]).filter((k) => k !== type && k !== "wait" && TYPES[k].cat === T.cat && cls(k) === cls(type) && (T.cat !== "logic" || BLOCK_TYPES[k].color === T.color));
+}
 
 /** Port rules: which handles a block shows. */
 export function portsFor(type: string) {

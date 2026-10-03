@@ -6,6 +6,7 @@ import { money, nf } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
 import type { FunnelNode } from "../graph";
 import type { edgeLook } from "../style";
+import { waitLabel } from "../wait";
 
 export type Seg = { t: string; b?: boolean };
 
@@ -20,7 +21,7 @@ export function subLabel(n: FunnelNode, cur: string): string {
   if (T.cat === "offer") return `${money(eff, cur)}${num(p.disc) ? ` (−${nf(num(p.disc))}%)` : ""}`;
   if (b === "cond") return `${ya} ${nf(num(p.pct), 1)}%`;
   if (b === "split") return `${ya} ${nf(num(p.pct), 1)}% · ${yb} ${nf(100 - num(p.pct), 1)}%`;
-  if (n.type === "wait") return `${nf(num(p.days))} days`;
+  if (n.type === "wait") return waitLabel(p);
   if (T.cat === "traffic") return p.model === "cpc" ? "Cost per click" : p.model === "cpm" ? "Cost per 1,000 views" : T.label;
   return T.label;
 }
@@ -40,6 +41,98 @@ export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1): S
   }
   if (b === "goal" || b === "exit") return [{ t: nf(r.inflow, 1), b: true }, { t: " people" }];
   return [{ t: `In ${nf(r.inflow)} → ` }, { t: nf(r.out, 1), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
+}
+
+const SHORT: Record<Interval, string> = { weekly: "wk", monthly: "mo", quarterly: "qtr", yearly: "yr" };
+
+/** Price tab text for offer blocks: `$37`, `↑ $297`, `↓ $27`, `+ $9`, `$70 / mo`, `3 × $333`. */
+export function priceTab(n: FunnelNode, cur: string): string {
+  const p = n.p,
+    eff = num(p.price) * (1 - num(p.disc) / 100),
+    b = baseOf(n.type);
+  if (b === "sub") return `${money(eff, cur)} / ${SHORT[p.interval as Interval] ?? "mo"}`;
+  if (b === "plan") return `${num(p.pays)} × ${money(eff, cur)}`;
+  const lead = n.type === "upsell" || n.type === "oto" ? "↑ " : n.type === "downsell" ? "↓ " : n.type === "bump" ? "+ " : "";
+  return lead + money(eff, cur);
+}
+
+/** Second line of an offer card (the price lives in the price tab). */
+export function offerSubtitle(n: FunnelNode): string {
+  const p = n.p,
+    parts = [typeOf(n.type).label];
+  if (num(p.disc)) parts.push(`−${nf(num(p.disc))}%`);
+  if (baseOf(n.type) === "sub" && num(p.trialDays)) parts.push(`${p.trialDays}-day trial`);
+  return parts.join(" · ");
+}
+
+
+/** Performance-map reading of a block: one headline number, a short caption and the share who move on. */
+export interface PerfLine {
+  headline: string;
+  caption: string;
+  /** Share of arriving people who move on (0–1); null when the block has no such rate (sources, goals, logic). */
+  ratio: number | null;
+}
+export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1): PerfLine | null {
+  const T = typeOf(n.type),
+    r0 = R.N[n.id];
+  if (!r0 || !T) return null;
+  const inflow = r0.inflow * k,
+    out = r0.out * k;
+  if (T.cat === "traffic") return { headline: nf(out), caption: r0.spend ? `visits · ${money(r0.spend * k, cur)}` : "visits · free", ratio: null };
+  const b = baseOf(n.type);
+  if (b === "goal" || b === "exit") return { headline: nf(inflow, 1), caption: "people", ratio: null };
+  if (b === "cond" || b === "split") return { headline: nf(inflow, 1), caption: "people in", ratio: null };
+  const ratio = inflow > 0 ? Math.min(1, out / inflow) : 0;
+  if (T.cat === "offer") return { headline: money(r0.rev * k, cur), caption: `${nf(out, 1)} buy · ${nf(ratio * 100)}%`, ratio };
+  return { headline: nf(out, 1), caption: `${nf(ratio * 100)}% move on`, ratio };
+}
+
+/**
+ * Totals shown in a stage frame's label (Performance map) and in Presentation stages, so the two always agree:
+ * a frame with traffic sources reads "N visits · spend"; one with offers reads "N customers · revenue";
+ * otherwise "N people" (the most people reaching any of its steps).
+ */
+export interface FrameTotals {
+  text: string;
+  visits: number;
+  spend: number;
+  buyers: number;
+  revenue: number;
+  people: number;
+}
+export function frameTotals(members: FunnelNode[], R: FunnelResult, cur: string, k = 1): FrameTotals {
+  let visits = 0,
+    spend = 0,
+    buyers = 0,
+    revenue = 0,
+    people = 0;
+  for (const n of members) {
+    const r = R.N[n.id],
+      T = typeOf(n.type);
+    if (!r || !T) continue;
+    if (T.cat === "traffic") {
+      visits += r.out;
+      spend += r.spend;
+    }
+    if (T.cat === "offer") buyers += r.out;
+    revenue += r.rev;
+    people = Math.max(people, r.inflow);
+  }
+  const f = { visits: visits * k, spend: spend * k, buyers: buyers * k, revenue: revenue * k, people: people * k };
+  const text = visits > 0 ? `${nf(f.visits)} visits · ${f.spend ? money(f.spend, cur) : "free"}` : buyers > 0 ? `${nf(f.buyers, 1)} customers · ${money(f.revenue, cur)}` : members.length ? `${nf(f.people)} people` : "";
+  return { text, ...f };
+}
+
+/** Revenue that flows through a connection: the target block's revenue in proportion to the people this line brings. */
+export function edgeRevenue(toId: string, flow: number, R: FunnelResult): number {
+  const t = R.N[toId];
+  return t && t.inflow > 0 && t.rev > 0 ? (t.rev * flow) / t.inflow : 0;
+}
+/** Share of the people who arrive at the source block that take this connection (0–1), or null without data. */
+export function edgeConversion(fromId: string, flow: number, R: FunnelResult): number | null {
+  const f = R.N[fromId];
+  return f && f.inflow > 0 ? Math.min(1, flow / f.inflow) : null;
 }
 
 export const segText = (s: Seg[]) => s.map((x) => x.t).join("");

@@ -123,6 +123,17 @@ export function statusReport(nodes: FunnelNode[]): StatusReport {
   return { total: steps.length, done: c("done"), building: c("building"), planned: c("planned"), pct: steps.length ? c("done") / steps.length : 0, steps };
 }
 
+/** Where a goal stands today (monthly figure, people at the step, or the step's own rate). NaN when it has no step yet. */
+export function goalCurrent(nodes: GraphLike["nodes"], R: FunnelResult, goal: Goal): number {
+  const node = goal.nodeId ? nodes.find((n) => n.id === goal.nodeId) : undefined;
+  if (goal.kind === "conversion") return node ? stepRate(node) : NaN;
+  if (goal.kind === "revenue") return R.rev;
+  if (goal.kind === "profit") return R.profit;
+  if (goal.kind === "customers") return R.cust;
+  if (goal.kind === "leads") return R.leads;
+  return node ? (R.N[node.id]?.out ?? 0) : NaN;
+}
+
 /** Progress and required numbers for one named goal. */
 export function goalReport(g: GraphLike, s: ReportSettings, R: FunnelResult, goal: Goal): GoalReport {
   const node = goal.nodeId ? g.nodes.find((n) => n.id === goal.nodeId) : undefined;
@@ -132,7 +143,7 @@ export function goalReport(g: GraphLike, s: ReportSettings, R: FunnelResult, goa
     const current = node ? stepRate(node) : NaN;
     return { goal, label, current, progress: target ? current / target : 0, plan: null, required: [], impact: node && target > 0 ? withStepRate(g, s, node.id, target) : null, stepName: node?.name };
   }
-  const current = goal.kind === "revenue" ? R.rev : goal.kind === "profit" ? R.profit : goal.kind === "customers" ? R.cust : goal.kind === "leads" ? R.leads : node ? (R.N[node.id]?.out ?? 0) : NaN;
+  const current = goalCurrent(g.nodes, R, goal);
   const plan = (goal.kind === "step" && !node) ? null : goalPlan(g, s, { kind: goal.kind, value: target, nodeId: goal.nodeId });
   const required: GoalReport["required"] =
     plan?.reachable && plan.R ? PERIODS.map(([p, k]) => [p, plan.R!.rev * k, plan.R!.profit * k, plan.R!.traffic * k, plan.R!.spend * k, plan.R!.leads * k, plan.R!.cust * k]) : [];

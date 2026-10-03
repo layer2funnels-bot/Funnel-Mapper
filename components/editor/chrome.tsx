@@ -35,6 +35,24 @@ export function ViewSwitch() {
   );
 }
 
+/** Performance map legend (top-right of the canvas): how to read line weight, orange lines and the conversion bar. */
+export function PerfLegend() {
+  return (
+    <div className="fm-legend" role="note" aria-label="Reading this view">
+      <b>Reading this view</b>
+      <span>
+        <i className="w" aria-hidden="true" /> Line weight = people
+      </span>
+      <span>
+        <i className="lost" aria-hidden="true" /> Didn’t convert
+      </span>
+      <span>
+        <i className="bar" aria-hidden="true" /> Conversion at the step
+      </span>
+    </div>
+  );
+}
+
 /** 48px left rail: block library, funnel notes and shortcuts. (Outline and workspace blocks join it when those exist.) */
 export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, notesActive, onNotes, onHelp }: { readOnly: boolean; sideCollapsed: boolean; onToggleSide: () => void; showNotes: boolean; notesActive: boolean; onNotes: () => void; onHelp: () => void }) {
   const what = readOnly ? "side panel" : "block library";

@@ -35,6 +35,7 @@
   --cat-ink: #0b1220; /* icons on category colours */
   --good: #22c55e;
   --bad: #f87171;
+  --neg: #fca5a5; /* negative money */
   --warn: #fbbf24;
   --edge: #64748b;
   /* V2 semantics: orange = people lost (non-convert lines, key leak); amber = needs attention (health checks) */
@@ -45,7 +46,7 @@
   --chart-2: #ea580c;
   --chart-3: #3b82f6;
   --chart-4: #b45309;
-  --alt: #fb923c;
+  --alt: var(--lost);
   --backdrop: rgba(2, 6, 23, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
@@ -81,6 +82,7 @@
   --cat-ink: #ffffff;
   --good: #15803d;
   --bad: #b91c1c;
+  --neg: #b91c1c;
   --warn: #b45309;
   --edge: #94a3b8;
   --lost: #c2410c; /* darker orange for contrast on white */
@@ -374,7 +376,7 @@ button {
     color: var(--good);
   }
   .neg {
-    color: var(--bad);
+    color: var(--neg);
   }
   .warns {
     background: color-mix(in srgb, var(--bad) 9%, transparent);
@@ -539,6 +541,7 @@ button {
     margin: 0 0 12px;
     font-size: 20px;
     font-weight: 700;
+    color: var(--brand);
   }
 }
 

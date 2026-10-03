@@ -15,7 +15,11 @@ import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { clearDraft, readDraft, useAutosave, type SaveFn } from "@/lib/editor/saver";
 import {
+  armEyedropper,
   clearSelection,
+  copyStyle,
+  pasteStyle,
+  startRename,
   copySelection,
   deleteSelection,
   duplicateSelection,
@@ -39,9 +43,12 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setSection, type ReportSection } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
-import { EditorRail, ScenarioPill, ViewSwitch } from "./chrome";
+import { ContextMenu } from "./context-menu";
+import { FloatingToolbar } from "./floating-toolbar";
+import { TypePicker } from "./type-picker";
+import { EditorRail, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
 import { CommentsPanel } from "./comments";
 import { CanvasNotes } from "./canvas-notes";
 import { download, downloadPng, pdfReport, renderMapSvg, svgToPng } from "./exporters";
@@ -161,6 +168,8 @@ function EditorInner(props: EditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funnel.id]);
 
+  useEffect(() => setProducts(props.products ?? []), [props.products]);
+
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
   const togglePanel = (which: "side" | "insp", value?: boolean) => setOpt(which === "side" ? "hideSide" : "hideInsp", value ?? !collapsed[which]);
@@ -240,7 +249,7 @@ function EditorInner(props: EditorProps) {
       try {
         if (kind === "json") download(fileName(s.name, "json"), JSON.stringify(exportFunnelFile({ ...editorSnapshot(), description: funnel.description }), null, 1), "application/json");
         if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R, s.settings.scenarios.length ? reportData(g, s.settings, s.R).scenarios : []), "text/csv");
-        const map = { heightOf, widthOf, thick: s.opts.thick };
+        const map = { heightOf, widthOf, thick: s.opts.thick, keyLeak: s.keyLeak, goals: s.settings.goals };
         const img = { ...map, palette: paletteFor(s.opts.bg) };
         // the map image shows what's on screen: hidden layers (notes, checklists) stay out of it
         const shown = { nodes: s.nodes.filter((n) => (s.opts.notes || n.type !== "note") && (s.opts.checks || n.type !== "checklist")), edges: s.edges };
@@ -304,7 +313,30 @@ function EditorInner(props: EditorProps) {
         return;
       }
       if (ev.key === "Escape") {
+        if (useEditor.getState().eyedrop) return armEyedropper(null);
+        if (useEditor.getState().menu || useEditor.getState().quick) return;
         clearSelection();
+        return;
+      }
+      // style clipboard and lock: Mod+Alt+C / V / L (key codes, because Alt changes the character on some keyboards)
+      if (mod && ev.altKey && ev.code === "KeyC") {
+        ev.preventDefault();
+        copyStyle();
+        return;
+      }
+      if (mod && ev.altKey && ev.code === "KeyV" && !useEditor.getState().readOnly) {
+        ev.preventDefault();
+        pasteStyle();
+        return;
+      }
+      if (mod && ev.altKey && ev.code === "KeyL" && !useEditor.getState().readOnly && useEditor.getState().selNodes.length) {
+        ev.preventDefault();
+        setLocked();
+        return;
+      }
+      if (ev.key === "F2" && useEditor.getState().selNodes.length === 1 && !useEditor.getState().readOnly) {
+        ev.preventDefault();
+        startRename(useEditor.getState().selNodes[0]);
         return;
       }
       if (mod && k === "a") {
@@ -419,7 +451,7 @@ function EditorInner(props: EditorProps) {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => useEditor.setState({ toast: null }), 2600);
+    const t = setTimeout(() => useEditor.setState({ toast: null }), toast.action ? 6000 : 2600);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -764,6 +796,8 @@ function EditorInner(props: EditorProps) {
       <section className="fm-stage" aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
         {ready && <Canvas />}
         {ready && !reports && !share?.hideNumbers && <ViewSwitch />}
+        {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
+        {ready && !reports && <FloatingToolbar />}
         {ready && !hasNodes && (
           <div className="fm-empty">
             <div>
@@ -818,9 +852,22 @@ function EditorInner(props: EditorProps) {
       <HelpDialog ref={helpRef} />
       {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
       {manage && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
+      {ready && (
+        <ContextMenu
+          onTidy={() => runTidy()}
+          onFit={() => rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 })}
+          onShortcuts={() => helpRef.current?.showModal()}
+        />
+      )}
+      {ready && <TypePicker />}
       {toast && (
         <div className="fm-toast" role="status" key={toast.id}>
           {toast.text}
+          {toast.action && toast.run && (
+            <button type="button" onClick={() => (toast.run!(), useEditor.setState({ toast: null }))}>
+              {toast.action}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { CATCOLOR, NH, nodeW, typeOf } from "@/lib/catalog";
+import { CATCOLOR, NH, blockH, isAnnot, nodeW, typeOf } from "@/lib/catalog";
 import { parseGraph } from "@/lib/graph";
 
 /** Static mini map of a funnel graph (server-renderable). Used as the funnel thumbnail. */
@@ -16,7 +16,7 @@ export function GraphThumb({ graph, className = "" }: { graph: unknown; classNam
         Empty map
       </div>
     );
-  const box = (n: (typeof nodes)[number]) => ({ w: n.w ?? nodeW(n.type), h: n.h ?? (n.type === "label" ? 40 : NH) });
+  const box = (n: (typeof nodes)[number]) => ({ w: n.w ?? nodeW(n.type), h: n.h ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)) });
   const x0 = Math.min(...nodes.map((n) => n.x)) - 30,
     y0 = Math.min(...nodes.map((n) => n.y)) - 30,
     x1 = Math.max(...nodes.map((n) => n.x + box(n).w)) + 30,
@@ -34,8 +34,8 @@ export function GraphThumb({ graph, className = "" }: { graph: unknown; classNam
           b = B[e.to];
         if (!a || !b) return null;
         const alt = e.port === "alt";
-        const [sx, sy] = alt ? [a.x + nodeW(a.type) / 2, a.y + NH] : [a.x + nodeW(a.type), a.y + NH / 2];
-        const [tx, ty] = [b.x, b.y + NH / 2];
+        const [sx, sy] = alt ? [a.x + nodeW(a.type) / 2, a.y + box(a).h] : [a.x + nodeW(a.type), a.y + box(a).h / 2];
+        const [tx, ty] = [b.x, b.y + box(b).h / 2];
         const dx = Math.max(50, Math.abs(tx - sx) / 2);
         const c1 = alt ? [sx, sy + Math.max(60, Math.abs(ty - sy) / 2)] : [sx + dx, sy];
         return <path key={e.id} d={`M${sx} ${sy} C${c1[0]} ${c1[1]},${tx - dx} ${ty},${tx} ${ty}`} style={{ fill: "none", stroke: alt ? "var(--alt)" : "var(--edge)", strokeWidth: 5, strokeDasharray: alt ? "14 12" : undefined }} />;
@@ -44,14 +44,14 @@ export function GraphThumb({ graph, className = "" }: { graph: unknown; classNam
         .filter((n) => n.type !== "frame")
         .map((n) => {
           const T = typeOf(n.type);
-          if (n.type === "note") return <rect key={n.id} x={n.x} y={n.y} width={210} height={NH} rx={14} style={{ fill: "#FEF3C7" }} />;
+          if (n.type === "note") return <rect key={n.id} x={n.x} y={n.y} width={210} height={96} rx={14} style={{ fill: "#FEF3C7" }} />;
           if (n.type === "label") return <rect key={n.id} x={n.x} y={n.y + 8} width={180} height={18} rx={9} style={{ fill: "var(--muted)", opacity: 0.4 }} />;
           return (
             <g key={n.id}>
-              <rect x={n.x} y={n.y} width={nodeW(n.type)} height={NH} rx={14} style={{ fill: "var(--panel)", stroke: "var(--line)", strokeWidth: 3 }} />
+              <rect x={n.x} y={n.y} width={nodeW(n.type)} height={box(n).h} rx={14} style={{ fill: "var(--panel)", stroke: "var(--line)", strokeWidth: 3 }} />
               <rect x={n.x + 12} y={n.y + 12} width={32} height={32} rx={9} style={{ fill: CATCOLOR[T.color ?? T.cat] }} />
               <rect x={n.x + 54} y={n.y + 18} width={nodeW(n.type) - 80} height={12} rx={6} style={{ fill: "var(--ink)", opacity: 0.55 }} />
-              <rect x={n.x + 12} y={n.y + 66} width={nodeW(n.type) - 60} height={10} rx={5} style={{ fill: "var(--muted)", opacity: 0.35 }} />
+              <rect x={n.x + 12} y={n.y + box(n).h - 24} width={nodeW(n.type) - 60} height={10} rx={5} style={{ fill: "var(--muted)", opacity: 0.35 }} />
             </g>
           );
         })}

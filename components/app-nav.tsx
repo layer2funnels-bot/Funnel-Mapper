@@ -13,7 +13,7 @@ const NAV: { href: string; label: string; icon: UiIconName }[] = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
-export function AppNav({ agency, user, logo }: { agency: string; user: string; logo?: string | null }) {
+export function AppNav({ agency, user, logo, team }: { agency: string; user: string; logo?: string | null; team: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
@@ -43,7 +43,9 @@ export function AppNav({ agency, user, logo }: { agency: string; user: string; l
           )}
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-side-ink">{agency}</div>
-            <div className="truncate text-xs text-side-muted">{user}</div>
+            <div className="truncate text-xs text-side-muted" data-testid="workspace-kind">
+              {team ? "Team workspace" : "Private workspace"} · {user}
+            </div>
           </div>
         </div>
         <button type="button" onClick={toggleTheme} className="flex min-h-[40px] w-full items-center gap-3 rounded-[10px] px-3 text-sm text-side-muted hover:bg-side-item hover:text-side-ink">

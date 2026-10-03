@@ -1,5 +1,6 @@
 import { expect, test, type Browser } from "@playwright/test";
-import { createFunnel, latestMail, openEditor, signIn, waitSaved } from "./helpers";
+import { createClient } from "@supabase/supabase-js";
+import { createFunnel, env, latestMail, openEditor, signIn, waitSaved } from "./helpers";
 
 const TRIPWIRE = "20000000-0000-4000-8000-000000000001"; // team funnel
 const INDIE_FUNNEL = "20000000-0000-4000-8000-000000000101"; // solo@independent.test's funnel
@@ -104,6 +105,51 @@ test.describe("workspaces", () => {
     await expect(joined.getByText("Joined Studio").first()).toBeVisible();
     await joined.goto("/clients");
     await expect(joined.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);
+    await ctx.close();
+  });
+});
+
+test.describe("invite links and workspace identity", () => {
+  // Supabase's standard invite email links to Supabase, which verifies the token and returns the session in the URL
+  // fragment, either to our callback (redirect allowed) or to the site root (fallback). Both must sign the invitee in.
+  for (const landing of ["callback", "site root"] as const) {
+    test(`standard invite link (session in the URL fragment, via ${landing}) → team member`, async ({ browser, baseURL }) => {
+      const svc = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+      const email = `fragment.${Date.now()}@layer2funnels.test`;
+      // the local stack only allows localhost:3000 redirects; anything else falls back to the site root
+      const redirectTo = landing === "callback" ? "http://localhost:3000/auth/callback?next=/update-password" : "http://not-allowed.test/";
+      const link = await svc.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } });
+      expect(link.error).toBeNull();
+      const res = await fetch(link.data.properties!.action_link, { redirect: "manual" });
+      const dest = new URL(res.headers.get("location")!);
+      expect(dest.hash).toContain("access_token=");
+      const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+      const page = await ctx.newPage();
+      await page.goto(`${baseURL}${dest.pathname}${dest.search}${dest.hash}`);
+      await expect(page).toHaveURL(/\/update-password/);
+      await page.getByLabel("New password").fill("fragment-pass-1");
+      await page.getByLabel("Confirm password").fill("fragment-pass-1");
+      await page.getByRole("button", { name: "Save password" }).click();
+      await expect(page).toHaveURL("/");
+      await page.goto("/settings");
+      await expect(page.getByTestId("current-workspace")).toContainText("Layer2Funnels team workspace");
+      await page.goto("/clients");
+      await expect(page.getByRole("link", { name: /Sam Carter/ })).toBeVisible();
+      await ctx.close();
+      await svc.auth.admin.deleteUser(link.data.user!.id);
+    });
+  }
+
+  test("settings and sidebar show the current workspace", async ({ page, browser }) => {
+    await page.goto("/settings");
+    await expect(page.getByTestId("current-workspace")).toContainText("Layer2Funnels team workspace");
+    await expect(page.getByTestId("workspace-kind").first()).toContainText("Team workspace");
+    const { ctx, page: solo } = await signIn(browser, "solo@independent.test");
+    await expect(solo).toHaveURL("/");
+    await solo.goto("/settings");
+    await expect(solo.getByTestId("current-workspace")).toContainText("Private workspace");
+    await expect(solo.getByTestId("current-workspace")).not.toContainText("Layer2Funnels");
+    await expect(solo.getByTestId("workspace-kind").first()).toContainText("Private workspace");
     await ctx.close();
   });
 });

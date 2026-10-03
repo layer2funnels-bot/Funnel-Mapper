@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
@@ -206,7 +207,12 @@ export async function setMemberAction(id: string, patch: { role?: "admin" | "mem
   return { ok: true };
 }
 
-const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+/** Where invite links send people back to: NEXT_PUBLIC_SITE_URL, else the address this request came in on. */
+async function siteUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  const h = await headers();
+  return `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+}
 
 /** Invite a teammate into the Layer2Funnels team workspace (team admins only). */
 export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -217,7 +223,7 @@ export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise
   const admin = supabaseAdmin();
   if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
   await clearPendingSignup(p.data.email);
-  const site = siteUrl();
+  const site = await siteUrl();
   const { error } = await admin.auth.admin.inviteUserByEmail(p.data.email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
   if (error) return { error: /already/i.test(error.message) ? "That person already has an account. Reactivate them in the list below if needed." : error.message };
   revalidatePath("/settings");
@@ -236,7 +242,7 @@ export async function createIndependentAccountAction(_: ActionResult, fd: FormDa
   if (!isTeam) return { error: "Only Layer2Funnels team admins can create independent accounts." };
   const p = independentSchema.safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", workspace_name: fd.get("workspace_name") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
-  const r = await startIndependentSignup(p.data, siteUrl());
+  const r = await startIndependentSignup(p.data, await siteUrl());
   if (r.exists) return { error: "That email already has an account." };
   if (r.error) return { error: r.error };
   return { ok: true };

@@ -26,8 +26,15 @@ export default async function SettingsPage() {
 
       <section className="card mb-6 p-6" aria-labelledby="brand-h">
         <h2 id="brand-h" className="mb-1 font-display text-lg font-bold">
-          Workspace branding
+          Workspace
         </h2>
+        <p className="mb-3 text-sm" data-testid="current-workspace">
+          You’re in <b>{workspace.agency_name}</b> <span className="pill bg-brand-soft text-brand">{isTeam ? "Layer2Funnels team workspace" : "Private workspace"}</span>
+          <span className="mt-1 block text-muted">
+            {isTeam ? "Shared with everyone on the Layer2Funnels team." : "Only you can see this workspace’s clients, funnels, templates and files."}
+          </span>
+        </p>
+        <h3 className="mb-1 text-sm font-bold">Branding</h3>
         <p className="mb-4 text-sm text-muted">Shown on client share links and PDF reports, next to the client’s logo.{!isAdmin && " Only admins can change it."}</p>
         <WorkspaceForm agencyName={workspace.agency_name} currency={workspace.default_currency} disabled={!isAdmin} />
         <div className="mt-4">

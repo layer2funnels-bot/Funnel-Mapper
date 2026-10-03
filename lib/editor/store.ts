@@ -42,6 +42,19 @@ interface Snapshot {
   name: string;
 }
 
+export interface StylePreset {
+  id: string;
+  name: string;
+  style: NodeStyle;
+}
+/** A saved selection (blocks and the connections between them) that can be placed again in any funnel of the workspace. */
+export interface WorkspaceBlock {
+  id: string;
+  name: string;
+  nodes: FunnelNode[];
+  edges: FunnelEdge[];
+}
+
 export interface ClientProduct {
   id: string;
   name: string;
@@ -84,6 +97,11 @@ export interface EditorState {
   warnIds: Set<string>;
   /** The client's saved products (library "Client products" and Quick Add). */
   products: ClientProduct[];
+  /** Left panel: block library, funnel outline or workspace blocks. */
+  sideTab: "library" | "outline" | "blocks";
+  /** Saved style presets and blocks of this workspace (table workspace_assets). */
+  stylePresets: StylePreset[];
+  workspaceBlocks: WorkspaceBlock[];
   /** Open context menu. */
   menu: MenuState | null;
   /** Copied style (Copy style / Paste style / eyedropper). */
@@ -163,6 +181,9 @@ export const useEditor = create<EditorState>(() => ({
   warnIds: new Set(),
   keyLeak: null,
   products: [],
+  sideTab: "library",
+  stylePresets: [],
+  workspaceBlocks: [],
   menu: null,
   typePicker: null,
   styleClip: null,
@@ -336,6 +357,27 @@ export function openQuickAdd(q: EditorState["quick"]) {
 }
 export function closeQuickAdd() {
   set({ quick: null });
+}
+export function setSideTab(sideTab: EditorState["sideTab"]) {
+  set({ sideTab });
+  setOpt("hideSide", false);
+}
+export function setAssets(a: { stylePresets?: StylePreset[]; workspaceBlocks?: WorkspaceBlock[] }) {
+  set(a);
+}
+/** Place a saved group of blocks (workspace block) with fresh ids, its top-left at (x, y). One undo step; the copy is selected. */
+export function insertSnippet(snip: { nodes: FunnelNode[]; edges: FunnelEdge[] }, x: number, y: number) {
+  if (get().readOnly || !snip.nodes.length) return;
+  const ox = Math.min(...snip.nodes.map((n) => n.x)),
+    oy = Math.min(...snip.nodes.map((n) => n.y));
+  const c = cloneSet(
+    snip.nodes.map((n) => n.id),
+    snapV(x) - ox,
+    snapV(y) - oy,
+    snip,
+  );
+  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] }, { discrete: true });
+  selectNodes(c.nodes.map((n) => n.id));
 }
 export function setProducts(products: ClientProduct[]) {
   set({ products });

@@ -6,8 +6,9 @@ import { Icon } from "@/components/icon";
 import { typeOf } from "@/lib/catalog";
 import type { ChecklistItem, FunnelEdge, FunnelNode } from "@/lib/graph";
 import { ICONS, type IconName } from "@/lib/icons";
-import { EDGE_PRESETS, FONT_FAMILIES, FONT_WEIGHTS, type EdgeStyle, type FontFamily, type NodeStyle } from "@/lib/style";
-import { checklistOf, copySelection, deleteSelection, duplicateSelection, moveNodes, newChecklistItem, reorder, setChecklist, setEdgeStyle, setLocked, setNodeStyle, showToast, updateParams, useEditor } from "@/lib/editor/store";
+import { EDGE_PRESETS, QUICK_STYLES, FONT_FAMILIES, FONT_WEIGHTS, type EdgeStyle, type FontFamily, type NodeStyle } from "@/lib/style";
+import { saveStylePreset } from "./assets";
+import { applyQuickStyle, armEyedropper, copyStyle, pasteStyle, checklistOf, copySelection, deleteSelection, duplicateSelection, moveNodes, newChecklistItem, reorder, setChecklist, setEdgeStyle, setLocked, setNodeStyle, showToast, updateParams, useEditor } from "@/lib/editor/store";
 import { Field, Seg } from "./fields";
 
 /* ---------------- small inputs ---------------- */
@@ -114,9 +115,78 @@ export function ArrangeBar({ ids }: { ids: string[] }) {
 
 const TEXT_TYPES = new Set(["label", "note", "shape", "checklist", "frame", "link"]);
 
-export function StylePanel({ n }: { n: FunnelNode }) {
+/** Quick styles + copy / paste style + eyedropper. Applies to `ids` (the whole selection). */
+/** "Save current" → a named preset for the whole workspace. */
+function SavePreset({ ids }: { ids: string[] }) {
+  const ro = useEditor((s) => s.readOnly || s.shared);
+  const style = useEditor((s) => s.nodes.find((n) => n.id === ids[0])?.s);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  if (ro) return null;
+  if (!open)
+    return (
+      <button type="button" className="btn sm" disabled={!style} onClick={() => setOpen(true)} title={style ? "Save this style for the whole workspace" : "Style the block first"}>
+        Save current
+      </button>
+    );
+  return (
+    <form
+      className="flex w-full gap-1.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        saveStylePreset(name, style);
+        setOpen(false);
+        setName("");
+      }}
+    >
+      <input className="input min-w-0 flex-1" autoFocus aria-label="Style name" placeholder="Name this style" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setOpen(false)} />
+      <button className="btn sm primary" disabled={!name.trim()}>
+        Save
+      </button>
+    </form>
+  );
+}
+
+function StyleShortcuts({ ids }: { ids: string[] }) {
+  const hasClip = useEditor((s) => !!s.styleClip);
+  const armed = useEditor((s) => s.eyedrop !== null);
+  const presets = useEditor((s) => s.stylePresets);
+  return (
+    <div className="fm-sec">
+      <h4>Quick styles</h4>
+      <div className="fm-chips" role="group" aria-label="Quick styles">
+        {QUICK_STYLES.map((q) => (
+          <button key={q.key} type="button" className="chip" onClick={() => applyQuickStyle(q.style, ids)}>
+            {q.label}
+          </button>
+        ))}
+        {presets.map((p) => (
+          <button key={p.id} type="button" className="chip" onClick={() => applyQuickStyle(p.style, ids)} title="Saved for this workspace">
+            {p.name}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button type="button" className="btn sm" onClick={() => copyStyle(ids[0])}>
+          <Icon name="paint" size={14} /> Copy style
+        </button>
+        <button type="button" className="btn sm" disabled={!hasClip} onClick={() => pasteStyle(ids)}>
+          <Icon name="paint" size={14} /> Paste style
+        </button>
+        <button type="button" className="btn sm" aria-pressed={armed} onClick={() => armEyedropper(armed ? null : ids[0])}>
+          <Icon name="pipette" size={14} /> Eyedropper
+        </button>
+        <SavePreset ids={ids} />
+      </div>
+    </div>
+  );
+}
+
+export function StylePanel({ n, ids }: { n: FunnelNode; ids?: string[] }) {
+  const all = ids ?? [n.id];
   const st: NodeStyle = n.s ?? {};
-  const S = (patch: Partial<NodeStyle>) => setNodeStyle(n.id, patch);
+  const S = (patch: Partial<NodeStyle>) => setNodeStyle(n.id, patch, all);
   const T = typeOf(n.type);
   const block = T.cat !== "annot";
   const isText = n.type === "label";
@@ -125,7 +195,8 @@ export function StylePanel({ n }: { n: FunnelNode }) {
   const icons = (Object.keys(ICONS) as IconName[]).filter((k) => k.includes(q.trim().toLowerCase()));
   return (
     <>
-      {block && (
+      <StyleShortcuts ids={all} />
+      {block && all.length === 1 && (
         <div className="fm-sec">
           <h4>Icon</h4>
           <div className="flex items-center gap-2">

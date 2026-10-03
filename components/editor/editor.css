@@ -104,13 +104,52 @@
   background: var(--brand-soft);
   color: var(--brand-light);
 }
-.fm-viewswitch {
+.fm-stagebar {
   position: absolute;
   left: 12px;
   top: 12px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fm-viewswitch {
   box-shadow: var(--shadow);
   background: var(--panel);
+}
+.fm-layers {
+  position: relative;
+}
+.fm-layers > .btn {
+  box-shadow: var(--shadow);
+  background: var(--panel);
+}
+.fm-layers-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.fm-layers-pop label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fm-layers-pop label:hover {
+  background: var(--brand-soft);
 }
 .fm-fname {
   border: 1px solid transparent;
@@ -1312,6 +1351,72 @@
   color: var(--muted);
   font-size: 13px;
   margin: 0 0 14px;
+}
+/* scope header: back link, name alone, type + status on the second line */
+.fm-scopehead {
+  margin-bottom: 8px;
+}
+.fm-scopehead .fm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: -4px 0 6px -4px;
+  padding: 2px 6px 2px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-scopehead .fm-back:hover {
+  color: var(--ink);
+  background: var(--brand-soft);
+}
+.fm-scopehead h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.fm-scopehead .sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 8px;
+}
+.fm-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.fm-pill.building {
+  color: var(--attention);
+  border-color: color-mix(in srgb, var(--attention) 50%, var(--line));
+}
+.fm-pill.done {
+  color: var(--good);
+  border-color: color-mix(in srgb, var(--good) 50%, var(--line));
+}
+.fm-insp-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.fm-insp-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fm-insp-tabs button {
+  white-space: nowrap;
 }
 .fm-insp .tabs {
   flex-wrap: wrap;
@@ -2761,4 +2866,160 @@ dialog.fm-typepick {
   font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* page preview field */
+.fm-thumb .tn-prev {
+  position: relative;
+  margin-bottom: 8px;
+}
+.fm-thumb .tn-prev .fm-wf {
+  height: 104px;
+}
+.fm-thumb .tn-prev.loading .fm-wf {
+  opacity: 0.45;
+}
+.fm-thumb .tn-load {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.fm-thumb .tn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+/* Wait / Delay editor */
+.fm-wait .wait-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.fm-wait .wait-row .input {
+  min-width: 0;
+}
+.fm-wait .input[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.fm-wait .wait-preview {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.fm-wait .wait-preview b {
+  color: var(--ink);
+}
+.fm-wait .wait-preview em {
+  color: var(--good);
+  font-style: normal;
+}
+.help.err {
+  color: var(--bad);
+}
+
+/* outline + workspace blocks (left panel) */
+.fm-outline h2,
+.fm-wsblocks h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.fm-outline h2 small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.fm-outline ul,
+.fm-wsblocks ul {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.fm-outline li button,
+.fm-wsblocks li .main {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.fm-outline li button:hover,
+.fm-wsblocks li .main:hover:not(:disabled) {
+  background: var(--brand-soft);
+}
+.fm-outline li button[aria-current="true"] {
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.fm-outline .nm,
+.fm-wsblocks .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-outline small,
+.fm-wsblocks small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.fm-outline .st {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  box-sizing: border-box;
+}
+.fm-outline .st.planned {
+  border: 1.5px solid var(--edge);
+}
+.fm-outline .st.building {
+  background: var(--attention);
+}
+.fm-outline .st.done {
+  background: var(--good);
+}
+.fm-wsblocks form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.fm-wsblocks li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.fm-wsblocks li .rm {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fm-wsblocks li .rm:hover {
+  color: var(--neg);
 }

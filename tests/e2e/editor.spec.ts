@@ -88,7 +88,7 @@ test.describe("funnel editor", () => {
     const a = (await node(page, "LinkedIn ads").boundingBox())!;
     const b = (await node(page, "Application").boundingBox())!;
     await drag(page, { x: a.x - 20, y: a.y - 30 }, { x: b.x + b.width + 10, y: b.y + b.height + 20 }, { shift: true });
-    await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks selected");
+    await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks");
     await page.getByRole("button", { name: "Put in a stage frame" }).click();
     await expect(page.locator(".fm-frame")).toHaveCount(1);
   });
@@ -117,7 +117,7 @@ test.describe("funnel editor", () => {
     await expect(nodes(page)).toHaveCount(7);
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
     await page.keyboard.press(`${mod}+a`);
-    await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks selected");
+    await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
   });

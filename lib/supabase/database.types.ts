@@ -249,6 +249,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"workspace_assets": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"data": NonNullable<Json>,"id": string,"kind": string,"name": string,"workspace_id": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"data": NonNullable<Json>,"id"?: string,"kind": string,"name": string,"workspace_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"data"?: NonNullable<Json>,"id"?: string,"kind"?: string,"name"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workspace_assets_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"workspace_members": {
                   Row: {
                     "active": boolean,"created_at": string,"role": string,"user_id": string,"workspace_id": string

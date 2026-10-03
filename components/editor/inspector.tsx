@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
-import { LogoUpload } from "@/components/logo-upload";
-import { baseOf, isAnnot, isShareLogic, CATS, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { ThumbnailField } from "./thumbnail-field";
+import { WaitField } from "./wait-field";
+import { baseOf, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf, pct } from "@/lib/format";
 import { Icon } from "@/components/icon";
 import { RichTextField } from "@/components/rich-text";
@@ -9,7 +10,7 @@ import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } 
 import { STEP_STATUSES, type FunnelEdge, type FunnelNode, type StepStatus } from "@/lib/graph";
 import { safeUrl } from "@/lib/rich-text";
 import { sym } from "@/lib/format";
-import { align, nid, setSection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, clearSelection, nid, setSection, tidySelection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
 import { edgeConversion, edgeRevenue } from "@/lib/editor/labels";
 import { openInsertStep } from "./quick-add";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
@@ -88,33 +89,55 @@ function Actions({ ro, n }: { ro: boolean; n: FunnelNode }) {
 }
 
 
+const STATUS_PILL: Record<StepStatus, string> = { planned: "Planned", building: "In progress", done: "Live" };
+
+/** Scope header: "← Funnel" back link, then the block's name alone on the first line, type + build status on the second. */
+function ScopeHeader({ title, sub, status, locked }: { title: string; sub: string; status?: StepStatus; locked?: boolean }) {
+  return (
+    <header className="fm-scopehead">
+      <button type="button" className="fm-back" onClick={clearSelection}>
+        <Icon name="chevronLeft" size={14} /> Funnel
+      </button>
+      <h3 title={title}>{title}</h3>
+      <p className="sub">
+        <span>{sub}</span>
+        {status && <span className={`fm-pill ${status}`}>{STATUS_PILL[status]}</span>}
+        {locked && <span className="fm-pill lock">Locked</span>}
+      </p>
+    </header>
+  );
+}
+
 function NodeInspector({ n }: { n: FunnelNode }) {
   const T = typeOf(n.type);
   const ro = useEditor((s) => s.readOnly);
   const shared = useEditor((s) => s.shared);
   const tab = useEditor((s) => s.inspTab);
   const flow = !isAnnot(n.type);
+  // Wait is math-neutral: everyone who arrives leaves, so it has nothing to analyse
+  const analytics = flow && n.type !== "wait";
   const tabs: [InspTab, string][] = [
     ["details", "Details"],
     ["style", "Style"],
     ...(!shared && n.type !== "checklist" ? ([["plan", "Plan"]] as [InspTab, string][]) : []),
-    ...(flow ? ([["analytics", "Analytics"]] as [InspTab, string][]) : []),
+    ...(analytics ? ([["analytics", "Analytics"]] as [InspTab, string][]) : []),
   ];
   const cur = tabs.some(([k]) => k === tab) ? tab : "details";
   const choose = setInspTab;
   return (
     <>
-      <h3>
-        {T.label}
-        {n.locked && <span className="ml-2 align-middle text-xs font-semibold text-muted">· Locked</span>}
-      </h3>
-      <p className="sub">{CATS[T.cat]}</p>
+      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} />
       <div className="fm-insp-tabs" role="tablist" aria-label="Element panels">
         {tabs.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => choose(k)}>
             {l}
           </button>
         ))}
+        {flow && !analytics && (
+          <button type="button" role="tab" aria-selected={false} aria-disabled="true" disabled title="Wait doesn’t change any numbers, so it has no analytics">
+            Analytics
+          </button>
+        )}
       </div>
       <fieldset disabled={ro && cur !== "analytics"} className="m-0 min-w-0 border-0 p-0">
       {cur === "details" && <NodeDetails n={n} />}
@@ -269,24 +292,19 @@ function NodeDetails({ n }: { n: FunnelNode }) {
                 <input type="checkbox" checked={!!p.lead} onChange={(e) => P("lead")(e.target.checked)} />
                 People who pass this step count as leads
               </label>
-              <TextField label="Page URL" type="url" value={n.url ?? ""} placeholder="https://" onChange={(v) => updateNode(n.id, { url: v })} />
             </>
           )}
+          {(T.cat === "page" || T.cat === "offer") && !shared && <ThumbnailField n={n} />}
           {T.cat === "action" && (
             <>
               <NumField label={`${T.crl ?? "Conversion rate"} (%)`} value={num(p.cr)} onChange={P("cr")} min={0} max={100} />
-              {n.type === "wait" && <NumField label="Wait (days)" value={num(p.days)} onChange={P("days")} min={0} />}
+              {n.type === "wait" && <WaitField n={n} />}
               {n.type === "seq" && <NumField label="Emails in the sequence" value={num(p.count)} onChange={P("count")} min={1} />}
               <NumField label={`Cost per person (${C})`} value={num(p.costPer)} onChange={P("costPer")} min={0} help="SMS fees, setter time per call, tool cost per contact." />
             </>
           )}
           {T.cat === "offer" && <OfferFields n={n} C={C} />}
-          {(T.cat === "page" || T.cat === "offer") && !shared && (
-            <div className="field">
-              <span className="lbl">Page screenshot</span>
-              <LogoUpload bucket="screenshots" label="Screenshot" url={n.shot ?? null} name={`shot-${n.id}`} onChange={async (u) => updateNode(n.id, { shot: u ?? undefined })} />
-            </div>
-          )}
+
           {baseOf(n.type) === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
           {!shared && (
             <Field label="Build status" help="Track which steps are planned, in progress or live. Shown in Reports → Published status.">
@@ -632,42 +650,70 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
 
 function MultiInspector({ count }: { count: number }) {
   const ro = useEditor((s) => s.readOnly);
+  const first = useEditor((s) => s.nodes.find((n) => n.id === s.selNodes[0]));
+  const sameType = useEditor((s) => s.selNodes.length > 1 && new Set(s.nodes.filter((n) => s.selNodes.includes(n.id)).map((n) => n.type)).size === 1);
+  const [tab, setTab] = useState<"style" | "arrange" | "details">("style");
+  const tabs: ["style" | "arrange" | "details", string][] = [
+    ["style", "Style"],
+    ["arrange", "Arrange"],
+    ...(sameType && first && !isAnnot(first.type) ? ([["details", "Details"]] as ["details", string][]) : []),
+  ];
+  const cur = tabs.some(([k]) => k === tab) ? tab : "style";
   return (
     <>
-      <h3>{count} blocks selected</h3>
-      <p className="sub">Drag any of them to move the group.</p>
-      {!ro && (
-        <>
-          <div className="mb-3 flex flex-wrap gap-2">
-            <button type="button" className="btn" onClick={() => align("left")}>
-              Align left
-            </button>
-            <button type="button" className="btn" onClick={() => align("top")}>
-              Align top
-            </button>
-            <button type="button" className="btn" onClick={() => align("center")}>
-              Centre
-            </button>
-            <button type="button" className="btn" onClick={() => align("middle")}>
-              Middle
-            </button>
-            <button type="button" className="btn" onClick={() => align("hdist")}>
-              Space across
-            </button>
-            <button type="button" className="btn" onClick={() => align("vdist")}>
-              Space down
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn" onClick={wrapInFrame}>
-              Put in a stage frame
-            </button>
-          </div>
-          <MultiArrange />
-        </>
-      )}
+      <ScopeHeader title={`${count} blocks`} sub="Drag any of them to move the group" />
+      <div className="fm-insp-tabs" role="tablist" aria-label="Selection panels">
+        {tabs.map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => setTab(k)}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+        {cur === "style" && first && <MultiStyle />}
+        {cur === "arrange" && (
+          <>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button type="button" className="btn" onClick={() => align("left")}>
+                Align left
+              </button>
+              <button type="button" className="btn" onClick={() => align("top")}>
+                Align top
+              </button>
+              <button type="button" className="btn" onClick={() => align("center")}>
+                Centre
+              </button>
+              <button type="button" className="btn" onClick={() => align("middle")}>
+                Middle
+              </button>
+              <button type="button" className="btn" onClick={() => align("hdist")}>
+                Space across
+              </button>
+              <button type="button" className="btn" onClick={() => align("vdist")}>
+                Space down
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn" onClick={tidySelection}>
+                Tidy selection
+              </button>
+              <button type="button" className="btn" onClick={wrapInFrame}>
+                Put in a stage frame
+              </button>
+            </div>
+            <MultiArrange />
+          </>
+        )}
+        {cur === "details" && first && <NodeDetails n={first} />}
+      </fieldset>
     </>
   );
+}
+
+function MultiStyle() {
+  const ids = useEditor((s) => s.selNodes);
+  const first = useEditor((s) => s.nodes.find((n) => n.id === s.selNodes[0]));
+  return first ? <StylePanel n={first} ids={ids} /> : null;
 }
 
 function MultiArrange() {

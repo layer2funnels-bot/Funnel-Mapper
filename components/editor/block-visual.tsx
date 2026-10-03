@@ -25,7 +25,7 @@ function Shape({ s }: { s: WfShape }) {
 }
 
 /** The captured / uploaded page screenshot (private bucket, signed URL) drawn over the wireframe once it has loaded. */
-function PageShot({ path }: { path: string }) {
+export function PageShot({ path }: { path: string }) {
   const url = useSignedUrl("screenshots", /^https?:|^data:/.test(path) ? null : path);
   const src = /^https?:|^data:/.test(path) ? path : url;
   const [bad, setBad] = useState(false);

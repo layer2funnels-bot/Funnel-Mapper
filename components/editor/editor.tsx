@@ -45,10 +45,13 @@ import {
   undo,
   useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
+import { loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
-import { EditorRail, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
+import { EditorRail, LayersMenu, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
+import { Outline } from "./outline";
+import { WorkspaceBlocks } from "./workspace-blocks";
 import { CommentsPanel } from "./comments";
 import { CanvasNotes } from "./canvas-notes";
 import { download, downloadPng, pdfReport, renderMapSvg, svgToPng } from "./exporters";
@@ -115,6 +118,8 @@ function EditorInner(props: EditorProps) {
   const [status, setStatus] = useState(funnel.status);
   const [commentCount, setCommentCount] = useState(props.unresolvedComments ?? 0);
   const helpRef = useRef<HTMLDialogElement>(null);
+  const tipsRef = useRef<HTMLDialogElement>(null);
+  const sideTab = useEditor((s) => s.sideTab);
   const shareRef = useRef<HTMLDialogElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -169,6 +174,9 @@ function EditorInner(props: EditorProps) {
   }, [funnel.id]);
 
   useEffect(() => setProducts(props.products ?? []), [props.products]);
+  useEffect(() => {
+    if (manage || props.viewer) loadAssets();
+  }, [manage, props.viewer, funnel.id]);
 
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
@@ -770,7 +778,8 @@ function EditorInner(props: EditorProps) {
         showNotes={owner || notesShared}
         notesActive={panel === "notes"}
         onNotes={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}
-        onHelp={() => helpRef.current?.showModal()}
+        onHelp={() => tipsRef.current?.showModal()}
+        onShortcuts={() => helpRef.current?.showModal()}
       />
 
       <aside className="fm-side" id="fm-side" aria-label="Building blocks">
@@ -789,13 +798,22 @@ function EditorInner(props: EditorProps) {
             )}
           </div>
         ) : (
-          <Palette products={props.products ?? []} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />
+          <>
+            {sideTab === "library" && <Palette products={props.products ?? []} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
+            {sideTab === "outline" && <Outline />}
+            {sideTab === "blocks" && <WorkspaceBlocks />}
+          </>
         )}
       </aside>
 
       <section className="fm-stage" aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
         {ready && <Canvas />}
-        {ready && !reports && !share?.hideNumbers && <ViewSwitch />}
+        {ready && !reports && !share?.hideNumbers && (
+          <div className="fm-stagebar">
+            <ViewSwitch />
+            <LayersMenu />
+          </div>
+        )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
         {ready && !reports && <FloatingToolbar />}
         {ready && !hasNodes && (
@@ -850,6 +868,7 @@ function EditorInner(props: EditorProps) {
         }}
       />
       <HelpDialog ref={helpRef} />
+      <HelpDialog ref={tipsRef} mode="help" />
       {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
       {manage && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
       {ready && (

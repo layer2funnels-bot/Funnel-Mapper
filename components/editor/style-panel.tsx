@@ -500,7 +500,18 @@ export function EdgeStyleFields({ e }: { e: FunnelEdge }) {
       <ColorField label="Line colour" value={st.color} onChange={(v) => S({ color: v })} fallback="#64748b" />
       <div className="row2">
         <OptNum label="Thickness" value={st.width} min={1} max={12} onChange={(v) => S({ width: v })} />
-        <Field label="Label">{(id) => <input id={id} className="input" value={st.label ?? ""} placeholder="e.g. Retargeting" maxLength={40} onChange={(ev) => S({ label: ev.target.value || undefined })} />}</Field>
+        <Field label="Label">
+          {(id) => (
+            <>
+              <input id={id} className="input" list="fm-edge-labels" value={st.label ?? ""} placeholder="e.g. Retargeting" maxLength={40} onChange={(ev) => S({ label: ev.target.value || undefined })} />
+              <datalist id="fm-edge-labels">
+                {["Yes", "No", "Purchase", "No thanks", "Retargeting", "Upsell", "Downsell", "Follow-up", "Booked", "No-show"].map((l) => (
+                  <option key={l} value={l} />
+                ))}
+              </datalist>
+            </>
+          )}
+        </Field>
       </div>
       <div className="field">
         <span className="lbl">Arrow</span>

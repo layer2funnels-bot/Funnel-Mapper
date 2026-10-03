@@ -40,7 +40,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Element Style tab (fill, border, font, alignment, opacity…) | PASS | Batch 2 `components/editor/style-panel.tsx`: icon library with search (blocks), font family, Font Size, weight (Regular/Medium/Semibold/Bold), line height, letter spacing, alignment, italic/underline/strikethrough, text colour, fill, border colour/width/style, radius, opacity, shadow, padding, size/position, Arrange (lock, order, duplicate, copy, delete). Multi-select gets Arrange too |
 | Plan / Analytics tabs per element | PASS | Details / Style / **Plan** (rich-text internal notes, checklist, per-period forecast for the step) / **Analytics** (numbers, share of visitors and revenue, a conversion goal for the step with its revenue and profit impact, per-period table). Tabs work read-only (viewers, view links); e2e `v1.spec.ts` |
 | Connections: main/alt port, share %, people labels | PASS | `flow-edge.tsx`, e2e "connect ports", "edit an edge" |
-| Connection styles | PASS | Batch 2: curved/straight/elbow, solid/dashed/dotted, colour, thickness, arrow none/end/both with size, label, "Skip step" and "No data" types. Presentation only: port, share % and flow maths are unchanged (unit-tested). The map export draws path, colour and dash |
+| Connection styles | PASS | Final V1: label suggestions (Yes, No, Purchase, No thanks, Retargeting, Upsell, Downsell, Follow-up, Booked, No-show). Batch 2: curved/straight/elbow, solid/dashed/dotted, colour, thickness, arrow none/end/both with size, label, "Skip step" and "No data" types. Presentation only: port, share % and flow maths are unchanged (unit-tested). The map export draws path, colour and dash |
 | Layers/views (Numbers/Flow/Forecast/Notes/Checklist; Clean vs Performance) | PASS | View → Layers: Clean map / Performance map presets, Numbers, Flow (thickness), Notes (sticky notes and note badges), Checklists, Forecast (numbers per day/week/month/year on blocks and connections, with an on-canvas badge). Map images follow hidden layers. e2e `v1.spec.ts` |
 | Tidy Up | PASS | `lib/layout.ts`: flow blocks are laid out exactly as the prototype does; notes and headings keep their exact offset from their nearest block, use measured sizes (`widthOf`/`heightOf`), and are nudged only to avoid overlapping blocks or each other; frames refit around their blocks. Tests: `tests/unit/layout.test.ts` and e2e "Tidy up keeps notes and headings…" |
 | What-if, goal seek, revenue target | PASS | `report.tsx` "What-if" tab, `goalSeek`, `targetPlan` |
@@ -86,12 +86,14 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 
 ## D. Test status
 
-| Suite | Audit | After Batch 1 | After Batch 2 | After Batch 3 | After Batch 4 |
-|---|---|---|---|---|---|
-| Unit (Vitest) | 73/73 | 91/91 | 102/102 | 115/115 (+13 `tests/unit/export-report.test.ts`: report data equals the engine on the golden funnel, map SVG keeps elements/styles/bounds, text wrap) | **115/115** (maths unchanged) |
-| Database/RLS | 22/22 | 22/22 | 22/22 | 22/22 | **37/37** (+15 `tests/integration/workspaces.test.ts`) |
-| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | 67/67 | 68/68 (+ `exports.spec.ts`: PDF sections and values vs the engine, SVG elements and embedded fonts, PNG size, KPIs unchanged) | **73/74** (+6 `workspaces.spec.ts`). The 1 failure is the pre-existing intermittent "Tidy up keeps notes…" overlap: it also fails on the Batch 3 editor code (1 of 5 runs) |
-| Typecheck / ESLint / `next build` | clean | clean | clean | clean | clean |
+| Suite | Audit | After Batch 1 | After Batch 2 | After Batch 3 | After Batch 4 | **Final V1** |
+|---|---|---|---|---|---|---|
+| Unit (Vitest) | 73/73 | 91/91 | 102/102 | 115/115 (+13 `tests/unit/export-report.test.ts`: report data equals the engine on the golden funnel, map SVG keeps elements/styles/bounds, text wrap) | **115/115** (maths unchanged) | **139/139** (+ `reports.test.ts`, `rich-text.test.ts`, `deploy-migrations.test.ts`, V1 export/report cases; golden values unchanged) |
+| Database/RLS | 22/22 | 22/22 | 22/22 | 22/22 | **37/37** (+15 `tests/integration/workspaces.test.ts`) | **48/48** (+ `roles.test.ts`, share-notes case; main's workspace tests), files run in sequence, stable over repeated runs |
+| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | 67/67 | 68/68 (+ `exports.spec.ts`: PDF sections and values vs the engine, SVG elements and embedded fonts, PNG size, KPIs unchanged) | **73/74** (+6 `workspaces.spec.ts`). The 1 failure is the pre-existing intermittent "Tidy up keeps notes…" overlap: it also fails on the Batch 3 editor code (1 of 5 runs) | **88/88** (+ `v1.spec.ts`: reports, goals, status, scenarios, reinvestment, notes and share privacy, layers, Analytics, library and quick-add, viewer, roles, archive, logo upload). The Tidy test now reads boxes in one frame: 16/16 repeats |
+| Typecheck / ESLint / `next build` | clean | clean | clean | clean | clean | clean |
+
+E2E needs the local stack (`npx supabase start && npx supabase db reset`), `SUPABASE_SERVICE_ROLE_KEY` and an `INDEPENDENT_SIGNUP_CODE` (8+ characters) in `.env.local`, then `npm run build && E2E_PROD=1 npx playwright test`.
 
 ## E. Maths status: PASS
 

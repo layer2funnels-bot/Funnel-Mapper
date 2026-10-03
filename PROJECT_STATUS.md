@@ -1,7 +1,7 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
-**Updated after Batch 4 (workspaces, team, editor panels), 3 Oct 2026.** Before that, Batch 3 (client-facing exports). Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
+**Updated after the Batch 4 demo access fix, 3 Oct 2026.** Before that, Batch 4 (workspaces, team, editor panels). Before that, Batch 3 (client-facing exports). Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
@@ -222,6 +222,37 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
   - No in-app list or deletion of independent accounts (use the Supabase dashboard).
   - A person can't belong to two workspaces.
   - Pre-existing intermittent Tidy Up note overlap (e2e "Tidy up keeps notes…", reproduced on the Batch 3 code; likely a measurement race in `lib/layout.ts` collision avoidance). Not touched, per the scope rules.
+
+## Batch 4 follow-up (done): demo access fix
+
+- **Symptom:** on the live demo, the existing demo account was signed out with "Your access to this workspace has been removed".
+- **Root cause:**
+  - PR #3 (Batch 4 code) auto-deployed, but its migration `20261007000000_workspaces.sql` had never been applied to the demo database (`arwedmqmxrxllytzriat`): there was no `workspaces` table and no `profiles.workspace_id`.
+  - The new `requireUser()` profile+workspace query therefore failed, and the failure was treated like a removed member.
+- **Fix:**
+  1. **Demo database:** the workspaces migration is now applied, in chunks: `workspaces_1_membership`, `_2_data_columns`, `_3_table_policies`, `_4a_guard_share`, `_4b_signups`, `_5_storage`. This is the same SQL as the repo migrations 20261007 + 20261008.
+     - All existing users, clients (4) and funnels (11) are in the Layer2Funnels team workspace.
+     - 20 policies are workspace-scoped.
+     - A signed-in non-member sees nothing.
+  2. **Migration tooling:**
+     - The Supabase connector hangs on SQL containing destructive statements (`DROP`, `DELETE`): it waits for a confirmation that can't be given.
+     - New migration `20261008000000_signup_cleanup.sql` therefore moves the pending sign-up clean-up out of `handle_new_user()` and into `lib/independent.ts` (service role, right after the invite).
+     - Behaviour is unchanged. A leftover row can only make a future account with that email private, never grant team access.
+     - The 20261007 header comment no longer contains the word DROP.
+  3. **`requireUser()`:** a failed query now raises an error instead of redirecting to "access removed". Infrastructure problems no longer sign people out or look like a permissions decision.
+- **Demo-only account:**
+  - A dedicated **Demo Owner**, `demo-owner@layer2funnels.test`, is an active admin of the team workspace.
+  - It was created directly in the demo database with a bcrypt hash computed locally; the password is not stored in the repository.
+  - It was verified by signing in on https://funnel-mapper-demo.vercel.app: dashboard, clients and Settings → Team all load.
+- **Existing `demo@layer2funnels.test`:** verified server-side as that user.
+  - Profile active admin; team workspace; 4 clients; 11 funnels visible.
+  - Its demo-environment password is not the local seed password, so a browser login was not re-run with it.
+- **Tests:**
+  - DB 37/37 and unit 115/115; typecheck, lint and build clean.
+  - e2e `workspaces` + `team` + `privacy` 24/24.
+- **Still to do:**
+  - Production (`kyhlhacbmlbkiibvpsel`) still needs the pending migrations, including 20261007 + 20261008, before this code is deployed there.
+  - Until this follow-up is deployed to the demo, an independent sign-up there leaves its (harmless) pending row behind.
 
 ## I. Recommended order for the remaining budget
 

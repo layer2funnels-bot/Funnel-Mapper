@@ -6,7 +6,7 @@ import { supabaseAdmin } from "./supabase/admin";
  * Independent accounts: a separate person with their own private workspace (no access to the Layer2Funnels team
  * workspace, and none to theirs for the team). The pending sign-up row makes the database create the personal
  * workspace in the same transaction that creates the account (see handle_new_user()), then Supabase emails an
- * invite link to choose a password. Server-only: uses the service role.
+ * invite link to choose a password; the row is removed straight after. Server-only: uses the service role.
  */
 export async function startIndependentSignup(d: { email: string; full_name: string; workspace_name: string }, siteUrl: string): Promise<{ error?: string; exists?: boolean }> {
   const admin = supabaseAdmin();
@@ -18,10 +18,9 @@ export async function startIndependentSignup(d: { email: string; full_name: stri
     data: { full_name: d.full_name, workspace_kind: "personal" },
     redirectTo: siteUrl ? `${siteUrl}/auth/callback?next=/update-password` : undefined,
   });
-  if (error) {
-    await admin.from("workspace_signups").delete().eq("email", email);
-    return /already/i.test(error.message) ? { exists: true } : { error: error.message };
-  }
+  // the account (if any) now exists, so the pending row has done its job either way
+  await admin.from("workspace_signups").delete().eq("email", email);
+  if (error) return /already/i.test(error.message) ? { exists: true } : { error: error.message };
   return {};
 }
 

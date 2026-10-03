@@ -37,6 +37,9 @@
   --bad: #f87171;
   --warn: #fbbf24;
   --edge: #64748b;
+  /* V2 semantics: orange = people lost (non-convert lines, key leak); amber = needs attention (health checks) */
+  --lost: #f97316;
+  --attention: #fbbf24;
   /* categorical chart series, validated (lightness band, CVD separation, contrast) against #111827 */
   --chart-1: #059669;
   --chart-2: #ea580c;
@@ -80,6 +83,8 @@
   --bad: #b91c1c;
   --warn: #b45309;
   --edge: #94a3b8;
+  --lost: #c2410c; /* darker orange for contrast on white */
+  --attention: #b45309;
   /* categorical chart series, validated against #ffffff */
   --chart-1: #047857;
   --chart-2: #c2410c;
@@ -114,6 +119,8 @@
   --color-bad: var(--bad);
   --color-warn: var(--warn);
   --color-alt: var(--alt);
+  --color-lost: var(--lost);
+  --color-attention: var(--attention);
   --font-sans: var(--font-dm-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-bricolage), var(--font-dm-sans), sans-serif;
   --shadow-card: var(--shadow);

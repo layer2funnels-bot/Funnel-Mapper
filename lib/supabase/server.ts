@@ -25,10 +25,13 @@ export async function supabaseServer() {
 
 export type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
 
+export type WorkspaceOption = { id: string; name: string; kind: string; role: string };
+
 /**
- * Current member, their profile and their workspace (the Layer2Funnels team workspace, or an independent user's
- * private one), or redirect to /login. A user without an active profile (deactivated, or never invited) is
- * signed out. Cached per request. RLS scopes every query to this workspace; `isTeam` only drives the UI.
+ * Current member, their profile, the workspace they're working in (the Layer2Funnels team workspace or another one
+ * they belong to) and the workspaces they can switch to; or redirect to /login. Someone who is no longer an active
+ * member of the workspace they were in is moved to another workspace they belong to, else signed out.
+ * Cached per request. RLS scopes every query to the current workspace; `isTeam` only drives the UI.
  */
 export const requireUser = cache(async () => {
   const sb = await supabaseServer();
@@ -36,17 +39,32 @@ export const requireUser = cache(async () => {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const { data, error } = await sb.from("profiles").select("*, workspace:workspaces(*)").eq("id", user.id).maybeSingle();
+  const [{ data, error }, { data: memberships, error: mErr }] = await Promise.all([
+    sb.from("profiles").select("*, workspace:workspaces!profiles_workspace_id_fkey(*)").eq("id", user.id).maybeSingle(),
+    sb.from("workspace_members").select("workspace_id, role, active, workspace:workspaces(id, agency_name, kind)").eq("user_id", user.id).order("created_at"),
+  ]);
   // a failed query (e.g. a migration not yet applied) is an error, not a removed member: never sign people out for it
-  if (error) throw new Error(`Couldn't load your workspace: ${error.message}`);
-  if (!data || !data.active || !data.workspace) redirect("/auth/removed");
+  if (error || mErr) throw new Error(`Couldn't load your workspace: ${(error ?? mErr)!.message}`);
+  if (!data) redirect("/auth/removed");
+  const mine = (memberships ?? []).filter((m) => m.active && m.workspace);
+  const current = mine.find((m) => m.workspace_id === data.workspace_id);
   const { workspace, ...profile } = data;
-  const role = profile.role as Role;
+  if (!current || !workspace) {
+    if (mine[0]) {
+      await sb.rpc("switch_workspace", { p_workspace: mine[0].workspace_id });
+      redirect("/");
+    }
+    redirect("/auth/removed");
+  }
+  const workspaces: WorkspaceOption[] = mine.map((m) => ({ id: m.workspace_id, name: m.workspace!.agency_name, kind: m.workspace!.kind, role: m.role }));
+  // the role in the workspace being worked in (workspace_members.role; profiles.role is legacy)
+  const role = current.role as Role;
   return {
     sb,
     user,
     profile,
     workspace,
+    workspaces,
     role,
     /** Owner or admin: manages members and branding. */
     isAdmin: role === "owner" || role === "admin",

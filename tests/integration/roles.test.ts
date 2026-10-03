@@ -1,4 +1,4 @@
-// Owner / Admin / Editor / Viewer (supabase/migrations/20261010000000_roles.sql) against the local Supabase stack.
+// Owner / Admin / Editor / Viewer per workspace membership (supabase/migrations/20261011000000_roles.sql) against the local Supabase stack.
 // Requires `npx supabase start` and `npx supabase db reset` (seed). Run: npm run test:db
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -25,17 +25,20 @@ beforeAll(async () => {
   viewer = await signIn("viewer@layer2funnels.test");
   [ownerId, editorId, viewerId] = await Promise.all([idOf(owner), idOf(editor), idOf(viewer)]);
 });
+const TEAM = "00000000-0000-4000-a000-000000000001";
+const member = (c: SupabaseClient) => c.from("workspace_members");
+const roleOf = async (id: string) => (await member(owner).select("role").eq("workspace_id", TEAM).eq("user_id", id).single()).data?.role;
 afterAll(async () => {
   // leave the seed as it was
-  await owner.from("profiles").update({ role: "editor" }).eq("id", editorId);
-  await owner.from("profiles").update({ role: "viewer" }).eq("id", viewerId);
+  await member(owner).update({ role: "editor" }).eq("workspace_id", TEAM).eq("user_id", editorId);
+  await member(owner).update({ role: "viewer" }).eq("workspace_id", TEAM).eq("user_id", viewerId);
 });
 
 describe("roles", () => {
   it("the seed has one owner, an editor and a viewer in the team workspace", async () => {
-    const { data } = await owner.from("profiles").select("email, role").in("id", [ownerId, editorId, viewerId]);
-    const by = Object.fromEntries((data ?? []).map((p) => [p.email, p.role]));
-    expect(by).toEqual({ "demo@layer2funnels.test": "owner", "teammate@layer2funnels.test": "editor", "viewer@layer2funnels.test": "viewer" });
+    expect(await roleOf(ownerId)).toBe("owner");
+    expect(await roleOf(editorId)).toBe("editor");
+    expect(await roleOf(viewerId)).toBe("viewer");
   });
 
   it("a viewer reads everything in the workspace", async () => {
@@ -73,9 +76,11 @@ describe("roles", () => {
   });
 
   it("a viewer can't make themselves an editor; an editor can't change roles", async () => {
-    expect((await viewer.from("profiles").update({ role: "editor" }).eq("id", viewerId)).error).not.toBeNull();
-    expect((await editor.from("profiles").update({ role: "admin" }).eq("id", editorId)).error).not.toBeNull();
-    expect((await editor.from("profiles").update({ role: "editor" }).eq("id", viewerId).select("id")).data ?? []).toEqual([]);
+    expect((await member(viewer).update({ role: "editor" }).eq("workspace_id", TEAM).eq("user_id", viewerId).select()).data ?? []).toEqual([]);
+    expect((await member(editor).update({ role: "admin" }).eq("workspace_id", TEAM).eq("user_id", editorId).select()).data ?? []).toEqual([]);
+    expect((await member(editor).update({ role: "editor" }).eq("workspace_id", TEAM).eq("user_id", viewerId).select()).data ?? []).toEqual([]);
+    expect(await roleOf(viewerId)).toBe("viewer");
+    expect(await roleOf(editorId)).toBe("editor");
   });
 
   it("an editor edits data", async () => {
@@ -84,27 +89,40 @@ describe("roles", () => {
   });
 
   it("admins manage roles below owner; nobody else can touch the owner", async () => {
+    const set = (c: SupabaseClient, id: string, patch: object) => member(c).update(patch).eq("workspace_id", TEAM).eq("user_id", id);
     // the owner promotes the editor to admin, who then manages the viewer
-    expect((await owner.from("profiles").update({ role: "admin" }).eq("id", editorId)).error).toBeNull();
-    expect((await editor.from("profiles").update({ role: "editor" }).eq("id", viewerId)).error).toBeNull();
+    expect((await set(owner, editorId, { role: "admin" })).error).toBeNull();
+    expect((await set(editor, viewerId, { role: "editor" })).error).toBeNull();
     expect((await viewer.from("clients").update({ notes: "now I can" }).eq("id", SAM).select("id")).data?.length).toBe(1);
-    expect((await editor.from("profiles").update({ role: "viewer" }).eq("id", viewerId)).error).toBeNull();
+    expect((await set(editor, viewerId, { role: "viewer" })).error).toBeNull();
     // an admin can't demote or deactivate the owner, or make themselves owner
-    expect((await editor.from("profiles").update({ role: "admin" }).eq("id", ownerId)).error).not.toBeNull();
-    expect((await editor.from("profiles").update({ active: false }).eq("id", ownerId)).error).not.toBeNull();
-    expect((await editor.from("profiles").update({ role: "owner" }).eq("id", editorId)).error).not.toBeNull();
-    // only one owner per workspace, and only through handover
+    expect((await set(editor, ownerId, { role: "admin" })).error).not.toBeNull();
+    expect((await set(editor, ownerId, { active: false })).error).not.toBeNull();
+    expect((await set(editor, editorId, { role: "owner" })).error).not.toBeNull();
+    expect(await roleOf(ownerId)).toBe("owner");
+    // only the owner hands over ownership
     expect((await editor.rpc("transfer_ownership", { p_to: editorId })).error).not.toBeNull();
   });
 
   it("the owner hands over ownership (and can take it back)", async () => {
     expect((await owner.rpc("transfer_ownership", { p_to: viewerId })).error).toBeNull();
-    let { data } = await owner.from("profiles").select("id, role").in("id", [ownerId, viewerId]);
-    expect(Object.fromEntries((data ?? []).map((p) => [p.id, p.role]))).toEqual({ [ownerId]: "admin", [viewerId]: "owner" });
+    expect([await roleOf(ownerId), await roleOf(viewerId)]).toEqual(["admin", "owner"]);
     expect((await viewer.rpc("transfer_ownership", { p_to: ownerId })).error).toBeNull();
-    ({ data } = await owner.from("profiles").select("id, role").in("id", [ownerId, viewerId]));
-    expect(Object.fromEntries((data ?? []).map((p) => [p.id, p.role]))).toEqual({ [ownerId]: "owner", [viewerId]: "admin" });
-    await owner.from("profiles").update({ role: "viewer" }).eq("id", viewerId);
+    expect([await roleOf(ownerId), await roleOf(viewerId)]).toEqual(["owner", "admin"]);
+    await member(owner).update({ role: "viewer" }).eq("workspace_id", TEAM).eq("user_id", viewerId);
+    expect(await roleOf(viewerId)).toBe("viewer");
+  });
+
+  it("whoever creates a workspace owns it", async () => {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) return; // clean-up needs the local service key in .env.local
+    const id = (await owner.rpc("create_workspace", { p_name: `Owned ${Date.now()}` })).data as string;
+    try {
+      expect((await member(owner).select("role").eq("workspace_id", id).eq("user_id", ownerId).single()).data?.role).toBe("owner");
+    } finally {
+      await owner.rpc("switch_workspace", { p_workspace: TEAM });
+      await createClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false } }).from("workspaces").delete().eq("id", id);
+    }
   });
 
   it("ownership can't be handed to another workspace's account", async () => {

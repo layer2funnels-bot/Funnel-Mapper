@@ -36,8 +36,10 @@ test.describe("workspaces", () => {
     // their own funnel opens in the editor
     await openEditor(page, INDIE_FUNNEL);
     await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "Private workspace" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send invite" })).toHaveCount(0);
+    await expect(page.getByTestId("current-workspace")).toContainText("Private workspace");
+    // their own workspace has its own team: only themselves, no Layer2Funnels people
+    await expect(page.getByRole("list", { name: "Team members" })).toContainText("solo@independent.test");
+    await expect(page.getByRole("list", { name: "Team members" })).not.toContainText("layer2funnels");
     await expect(page.getByRole("heading", { name: "Independent accounts" })).toHaveCount(0);
     await page.goto("/templates");
     await expect(page.getByRole("heading", { name: "Your templates" })).toBeVisible();
@@ -73,7 +75,7 @@ test.describe("workspaces", () => {
     await expect(indie.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);
     await expect(indie.getByRole("link", { name: /Indie Client/ })).toHaveCount(0);
     await indie.goto("/settings");
-    await expect(indie.getByRole("heading", { name: "Private workspace" })).toBeVisible();
+    await expect(indie.getByTestId("current-workspace")).toContainText("Private workspace");
     await ctx.close();
   });
 
@@ -150,6 +152,53 @@ test.describe("invite links and workspace identity", () => {
     await expect(solo.getByTestId("current-workspace")).toContainText("Private workspace");
     await expect(solo.getByTestId("current-workspace")).not.toContainText("Layer2Funnels");
     await expect(solo.getByTestId("workspace-kind").first()).toContainText("Private workspace");
+    await ctx.close();
+  });
+});
+
+test.describe("multiple workspaces", () => {
+  test("an admin creates a workspace from the left menu and switches between workspaces", async ({ browser }) => {
+    const svc = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+    const name = `Agency ${Date.now()}`;
+    const { ctx, page } = await signIn(browser, "solo@independent.test");
+    await expect(page).toHaveURL("/");
+    try {
+      const menu = page.getByTestId("workspace-switcher").first();
+      await expect(menu).toContainText("Solo Studio");
+      await menu.locator("summary").click();
+      await menu.getByLabel("New workspace").fill(name);
+      await menu.getByRole("button", { name: "Create workspace" }).click();
+      await expect(page.getByTestId("workspace-switcher").first()).toContainText(name);
+      // a brand-new workspace has its own (empty) data and only its creator as a member
+      await page.goto("/clients");
+      await expect(page.getByRole("link", { name: /Indie Client/ })).toHaveCount(0);
+      await page.goto("/settings");
+      await expect(page.getByTestId("current-workspace")).toContainText(name);
+      await expect(page.getByRole("list", { name: "Team members" }).getByRole("listitem")).toHaveCount(1);
+      // switch back: the original workspace's data again
+      const m2 = page.getByTestId("workspace-switcher").first();
+      await m2.locator("summary").click();
+      await m2.getByRole("button", { name: /Solo Studio/ }).click();
+      await expect(page.getByTestId("workspace-switcher").first()).toContainText("Solo Studio");
+      await page.goto("/clients");
+      await expect(page.getByRole("link", { name: /Indie Client/ })).toBeVisible();
+    } finally {
+      await ctx.close();
+      const { data } = await svc.from("workspaces").select("id").eq("agency_name", name);
+      for (const w of data ?? []) {
+        await svc.from("profiles").update({ workspace_id: (await svc.from("workspace_members").select("workspace_id").eq("user_id", "00000000-0000-4000-8000-000000000004").neq("workspace_id", w.id).limit(1).single()).data!.workspace_id }).eq("workspace_id", w.id);
+        await svc.from("workspaces").delete().eq("id", w.id);
+      }
+    }
+  });
+
+  test("members only see workspaces they belong to, and can't create one", async ({ browser }) => {
+    const { ctx, page } = await signIn(browser, "teammate@layer2funnels.test");
+    await expect(page).toHaveURL("/");
+    const menu = page.getByTestId("workspace-switcher").first();
+    await menu.locator("summary").click();
+    await expect(menu.getByRole("list", { name: "Your workspaces" }).getByRole("listitem")).toHaveCount(1);
+    await expect(menu.getByRole("button", { name: "Create workspace" })).toHaveCount(0);
     await ctx.close();
   });
 });

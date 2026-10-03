@@ -9,9 +9,11 @@ import { AgencyLogo, IndependentForm, InviteForm, MemberRow, ProfileForm, Worksp
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const { sb, user, profile, workspace, isAdmin, isOwner, isTeam } = await requireUser();
-  // RLS returns only this workspace's members
-  const { data: members } = await sb.from("profiles").select("id, full_name, email, role, active, created_at").order("created_at");
+  const { sb, user, profile, workspace, role, isAdmin, isOwner, isTeam } = await requireUser();
+  const { data: rows } = await sb.from("workspace_members").select("user_id, role, active").eq("workspace_id", workspace.id).order("created_at");
+  const { data: people } = await sb.from("profiles").select("id, full_name, email").in("id", (rows ?? []).map((m) => m.user_id));
+  const byId = new Map((people ?? []).map((p) => [p.id, p]));
+  const members = (rows ?? []).map((m) => ({ id: m.user_id, role: m.role, active: m.active, full_name: byId.get(m.user_id)?.full_name ?? "", email: byId.get(m.user_id)?.email ?? "" }));
   const canInvite = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const joinCode = process.env.INDEPENDENT_SIGNUP_CODE ?? "";
   const joinUrl = canInvite && joinCode.length >= 8 ? `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/join/${joinCode}` : "";
@@ -22,7 +24,7 @@ export default async function SettingsPage() {
         <h2 id="profile-h" className="mb-4 font-display text-lg font-bold">
           Your profile
         </h2>
-        <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={profile.role} />
+        <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={role} />
       </section>
 
       <section className="card mb-6 p-6" aria-labelledby="brand-h">
@@ -32,7 +34,7 @@ export default async function SettingsPage() {
         <p className="mb-3 text-sm" data-testid="current-workspace">
           You’re in <b>{workspace.agency_name}</b> <span className="pill bg-brand-soft text-brand">{isTeam ? "Layer2Funnels team workspace" : "Private workspace"}</span>
           <span className="mt-1 block text-muted">
-            {isTeam ? "Shared with everyone on the Layer2Funnels team." : "Only you can see this workspace’s clients, funnels, templates and files."}
+            {isTeam ? "Shared with everyone on the Layer2Funnels team." : "Only this workspace’s members can see its clients, funnels, templates and files."}
           </span>
         </p>
         <h3 className="mb-1 text-sm font-bold">Branding</h3>
@@ -51,12 +53,11 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {isTeam ? (
-        <section className="card mb-6 p-6" aria-labelledby="team-h">
+      <section className="card mb-6 p-6" aria-labelledby="team-h">
           <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
             Team
           </h2>
-          <p className="mb-2 text-sm text-muted">Everyone listed here shares the same clients, funnels and templates. There is no public sign-up: people join by invite only.</p>
+          <p className="mb-2 text-sm text-muted">Everyone listed here shares this workspace’s clients, funnels and templates, and nothing else. There is no public sign-up: people join by invite only.</p>
           <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
             {(["owner", "admin", "editor", "viewer"] as const).map((r) => (
               <div key={r} className="contents">
@@ -78,19 +79,11 @@ export default async function SettingsPage() {
             </div>
           )}
           <ul className="m-0 list-none p-0" aria-label="Team members">
-            {(members ?? []).map((m) => (
-              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} isOwner={isOwner} />
+            {members.map((m) => (
+              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} isOwner={isOwner} canRemove={isAdmin && canInvite} />
             ))}
           </ul>
-        </section>
-      ) : (
-        <section className="card mb-6 p-6" aria-labelledby="team-h">
-          <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
-            Private workspace
-          </h2>
-          <p className="text-sm text-muted">This workspace is yours alone: only you can see its clients, funnels, templates and files.</p>
-        </section>
-      )}
+      </section>
 
       {isTeam && isOwner && (
         <section className="card mb-6 p-6" aria-labelledby="indep-h">

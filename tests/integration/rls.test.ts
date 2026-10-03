@@ -53,10 +53,10 @@ describe("private access", () => {
     const u = mk();
     expect((await u.auth.signInWithPassword({ email, password: "uninvited-pass-1" })).error).toBeNull();
     expect((await u.from("clients").select("id")).data ?? []).toEqual([]);
-    const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
+    const prof = await admin.from("workspace_members").select("active, role").eq("user_id", created.data.user!.id).single();
     expect(prof.data).toEqual({ active: false, role: "editor" });
     // an admin activates them → they're in
-    await admin.from("profiles").update({ active: true }).eq("email", email);
+    await admin.from("workspace_members").update({ active: true }).eq("user_id", created.data.user!.id);
     expect(((await u.from("clients").select("id")).data ?? []).length).toBeGreaterThan(0);
     await svc.auth.admin.deleteUser(created.data.user!.id);
   });
@@ -67,14 +67,15 @@ describe("private access", () => {
     const email = `invited-${Date.now()}@example.test`;
     const inv = await svc.auth.admin.inviteUserByEmail(email);
     expect(inv.error).toBeNull();
-    const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
+    const prof = await admin.from("workspace_members").select("active, role").eq("user_id", inv.data.user!.id).single();
     expect(prof.data).toEqual({ active: true, role: "editor" });
     await svc.auth.admin.deleteUser(inv.data.user!.id);
   });
-  it("a deactivated member sees nothing and can't write", async () => {
+  it("a deactivated member sees nothing (but their own profile) and can't write", async () => {
+    const me = (await former.auth.getUser()).data.user!.id;
     for (const t of TABLES) {
       const { data } = await former.from(t).select("id");
-      expect(data ?? [], t).toEqual([]);
+      expect(data ?? [], t).toEqual(t === "profiles" ? [{ id: me }] : []);
     }
     const { error } = await former.from("clients").insert({ name: "sneaky" });
     expect(error).not.toBeNull();
@@ -127,17 +128,17 @@ describe("shared workspace", () => {
   });
   it("admins can deactivate and reactivate members", async () => {
     const id = "00000000-0000-4000-8000-000000000002";
-    const off = await admin.from("profiles").update({ active: false }).eq("id", id).select("active").single();
+    const off = await admin.from("workspace_members").update({ active: false }).eq("user_id", id).select("active").single();
     expect(off.data!.active).toBe(false);
     const { data } = await mate.from("clients").select("id");
     expect(data).toEqual([]);
-    await admin.from("profiles").update({ active: true }).eq("id", id);
+    await admin.from("workspace_members").update({ active: true }).eq("user_id", id);
     const back = await mate.from("clients").select("id");
     expect(back.data!.length).toBeGreaterThan(0);
   });
   it("the owner can't demote themselves (ownership only moves by handover)", async () => {
     const me = (await admin.auth.getUser()).data.user!.id;
-    const { error } = await admin.from("profiles").update({ role: "editor" }).eq("id", me);
+    const { error } = await admin.from("workspace_members").update({ role: "editor" }).eq("user_id", me);
     expect(error).not.toBeNull();
   });
 });

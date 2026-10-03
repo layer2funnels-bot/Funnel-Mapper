@@ -12,8 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
 
-const TEAM_WORKSPACE = "00000000-0000-4000-a000-000000000001";
-export type ActionResult = { error?: string; ok?: boolean; id?: string } | undefined;
+export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: boolean } | undefined;
 const uuid = z.uuid();
 const newId = () => "n" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
@@ -223,11 +222,11 @@ export async function updateAgencyLogo(url: string | null) {
 const ASSIGNABLE = ["admin", "editor", "viewer"] as const;
 export type AssignableRole = (typeof ASSIGNABLE)[number];
 
-/** Change a member's role (admin / editor / viewer) or activation. The owner can't be changed here (handover only). */
+/** Change a member's role (admin / editor / viewer) or activation in this workspace. The owner is changed only by handover. */
 export async function setMemberAction(id: string, patch: { role?: AssignableRole; active?: boolean }): Promise<ActionResult> {
-  const { sb } = await requireAdmin();
+  const { sb, workspace } = await requireAdmin();
   const p = z.object({ role: z.enum(ASSIGNABLE).optional(), active: z.boolean().optional() }).parse(patch);
-  const { error } = await sb.from("profiles").update(p).eq("id", uuid.parse(id));
+  const { error } = await sb.from("workspace_members").update(p).eq("workspace_id", workspace.id).eq("user_id", uuid.parse(id));
   if (error)
     return {
       error: error.message.includes("at least one active admin")
@@ -240,13 +239,45 @@ export async function setMemberAction(id: string, patch: { role?: AssignableRole
   return { ok: true };
 }
 
-/** The owner hands the workspace to another active member (the owner becomes an admin). */
+/** The owner hands this workspace to another active member (the owner becomes an admin). */
 export async function transferOwnershipAction(id: string): Promise<ActionResult> {
   const { sb, isOwner } = await requireUser();
   if (!isOwner) return { error: "Only the owner can hand over the workspace." };
   const { error } = await sb.rpc("transfer_ownership", { p_to: uuid.parse(id) });
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+/**
+ * Remove a teammate from the current workspace. Everything they created here is first handed to the admin removing
+ * them. If they belong to no other workspace, their account (and email) is deleted too; otherwise they keep access
+ * to their other workspaces. Workspace admins only, never yourself.
+ */
+export async function removeMemberAction(id: string): Promise<ActionResult> {
+  const { sb, user, workspace } = await requireAdmin();
+  const target = uuid.parse(id);
+  if (target === user.id) return { error: "You can’t remove yourself." };
+  const { data: member } = await sb.from("workspace_members").select("user_id, role").eq("workspace_id", workspace.id).eq("user_id", target).maybeSingle();
+  if (!member) return { error: "That person isn’t in this workspace." };
+  if (member.role === "owner") return { error: "The owner can’t be removed. The owner can hand over ownership first." };
+  const admin = supabaseAdmin();
+  if (!admin) return { error: "Removing teammates needs SUPABASE_SERVICE_ROLE_KEY on the server. Until then, deactivate them." };
+  for (const t of ["clients", "funnels", "funnel_versions", "funnel_actuals", "share_links", "share_comments", "templates", "products"] as const) {
+    const { error } = await admin.from(t).update({ owner_id: user.id }).eq("owner_id", target).eq("workspace_id", workspace.id);
+    if (error) return { error: `Couldn’t transfer their work (${t}): ${error.message}. Nothing was removed.` };
+  }
+  const left = await admin.from("workspace_members").delete().eq("workspace_id", workspace.id).eq("user_id", target);
+  if (left.error) return { error: `Their work is now yours, but they couldn’t be removed: ${left.error.message}` };
+  // still in other workspaces: keep the account and move them out of this one; otherwise delete the account
+  const { data: others } = await admin.from("workspace_members").select("workspace_id, active").eq("user_id", target).order("active", { ascending: false });
+  if (others?.length) {
+    await admin.from("profiles").update({ workspace_id: others[0].workspace_id }).eq("id", target).eq("workspace_id", workspace.id);
+  } else {
+    const { error } = await admin.auth.admin.deleteUser(target);
+    if (error) return { error: `Removed from the workspace, but the account couldn’t be deleted: ${error.message}` };
+  }
   revalidatePath("/settings");
   return { ok: true };
 }
@@ -258,22 +289,38 @@ async function siteUrl() {
   return `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 }
 
-/** Invite a teammate into the Layer2Funnels team workspace (team admins only). */
+/** Invite a teammate into the current workspace (its admins only). Someone who already has an account is added directly. */
 export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { isTeam } = await requireAdmin();
-  if (!isTeam) return { error: "Only the Layer2Funnels team workspace can invite teammates." };
+  const { isTeam, workspace } = await requireAdmin();
   const p = z
     .object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default(""), role: z.enum(ASSIGNABLE).default("editor") })
     .safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", role: fd.get("role") || undefined });
   if (!p.success) return { error: p.error.issues[0].message };
   const admin = supabaseAdmin();
   if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
-  await clearPendingSignup(p.data.email);
+  const email = p.data.email.trim().toLowerCase();
+  // the team workspace is where new accounts land by default; any other workspace needs a pending row naming it
+  if (isTeam) await clearPendingSignup(email);
+  else {
+    const pending = await admin.from("workspace_signups").upsert({ email, full_name: p.data.full_name, workspace_name: "", join_workspace_id: workspace.id });
+    if (pending.error) return { error: pending.error.message };
+  }
   const site = await siteUrl();
-  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(p.data.email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
-  if (error) return { error: /already/i.test(error.message) ? "That person already has an account. Reactivate them in the list below if needed." : error.message };
-  // new accounts join as editors; set the chosen role straight away (service role, same team workspace only)
-  if (p.data.role !== "editor" && invited.user) await admin.from("profiles").update({ role: p.data.role }).eq("id", invited.user.id).eq("workspace_id", TEAM_WORKSPACE);
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
+  if (!isTeam) await clearPendingSignup(email);
+  if (error && /already/i.test(error.message)) {
+    const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
+    if (!existing) return { error: error.message };
+    const { data: had } = await admin.from("workspace_members").select("active").eq("workspace_id", workspace.id).eq("user_id", existing.id).maybeSingle();
+    if (had) return { error: had.active ? "That person is already in this workspace." : "That person is in the list below: reactivate them." };
+    const added = await admin.from("workspace_members").insert({ workspace_id: workspace.id, user_id: existing.id, role: p.data.role, active: true });
+    if (added.error) return { error: added.error.message };
+    revalidatePath("/settings");
+    return { ok: true, added: true };
+  }
+  if (error) return { error: error.message };
+  // new accounts join as editors; give them the chosen role in this workspace straight away (service role)
+  if (p.data.role !== "editor" && invited.user) await admin.from("workspace_members").update({ role: p.data.role }).eq("workspace_id", workspace.id).eq("user_id", invited.user.id);
   revalidatePath("/settings");
   return { ok: true };
 }
@@ -294,6 +341,27 @@ export async function createIndependentAccountAction(_: ActionResult, fd: FormDa
   if (r.exists) return { error: "That email already has an account." };
   if (r.error) return { error: r.error };
   return { ok: true };
+}
+
+/* ---------------- workspaces ---------------- */
+/** Switch to another workspace you're an active member of (checked by the database). */
+export async function switchWorkspaceAction(id: string) {
+  const { sb } = await requireUser();
+  const { error } = await sb.rpc("switch_workspace", { p_workspace: uuid.parse(id) });
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+
+/** Admins create a new, empty workspace with its own data and teammates, and switch to it. */
+export async function createWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { sb } = await requireAdmin();
+  const p = z.string().trim().min(1, "Name the workspace").max(120).safeParse(fd.get("name") ?? "");
+  if (!p.success) return { error: p.error.issues[0].message };
+  const { error } = await sb.rpc("create_workspace", { p_name: p.data });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  redirect("/");
 }
 
 /* ---------------- products (reusable offers) ---------------- */

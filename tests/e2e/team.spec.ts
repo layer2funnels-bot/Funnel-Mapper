@@ -72,7 +72,7 @@ test.describe("team workspace", () => {
     const u = await svc.auth.admin.createUser({ email, password: "leaver-pass-1", email_confirm: true });
     expect(u.error).toBeNull();
     const id = u.data.user!.id;
-    await svc.from("profiles").update({ active: true }).eq("id", id);
+    await svc.from("workspace_members").update({ active: true }).eq("user_id", id);
     const c = await svc.from("clients").insert({ name: `Leaver client ${Date.now()}`, owner_id: id }).select("id").single();
     expect(c.error).toBeNull();
 
@@ -117,7 +117,7 @@ test.describe("team workspace", () => {
     const id = created.user.id;
     try {
       // accounts created outside an invite start with no access; activate it as an admin would
-      await sb.from("profiles").update({ active: true }).eq("id", id);
+      await sb.from("workspace_members").update({ active: true }).eq("user_id", id);
       const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
       const page = await ctx.newPage();
       await page.goto("/reset-password");

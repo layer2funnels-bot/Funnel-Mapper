@@ -75,7 +75,7 @@ export function InviteForm() {
   const [state, action] = useActionState(inviteMemberAction, undefined);
   return (
     <form action={action}>
-      <FormMessage state={state?.error ? state : state?.ok ? { message: "Invite sent. They’ll get an email to choose a password." } : undefined} />
+      <FormMessage state={state?.error ? state : state?.added ? { message: "Added. They already have an account and can switch to this workspace from the menu." } : state?.ok ? { message: "Invite sent. They’ll get an email to choose a password." } : undefined} />
       <div className="row2">
         <div className="field">
           <label htmlFor="inv-email">Email</label>

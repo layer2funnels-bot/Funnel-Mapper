@@ -249,18 +249,43 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"workspace_signups": {
+                },"workspace_members": {
                   Row: {
-                    "created_at": string,"email": string,"full_name": string,"workspace_name": string
+                    "active": boolean,"created_at": string,"role": string,"user_id": string,"workspace_id": string
                   }
                   Insert: {
-                    "created_at"?: string,"email": string,"full_name"?: string,"workspace_name"?: string
+                    "active"?: boolean,"created_at"?: string,"role"?: string,"user_id": string,"workspace_id": string
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"full_name"?: string,"workspace_name"?: string
+                    "active"?: boolean,"created_at"?: string,"role"?: string,"user_id"?: string,"workspace_id"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "workspace_members_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"workspace_signups": {
+                  Row: {
+                    "created_at": string,"email": string,"full_name": string,"join_workspace_id": string | null,"workspace_name": string
+                  }
+                  Insert: {
+                    "created_at"?: string,"email": string,"full_name"?: string,"join_workspace_id"?: string | null,"workspace_name"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"full_name"?: string,"join_workspace_id"?: string | null,"workspace_name"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "workspace_signups_join_workspace_id_fkey"
+      columns: ["join_workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"workspaces": {
                   Row: {
@@ -284,6 +309,9 @@ isOneToOne: false
             "add_share_comment":
 { Args: { "p_author": string,"p_body": string,"p_node_id": string,"p_token": string }; Returns: string
                            },
+"create_workspace":
+{ Args: { "p_name": string }; Returns: string
+                           },
 "current_workspace_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -296,6 +324,9 @@ isOneToOne: false
 "is_team_member":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"my_workspace_ids":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
 "save_shared_funnel":
 { Args: { "p_graph": Json,"p_settings": Json,"p_token": string }; Returns: boolean
                            },
@@ -304,6 +335,9 @@ isOneToOne: false
                            },
 "storage_object_in_my_workspace":
 { Args: { "bucket": string,"object_name": string }; Returns: boolean
+                           },
+"switch_workspace":
+{ Args: { "p_workspace": string }; Returns: boolean
                            },
 "team_workspace_id":
 { Args: Record<PropertyKey, never>; Returns: string

@@ -5,6 +5,8 @@ import { useState } from "react";
 import { BrandMark, Icon } from "./icon";
 import { toggleTheme } from "./theme-toggle";
 import type { UiIconName } from "@/lib/icons";
+import type { WorkspaceOption } from "@/lib/supabase/server";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 
 const NAV: { href: string; label: string; icon: UiIconName }[] = [
   { href: "/", label: "Dashboard", icon: "home" },
@@ -13,7 +15,7 @@ const NAV: { href: string; label: string; icon: UiIconName }[] = [
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
-export function AppNav({ agency, user, logo, team }: { agency: string; user: string; logo?: string | null; team: boolean }) {
+export function AppNav({ agency, user, logo, team, workspaceId, workspaces, canCreate }: { agency: string; user: string; logo?: string | null; team: boolean; workspaceId: string; workspaces: WorkspaceOption[]; canCreate: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
@@ -22,6 +24,7 @@ export function AppNav({ agency, user, logo, team }: { agency: string; user: str
       <Link href="/" className="mb-5 flex items-center gap-2.5 px-2 font-display text-[19px] font-extrabold tracking-tight text-side-ink no-underline" onClick={() => setOpen(false)}>
         <BrandMark /> Funnel Mapper Pro
       </Link>
+      <WorkspaceSwitcher currentId={workspaceId} workspaces={workspaces} canCreate={canCreate} />
       {NAV.map((n) => (
         <Link
           key={n.href}

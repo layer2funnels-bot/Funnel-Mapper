@@ -219,7 +219,7 @@ describe("accounts", () => {
     const inv = await svc.auth.admin.inviteUserByEmail(email);
     expect(inv.error).toBeNull();
     const id = inv.data.user!.id;
-    const prof = await svc.from("profiles").select("role, active, workspace:workspaces(kind, agency_name)").eq("id", id).single();
+    const prof = await svc.from("profiles").select("role, active, workspace:workspaces!profiles_workspace_id_fkey(kind, agency_name)").eq("id", id).single();
     expect(prof.data).toEqual({ role: "admin", active: true, workspace: { kind: "personal", agency_name: "New Indie Co" } });
     // the server removes the pending row after the invite (lib/independent.ts); do the same here
     await svc.from("workspace_signups").delete().eq("email", email);
@@ -242,5 +242,56 @@ describe("accounts", () => {
     const prof = await team.from("profiles").select("role, active, workspace_id").eq("email", email).single();
     expect(prof.data).toEqual({ role: "member", active: true, workspace_id: TEAM_WS });
     await svc.auth.admin.deleteUser(inv.data.user!.id);
+  });
+});
+
+describe("multiple workspaces", () => {
+  it("admins create workspaces with their own data and members; nobody switches in without access", async () => {
+    if (!SERVICE) return;
+    const svc = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
+    // only admins create workspaces
+    expect((await mate.rpc("create_workspace", { p_name: "Not allowed" })).error).not.toBeNull();
+    // solo (admin of their own workspace) creates one and is switched into it: empty, theirs alone
+    const created = await solo.rpc("create_workspace", { p_name: "Solo Agency Two" });
+    expect(created.error).toBeNull();
+    const ws = created.data as string;
+    try {
+      expect((await solo.from("workspaces").select("id").eq("id", ws)).data).toEqual([{ id: ws }]);
+      expect((await solo.from("clients").select("id")).data).toEqual([]);
+      const c = await solo.from("clients").insert({ name: "Agency Two client" }).select("id, workspace_id").single();
+      expect(c.data!.workspace_id).toBe(ws);
+      // nobody else can see it or switch into it
+      for (const other of [team, mate, solo2]) {
+        expect((await other.from("workspaces").select("id").eq("id", ws)).data).toEqual([]);
+        expect((await other.from("clients").select("id").eq("id", c.data!.id)).data).toEqual([]);
+        expect((await other.rpc("switch_workspace", { p_workspace: ws })).error).not.toBeNull();
+      }
+      // a profile can't be pointed at it directly either
+      expect((await solo2.from("profiles").update({ workspace_id: ws }).eq("id", await uid(solo2))).error).not.toBeNull();
+      // give solo2 access: now they can switch in and see this workspace's data, and only it
+      expect((await svc.from("workspace_members").insert({ workspace_id: ws, user_id: await uid(solo2), role: "member" })).error).toBeNull();
+      expect((await solo2.rpc("switch_workspace", { p_workspace: ws })).error).toBeNull();
+      expect((await solo2.from("clients").select("id")).data).toEqual([{ id: c.data!.id }]);
+      expect(((await solo2.from("profiles").select("email")).data ?? []).map((p) => p.email).sort()).toEqual(["solo2@independent.test", "solo@independent.test"]);
+      // members can't manage members; the admin can deactivate them, which cuts access at once
+      expect((await solo2.from("workspace_members").update({ role: "admin" }).eq("workspace_id", ws).eq("user_id", await uid(solo2)).select()).data).toEqual([]);
+      expect((await solo.from("workspace_members").update({ active: false }).eq("workspace_id", ws).eq("user_id", await uid(solo2))).error).toBeNull();
+      expect((await solo2.from("clients").select("id")).data).toEqual([]);
+      expect((await solo2.rpc("switch_workspace", { p_workspace: ws })).error).not.toBeNull();
+      // the last admin can't step down
+      expect((await solo.from("workspace_members").update({ role: "member" }).eq("workspace_id", ws).eq("user_id", await uid(solo))).error).not.toBeNull();
+      // back to their own workspaces: each sees its own data again
+      expect((await solo2.rpc("switch_workspace", { p_workspace: solo2Ws })).error).toBeNull();
+      expect((await solo2.from("clients").select("id")).data).toEqual([{ id: INDIE2 }]);
+      expect((await solo.rpc("switch_workspace", { p_workspace: soloWs })).error).toBeNull();
+      expect((await solo.from("clients").select("id")).data).toEqual([{ id: INDIE }]);
+      // the team never saw any of it
+      expect((await team.from("clients").select("id").eq("id", c.data!.id)).data).toEqual([]);
+    } finally {
+      await svc.from("profiles").update({ workspace_id: soloWs }).eq("id", await uid(solo));
+      await svc.from("profiles").update({ workspace_id: solo2Ws }).eq("id", await uid(solo2));
+      await svc.from("clients").delete().eq("workspace_id", ws);
+      await svc.from("workspaces").delete().eq("id", ws);
+    }
   });
 });

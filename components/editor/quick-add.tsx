@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { LIB_GROUPS } from "@/lib/catalog";
 import { addNode, closeQuickAdd, useEditor } from "@/lib/editor/store";
-import { ITEMS, colorOf } from "./palette";
+import { BlockTile } from "./block-visual";
+import { ITEMS } from "./palette";
 
 export function QuickAdd() {
   const q = useEditor((s) => s.quick);
@@ -59,9 +60,7 @@ function QuickAddBox() {
               e.preventDefault();
               pick(k);
             }}>
-            <span className="pi" style={{ background: colorOf(it.payload.type) }}>
-              <Icon name={it.icon} size={13} />
-            </span>
+            <BlockTile type={it.payload.type} icon={it.icon} size={13} />
             {it.label}
             <small>{LIB_GROUPS[it.group]}</small>
           </li>

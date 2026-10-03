@@ -2,9 +2,10 @@
 import { useReactFlow } from "@xyflow/react";
 import { useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icon";
-import { BLOCK_TYPES, CATCOLOR, LIB_GROUPS, libOf, typeOf, type BlockTypeKey, type LibGroup, type NodeParams } from "@/lib/catalog";
+import { BLOCK_TYPES, LIB_GROUPS, libOf, typeOf, type BlockTypeKey, type LibGroup, type NodeParams } from "@/lib/catalog";
 import type { IconName } from "@/lib/icons";
 import { addNode } from "@/lib/editor/store";
+import { BlockTile } from "./block-visual";
 import { DND_MIME } from "./canvas";
 
 export interface PaletteProduct {
@@ -106,11 +107,6 @@ const useList = (k: string) =>
 /** Small random offset so blocks added by tap don't stack exactly on top of each other. */
 const jitter = () => Math.random() * 80 - 40;
 
-export const colorOf = (type: string) => {
-  const T = typeOf(type);
-  return CATCOLOR[T.color ?? T.cat];
-};
-
 export function Palette({ products, onPicked }: { products: PaletteProduct[]; onPicked?: () => void }) {
   const [q, setQ] = useState("");
   const recent = useList(RECENT_KEY);
@@ -150,9 +146,7 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
   const item = (it: { key: string; label: string; icon: IconName; payload: LibPayload }, favKey?: string) => (
     <div key={it.key} className="fm-pitem">
       <button type="button" {...dragProps(it.payload, favKey)} onClick={() => addAtCentre(it.payload, favKey)} aria-label={`Add ${it.label}`}>
-        <span className="pi" style={{ background: colorOf(it.payload.type) }}>
-          <Icon name={it.icon} size={16} />
-        </span>
+        <BlockTile type={it.payload.type} icon={it.icon} />
         {it.label}
       </button>
       {favKey && (
@@ -172,9 +166,7 @@ export function Palette({ products, onPicked }: { products: PaletteProduct[]; on
             const it = BY_KEY[k];
             return (
               <button key={k} type="button" {...dragProps(it.payload, k)} onClick={() => addAtCentre(it.payload, k)} aria-label={`${title === "Favourites" ? "Favourite" : "Recent"}: ${it.label}`} title={`Add ${it.label}`}>
-                <span className="pi" style={{ background: colorOf(it.payload.type) }}>
-                  <Icon name={it.icon} size={13} />
-                </span>
+                <BlockTile type={it.payload.type} icon={it.icon} size={13} />
                 {it.label}
               </button>
             );

@@ -89,6 +89,7 @@ test.describe("funnel editor", () => {
     const b = (await node(page, "Application").boundingBox())!;
     await drag(page, { x: a.x - 20, y: a.y - 30 }, { x: b.x + b.width + 10, y: b.y + b.height + 20 }, { shift: true });
     await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks");
+    await page.getByRole("tab", { name: "Arrange" }).click(); // several blocks: Style | Arrange
     await page.getByRole("button", { name: "Put in a stage frame" }).click();
     await expect(page.locator(".fm-frame")).toHaveCount(1);
   });
@@ -258,18 +259,31 @@ test.describe("tablet and phone", () => {
     await ctx.close();
   });
 
-  test("phone: opens view-only, can switch to editing", async ({ browser }) => {
+  test("phone: compact bar, KPI chips, and a 68px action bar when a block is selected", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const { id } = await createFunnel({ template: "tripwire" });
     await page.goto(`/funnels/${id}`);
     await expect(nodes(page)).toHaveCount(11);
-    await expect(page.getByRole("button", { name: "Show building blocks" })).toHaveCount(0);
+    // top bar: back, name, Reports, overflow; the KPI chips scroll inside their own strip
+    await expect(page.getByRole("link", { name: /^Back to/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.locator(".fm-kpis")).toBeVisible();
+    // no horizontal page scroll
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // the library opens from the 52px + button
+    const fab = page.getByRole("button", { name: "Show building blocks" });
+    expect((await fab.boundingBox())!.width).toBeGreaterThanOrEqual(52);
+    // selecting a block swaps the KPI chips for the action bar; there is no floating toolbar on a phone
+    await page.locator(".react-flow__node").first().dispatchEvent("click");
+    const bar = page.getByRole("toolbar", { name: "Block actions" });
+    await expect(bar).toBeVisible();
+    expect((await bar.boundingBox())!.height).toBeGreaterThanOrEqual(68);
+    await expect(bar.getByRole("button", { name: "Next step" })).toBeVisible();
+    await expect(page.locator(".fm-ftb")).toBeHidden();
     await page.screenshot({ path: "test-results/editor-phone.png" });
-    await page.getByRole("button", { name: "View", exact: true }).click();
-    await page.getByText("View only (lock editing)").click();
-    await expect(page.getByRole("button", { name: "Show building blocks" })).toBeVisible();
     await ctx.close();
   });
+
 });

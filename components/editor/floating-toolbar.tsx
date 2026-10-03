@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { isAnnot, retypeTargets } from "@/lib/catalog";
 import { kbd } from "@/lib/platform";
-import { copyStyle, deleteSelection, duplicateSelection, flipEdge, heightOf, openMenu, openTypePicker, pasteStyle, selectNodes, setEdgeStyle, setInspTab, setLocked, setOpt, showToast, useEditor, widthOf, wrapInFrame, type InspTab } from "@/lib/editor/store";
+import { copyStyle, deleteSelection, duplicateSelection, flipEdge, heightOf, openMenu, openTypePicker, pasteStyle, selectNodes, setEdgeStyle, setInspTab, setLocked, setOpt, showToast, updateParams, useEditor, widthOf, wrapInFrame, type InspTab } from "@/lib/editor/store";
 import { openInsertStep } from "./quick-add";
 import { Tip } from "./tip";
 
@@ -70,7 +70,33 @@ export function FloatingToolbar() {
   const flow = n && !isAnnot(n.type);
   return (
     <div ref={ref} className="fm-ftb" role="toolbar" aria-label={kind === "edge" ? "Connection tools" : kind === "multi" ? "Selection tools" : "Block tools"} style={{ left: place?.left ?? -9999, top: place?.top ?? -9999, visibility: place ? "visible" : "hidden" }} onPointerDown={(e) => e.stopPropagation()}>
-      {kind === "block" && n && (
+      {kind === "block" && n && n.type === "widget" && (
+        <>
+          <button type="button" className="tab" onClick={() => openInspector("details")}>
+            Edit
+          </button>
+          {!ro &&
+            (["S", "M", "L"] as const).map((z) => (
+              <button key={z} type="button" className="tab" aria-pressed={n.p.wsize === z || (!n.p.wsize && z === "M")} aria-label={`Size ${z}`} onClick={() => updateParams(n.id, { wsize: z })}>
+                {z}
+              </button>
+            ))}
+          <i className="vr" />
+          {!ro && (
+            <Tip label={`Duplicate (${kbd("Mod+D")})`}>
+              <button type="button" aria-label="Duplicate" onClick={() => (selectNodes([n.id]), duplicateSelection())}>
+                <Icon name="copy" size={16} />
+              </button>
+            </Tip>
+          )}
+          <Tip label="More actions">
+            <button type="button" aria-label="More actions" aria-haspopup="menu" onClick={(e) => menuAt(e, "block", n.id)}>
+              <Icon name="more" size={16} />
+            </button>
+          </Tip>
+        </>
+      )}
+      {kind === "block" && n && n.type !== "widget" && (
         <>
           <button type="button" className="tab" onClick={() => openInspector("style")}>
             Style
@@ -186,8 +212,8 @@ export function FloatingToolbar() {
             </button>
           </Tip>
           {!ro && (
-            <Tip label="Delete connection">
-              <button type="button" aria-label="Delete connection" className="danger" onClick={deleteSelection}>
+            <Tip label="Remove this line">
+              <button type="button" aria-label="Remove this line" className="danger" onClick={deleteSelection}>
                 <Icon name="trash" size={16} />
               </button>
             </Tip>

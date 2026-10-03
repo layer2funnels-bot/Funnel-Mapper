@@ -10,6 +10,7 @@ import { QUICK_STYLES } from "@/lib/style";
 import { kbd } from "@/lib/platform";
 import {
   addNode,
+  addWidget,
   align,
   applyQuickStyle,
   armEyedropper,
@@ -108,6 +109,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
               { label: "Open in Reports", icon: "chart", run: () => (setReportFocus(node.id), setSection("data")) },
             ] as Item[])
           : []),
+        ...(node.type === "frame" ? ([{ label: "Add widget for this frame", icon: "chart", disabled: ro, run: () => addWidget({ scope: "frame", frameId: node.id }, node.x + (node.w ?? 400) + 40, node.y) }] as Item[]) : []),
         { label: "Delete", kbd: m("Mod+Backspace"), icon: "trash", danger: true, sep: true, disabled: ro || !!node.locked, run: () => (selectNodes([node.id]), deleteSelection()) },
       ];
     }

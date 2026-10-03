@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { ThumbnailField } from "./thumbnail-field";
 import { WaitField } from "./wait-field";
+import { WidgetFields } from "./widget-fields";
 import { baseOf, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf, pct } from "@/lib/format";
 import { Icon } from "@/components/icon";
@@ -171,7 +172,9 @@ function NodeDetails({ n }: { n: FunnelNode }) {
   const P = (k: string) => (v: number | string | boolean) => updateParams(n.id, { [k]: v });
   return (
     <>
-      {n.type === "note" ? (
+      {n.type === "widget" ? (
+        <WidgetFields n={n} />
+      ) : n.type === "note" ? (
         <RichTextField label="Note" value={String(p.text ?? "")} onChange={P("text")} rows={7} disabled={ro} help="Headings, bold, italic, lists, links and images. Shown on the map (and on share links)." />
       ) : n.type === "label" ? (
         <>

@@ -10,6 +10,7 @@ import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
 import { updateClientAction } from "../../actions";
+import { ClientTabs } from "./client-tabs";
 import { ArchiveClient, ClientLogo, ClientNotes, DeleteClient, FunnelList } from "./portfolio-bits";
 import { ProductLibrary } from "./products";
 
@@ -20,8 +21,10 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
   return { title: data?.name ?? "Client" };
 }
 
-export default async function ClientPage({ params }: PageProps<"/clients/[id]">) {
+export default async function ClientPage({ params, searchParams }: PageProps<"/clients/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const tab = String(Array.isArray(sp.tab) ? sp.tab[0] : (sp.tab ?? "funnels"));
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: client }, { data: funnels }, { data: allClients }, tpls, { data: products }] = await Promise.all([
@@ -55,6 +58,15 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
             {[client.business_name, client.niche, client.country].filter(Boolean).join(" · ") || "No details yet"}
             {pricingSummary(client, client.currency) && <> · {pricingSummary(client, client.currency)}</>}
           </p>
+          {client.tags.length > 0 && (
+            <p className="mt-1 flex flex-wrap gap-1">
+              {client.tags.map((t) => (
+                <span key={t} className="pill bg-brand-soft text-brand">
+                  #{t}
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {client.website && (
@@ -73,40 +85,64 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
         </div>
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="min-w-0 space-y-6">
-          <section aria-labelledby="funnels-h">
-            <h2 id="funnels-h" className="mb-3 font-display text-xl font-bold">
-              Funnels <span className="text-base font-medium text-muted">({funnels?.length ?? 0})</span>
-            </h2>
-            <FunnelList funnels={funnels ?? []} currency={client.currency} canEdit={canEdit} />
-          </section>
-          <ProductLibrary clientId={client.id} products={products ?? []} currency={client.currency} readOnly={!canEdit} />
-        </div>
-        {/* viewers see the same panels, read-only (RLS refuses their writes anyway) */}
-        <fieldset disabled={!canEdit} className="m-0 min-w-0 space-y-6 border-0 p-0" aria-label={canEdit ? undefined : "Client details (read-only)"}>
-          <section className="card p-5" aria-labelledby="logo-h">
-            <h2 id="logo-h" className="mb-3 font-display text-lg font-bold">
-              Logo
-            </h2>
-            <ClientLogo id={client.id} url={client.logo_url} />
-            <p className="mt-2 text-xs text-muted">Shown on the share pages you send this client.</p>
-          </section>
-          <section className="card p-5" aria-labelledby="notes-h">
-            <h2 id="notes-h" className="mb-3 font-display text-lg font-bold">
-              Notes
-            </h2>
-            <ClientNotes id={client.id} notes={client.notes} />
-          </section>
-          <section className="card p-5" aria-labelledby="details-h">
-            <h2 id="details-h" className="mb-3 font-display text-lg font-bold">
-              Details
-            </h2>
-            <ClientForm action={update} client={client} niches={niches} submitLabel="Save details" />
-          </section>
-          {canEdit && <DeleteClient id={client.id} name={client.name} funnels={funnels?.length ?? 0} />}
-        </fieldset>
-      </div>
+      <ClientTabs
+        initial={tab}
+        tabs={[
+          {
+            key: "funnels",
+            label: "Funnels",
+            count: funnels?.length ?? 0,
+            content: (
+              <section aria-labelledby="funnels-h">
+                <h2 id="funnels-h" className="sr-only">
+                  Funnels
+                </h2>
+                <FunnelList funnels={funnels ?? []} currency={client.currency} canEdit={canEdit} />
+              </section>
+            ),
+          },
+          { key: "products", label: "Products", count: products?.length ?? 0, content: <ProductLibrary clientId={client.id} products={products ?? []} currency={client.currency} readOnly={!canEdit} /> },
+          {
+            key: "notes",
+            label: "Notes",
+            content: (
+              <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
+                <section className="card max-w-[820px] p-5" aria-labelledby="notes-h">
+                  <h2 id="notes-h" className="mb-3 font-display text-lg font-bold">
+                    Notes
+                  </h2>
+                  <ClientNotes id={client.id} notes={client.notes} />
+                </section>
+              </fieldset>
+            ),
+          },
+          {
+            key: "details",
+            label: "Details",
+            content: (
+              /* viewers see the same panels, read-only (RLS refuses their writes anyway) */
+              <fieldset disabled={!canEdit} className="m-0 min-w-0 space-y-6 border-0 p-0" aria-label={canEdit ? undefined : "Client details (read-only)"}>
+                <div className="grid max-w-[1000px] gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+                  <section className="card h-fit p-5" aria-labelledby="logo-h">
+                    <h2 id="logo-h" className="mb-3 font-display text-lg font-bold">
+                      Logo
+                    </h2>
+                    <ClientLogo id={client.id} url={client.logo_url} />
+                    <p className="mt-2 text-xs text-muted">Shown on the share pages you send this client.</p>
+                  </section>
+                  <section className="card p-5" aria-labelledby="details-h">
+                    <h2 id="details-h" className="mb-3 font-display text-lg font-bold">
+                      Details
+                    </h2>
+                    <ClientForm action={update} client={client} niches={niches} submitLabel="Save details" />
+                  </section>
+                </div>
+                {canEdit && <DeleteClient id={client.id} name={client.name} funnels={funnels?.length ?? 0} />}
+              </fieldset>
+            ),
+          },
+        ]}
+      />
     </>
   );
 }

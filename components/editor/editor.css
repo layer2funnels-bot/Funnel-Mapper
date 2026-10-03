@@ -1589,7 +1589,7 @@
   display: none;
 }
 /* desktop: collapsed side panels give their column to the canvas (React Flow resizes itself) */
-@media (min-width: 1021px) {
+@media (min-width: 1280px) {
   .fm-editor.fm-collapse-side {
     grid-template-columns: 48px 0 minmax(0, 1fr) 320px;
   }
@@ -1604,8 +1604,8 @@
     display: none;
   }
 }
-/* 1021-1439px: keep the top bar on one row */
-@media (min-width: 1021px) and (max-width: 1439px) {
+/* 1280-1439px: keep the top bar on one row */
+@media (min-width: 1280px) and (max-width: 1439px) {
   .fm-top {
     gap: 6px;
     padding-inline: 10px;
@@ -1621,8 +1621,8 @@
     font-size: 0;
   }
 }
-/* 1021-1439px: the library lives on the rail and opens as a 256px overlay on the canvas */
-@media (min-width: 1021px) and (max-width: 1439px) {
+/* 1280-1439px: the library lives on the rail and opens as a 256px overlay on the canvas */
+@media (min-width: 1280px) and (max-width: 1439px) {
   .fm-editor,
   .fm-editor.fm-collapse-side {
     grid-template-columns: 48px 0 minmax(0, 1fr) 320px;
@@ -1641,7 +1641,7 @@
     border-right: 1px solid var(--side-line);
   }
 }
-@media (max-width: 1020px) {
+@media (max-width: 1279px) {
   .fm-editor {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "top" "stage" "kpi";
@@ -1692,11 +1692,13 @@
   .fm-fname {
     max-width: 150px;
   }
-  .fm-hide-sm {
-    display: none !important;
-  }
   .fm-stage .react-flow__minimap {
     display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .fm-hide-sm {
+    display: none !important;
   }
 }
 @media (max-width: 640px) {
@@ -1719,8 +1721,113 @@
   left: 50%;
   bottom: 24px;
   transform: translateX(-50%);
-  width: min(560px, calc(100% - 32px));
+  width: min(640px, calc(100% - 32px));
   z-index: 10;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.fp-progress ol {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.fp-progress li {
+  flex: 1;
+  min-width: 0;
+}
+.fp-progress button {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.fp-progress button i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.fp-progress button.done i,
+.fp-progress button[aria-current="step"] i {
+  background: var(--brand);
+}
+.fp-progress button[aria-current="step"] {
+  color: var(--ink);
+}
+.fp-progress button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fp-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.fp-title {
+  margin: 2px 0 4px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--brand);
+}
+.fp-numbers {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.fp-numbers.muted,
+.fp-hint {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.fp-hint {
+  margin: 8px 0 0;
+}
+.fp-obj {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.fp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+@media (max-width: 640px) {
+  /* phone: one stage per screen; the card is a bottom sheet, swipe changes stage, numbers sit under the title */
+  .fm-present-card {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: none;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .fp-title {
+    font-size: 22px;
+  }
+  .fp-actions .seg {
+    order: 5;
+  }
 }
 
 /* share links with numbers hidden: sub-labels carry prices/rates, hide them too */
@@ -2264,7 +2371,7 @@ button.link {
   text-underline-offset: 2px;
   font-weight: 600;
 }
-@media (max-width: 1020px) {
+@media (max-width: 1023px) {
   .fm-reports {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
@@ -2477,9 +2584,7 @@ button.link {
 }
 .fm-group {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 .fm-group .gname {
   font-size: 10.5px;
@@ -3022,4 +3127,537 @@ dialog.fm-typepick {
 }
 .fm-wsblocks li .rm:hover {
   color: var(--neg);
+}
+
+/* widgets */
+.fm-widget {
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: move;
+  user-select: none;
+}
+.fm-widget.sel {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px var(--brand-soft);
+}
+.fm-widget.invalid {
+  border-style: dashed;
+  border-color: var(--attention);
+}
+.fm-widget .wg-scope {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-widget .wg-vals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+.fm-widget.w-S .wg-vals {
+  grid-template-columns: 1fr;
+}
+.fm-widget .wm {
+  min-width: 0;
+  display: grid;
+}
+.fm-widget .ml {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.fm-widget .wm b {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-widget.w-L .wm b {
+  font-size: 22px;
+}
+.fm-widget .wm small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 14px;
+}
+.fm-widget .wg-mrr {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.fm-widget .wg-chart {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin-top: 8px;
+}
+.fm-widget .wg-chart .line {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 2;
+}
+.fm-widget .wg-chart .area {
+  fill: var(--brand-soft);
+}
+.fm-widget .wg-empty {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  /* phone: widgets are S chips on the editor map */
+  .fm-widget {
+    width: 150px !important;
+    min-height: 0 !important;
+  }
+  .fm-widget .wm:nth-child(n + 2),
+  .fm-widget .wg-chart,
+  .fm-widget .wg-mrr,
+  .fm-widget .wm small {
+    display: none;
+  }
+}
+
+/* reports: grouped navigation, period toggle, widgets, key-leak actions */
+.fm-rgroup {
+  margin-bottom: 12px;
+}
+.fm-rgroup h3 {
+  margin: 0 8px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fm-rtitle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fm-rwidgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.fm-rwidgets .fm-widget {
+  cursor: default;
+}
+.fm-rcallout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.fm-rkpis small .link {
+  font-size: inherit;
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--muted) 40%, transparent);
+  text-underline-offset: 3px;
+}
+.fm-rkpis small .link:hover {
+  color: var(--brand);
+}
+@media (max-width: 767px) {
+  .fm-rwidgets {
+    grid-template-columns: 1fr;
+  }
+}
+.fm-rtbl tr.hl th,
+.fm-rtbl tr.hl td {
+  background: var(--brand-soft);
+}
+
+/* share dialog: options + links on the left/right, live preview; a full-height sheet on phones */
+dialog.fm-sharedlg {
+  max-width: 920px;
+}
+.fm-sharegrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.fm-sharepreview {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.fm-sharepreview header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+.fm-sharepreview .logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fm-sharepreview .logos img,
+.fm-sharepreview .logos b {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #0b1220;
+}
+.fm-sharepreview .logos i {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+}
+.fm-sharepreview .who {
+  font-size: 12.5px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-sharepreview .map {
+  display: block;
+  width: 100%;
+  height: 150px;
+}
+.fm-sharepreview ul {
+  margin: 0;
+  padding: 8px 12px 10px 28px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-sharepreview-fold {
+  display: none;
+}
+.fm-sharepreview-fold summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand);
+}
+@media (max-width: 860px) {
+  .fm-sharegrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fm-sharepreview-wide {
+    display: none;
+  }
+  .fm-sharepreview-fold {
+    display: block;
+  }
+}
+@media (max-width: 640px) {
+  dialog.modal.fm-sharedlg,
+  dialog.modal.fm-typepick {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    border-width: 1px 0 0;
+  }
+  dialog.modal.fm-sharedlg::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    margin: -10px auto 12px;
+    background: var(--line);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Responsive bands (V2). >=1440 and 1280-1439: docked panels (above). 1024-1279: floating inspector, Library button.
+   768-1023: bottom sheet, left drawer, 52px + button. <768 (390-430 designed): action bar, compact top bar.
+   --------------------------------------------------------------------------------------------------------------- */
+.fm-libbtn,
+.fm-fab,
+.fm-over,
+.fm-phone-only,
+.fm-sheet-grab {
+  display: none;
+}
+.fm-lbl {
+  display: inline;
+}
+@media (max-width: 1279px) {
+  .fm-lbl,
+  .fm-hide-md,
+  .fm-saved {
+    display: none !important;
+  }
+  .fm-over {
+    display: inline-flex;
+  }
+  .fm-top {
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding-inline: 10px;
+  }
+  .fm-crumbs {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .fm-modes button,
+  .btn.tidy {
+    padding-inline: 9px;
+  }
+  .fm-mobile-only {
+    display: inline-flex;
+  }
+  .fm-sheet-close {
+    display: flex;
+  }
+}
+/* 1024-1279: the details panel floats over the canvas, inset 8px; the library opens from the Library button */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .fm-editor {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "top" "stage" "kpi";
+  }
+  .fm-libbtn {
+    display: inline-flex;
+    box-shadow: var(--shadow);
+    background: var(--panel);
+  }
+  .fm-insp {
+    position: relative;
+    grid-area: stage;
+    justify-self: end;
+    align-self: stretch;
+    width: 320px;
+    height: auto;
+    max-height: none;
+    margin: 8px;
+    z-index: 30;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    transform: none;
+    display: none;
+    padding-bottom: 20px;
+  }
+  .fm-editor.show-insp .fm-insp {
+    display: block;
+  }
+  .fm-side {
+    z-index: 70;
+  }
+}
+/* 768-1023: bottom sheet (50% height, drag to 90%), full-height library drawer, 52px + button, Fit top-right */
+@media (max-width: 1023px) {
+  .fm-sheet-grab {
+    display: block;
+    width: 44px;
+    height: 20px;
+    margin: -8px auto 4px;
+    cursor: grab;
+    touch-action: none;
+    position: relative;
+  }
+  .fm-sheet-grab::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: 8px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+  .fm-sheet-grab:focus-visible {
+    outline: 2px solid var(--brand);
+    border-radius: 6px;
+  }
+  .fm-insp {
+    max-height: none;
+    transition:
+      transform 0.2s,
+      height 0.15s;
+  }
+  .fm-fab {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    z-index: 6;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--brand);
+    color: var(--brand-ink);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .fm-stagebar {
+    left: auto;
+    right: 12px;
+  }
+  .fm-zoom {
+    top: 58px;
+    right: 12px;
+    bottom: auto;
+  }
+  .fm-zoom output,
+  .fm-zoom .btn.icon {
+    display: none;
+  }
+  .fm-side {
+    width: min(320px, 86vw);
+  }
+  .fm-top .btn,
+  .fm-top .fm-modes button {
+    min-height: 44px;
+  }
+}
+/* phone: compact top bar, KPI chips scrolling, 68px action bar */
+@media (max-width: 767px) {
+  .fm-hide-phone {
+    display: none !important;
+  }
+  .fm-phone-only {
+    display: block;
+  }
+  .fm-top .btn.fm-phone-only {
+    display: inline-flex;
+  }
+  .fm-top {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .fm-fname {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    font-size: 14px;
+  }
+  .fm-crumbs {
+    flex: 1 1 0;
+  }
+  .fm-scen {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fm-kpis {
+    min-height: 56px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fm-kpi {
+    flex: none;
+    min-width: 84px;
+  }
+  .fm-kunit {
+    display: none;
+  }
+  .fm-actionbar {
+    grid-area: kpi;
+    min-height: 68px;
+    display: flex;
+    align-items: stretch;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .fm-actionbar button {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    min-width: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .fm-actionbar button:disabled {
+    opacity: 0.4;
+  }
+  .fm-actionbar button.danger {
+    color: var(--neg);
+  }
+  .fm-actionbar .hint {
+    flex: 1;
+    align-self: center;
+    padding: 0 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  /* the sheet sits above the action bar; no floating toolbar or right-click menu on a phone */
+  .fm-editor.fm-has-bar .fm-insp {
+    bottom: 68px;
+  }
+  .fm-ftb {
+    display: none;
+  }
+  .fm-ctx {
+    left: 0 !important;
+    right: 0;
+    bottom: 0;
+    top: auto !important;
+    max-width: none;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .fm-ctx button {
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .fm-quick {
+    left: 8px !important;
+    right: 8px;
+    width: auto;
+  }
+  .fm-insp input,
+  .fm-insp select,
+  .fm-insp textarea {
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .fm-fab {
+    bottom: 14px;
+  }
+  .fm-legend {
+    display: none;
+  }
+}
+.fm-logo-x {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 500;
 }

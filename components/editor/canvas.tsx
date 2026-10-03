@@ -8,7 +8,7 @@ import { addNode, applyEyedropper, openMenu, openQuickAdd, setDragging, startRen
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
-const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link"]);
+const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link", "widget"]);
 const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -247,7 +247,12 @@ export function Canvas() {
         setDragging(false);
       }}
       onMoveStart={(ev) => ev && setDragging(true)}
-      onNodeClick={(_, node) => useEditor.getState().eyedrop && applyEyedropper(node.id)}
+      onNodeClick={(_, node) => {
+        const st = useEditor.getState();
+        if (st.eyedrop) return applyEyedropper(node.id);
+        // phone "Select blocks" mode: taps add or remove blocks from the selection
+        if (st.selectMode) selectNodes(st.selNodes.includes(node.id) ? st.selNodes.filter((x) => x !== node.id) : [...st.selNodes, node.id]);
+      }}
       onNodeDoubleClick={(_, node) => {
         const n = useEditor.getState().nodes.find((x) => x.id === node.id);
         if (n && !isAnnot(n.type)) startRename(n.id);

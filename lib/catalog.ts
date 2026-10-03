@@ -301,6 +301,8 @@ export const TYPES = {
   image: { cat: "annot", label: "Image / logo", icon: "image", d: { src: "", alt: "", fit: "contain" } },
   checklist: { cat: "annot", label: "Checklist", icon: "task", d: { title: "Checklist", items: [] } },
   link: { cat: "annot", label: "Link / video", icon: "link", kw: "embed preview youtube loom url", d: { url: "", title: "" } },
+  // Widget: live numbers on the map (scope, up to 4 metrics, display, size). Added from the canvas menus, not the 169-item library.
+  widget: { cat: "annot", label: "Widget", icon: "chart", d: { scope: "funnel", display: "number", metrics: ["revenue"], wsize: "M" } },
 } satisfies Record<string, BlockType>;
 
 export type BlockTypeKey = keyof typeof TYPES;
@@ -323,6 +325,8 @@ export const INT_LABEL: Record<Interval, string> = { weekly: "week", monthly: "m
 export const SIZED_TYPES = new Set(["frame", "shape", "image"]);
 /** Annotation types with a stored width only (height follows the content). */
 export const WIDTH_TYPES = new Set(["label", "note", "checklist", "link"]);
+/** Widgets are laid out by their size (S / M / L), not by a stored width. */
+export const WIDGET_SIZES = { S: { w: 150, h: 64 }, M: { w: 230, h: 112 }, L: { w: 340, h: 196 } } as const;
 export const DEFAULT_SIZE: Record<string, { w: number; h?: number }> = {
   frame: { w: 520, h: 300 },
   shape: { w: 200, h: 120 },

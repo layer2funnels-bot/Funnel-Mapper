@@ -16,6 +16,7 @@ import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
 import { hostOf, isVideoUrl } from "@/lib/rich-text";
 import { RichText } from "@/components/rich-text";
+import { WidgetNode } from "./widget-node";
 
 type P = NodeProps & { data: { id: string } };
 
@@ -117,6 +118,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const renaming = useEditor((s) => s.renaming === id);
   const multi = useEditor((s) => s.selNodes.length > 1 && s.selNodes.includes(id));
   const spot = useEditor((s) => s.spot);
+  const outOfStage = useEditor((s) => !!s.stageIds && !s.stageIds.includes(id));
   const period = useEditor((s) => s.opts.period);
   const shared = useEditor((s) => s.shared);
   if (!n) return null;
@@ -133,7 +135,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
-  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", n.locked && "locked", n.status === "done" && "live", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
+  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
   const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
@@ -382,4 +384,4 @@ export const LinkNode = memo(function LinkNode({ id, selected }: P) {
   );
 });
 
-export const nodeTypes = { block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode, shape: ShapeNode, image: ImageNode, checklist: ChecklistNode, link: LinkNode };
+export const nodeTypes = { widget: WidgetNode, block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode, shape: ShapeNode, image: ImageNode, checklist: ChecklistNode, link: LinkNode };

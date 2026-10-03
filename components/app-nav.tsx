@@ -8,10 +8,10 @@ import type { UiIconName } from "@/lib/icons";
 import type { WorkspaceOption } from "@/lib/supabase/server";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
-// "Funnels" (all funnels) joins this list with its page in the D6 batch.
 const NAV: { href: string; label: string; icon: UiIconName }[] = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/clients", label: "Clients", icon: "users" },
+  { href: "/funnels", label: "Funnels", icon: "logo" },
   { href: "/templates", label: "Templates", icon: "layers" },
 ];
 const SETTINGS = { href: "/settings", label: "Settings", icon: "settings" as UiIconName };
@@ -93,7 +93,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
           <BrandMark size={26} /> Funnel Mapper Pro
         </Link>
       </div>
-      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] sm:hidden">
+      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] sm:hidden">
         {NAV.map(tab)}
         <button type="button" className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted" aria-expanded={open} onClick={() => setOpen(true)}>
           <Icon name="menu" size={20} />

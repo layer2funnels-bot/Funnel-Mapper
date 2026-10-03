@@ -1,5 +1,5 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
-import { baseOf, CATDARK, CATHEX, NH, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
+import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
 import { money, nf } from "./format";
 import { num, stepRows, type FunnelResult } from "./funnel-math";
 import type { FunnelEdge, FunnelNode, Goal } from "./graph";
@@ -9,6 +9,7 @@ import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 import { goalCurrent } from "./report-data";
+import { formatMetricValue, widgetConfig, widgetMembers, widgetValues } from "./widget-data";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -490,6 +491,33 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       const h = Math.max(H0(n), lines.length * t.lh + py * 2);
       const frame = s?.fill || s?.border || s?.borderW ? box(n.x, n.y, w, h, s, { fill: "none", stroke: "none", sw: 0, r: 0 }) : "";
       body += group(s, frame + textBlock(lines, n.x + px, w - px * 2, n.y + py, t));
+      boxes.push([n.x, n.y, w, h]);
+      return;
+    }
+    if (n.type === "widget") {
+      // widgets are drawn with the plan's numbers (Actuals are not part of an image)
+      if (!opts.nums) return;
+      const cfg = widgetConfig(n.p);
+      const dims = WIDGET_SIZES[cfg.size];
+      const vals = widgetValues(cfg, g.nodes, R, opts.goals ?? []);
+      const { members, invalid } = widgetMembers(cfg, g.nodes);
+      const shown = (cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals);
+      const rows = Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
+      const h = Math.max(dims.h, 30 + rows * 44);
+      const w = dims.w;
+      const scope = cfg.scope === "funnel" ? "WHOLE FUNNEL" : cfg.scope === "frame" ? (g.nodes.find((x) => x.id === cfg.frameId)?.name ?? "FRAME").toUpperCase() : `${members?.length ?? 0} SELECTED STEPS`;
+      let o = box(n.x, n.y, w, h, s, { fill: P.panel, stroke: invalid ? P.alt : P.line, sw: 1, r: 12 });
+      o += `<text x="${n2(n.x + 12)}" y="${n2(n.y + 20)}" font-size="10.5" font-weight="700" letter-spacing=".7" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(ellipsis(scope, w - 24, 10.5, 700, F.sans, measure))}</text>`;
+      shown.forEach((v, i) => {
+        const col = cfg.size === "S" ? 0 : i % 2,
+          row = cfg.size === "S" ? i : Math.floor(i / 2);
+        const cw = cfg.size === "S" ? w - 24 : (w - 24 - 14) / 2;
+        const x = n.x + 12 + col * (cw + 14),
+          y = n.y + 28 + row * 44;
+        o += `<text x="${n2(x)}" y="${n2(y + 10)}" font-size="11.5" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(v.label)}</text>`;
+        o += `<text x="${n2(x)}" y="${n2(y + 32)}" font-size="${cfg.size === "L" ? 22 : 20}" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(formatMetricValue(v, opts.currency), cw, 20, 700, F.display, measure))}</text>`;
+      });
+      body += group(s, o);
       boxes.push([n.x, n.y, w, h]);
       return;
     }

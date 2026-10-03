@@ -4,6 +4,7 @@
 import { create } from "zustand";
 import { blockH, DEFAULT_SIZE, defaultsFor, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
+import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
@@ -97,11 +98,17 @@ export interface EditorState {
   warnIds: Set<string>;
   /** The client's saved products (library "Client products" and Quick Add). */
   products: ClientProduct[];
+  /** Actuals rows of this funnel (loaded on demand for Trend widgets). */
+  actuals: ActualRowDb[] | null;
   /** Left panel: block library, funnel outline or workspace blocks. */
   sideTab: "library" | "outline" | "blocks";
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
+  /** Phone: tap blocks to add them to the selection. */
+  selectMode: boolean;
+  /** Presentation: the steps of the stage being shown (others dim). */
+  stageIds: string[] | null;
   /** Open context menu. */
   menu: MenuState | null;
   /** Copied style (Copy style / Paste style / eyedropper). */
@@ -181,7 +188,10 @@ export const useEditor = create<EditorState>(() => ({
   warnIds: new Set(),
   keyLeak: null,
   products: [],
+  actuals: null,
   sideTab: "library",
+  selectMode: false,
+  stageIds: null,
   stylePresets: [],
   workspaceBlocks: [],
   menu: null,
@@ -357,6 +367,13 @@ export function openQuickAdd(q: EditorState["quick"]) {
 }
 export function closeQuickAdd() {
   set({ quick: null });
+}
+export function setActuals(actuals: ActualRowDb[] | null) {
+  set({ actuals });
+}
+/** Add a widget at (x, y). Scope "frame" needs the frame's id, "selection" the steps it covers. */
+export function addWidget(cfg: { scope: "funnel" | "frame" | "selection"; frameId?: string; nodeIds?: string[]; display?: "number" | "trend" | "chart"; metrics?: string[]; wsize?: "S" | "M" | "L" }, x: number, y: number) {
+  return addNode("widget", x, y, { p: { ...cfg, metrics: cfg.metrics ?? ["revenue", "profit"] }, name: cfg.scope === "frame" ? "Stage widget" : cfg.scope === "selection" ? "Selection widget" : "Funnel widget" });
 }
 export function setSideTab(sideTab: EditorState["sideTab"]) {
   set({ sideTab });

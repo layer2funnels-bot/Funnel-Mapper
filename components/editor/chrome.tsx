@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { setOpt, setSideTab, useEditor } from "@/lib/editor/store";
-
-const sameWhatIf = (a: { traffic: number; conv: number; price: number; cost: number }, b: typeof a) => a.traffic === b.traffic && a.conv === b.conv && a.price === b.price && a.cost === b.cost;
+import { scenarioLabel } from "@/lib/scenario-label";
 
 /** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
 export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
   const w = useEditor((s) => s.settings.whatif);
   const list = useEditor((s) => s.settings.scenarios);
-  const label = sameWhatIf(w, { traffic: 1, conv: 1, price: 1, cost: 1 }) ? "Base case" : (list.find((sc) => sameWhatIf(sc.whatif, w))?.name ?? "What-if");
+  const label = scenarioLabel({ whatif: w, scenarios: list });
   return (
     <button type="button" className="fm-scen fm-hide-sm" onClick={onOpen} aria-label={`Scenario: ${label}`} title="Choose a scenario">
       <i aria-hidden="true" />

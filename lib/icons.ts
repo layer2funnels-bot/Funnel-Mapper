@@ -66,6 +66,7 @@ export const ICONS = {
   line: '<path d="M4 20L20 4"/>',
   arrow: '<path d="M4 20L20 4M10 4h10v10"/>',
   circle: '<circle cx="12" cy="12" r="9"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
 } as const;
 
 export type IconName = keyof typeof ICONS;

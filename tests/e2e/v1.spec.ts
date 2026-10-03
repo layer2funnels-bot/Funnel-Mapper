@@ -13,9 +13,9 @@ test.describe("reports / insights", () => {
     const main = page.locator(".fm-rmain");
     await expect(main.getByRole("heading", { name: "Overview" })).toBeVisible();
     // golden quiz funnel (MASTER_HANDOFF §14): the report agrees with the engine and the KPI bar
-    await expect(main.locator(".fm-rkpis")).toContainText("£6,032");
-    await expect(main.locator(".fm-rkpis")).toContainText("89.1");
-    await expect(main.locator(".fm-rkpis")).toContainText("13.4x");
+    await expect(main.locator(".fm-rkpis").first()).toContainText("£6,032");
+    await expect(main.locator(".fm-rkpis").first()).toContainText("89.1");
+    await expect(main.locator(".fm-rkpis").first()).toContainText("13.4x");
     await expect(main).toContainText("Key leak: Quiz funnel");
     for (const name of ["Funnel data", "Traffic sources", "Offers & products", "Expenses", "Scenario comparison", "Revenue & profit forecast", "Goals & required numbers", "MRR forecast", "Month-to-month", "Traffic reinvestment", "Published status"]) {
       await page.locator(".fm-rnav").getByRole("button", { name, exact: true }).click();
@@ -48,7 +48,7 @@ test.describe("reports / insights", () => {
     await page.locator(".fm-rnav").getByRole("button", { name: "Funnel data" }).click();
     await main.getByLabel("Status of Quiz funnel").selectOption("done");
     await page.locator(".fm-rnav").getByRole("button", { name: "Published status" }).click();
-    await expect(main.locator(".fm-rkpis")).toContainText("1 of 11 steps live");
+    await expect(main.locator(".fm-rkpis").first()).toContainText("1 of 11 steps live");
 
     // scenarios: presets from the map's Scenarios tab, compared in Reports with deltas
     await page.getByRole("button", { name: "Map", exact: true }).click();
@@ -173,6 +173,7 @@ test.describe("roles and clients", () => {
     await page.goto(`/clients/${DEMO_CLIENT}`);
     await expect(page.getByRole("heading", { name: /Sam Carter/ })).toBeVisible();
     await expect(page.getByRole("button", { name: "New funnel" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Details" }).click();
     await expect(page.getByRole("button", { name: "Save details" })).toBeDisabled();
     await expect(page.getByRole("button", { name: /Delete client/ })).toHaveCount(0);
     // the editor is view-only: no share, no editing, but reports and analytics work
@@ -185,7 +186,7 @@ test.describe("roles and clients", () => {
     await page.getByRole("tab", { name: "Analytics" }).click();
     await expect(page.locator(".fm-insp")).toContainText("Share of all visitors");
     await page.getByRole("button", { name: "Reports", exact: true }).click();
-    await expect(page.locator(".fm-rkpis")).toContainText("£6,032");
+    await expect(page.locator(".fm-rkpis").first()).toContainText("£6,032");
     await page.goto("/settings");
     await expect(page.locator("main")).toContainText("Viewer");
     await expect(page.getByRole("heading", { name: "Invite a teammate" })).toHaveCount(0);
@@ -206,7 +207,7 @@ test.describe("roles and clients", () => {
     await sb.auth.signInWithPassword({ email: "demo@layer2funnels.test", password: "demo-password" });
     const name = `Archive me ${Date.now()}`;
     const { data } = await sb.from("clients").insert({ name, owner_id: (await sb.auth.getUser()).data.user!.id }).select("id").single();
-    await page.goto(`/clients/${data!.id}`);
+    await page.goto(`/clients/${data!.id}?tab=details`);
     // logo upload (P0: upload, preview, persist)
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
     await page.getByLabel("Upload logo").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });

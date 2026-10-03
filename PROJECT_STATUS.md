@@ -346,6 +346,11 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 - **D2:** V2 top bar, 48px rail, 256px library with categories, Clean | Performance switch, KPI strip with checks chip and "+9 more", mid-width overlay library.
 - **Tests:** unit 143/143 (+4 block-visual tests), DB 48/48; E2E 88/88 (two tests clicked a canvas point now covered by the Clean / Performance switch; the click moved).
 
+## V2 final completion pass (checkpoint)
+
+See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. Unit 189/189, DB 52/52, E2E 88/88, typecheck / lint / build clean.
+New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
+
 ## I. Recommended order (history)
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)

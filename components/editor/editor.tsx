@@ -15,6 +15,7 @@ import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { clearDraft, readDraft, useAutosave, type SaveFn } from "@/lib/editor/saver";
 import {
+  addWidget,
   armEyedropper,
   clearSelection,
   copyStyle,
@@ -45,6 +46,9 @@ import {
   undo,
   useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
+import { kbd } from "@/lib/platform";
+import { useBand } from "@/lib/use-band";
+import { PhoneActionBar } from "./phone-bar";
 import { loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
@@ -99,9 +103,9 @@ export function Editor(props: EditorProps) {
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (!!t.closest("input, textarea, select, [contenteditable=true]") || !!document.querySelector("dialog[open]"));
 
-// 1021-1439px: the library opens as an overlay on the canvas and closes when you start working on the canvas or press Esc
+// 1280-1439px: the library opens as an overlay on the canvas and closes when you start working on the canvas or press Esc
 function closeOverlayLibrary() {
-  if (window.matchMedia("(min-width: 1021px) and (max-width: 1439px)").matches && !useEditor.getState().opts.hideSide) setOpt("hideSide", true);
+  if (window.matchMedia("(min-width: 1280px) and (max-width: 1439px)").matches && !useEditor.getState().opts.hideSide) setOpt("hideSide", true);
 }
 
 function EditorInner(props: EditorProps) {
@@ -120,6 +124,12 @@ function EditorInner(props: EditorProps) {
   const helpRef = useRef<HTMLDialogElement>(null);
   const tipsRef = useRef<HTMLDialogElement>(null);
   const sideTab = useEditor((s) => s.sideTab);
+  const selectMode = useEditor((s) => s.selectMode);
+  const selNodesCount = useEditor((s) => s.selNodes.length);
+  const selEdgeId = useEditor((s) => s.selEdge);
+  const band = useBand();
+  const [sheetH, setSheetH] = useState(50);
+  const sheetDrag = useRef<{ y: number; h: number } | null>(null);
   const shareRef = useRef<HTMLDialogElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -143,7 +153,6 @@ function EditorInner(props: EditorProps) {
   /* ---------- init ---------- */
   useEffect(() => {
     const canEdit = manage || !!share?.canEdit;
-    const narrow = window.matchMedia("(max-width: 640px)").matches;
     let graph = funnel.graph,
       settings = funnel.settings,
       nm = funnel.name;
@@ -158,7 +167,7 @@ function EditorInner(props: EditorProps) {
       } else if (d) clearDraft(funnel.id);
     }
     if (share?.hideNumbers) settings = { ...settings, hideNumbers: true };
-    initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit || narrow, shared: !owner, viewer: !!props.viewer });
+    initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit, shared: !owner, viewer: !!props.viewer });
     if (share?.hideNumbers) setOpt("nums", false);
     // deep link: ?view=reports[&section=goals]
     const q = new URLSearchParams(window.location.search);
@@ -439,6 +448,38 @@ function EditorInner(props: EditorProps) {
     [],
   );
 
+  // when the details panel floats over the canvas (1024-1279) or covers the lower half (sheet), pan so the selection stays visible
+  useEffect(
+    () =>
+      useEditor.subscribe((st, prev) => {
+        if (st.selNodes === prev.selNodes || !st.selNodes.length) return;
+        const w = window.innerWidth;
+        if (w >= 1280) return;
+        requestAnimationFrame(() => {
+          const stage = document.querySelector(".fm-stage")?.getBoundingClientRect();
+          if (!stage) return;
+          const vp = rf.getViewport();
+          const sel = st.nodes.filter((n) => st.selNodes.includes(n.id));
+          if (!sel.length) return;
+          const l = Math.min(...sel.map((n) => n.x)) * vp.zoom + vp.x,
+            r = Math.max(...sel.map((n) => n.x + widthOf(n))) * vp.zoom + vp.x,
+            t = Math.min(...sel.map((n) => n.y)) * vp.zoom + vp.y,
+            b = Math.max(...sel.map((n) => n.y + heightOf(n))) * vp.zoom + vp.y;
+          // free area: left of the 320px floating panel (md), or above the bottom sheet (tablet / phone)
+          const freeW = w >= 1024 ? stage.width - 340 : stage.width,
+            freeH = w >= 1024 ? stage.height : stage.height * 0.5 - 8;
+          let dx = 0,
+            dy = 0;
+          if (r > freeW - 12) dx = freeW - 12 - r;
+          if (l + dx < 12) dx = 12 - l;
+          if (b > freeH - 12) dy = freeH - 12 - b;
+          if (t + dy < 12) dy = 12 - t;
+          if (dx || dy) rf.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }, { duration: 250 });
+        });
+      }),
+    [rf],
+  );
+
   // keep the address in sync with Map / Reports so the view can be bookmarked or shared with the team
   useEffect(
     () =>
@@ -465,55 +506,9 @@ function EditorInner(props: EditorProps) {
 
   const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
   const canEdit = manage || !!share?.canEdit;
-  const cls = ["fm-editor", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
+  const cls = ["fm-editor", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
-  if (presenting)
-    return (
-      <div className="fm-present">
-        <div className="fm-stage">
-          <Canvas />
-        </div>
-        <Presenter onExit={() => setPresenting(false)} />
-      </div>
-    );
-
-  return (
-    <div className={cls}>
-      <header className="fm-top">
-        {!readOnly && (
-          <button type="button" className="btn icon fm-mobile-only" aria-label="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
-            <Icon name="plus" />
-          </button>
-        )}
-        {!owner && (
-          <span className="flex items-center gap-2 font-display font-extrabold">
-            {agency.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={agency.logo_url} alt="" className="h-7 w-7 rounded-md bg-white object-contain" />
-            ) : (
-              <BrandMark />
-            )}
-            <span className="fm-hide-sm">{agency.name}</span>
-          </span>
-        )}
-        <div className="fm-crumbs">
-          {owner && (
-            <>
-              <Link href={`/clients/${client.id}`} className="fm-crumb" aria-label={`Back to ${client.name}`} title={`Back to ${client.name}`}>
-                {client.name}
-              </Link>
-              <span className="sep" aria-hidden="true">
-                /
-              </span>
-            </>
-          )}
-          <label className="sr-only" htmlFor="fm-fname">
-            Funnel name
-          </label>
-          <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} />
-        </div>
-        <Menu label="File">
-          {(close) => (
+  const fileMenu = (close: () => void) => (
             <>
               {owner && (
                 <>
@@ -567,59 +562,8 @@ function EditorInner(props: EditorProps) {
                 <Icon name="play" size={16} /> Present
               </button>
             </>
-          )}
-        </Menu>
-        {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
-        {!share?.hideNumbers && (
-          <div className="seg fm-modes" role="group" aria-label="View">
-            <button type="button" aria-pressed={!reports} onClick={() => setMode("map")}>
-              <Icon name="layers" size={15} />
-              <span className="fm-hide-xs">Map</span>
-            </button>
-            <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights">
-              <Icon name="chart" size={15} />
-              <span className="fm-hide-xs">Reports</span>
-            </button>
-          </div>
-        )}
-        {canEdit && (
-          <>
-            <button type="button" className="btn icon" aria-label="Undo" title="Undo (Ctrl Z)" onClick={undo} disabled={readOnly || !canUndo}>
-              <Icon name="undo" />
-            </button>
-            <button type="button" className="btn icon" aria-label="Redo" title="Redo (Ctrl Shift Z)" onClick={redo} disabled={readOnly || !canRedo}>
-              <Icon name="redo" />
-            </button>
-            <button type="button" className="btn tidy" title="Tidy up layout (Ctrl Shift L)" onClick={() => runTidy()} disabled={readOnly}>
-              <Icon name="sparkle" />
-              <span className="fm-hide-sm">Tidy up</span>
-            </button>
-          </>
-        )}
-        <span className="flex-1" />
-        {manage && (
-          <label className="fm-hide-sm">
-            <span className="sr-only">Funnel status</span>
-            <select
-              className="btn"
-              value={status}
-              onChange={async (e) => {
-                const v = e.target.value;
-                setStatus(v);
-                const { error } = await supabaseBrowser().from("funnels").update({ status: v }).eq("id", funnel.id);
-                if (error) showToast("Couldn’t change status");
-              }}
-            >
-              {FUNNEL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <Menu label="View" align="right">
-          {(close) => (
+  );
+  const viewMenu = (close: () => void) => (
             <>
               <div className="ph">Layers</div>
               {!share?.hideNumbers && (
@@ -707,18 +651,134 @@ function EditorInner(props: EditorProps) {
                 Keyboard shortcuts<kbd>?</kbd>
               </button>
             </>
+  );
+
+  if (presenting)
+    return (
+      <div className="fm-present">
+        <div className="fm-stage">
+          <Canvas />
+        </div>
+        <Presenter onExit={() => setPresenting(false)} />
+      </div>
+    );
+
+  return (
+    <div className={cls}>
+      <header className="fm-top">
+        {!owner && (
+          <span className="flex items-center gap-2 font-display font-extrabold">
+            {agency.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={agency.logo_url} alt="" className="h-7 w-7 rounded-md bg-white object-contain" />
+            ) : (
+              <BrandMark />
+            )}
+            <span className="fm-hide-sm">{agency.name}</span>
+            {client.name && (
+              <>
+                <i className="fm-logo-x" aria-hidden="true">
+                  ×
+                </i>
+                {client.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={client.logo_url} alt={`${client.name} logo`} className="h-7 w-7 rounded-md bg-white object-contain" />
+                ) : (
+                  <span className="grid h-7 w-7 place-items-center rounded-md bg-brand-soft text-xs font-bold text-brand" aria-hidden="true">
+                    {client.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <span className="fm-hide-sm font-semibold">{client.name}</span>
+              </>
+            )}
+          </span>
+        )}
+        {owner && (
+          <Link href={`/clients/${client.id}`} className="btn icon fm-phone-only" aria-label={`Back to ${client.name}`}>
+            <Icon name="back" />
+          </Link>
+        )}
+        <div className="fm-crumbs">
+          {owner && (
+            <>
+              <Link href={`/clients/${client.id}`} className="fm-crumb fm-hide-phone" aria-label={`Back to ${client.name}`} title={`Back to ${client.name}`}>
+                {client.name}
+              </Link>
+              <span className="sep fm-hide-phone" aria-hidden="true">
+                /
+              </span>
+            </>
           )}
-        </Menu>
-        <span className="fm-saved fm-hide-xs" data-s={saveStatus} role="status" aria-live="polite">
+          <label className="sr-only" htmlFor="fm-fname">
+            Funnel name
+          </label>
+          <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} title={name} />
+        </div>
+        <span className="fm-hide-phone">
+          <Menu label="File">{fileMenu}</Menu>
+        </span>
+        {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
+        {!share?.hideNumbers && (
+          <div className="seg fm-modes" role="group" aria-label="View">
+            <button type="button" aria-pressed={!reports} onClick={() => setMode("map")} aria-label="Map" title="Map" className="fm-hide-phone">
+              <Icon name="layers" size={15} />
+              <span className="fm-lbl">Map</span>
+            </button>
+            <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights" aria-label="Reports">
+              <Icon name="chart" size={15} />
+              <span className="fm-lbl fm-hide-phone">Reports</span>
+            </button>
+          </div>
+        )}
+        {canEdit && (
+          <span className="fm-edit-tools fm-hide-phone">
+            <button type="button" className="btn icon" aria-label="Undo" title={`Undo (${kbd("Mod+Z")})`} onClick={undo} disabled={readOnly || !canUndo}>
+              <Icon name="undo" />
+            </button>
+            <button type="button" className="btn icon" aria-label="Redo" title={`Redo (${kbd("Mod+Shift+Z")})`} onClick={redo} disabled={readOnly || !canRedo}>
+              <Icon name="redo" />
+            </button>
+            <button type="button" className="btn tidy" title={`Tidy up layout (${kbd("Mod+Shift+L")})`} aria-label="Tidy up" onClick={() => runTidy()} disabled={readOnly}>
+              <Icon name="sparkle" />
+              <span className="fm-lbl">Tidy up</span>
+            </button>
+          </span>
+        )}
+        <span className="flex-1" />
+        {manage && (
+          <label className="fm-hide-md">
+            <span className="sr-only">Funnel status</span>
+            <select
+              className="btn"
+              value={status}
+              onChange={async (e) => {
+                const v = e.target.value;
+                setStatus(v);
+                const { error } = await supabaseBrowser().from("funnels").update({ status: v }).eq("id", funnel.id);
+                if (error) showToast("Couldn’t change status");
+              }}
+            >
+              {FUNNEL_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <span className="fm-hide-phone">
+          <Menu label="View" align="right">{viewMenu}</Menu>
+        </span>
+        <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
           <span className="dot" aria-hidden="true" />
           {saveLabel[saveStatus]}
         </span>
-        <button type="button" className="btn icon fm-mobile-only" aria-label="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
+        <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
           <Icon name="chart" />
         </button>
         <button
           type="button"
-          className="btn icon ghost fm-hide-sm"
+          className="btn icon ghost fm-hide-md"
           aria-label={`${collapsed.insp ? "Expand" : "Collapse"} details panel`}
           title={`${collapsed.insp ? "Show" : "Hide"} details panel`}
           aria-expanded={!collapsed.insp}
@@ -728,33 +788,33 @@ function EditorInner(props: EditorProps) {
           <Icon name="panelRight" />
         </button>
         {(owner || notesShared) && (
-          <button type="button" className="btn icon fm-mobile-only" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
+          <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
             <Icon name="note" />
           </button>
         )}
         {owner && (
           <>
-            <button type="button" className="btn icon fm-hide-sm" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
+            <button type="button" className="btn icon fm-hide-md" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="history" />
             </button>
-            <button type="button" className="btn icon fm-hide-sm" aria-label="Present" title="Present to the client" onClick={() => setPresenting(true)} disabled={!hasNodes}>
+            <button type="button" className="btn icon fm-hide-md" aria-label="Present" title="Present to the client" onClick={() => setPresenting(true)} disabled={!hasNodes}>
               <Icon name="play" />
             </button>
-            <button type="button" className="btn fm-hide-sm relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
+            <button type="button" className="btn fm-hide-md relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="comment" />
               {commentCount > 0 && <span className="pill bg-brand px-1.5! py-0! text-brand-ink">{commentCount}</span>}
             </button>
             {manage && (
               <button
                 type="button"
-                className="btn primary"
+                className="btn primary fm-hide-phone"
                 onClick={() => {
                   setShareOpen(true);
                   shareRef.current?.showModal();
                 }}
               >
                 <Icon name="share" />
-                <span className="fm-hide-sm">Share</span>
+                <span>Share</span>
               </button>
             )}
             {props.viewer && (
@@ -768,6 +828,56 @@ function EditorInner(props: EditorProps) {
           <button type="button" className="btn" onClick={() => setPresenting(true)} disabled={!hasNodes}>
             <Icon name="play" /> <span className="fm-hide-sm">Present</span>
           </button>
+        )}
+        {/* below 1280: comments, history and present move into the overflow menu; on a phone it holds most of the bar */}
+        {owner && (
+          <span className="fm-over">
+            <Menu label="More" align="right" className="btn icon" buttonContent={<Icon name="more" />}>
+              {(close) => (
+                <>
+                  <div className="fm-phone-only">
+                    {canEdit && (
+                      <>
+                        <button type="button" role="menuitem" onClick={() => (close(), undo())} disabled={readOnly || !canUndo}>
+                          Undo
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => (close(), redo())} disabled={readOnly || !canRedo}>
+                          Redo
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => (close(), runTidy())} disabled={readOnly}>
+                          Tidy up
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => (close(), useEditor.setState((x) => ({ selectMode: !x.selectMode })))} disabled={readOnly}>
+                          {selectMode ? "Done selecting" : "Select blocks"}
+                        </button>
+                        <hr />
+                      </>
+                    )}
+                  </div>
+                  <button type="button" role="menuitem" onClick={() => (close(), setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
+                    Client comments{commentCount > 0 ? ` (${commentCount})` : ""}
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => (close(), setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
+                    Version history
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => (close(), setPresenting(true))} disabled={!hasNodes}>
+                    Present
+                  </button>
+                  {manage && (
+                    <button type="button" role="menuitem" className="fm-phone-only" onClick={() => (close(), setShareOpen(true), shareRef.current?.showModal())}>
+                      Share…
+                    </button>
+                  )}
+                  <div className="fm-phone-only">
+                    <hr />
+                    {fileMenu(close)}
+                    <hr />
+                    {viewMenu(close)}
+                  </div>
+                </>
+              )}
+            </Menu>
+          </span>
         )}
       </header>
 
@@ -810,6 +920,11 @@ function EditorInner(props: EditorProps) {
         {ready && <Canvas />}
         {ready && !reports && !share?.hideNumbers && (
           <div className="fm-stagebar">
+            {!readOnly && (
+              <button type="button" className="btn fm-libbtn" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
+                <Icon name="panelLeft" size={15} /> Library
+              </button>
+            )}
             <ViewSwitch />
             <LayersMenu />
           </div>
@@ -824,6 +939,11 @@ function EditorInner(props: EditorProps) {
             </div>
           </div>
         )}
+        {ready && !readOnly && !reports && (
+          <button type="button" className="fm-fab" aria-label="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
+            <Icon name="plus" size={24} />
+          </button>
+        )}
         <ZoomControls />
         <QuickAdd />
         {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
@@ -833,7 +953,31 @@ function EditorInner(props: EditorProps) {
         )}
       </section>
 
-      <aside className="fm-insp" id="fm-insp" aria-label="Details">
+      <aside className="fm-insp" id="fm-insp" aria-label="Details" style={band === "tablet" || band === "phone" ? { height: `${sheetH}dvh` } : undefined}>
+        <div
+          className="fm-sheet-grab"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Drag to resize the details sheet"
+          tabIndex={0}
+          onPointerDown={(e) => {
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            sheetDrag.current = { y: e.clientY, h: sheetH };
+          }}
+          onPointerMove={(e) => {
+            const d = sheetDrag.current;
+            if (!d) return;
+            setSheetH(Math.max(30, Math.min(90, d.h + ((d.y - e.clientY) / window.innerHeight) * 100)));
+          }}
+          onPointerUp={() => {
+            sheetDrag.current = null;
+            setSheetH((h) => (h > 70 ? 90 : 50)); // snap: half height, or nearly full
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") setSheetH(90);
+            if (e.key === "ArrowDown") setSheetH(50);
+          }}
+        />
         <div className="fm-sheet-close">
           <button type="button" className="btn icon ghost" aria-label="Close details" onClick={() => setShowInsp(false)}>
             <Icon name="close" />
@@ -853,8 +997,8 @@ function EditorInner(props: EditorProps) {
         )}
       </aside>
 
-      {!share?.hideNumbers && <KpiBar />}
-      {reports && <ReportsView />}
+      {!share?.hideNumbers && (band === "phone" && (selNodesCount > 0 || selEdgeId || selectMode) ? <PhoneActionBar /> : <KpiBar />)}
+      {reports && <ReportsView onExportPdf={manage || share?.canEdit || mode === "share" ? () => doExport("pdf") : undefined} />}
 
       <input
         ref={fileRef}
@@ -869,13 +1013,23 @@ function EditorInner(props: EditorProps) {
       />
       <HelpDialog ref={helpRef} />
       <HelpDialog ref={tipsRef} mode="help" />
-      {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
+      {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} clientName={client.name} clientLogo={client.logo_url} agencyName={agency.name} agencyLogo={agency.logo_url} />}
       {manage && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
       {ready && (
         <ContextMenu
           onTidy={() => runTidy()}
           onFit={() => rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 })}
           onShortcuts={() => helpRef.current?.showModal()}
+          onWidget={(scope, at) => {
+            const st = useEditor.getState();
+            const flowSel = st.selNodes.filter((id) => st.nodes.some((x) => x.id === id && !isAnnot(x.type)));
+            const box = document.querySelector(".fm-stage")?.getBoundingClientRect();
+            const centre = box ? rf.screenToFlowPosition({ x: box.left + box.width / 2, y: box.top + box.height / 3 }) : { x: 100, y: 100 };
+            if (scope === "selection" && flowSel.length) {
+              const ns = st.nodes.filter((x) => flowSel.includes(x.id));
+              addWidget({ scope: "selection", nodeIds: flowSel }, Math.max(...ns.map((x) => x.x + widthOf(x))) + 40, Math.min(...ns.map((x) => x.y)));
+            } else addWidget({ scope: "funnel" }, at?.x ?? centre.x, at?.y ?? centre.y);
+          }}
         />
       )}
       {ready && <TypePicker />}

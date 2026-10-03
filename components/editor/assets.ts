@@ -3,7 +3,7 @@
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { nodeSchema, edgeSchema, type FunnelEdge, type FunnelNode } from "@/lib/graph";
 import { cleanStyle, type NodeStyle } from "@/lib/style";
-import { setAssets, showToast, useEditor, type StylePreset, type WorkspaceBlock } from "@/lib/editor/store";
+import { setActuals, setAssets, showToast, useEditor, type StylePreset, type WorkspaceBlock } from "@/lib/editor/store";
 import { z } from "zod";
 
 const blockData = z.object({ nodes: z.array(nodeSchema), edges: z.array(edgeSchema) });
@@ -45,6 +45,15 @@ export async function saveWorkspaceBlock(name: string) {
   if (error) return showToast("Couldn’t save the workspace block");
   await loadAssets();
   showToast(`Saved “${name.trim()}” as a workspace block`);
+}
+
+/** Load this funnel's Actuals once (Trend widgets compare them with the plan). Owners and editors only: share links have none. */
+export async function ensureActuals() {
+  const s = useEditor.getState();
+  if (s.actuals !== null || s.shared || !s.funnelId) return;
+  setActuals([]);
+  const { data } = await supabaseBrowser().from("funnel_actuals").select("*").eq("funnel_id", s.funnelId);
+  setActuals(data ?? []);
 }
 
 export async function removeAsset(id: string) {

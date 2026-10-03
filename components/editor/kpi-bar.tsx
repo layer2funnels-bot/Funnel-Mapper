@@ -1,4 +1,5 @@
 "use client";
+import { useBand } from "@/lib/use-band";
 import { useFocusBlock } from "./focus";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
@@ -37,6 +38,7 @@ function Pop({ label, button, children, wide }: { label: string; button: (open: 
 
 /** Bottom strip (V2 D2): checks chip, the six headline numbers, "+N more", and the unit the numbers are in. Every figure is the engine's `R`. */
 export function KpiBar() {
+  const band = useBand();
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const basis = useEditor((s) => s.settings.basis);
@@ -69,6 +71,19 @@ export function KpiBar() {
     ["LTV / customer", m(R.ltvc)],
   ];
   const named = nodes.filter((n) => warnIds.has(n.id));
+  // bands: what the strip shows; everything else goes into "+N more" (phone: every figure, scrolling)
+  const all = [...main, ...more];
+  const SHOW: Record<string, string[] | "all"> = {
+    xl: main.map(([k]) => k),
+    lg: main.map(([k]) => k),
+    md: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS", "Customers"],
+    tablet: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS"],
+    phone: "all",
+  };
+  const rule = SHOW[band];
+  const strip = rule === "all" ? all : all.filter(([k]) => rule.includes(k));
+  const rest = rule === "all" ? [] : all.filter(([k]) => !rule.includes(k));
+  const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
     <footer className="fm-kpis" aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
@@ -78,7 +93,8 @@ export function KpiBar() {
             checks.length > 0 ? (
               <span className="fm-chk warn">
                 <Icon name="alert" size={14} />
-                {checks.length} {checks.length === 1 ? "check" : "checks"}
+                {checks.length}
+                {!compactChecks && (checks.length === 1 ? " check" : " checks")}
               </span>
             ) : (
               <span className="fm-chk ok">
@@ -134,32 +150,34 @@ export function KpiBar() {
           )}
         </Pop>
       )}
-      {main.map(([a, b]) => (
+      {strip.map(([a, b]) => (
         <div className="fm-kpi" key={a}>
           <div>{a}</div>
           <b>{b}</b>
         </div>
       ))}
-      <Pop
-        label="More numbers"
-        wide
-        button={() => (
-          <>
-            <span className="fm-kmore">+{more.length} more</span>
-          </>
-        )}
-      >
-        {() => (
-          <dl className="fm-kgrid">
-            {more.map(([a, b]) => (
-              <div key={a}>
-                <dt>{a}</dt>
-                <dd>{b}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </Pop>
+      {rest.length > 0 && (
+        <Pop
+          label="More numbers"
+          wide
+          button={() => (
+            <>
+              <span className="fm-kmore">+{rest.length}{band === "md" || band === "tablet" ? "" : " more"}</span>
+            </>
+          )}
+        >
+          {() => (
+            <dl className="fm-kgrid">
+              {rest.map(([a, b]) => (
+                <div key={a}>
+                  <dt>{a}</dt>
+                  <dd>{b}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </Pop>
+      )}
       <span className="fm-kunit">per month · {cur}</span>
     </footer>
   );

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
 import { timeAgo } from "@/lib/format";
-import { pricingShort, pricingSummary, pricingValue } from "@/lib/pricing";
+import { PRICING_LABEL, PRICING_MODELS, pricingModel, pricingShort, pricingSummary, pricingValue } from "@/lib/pricing";
 import { CLIENT_STATUSES, STATUS_LABEL, type ClientRow } from "@/lib/schemas";
 
 export type ClientListItem = ClientRow & { funnels: number; liveFunnels: number };
@@ -12,11 +12,12 @@ type Sort = "updated" | "name" | "value" | "created" | "funnels";
 
 function useViewPref() {
   const [view, setView] = useState<"cards" | "table">(() => {
-    if (typeof window === "undefined") return "cards";
+    // V2: the table is the default; the choice is remembered per device
+    if (typeof window === "undefined") return "table";
     try {
-      return (localStorage.getItem("fm-clients-view") as "cards" | "table") || "cards";
+      return (localStorage.getItem("fm-clients-view") as "cards" | "table") || "table";
     } catch {
-      return "cards";
+      return "table";
     }
   });
   const set = (v: "cards" | "table") => {
@@ -44,6 +45,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
   const [status, setStatus] = useState(initialStatus);
   const [niche, setNiche] = useState("");
   const [tag, setTag] = useState("");
+  const [pricing, setPricing] = useState("");
   const [sort, setSort] = useState<Sort>("updated");
   const [archived, setArchived] = useState(false);
   const archivedCount = clients.filter((c) => c.archived_at).length;
@@ -59,6 +61,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
         (!status || c.status === status) &&
         (!niche || c.niche === niche) &&
         (!tag || c.tags.includes(tag)) &&
+        (!pricing || pricingModel(c) === pricing) &&
         !!c.archived_at === archived,
     );
     const cmp: Record<Sort, (a: ClientListItem, b: ClientListItem) => number> = {
@@ -69,7 +72,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
       funnels: (a, b) => b.funnels - a.funnels,
     };
     return out.sort(cmp[sort]);
-  }, [clients, q, status, niche, tag, sort, archived]);
+  }, [clients, q, status, niche, tag, pricing, sort, archived]);
 
   return (
     <>
@@ -91,6 +94,14 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
           <option value="">All niches</option>
           {niches.map((n) => (
             <option key={n}>{n}</option>
+          ))}
+        </select>
+        <select className="input w-auto" aria-label="Filter by pricing" value={pricing} onChange={(e) => setPricing(e.target.value)}>
+          <option value="">All pricing</option>
+          {PRICING_MODELS.map((m) => (
+            <option key={m} value={m}>
+              {PRICING_LABEL[m]}
+            </option>
           ))}
         </select>
         <select className="input w-auto" aria-label="Filter by tag" value={tag} onChange={(e) => setTag(e.target.value)}>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { compute, summary } from "@/lib/funnel-math";
 import { blankGraph, blankSettings, importFunnelFile, isCurrency, parseGraph, parseSettings, type CurrencyCode } from "@/lib/graph";
+import { clearPendingSignup, startIndependentSignup } from "@/lib/independent";
 import { normalisePricing } from "@/lib/pricing";
 import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schemas";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -177,21 +178,21 @@ async function requireAdmin() {
 }
 
 export async function updateWorkspaceAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, isAdmin } = await requireUser();
+  const { sb, isAdmin, workspace } = await requireUser();
   if (!isAdmin) return { error: "Only workspace admins can change branding" };
   const p = z
     .object({ agency_name: z.string().trim().min(1, "Enter the agency name").max(120), default_currency: z.string().refine(isCurrency, "Pick a currency") })
     .safeParse({ agency_name: fd.get("agency_name"), default_currency: fd.get("default_currency") });
   if (!p.success) return { error: p.error.issues[0].message };
-  const { error } = await sb.from("workspace").update(p.data).eq("id", 1);
+  const { error } = await sb.from("workspaces").update(p.data).eq("id", workspace.id);
   if (error) return { error: error.message };
   revalidatePath("/", "layout");
   return { ok: true };
 }
 
 export async function updateAgencyLogo(url: string | null) {
-  const { sb } = await requireAdmin();
-  const { error } = await sb.from("workspace").update({ agency_logo_url: z.url().nullable().parse(url) }).eq("id", 1);
+  const { sb, workspace } = await requireAdmin();
+  const { error } = await sb.from("workspaces").update({ agency_logo_url: z.url().nullable().parse(url) }).eq("id", workspace.id);
   if (error) throw new Error(error.message);
   revalidatePath("/", "layout");
 }
@@ -205,16 +206,39 @@ export async function setMemberAction(id: string, patch: { role?: "admin" | "mem
   return { ok: true };
 }
 
+const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+
+/** Invite a teammate into the Layer2Funnels team workspace (team admins only). */
 export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const { isTeam } = await requireAdmin();
+  if (!isTeam) return { error: "Only the Layer2Funnels team workspace can invite teammates." };
   const p = z.object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default("") }).safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
   const admin = supabaseAdmin();
   if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
-  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+  await clearPendingSignup(p.data.email);
+  const site = siteUrl();
   const { error } = await admin.auth.admin.inviteUserByEmail(p.data.email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
   if (error) return { error: /already/i.test(error.message) ? "That person already has an account. Reactivate them in the list below if needed." : error.message };
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+const independentSchema = z.object({
+  email: z.email("Enter a valid email"),
+  full_name: z.string().trim().max(120).default(""),
+  workspace_name: z.string().trim().max(120).default(""),
+});
+
+/** Create an independent account with its own private workspace (team admins only). */
+export async function createIndependentAccountAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const { isTeam } = await requireAdmin();
+  if (!isTeam) return { error: "Only Layer2Funnels team admins can create independent accounts." };
+  const p = independentSchema.safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", workspace_name: fd.get("workspace_name") ?? "" });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const r = await startIndependentSignup(p.data, siteUrl());
+  if (r.exists) return { error: "That email already has an account." };
+  if (r.error) return { error: r.error };
   return { ok: true };
 }
 

@@ -11,7 +11,7 @@ export function LoginForm({ next, error }: { next: string; error?: string }) {
   return (
     <>
       <h1 className="mb-1 font-display text-2xl font-bold">Sign in</h1>
-      <p className="mb-5 text-sm text-muted">Layer2Funnels team workspace.</p>
+      <p className="mb-5 text-sm text-muted">Sign in to your workspace.</p>
       <div className="tabs" role="tablist" aria-label="Sign-in method">
         <button role="tab" type="button" aria-selected={mode === "password"} onClick={() => setMode("password")}>
           Password

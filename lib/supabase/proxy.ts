@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Everything is private except sign-in/recovery and token-checked share links.
-const PUBLIC = ["/login", "/reset-password", "/auth/", "/s/", "/api/share/", "/robots.txt"];
+// Everything is private except sign-in/recovery, token-checked share links and the code-checked private sign-up.
+const PUBLIC = ["/login", "/reset-password", "/auth/", "/s/", "/api/share/", "/join/", "/robots.txt"];
 
 /** Refreshes the Supabase session cookie on every request and guards private pages. */
 export async function updateSession(request: NextRequest) {

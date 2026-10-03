@@ -25,7 +25,7 @@ test.describe("private internal tool", () => {
     await page.getByRole("tab", { name: "Magic link" }).click();
     await page.getByLabel("Email").fill("stranger@example.test");
     await page.getByRole("button", { name: "Email me a link" }).click();
-    await expect(page.getByRole("status")).toContainText("If that email belongs to a team member");
+    await expect(page.getByRole("status")).toContainText("If that email has an account");
   });
 
   test("share link shows only that funnel, without signing in", async ({ page }) => {

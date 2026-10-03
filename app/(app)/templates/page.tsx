@@ -12,11 +12,11 @@ import { DeleteTemplate } from "./delete-template";
 export const metadata: Metadata = { title: "Templates" };
 
 export default async function TemplatesPage() {
-  const { sb } = await requireUser();
+  const { sb, isTeam } = await requireUser();
   const [{ data: templates }, { data: clients }, opts] = await Promise.all([
     sb.from("templates").select("*").order("owner_id", { nullsFirst: true }).order("created_at"),
     sb.from("clients").select("id, name").order("name"),
-    templateOptions(sb),
+    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
   ]);
   const list = templates ?? [];
   const builtins = list.filter((t) => !t.owner_id);
@@ -55,9 +55,9 @@ export default async function TemplatesPage() {
           <Card key={t.id} t={t} />
         ))}
       </ul>
-      <h2 className="mb-3 font-display text-xl font-bold">Team templates</h2>
+      <h2 className="mb-3 font-display text-xl font-bold">{isTeam ? "Team templates" : "Your templates"}</h2>
       {mine.length === 0 ? (
-        <div className="card px-6 py-10 text-center text-sm text-muted">No team templates yet. Open any funnel, then File → Save as template. Everyone on the team can use them.</div>
+        <div className="card px-6 py-10 text-center text-sm text-muted">{isTeam ? "No team templates yet. Open any funnel, then File → Save as template. Everyone on the team can use them." : "No saved templates yet. Open any funnel, then File → Save as template."}</div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {mine.map((t) => (

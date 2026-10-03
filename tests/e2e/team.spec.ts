@@ -1,33 +1,6 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { env } from "./helpers";
-
-const MAILPIT = "http://127.0.0.1:54324";
-
-async function signIn(browser: Browser, email: string, password = "demo-password") {
-  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await ctx.newPage();
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  return { ctx, page };
-}
-
-/** Latest email to `to` from the local Mailpit inbox, ignoring anything sent before `since` (ms epoch). */
-async function latestMail(to: string, since = 0) {
-  for (let i = 0; i < 30; i++) {
-    const r = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
-    const j = (await r.json()) as { messages: { ID: string; Created: string }[] };
-    const fresh = (j.messages ?? []).find((m) => Date.parse(m.Created) >= since - 1000);
-    if (fresh) {
-      const m = await (await fetch(`${MAILPIT}/api/v1/message/${fresh.ID}`)).json();
-      return m as { Subject: string; HTML: string };
-    }
-    await new Promise((res) => setTimeout(res, 500));
-  }
-  throw new Error(`no email for ${to}`);
-}
+import { env, latestMail, signIn } from "./helpers";
 
 /** Service-role client for test setup only (local stack). */
 const admin = () => createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
@@ -59,8 +32,9 @@ test.describe("team workspace", () => {
     test.setTimeout(120_000);
     const email = `new.${Date.now()}@layer2funnels.test`;
     await page.goto("/settings");
-    await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByLabel("Name (optional)").fill("New Teammate");
+    const team = page.getByRole("region", { name: "Team" });
+    await team.getByLabel("Email", { exact: true }).fill(email);
+    await team.getByLabel("Name (optional)").fill("New Teammate");
     await page.getByRole("button", { name: "Send invite" }).click();
     await expect(page.getByText("Invite sent")).toBeVisible();
 

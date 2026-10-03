@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { compute, summary } from "../../lib/funnel-math";
 import { blankGraph, blankSettings, type FunnelGraph, type FunnelSettings } from "../../lib/graph";
@@ -71,4 +71,31 @@ export async function centre(page: Page, selector: string | ReturnType<Page["loc
   const loc = typeof selector === "string" ? page.locator(selector) : selector;
   const b = (await loc.boundingBox())!;
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+}
+
+const MAILPIT = "http://127.0.0.1:54324";
+
+export async function signIn(browser: Browser, email: string, password = "demo-password") {
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await ctx.newPage();
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  return { ctx, page };
+}
+
+/** Latest email to `to` from the local Mailpit inbox, ignoring anything sent before `since` (ms epoch). */
+export async function latestMail(to: string, since = 0) {
+  for (let i = 0; i < 30; i++) {
+    const r = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+    const j = (await r.json()) as { messages: { ID: string; Created: string }[] };
+    const fresh = (j.messages ?? []).find((m) => Date.parse(m.Created) >= since - 1000);
+    if (fresh) {
+      const m = await (await fetch(`${MAILPIT}/api/v1/message/${fresh.ID}`)).json();
+      return m as { Subject: string; HTML: string };
+    }
+    await new Promise((res) => setTimeout(res, 500));
+  }
+  throw new Error(`no email for ${to}`);
 }

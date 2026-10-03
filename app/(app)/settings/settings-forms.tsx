@@ -3,7 +3,8 @@ import { useActionState, useState, useTransition } from "react";
 import { FormMessage, Submit } from "@/components/form-bits";
 import { LogoUpload } from "@/components/logo-upload";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
-import { createIndependentAccountAction, inviteMemberAction, removeMemberAction, setMemberAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction } from "../actions";
+import { ROLE_HELP, ROLE_LABEL, roleLabel, type Role } from "@/lib/roles";
+import { createIndependentAccountAction, inviteMemberAction, removeMemberAction, setMemberAction, transferOwnershipAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction, type AssignableRole } from "../actions";
 
 export function ProfileForm({ fullName, email, role }: { fullName: string; email: string; role: string }) {
   const [state, action] = useActionState(updateProfileAction, undefined);
@@ -18,7 +19,7 @@ export function ProfileForm({ fullName, email, role }: { fullName: string; email
         <div className="field">
           <span className="lbl">Email</span>
           <p className="m-0 py-2 text-sm">
-            {email} · <span className="pill bg-brand-soft text-brand">{role === "admin" ? "Admin" : "Member"}</span>
+            {email} · <span className="pill bg-brand-soft text-brand" title={ROLE_HELP[role as Role]}>{roleLabel(role)}</span>
           </p>
         </div>
       </div>
@@ -86,6 +87,16 @@ export function InviteForm() {
           <input className="input" id="inv-name" name="full_name" autoComplete="off" />
         </div>
       </div>
+      <div className="field">
+        <label htmlFor="inv-role">Role</label>
+        <select className="input" id="inv-role" name="role" defaultValue="editor">
+          {(["editor", "viewer", "admin"] as const).map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABEL[r]}: {ROLE_HELP[r].toLowerCase()}
+            </option>
+          ))}
+        </select>
+      </div>
       <Submit className="btn primary">Send invite</Submit>
     </form>
   );
@@ -117,13 +128,20 @@ export function IndependentForm() {
 
 type Member = { id: string; full_name: string; email: string; role: string; active: boolean };
 
-export function MemberRow({ member: m, me, canManage, canRemove }: { member: Member; me: boolean; canManage: boolean; canRemove: boolean }) {
+export function MemberRow({ member: m, me, canManage, isOwner, canRemove }: { member: Member; me: boolean; canManage: boolean; isOwner: boolean; canRemove: boolean }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState("");
-  const run = (patch: { role?: "admin" | "member"; active?: boolean }) =>
+  const run = (patch: { role?: AssignableRole; active?: boolean }) =>
     start(async () => {
       setErr("");
       const r = await setMemberAction(m.id, patch);
+      if (r?.error) setErr(r.error);
+    });
+  const handover = () =>
+    confirm(`Make ${m.full_name || m.email} the owner of this workspace? You’ll become an admin.`) &&
+    start(async () => {
+      setErr("");
+      const r = await transferOwnershipAction(m.id);
       if (r?.error) setErr(r.error);
     });
   return (
@@ -139,15 +157,23 @@ export function MemberRow({ member: m, me, canManage, canRemove }: { member: Mem
         <div className="truncate text-xs text-muted">{m.email}</div>
       </div>
       {!m.active && <span className="pill st-past">Deactivated</span>}
-      {canManage && !me ? (
+      {canManage && !me && m.role !== "owner" ? (
         <>
           <label className="sr-only" htmlFor={`role-${m.id}`}>
             Role for {m.email}
           </label>
-          <select id={`role-${m.id}`} className="input min-h-[32px]! w-auto py-1! text-sm" value={m.role} disabled={pending} onChange={(e) => run({ role: e.target.value as "admin" | "member" })}>
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
+          <select id={`role-${m.id}`} className="input min-h-[32px]! w-auto py-1! text-sm" value={m.role} disabled={pending} onChange={(e) => run({ role: e.target.value as AssignableRole })} title={ROLE_HELP[m.role as Role]}>
+            {(["admin", "editor", "viewer"] as const).map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </option>
+            ))}
           </select>
+          {isOwner && m.active && (
+            <button type="button" className="btn sm" disabled={pending} onClick={handover}>
+              Make owner
+            </button>
+          )}
           <button type="button" className={`btn sm ${m.active ? "danger" : ""}`} disabled={pending} onClick={() => (m.active ? confirm(`Remove ${m.email}'s access? They’re signed out and can’t see anything until reactivated.`) && run({ active: false }) : run({ active: true }))}>
             {m.active ? "Deactivate" : "Reactivate"}
           </button>
@@ -170,7 +196,9 @@ export function MemberRow({ member: m, me, canManage, canRemove }: { member: Mem
           )}
         </>
       ) : (
-        <span className="pill bg-brand-soft text-brand">{m.role === "admin" ? "Admin" : "Member"}</span>
+        <span className="pill bg-brand-soft text-brand" title={ROLE_HELP[m.role as Role]}>
+          {roleLabel(m.role)}
+        </span>
       )}
       {err && (
         <p role="alert" className="w-full text-sm text-bad">

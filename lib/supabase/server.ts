@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Database } from "./database.types";
+import type { Role } from "../roles";
 
 /** Server Supabase client bound to the request's auth cookies. */
 export async function supabaseServer() {
@@ -56,5 +57,20 @@ export const requireUser = cache(async () => {
     redirect("/auth/removed");
   }
   const workspaces: WorkspaceOption[] = mine.map((m) => ({ id: m.workspace_id, name: m.workspace!.agency_name, kind: m.workspace!.kind, role: m.role }));
-  return { sb, user, profile, workspace, workspaces, isAdmin: current.role === "admin", isTeam: workspace.kind === "team" };
+  // the role in the workspace being worked in (workspace_members.role; profiles.role is legacy)
+  const role = current.role as Role;
+  return {
+    sb,
+    user,
+    profile,
+    workspace,
+    workspaces,
+    role,
+    /** Owner or admin: manages members and branding. */
+    isAdmin: role === "owner" || role === "admin",
+    isOwner: role === "owner",
+    /** Everyone but viewers may change data (RLS enforces the same rule). */
+    canEdit: role !== "viewer",
+    isTeam: workspace.kind === "team",
+  };
 });

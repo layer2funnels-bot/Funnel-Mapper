@@ -10,7 +10,7 @@ import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
 import { updateClientAction } from "../../actions";
-import { ClientLogo, ClientNotes, DeleteClient, FunnelList } from "./portfolio-bits";
+import { ArchiveClient, ClientLogo, ClientNotes, DeleteClient, FunnelList } from "./portfolio-bits";
 import { ProductLibrary } from "./products";
 
 export async function generateMetadata({ params }: PageProps<"/clients/[id]">): Promise<Metadata> {
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps<"/clients/[id]">): 
 export default async function ClientPage({ params }: PageProps<"/clients/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb, isTeam } = await requireUser();
+  const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: client }, { data: funnels }, { data: allClients }, tpls, { data: products }] = await Promise.all([
     sb.from("clients").select("*").eq("id", id).maybeSingle(),
     sb.from("funnels").select("id, name, description, status, summary, settings, graph, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
@@ -49,6 +49,7 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 font-display text-[28px] leading-tight font-bold tracking-tight">
             {client.name} <StatusPill status={client.status} />
+            {client.archived_at && <span className="pill st-past">Archived</span>}
           </h1>
           <p className="text-sm text-muted">
             {[client.business_name, client.niche, client.country].filter(Boolean).join(" · ") || "No details yet"}
@@ -66,8 +67,9 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
               Email
             </a>
           )}
-          <ImportFunnelButton clientId={client.id} />
-          <NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} />
+          {canEdit && <ArchiveClient id={client.id} archived={!!client.archived_at} />}
+          {canEdit && <ImportFunnelButton clientId={client.id} />}
+          {canEdit && <NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} />}
         </div>
       </header>
 
@@ -77,11 +79,12 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
             <h2 id="funnels-h" className="mb-3 font-display text-xl font-bold">
               Funnels <span className="text-base font-medium text-muted">({funnels?.length ?? 0})</span>
             </h2>
-            <FunnelList funnels={funnels ?? []} currency={client.currency} />
+            <FunnelList funnels={funnels ?? []} currency={client.currency} canEdit={canEdit} />
           </section>
-          <ProductLibrary clientId={client.id} products={products ?? []} currency={client.currency} />
+          <ProductLibrary clientId={client.id} products={products ?? []} currency={client.currency} readOnly={!canEdit} />
         </div>
-        <aside className="space-y-6">
+        {/* viewers see the same panels, read-only (RLS refuses their writes anyway) */}
+        <fieldset disabled={!canEdit} className="m-0 min-w-0 space-y-6 border-0 p-0" aria-label={canEdit ? undefined : "Client details (read-only)"}>
           <section className="card p-5" aria-labelledby="logo-h">
             <h2 id="logo-h" className="mb-3 font-display text-lg font-bold">
               Logo
@@ -101,8 +104,8 @@ export default async function ClientPage({ params }: PageProps<"/clients/[id]">)
             </h2>
             <ClientForm action={update} client={client} niches={niches} submitLabel="Save details" />
           </section>
-          <DeleteClient id={client.id} name={client.name} funnels={funnels?.length ?? 0} />
-        </aside>
+          {canEdit && <DeleteClient id={client.id} name={client.name} funnels={funnels?.length ?? 0} />}
+        </fieldset>
       </div>
     </>
   );

@@ -112,7 +112,7 @@ export function ArrangeBar({ ids }: { ids: string[] }) {
 
 /* ---------------- style ---------------- */
 
-const TEXT_TYPES = new Set(["label", "note", "shape", "checklist", "frame"]);
+const TEXT_TYPES = new Set(["label", "note", "shape", "checklist", "frame", "link"]);
 
 export function StylePanel({ n }: { n: FunnelNode }) {
   const st: NodeStyle = n.s ?? {};
@@ -263,7 +263,7 @@ function SizeFields({ n }: { n: FunnelNode }) {
     moveNodes({ [n.id]: { x: n.x, y: n.y, ...patch } });
   };
   const sized = ["frame", "shape", "image"].includes(n.type);
-  const widthOnly = ["label", "note", "checklist"].includes(n.type);
+  const widthOnly = ["label", "note", "checklist", "link"].includes(n.type);
   return (
     <div className="fm-sec">
       <h4>Size and position</h4>
@@ -500,7 +500,18 @@ export function EdgeStyleFields({ e }: { e: FunnelEdge }) {
       <ColorField label="Line colour" value={st.color} onChange={(v) => S({ color: v })} fallback="#64748b" />
       <div className="row2">
         <OptNum label="Thickness" value={st.width} min={1} max={12} onChange={(v) => S({ width: v })} />
-        <Field label="Label">{(id) => <input id={id} className="input" value={st.label ?? ""} placeholder="e.g. Retargeting" maxLength={40} onChange={(ev) => S({ label: ev.target.value || undefined })} />}</Field>
+        <Field label="Label">
+          {(id) => (
+            <>
+              <input id={id} className="input" list="fm-edge-labels" value={st.label ?? ""} placeholder="e.g. Retargeting" maxLength={40} onChange={(ev) => S({ label: ev.target.value || undefined })} />
+              <datalist id="fm-edge-labels">
+                {["Yes", "No", "Purchase", "No thanks", "Retargeting", "Upsell", "Downsell", "Follow-up", "Booked", "No-show"].map((l) => (
+                  <option key={l} value={l} />
+                ))}
+              </datalist>
+            </>
+          )}
+        </Field>
       </div>
       <div className="field">
         <span className="lbl">Arrow</span>

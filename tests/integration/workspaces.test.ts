@@ -211,7 +211,7 @@ describe("share links across workspaces", () => {
 });
 
 describe("accounts", () => {
-  it("an independent sign-up gets a fresh private workspace, as its admin", async () => {
+  it("an independent sign-up gets a fresh private workspace, as its owner", async () => {
     if (!SERVICE) return; // needs the local service key in .env.local
     const svc = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
     const email = `indie-${Date.now()}@example.test`;
@@ -239,8 +239,8 @@ describe("accounts", () => {
     const email = `teaminv-${Date.now()}@example.test`;
     const inv = await svc.auth.admin.inviteUserByEmail(email);
     expect(inv.error).toBeNull();
-    const prof = await team.from("profiles").select("role, active, workspace_id").eq("email", email).single();
-    expect(prof.data).toEqual({ role: "member", active: true, workspace_id: TEAM_WS });
+    const prof = await team.from("workspace_members").select("role, active, workspace_id").eq("user_id", inv.data.user!.id).single();
+    expect(prof.data).toEqual({ role: "editor", active: true, workspace_id: TEAM_WS });
     await svc.auth.admin.deleteUser(inv.data.user!.id);
   });
 });
@@ -269,7 +269,7 @@ describe("multiple workspaces", () => {
       // a profile can't be pointed at it directly either
       expect((await solo2.from("profiles").update({ workspace_id: ws }).eq("id", await uid(solo2))).error).not.toBeNull();
       // give solo2 access: now they can switch in and see this workspace's data, and only it
-      expect((await svc.from("workspace_members").insert({ workspace_id: ws, user_id: await uid(solo2), role: "member" })).error).toBeNull();
+      expect((await svc.from("workspace_members").insert({ workspace_id: ws, user_id: await uid(solo2), role: "editor" })).error).toBeNull();
       expect((await solo2.rpc("switch_workspace", { p_workspace: ws })).error).toBeNull();
       expect((await solo2.from("clients").select("id")).data).toEqual([{ id: c.data!.id }]);
       expect(((await solo2.from("profiles").select("email")).data ?? []).map((p) => p.email).sort()).toEqual(["solo2@independent.test", "solo@independent.test"]);
@@ -279,7 +279,7 @@ describe("multiple workspaces", () => {
       expect((await solo2.from("clients").select("id")).data).toEqual([]);
       expect((await solo2.rpc("switch_workspace", { p_workspace: ws })).error).not.toBeNull();
       // the last admin can't step down
-      expect((await solo.from("workspace_members").update({ role: "member" }).eq("workspace_id", ws).eq("user_id", await uid(solo))).error).not.toBeNull();
+      expect((await solo.from("workspace_members").update({ role: "editor" }).eq("workspace_id", ws).eq("user_id", await uid(solo))).error).not.toBeNull();
       // back to their own workspaces: each sees its own data again
       expect((await solo2.rpc("switch_workspace", { p_workspace: solo2Ws })).error).toBeNull();
       expect((await solo2.from("clients").select("id")).data).toEqual([{ id: INDIE2 }]);

@@ -34,7 +34,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   const funnelUrl = page.url();
 
   // --- edit visually: add a downsell and connect the checkout's "didn't buy" path to it ---
-  await page.getByRole("button", { name: "Add Downsell" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 520, y: 600 } });
+  await page.getByRole("button", { name: "Add Downsell", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 520, y: 600 } });
   await expect(nodes(page)).toHaveCount(10);
   await page.getByLabel("Name", { exact: true }).fill("Payment plan offer");
   await page.getByLabel("Price (£)").fill("297");
@@ -111,7 +111,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
 
   // --- share: create a read-only link and open it as the client would (no session) ---
   await page.goto(funnelUrl);
-  await page.getByRole("button", { name: "Share" }).click();
+  await page.getByRole("button", { name: "Share", exact: true }).click();
   await page.getByRole("button", { name: "Create link" }).click();
   const link = await page.getByRole("textbox", { name: "Share link" }).first().inputValue();
   expect(link).toMatch(/\/s\/[0-9a-f]{48}$/);
@@ -121,7 +121,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await client.goto(link);
   await expect(client.getByRole("textbox", { name: "Funnel name" })).toHaveValue("Spring webinar");
   await expect(client.locator(".react-flow__node")).toHaveCount(10);
-  await expect(client.getByRole("button", { name: "Add Landing page" })).toHaveCount(0);
+  await expect(client.getByRole("button", { name: "Add Landing page", exact: true })).toHaveCount(0);
   await anon.close();
 
   // --- keyboard undo still works after all that ---

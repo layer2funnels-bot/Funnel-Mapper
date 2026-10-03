@@ -16,6 +16,14 @@ export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: 
 const uuid = z.uuid();
 const newId = () => "n" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
+const VIEWER = "Viewers can look but not change anything. Ask an admin for edit access.";
+/** Signed-in member who may change data (owner, admin or editor). RLS enforces the same rule. */
+async function requireEditor() {
+  const ctx = await requireUser();
+  if (!ctx.canEdit) throw new Error(VIEWER);
+  return ctx;
+}
+
 function formObject(fd: FormData) {
   const o: Record<string, FormDataEntryValue> = {};
   fd.forEach((v, k) => (o[k] = v));
@@ -33,7 +41,8 @@ function clientValues(fd: FormData): { error: string } | { data: ClientForm } {
 }
 
 export async function createClientAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+  const { sb, user, canEdit } = await requireUser();
+  if (!canEdit) return { error: VIEWER };
   const p = clientValues(fd);
   if ("error" in p) return { error: p.error };
   const { data, error } = await sb.from("clients").insert({ ...p.data, owner_id: user.id }).select("id").single();
@@ -44,7 +53,8 @@ export async function createClientAction(_: ActionResult, fd: FormData): Promise
 }
 
 export async function updateClientAction(id: string, _: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb } = await requireUser();
+  const { sb, canEdit } = await requireUser();
+  if (!canEdit) return { error: VIEWER };
   if (!uuid.safeParse(id).success) return { error: "Unknown client" };
   const p = clientValues(fd);
   if ("error" in p) return { error: p.error };
@@ -58,7 +68,7 @@ export async function updateClientAction(id: string, _: ActionResult, fd: FormDa
 }
 
 export async function updateClientFields(id: string, fields: { notes?: string; logo_url?: string | null; status?: string }) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const p = clientFormSchema.pick({ notes: true, status: true }).partial().extend({ logo_url: z.url().nullable().optional() }).parse(fields);
   const { error } = await sb.from("clients").update(p).eq("id", uuid.parse(id));
   if (error) throw new Error(error.message);
@@ -66,8 +76,18 @@ export async function updateClientFields(id: string, fields: { notes?: string; l
   revalidatePath("/clients");
 }
 
+/** Archive (or restore) a client: it leaves the active portfolio and dashboard; nothing is deleted. */
+export async function archiveClientAction(id: string, archive: boolean) {
+  const { sb } = await requireEditor();
+  const { error } = await sb.from("clients").update({ archived_at: archive ? new Date().toISOString() : null }).eq("id", uuid.parse(id));
+  if (error) throw new Error(error.message);
+  revalidatePath(`/clients/${id}`);
+  revalidatePath("/clients");
+  revalidatePath("/");
+}
+
 export async function deleteClientAction(id: string) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const { error } = await sb.from("clients").delete().eq("id", uuid.parse(id));
   if (error) throw new Error(error.message);
   revalidatePath("/clients");
@@ -83,7 +103,8 @@ const newFunnelSchema = z.object({
 });
 
 export async function createFunnelAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+  const { sb, user, canEdit } = await requireUser();
+  if (!canEdit) return { error: VIEWER };
   const p = newFunnelSchema.safeParse(formObject(fd));
   if (!p.success) return { error: p.error.issues[0].message };
   const { data: client } = await sb.from("clients").select("id, currency").eq("id", p.data.client_id).single();
@@ -118,7 +139,7 @@ export async function createFunnelAction(_: ActionResult, fd: FormData): Promise
 }
 
 export async function duplicateFunnelAction(id: string) {
-  const { sb, user } = await requireUser();
+  const { sb, user } = await requireEditor();
   const { data: f } = await sb.from("funnels").select("*").eq("id", uuid.parse(id)).single();
   if (!f) throw new Error("Funnel not found");
   const graph = reidGraph(parseGraph(f.graph), newId);
@@ -137,7 +158,7 @@ export async function duplicateFunnelAction(id: string) {
 }
 
 export async function setFunnelStatusAction(id: string, status: string) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const s = z.enum(FUNNEL_STATUSES).parse(status);
   const { data, error } = await sb.from("funnels").update({ status: s }).eq("id", uuid.parse(id)).select("client_id").single();
   if (error) throw new Error(error.message);
@@ -146,7 +167,7 @@ export async function setFunnelStatusAction(id: string, status: string) {
 }
 
 export async function deleteFunnelAction(id: string) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const { data, error } = await sb.from("funnels").delete().eq("id", uuid.parse(id)).select("client_id").single();
   if (error) throw new Error(error.message);
   revalidatePath(`/clients/${data.client_id}`);
@@ -155,7 +176,7 @@ export async function deleteFunnelAction(id: string) {
 
 /* ---------------- templates ---------------- */
 export async function deleteTemplateAction(id: string) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const { error } = await sb.from("templates").delete().eq("id", uuid.parse(id));
   if (error) throw new Error(error.message);
   revalidatePath("/templates");
@@ -198,11 +219,33 @@ export async function updateAgencyLogo(url: string | null) {
   revalidatePath("/", "layout");
 }
 
-export async function setMemberAction(id: string, patch: { role?: "admin" | "member"; active?: boolean }): Promise<ActionResult> {
+const ASSIGNABLE = ["admin", "editor", "viewer"] as const;
+export type AssignableRole = (typeof ASSIGNABLE)[number];
+
+/** Change a member's role (admin / editor / viewer) or activation in this workspace. The owner is changed only by handover. */
+export async function setMemberAction(id: string, patch: { role?: AssignableRole; active?: boolean }): Promise<ActionResult> {
   const { sb, workspace } = await requireAdmin();
-  const p = z.object({ role: z.enum(["admin", "member"]).optional(), active: z.boolean().optional() }).parse(patch);
+  const p = z.object({ role: z.enum(ASSIGNABLE).optional(), active: z.boolean().optional() }).parse(patch);
   const { error } = await sb.from("workspace_members").update(p).eq("workspace_id", workspace.id).eq("user_id", uuid.parse(id));
-  if (error) return { error: error.message.includes("at least one active admin") ? "The workspace needs at least one active admin." : error.message };
+  if (error)
+    return {
+      error: error.message.includes("at least one active admin")
+        ? "The workspace needs at least one active admin."
+        : error.message.includes("ownership")
+          ? "The owner’s role can’t be changed. The owner can hand over ownership instead."
+          : error.message,
+    };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
+/** The owner hands this workspace to another active member (the owner becomes an admin). */
+export async function transferOwnershipAction(id: string): Promise<ActionResult> {
+  const { sb, isOwner } = await requireUser();
+  if (!isOwner) return { error: "Only the owner can hand over the workspace." };
+  const { error } = await sb.rpc("transfer_ownership", { p_to: uuid.parse(id) });
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
   revalidatePath("/settings");
   return { ok: true };
 }
@@ -216,8 +259,9 @@ export async function removeMemberAction(id: string): Promise<ActionResult> {
   const { sb, user, workspace } = await requireAdmin();
   const target = uuid.parse(id);
   if (target === user.id) return { error: "You can’t remove yourself." };
-  const { data: member } = await sb.from("workspace_members").select("user_id").eq("workspace_id", workspace.id).eq("user_id", target).maybeSingle();
+  const { data: member } = await sb.from("workspace_members").select("user_id, role").eq("workspace_id", workspace.id).eq("user_id", target).maybeSingle();
   if (!member) return { error: "That person isn’t in this workspace." };
+  if (member.role === "owner") return { error: "The owner can’t be removed. The owner can hand over ownership first." };
   const admin = supabaseAdmin();
   if (!admin) return { error: "Removing teammates needs SUPABASE_SERVICE_ROLE_KEY on the server. Until then, deactivate them." };
   for (const t of ["clients", "funnels", "funnel_versions", "funnel_actuals", "share_links", "share_comments", "templates", "products"] as const) {
@@ -248,7 +292,9 @@ async function siteUrl() {
 /** Invite a teammate into the current workspace (its admins only). Someone who already has an account is added directly. */
 export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
   const { isTeam, workspace } = await requireAdmin();
-  const p = z.object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default("") }).safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "" });
+  const p = z
+    .object({ email: z.email("Enter a valid email"), full_name: z.string().trim().max(120).default(""), role: z.enum(ASSIGNABLE).default("editor") })
+    .safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", role: fd.get("role") || undefined });
   if (!p.success) return { error: p.error.issues[0].message };
   const admin = supabaseAdmin();
   if (!admin) return { error: "In-app invites need SUPABASE_SERVICE_ROLE_KEY on the server. Until then, invite from Supabase → Authentication → Users → Invite user." };
@@ -260,19 +306,21 @@ export async function inviteMemberAction(_: ActionResult, fd: FormData): Promise
     if (pending.error) return { error: pending.error.message };
   }
   const site = await siteUrl();
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, { data: { full_name: p.data.full_name }, redirectTo: site ? `${site}/auth/callback?next=/update-password` : undefined });
   if (!isTeam) await clearPendingSignup(email);
   if (error && /already/i.test(error.message)) {
     const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
     if (!existing) return { error: error.message };
     const { data: had } = await admin.from("workspace_members").select("active").eq("workspace_id", workspace.id).eq("user_id", existing.id).maybeSingle();
     if (had) return { error: had.active ? "That person is already in this workspace." : "That person is in the list below: reactivate them." };
-    const added = await admin.from("workspace_members").insert({ workspace_id: workspace.id, user_id: existing.id, role: "member", active: true });
+    const added = await admin.from("workspace_members").insert({ workspace_id: workspace.id, user_id: existing.id, role: p.data.role, active: true });
     if (added.error) return { error: added.error.message };
     revalidatePath("/settings");
     return { ok: true, added: true };
   }
   if (error) return { error: error.message };
+  // new accounts join as editors; give them the chosen role in this workspace straight away (service role)
+  if (p.data.role !== "editor" && invited.user) await admin.from("workspace_members").update({ role: p.data.role }).eq("workspace_id", workspace.id).eq("user_id", invited.user.id);
   revalidatePath("/settings");
   return { ok: true };
 }
@@ -283,10 +331,10 @@ const independentSchema = z.object({
   workspace_name: z.string().trim().max(120).default(""),
 });
 
-/** Create an independent account with its own private workspace (team admins only). */
+/** Create an independent account with its own private workspace (the team workspace's owner only). */
 export async function createIndependentAccountAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  const { isTeam } = await requireAdmin();
-  if (!isTeam) return { error: "Only Layer2Funnels team admins can create independent accounts." };
+  const { isTeam, isOwner } = await requireUser();
+  if (!isTeam || !isOwner) return { error: "Only the owner of the Layer2Funnels workspace can create independent accounts." };
   const p = independentSchema.safeParse({ email: fd.get("email"), full_name: fd.get("full_name") ?? "", workspace_name: fd.get("workspace_name") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
   const r = await startIndependentSignup(p.data, await siteUrl());
@@ -317,7 +365,7 @@ export async function createWorkspaceAction(_: ActionResult, fd: FormData): Prom
 }
 
 /* ---------------- products (reusable offers) ---------------- */
-const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick"] as const;
+const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick", "service", "digital", "coursep", "coaching", "membership", "oto", "bundle", "coupon", "freeoffer"] as const;
 const productSchema = z.object({
   id: z.uuid().optional(),
   client_id: z.uuid().nullable(),
@@ -343,7 +391,8 @@ const productSchema = z.object({
 export type ProductInput = z.input<typeof productSchema>;
 
 export async function saveProductAction(input: ProductInput): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+  const { sb, user, canEdit } = await requireUser();
+  if (!canEdit) return { error: VIEWER };
   const p = productSchema.safeParse(input);
   if (!p.success) return { error: p.error.issues[0].message };
   const { id, ...row } = p.data;
@@ -355,7 +404,7 @@ export async function saveProductAction(input: ProductInput): Promise<ActionResu
 }
 
 export async function deleteProductAction(id: string, clientId: string | null) {
-  const { sb } = await requireUser();
+  const { sb } = await requireEditor();
   const { error } = await sb.from("products").delete().eq("id", uuid.parse(id));
   if (error) throw new Error(error.message);
   if (clientId) revalidatePath(`/clients/${clientId}`);
@@ -364,7 +413,8 @@ export async function deleteProductAction(id: string, clientId: string | null) {
 /* ---------------- import ---------------- */
 /** Create a new funnel for a client from an exported .json file (this app's format or the prototype's). */
 export async function importFunnelAction(clientId: string, json: string): Promise<ActionResult> {
-  const { sb, user } = await requireUser();
+  const { sb, user, canEdit } = await requireUser();
+  if (!canEdit) return { error: VIEWER };
   if (!uuid.safeParse(clientId).success) return { error: "Unknown client" };
   if (json.length > 5_000_000) return { error: "That file is too large" };
   let d;

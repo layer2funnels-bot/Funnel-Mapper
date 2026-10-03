@@ -1,7 +1,7 @@
 // Text shown on blocks and edges, ported from the prototype's subLabel() / nodeStats().
 // Returns plain segments (bold or not) so React, SVG and PDF exports can all render them.
 import { getSmoothStepPath, getStraightPath, Position } from "@xyflow/react";
-import { INT_LABEL, typeOf, type Interval } from "../catalog";
+import { baseOf, INT_LABEL, typeOf, type Interval } from "../catalog";
 import { money, nf } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
 import type { FunnelNode } from "../graph";
@@ -13,25 +13,32 @@ export function subLabel(n: FunnelNode, cur: string): string {
   const T = typeOf(n.type),
     p = n.p;
   const eff = num(p.price) * (1 - num(p.disc) / 100);
-  if (n.type === "sub") return `${money(eff, cur)}/${INT_LABEL[p.interval as Interval] || "month"}${num(p.trialDays) ? ` · ${p.trialDays}-day trial` : ""}`;
-  if (n.type === "plan") return `${num(p.pays)} × ${money(eff, cur)}`;
+  const b = baseOf(n.type),
+    [ya, yb] = T.ports ?? ["Yes", "No"];
+  if (b === "sub") return `${money(eff, cur)}/${INT_LABEL[p.interval as Interval] || "month"}${num(p.trialDays) ? ` · ${p.trialDays}-day trial` : ""}`;
+  if (b === "plan") return `${num(p.pays)} × ${money(eff, cur)}`;
   if (T.cat === "offer") return `${money(eff, cur)}${num(p.disc) ? ` (−${nf(num(p.disc))}%)` : ""}`;
-  if (n.type === "cond") return `Yes ${nf(num(p.pct), 1)}%`;
-  if (n.type === "split") return `A ${nf(num(p.pct), 1)}% · B ${nf(100 - num(p.pct), 1)}%`;
+  if (b === "cond") return `${ya} ${nf(num(p.pct), 1)}%`;
+  if (b === "split") return `${ya} ${nf(num(p.pct), 1)}% · ${yb} ${nf(100 - num(p.pct), 1)}%`;
   if (n.type === "wait") return `${nf(num(p.days))} days`;
   if (T.cat === "traffic") return p.model === "cpc" ? "Cost per click" : p.model === "cpm" ? "Cost per 1,000 views" : T.label;
   return T.label;
 }
 
-export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string): Seg[] {
+/** Block stats. `k` scales people and money to another period (Forecast layer: day / week / year). */
+export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1): Seg[] {
   const T = typeOf(n.type),
-    r = R.N[n.id];
-  if (!r || !T) return [];
+    r0 = R.N[n.id];
+  if (!r0 || !T) return [];
+  const r = k === 1 ? r0 : { ...r0, inflow: r0.inflow * k, out: r0.out * k, non: r0.non * k, rev: r0.rev * k, spend: r0.spend * k };
   if (T.cat === "traffic") return [{ t: nf(r.out), b: true }, { t: ` visits · ${r.spend ? money(r.spend, cur) : "free"}` }];
   if (T.cat === "offer") return [{ t: nf(r.out, 1), b: true }, { t: " buy · " }, { t: money(r.rev, cur), b: true }];
-  if (n.type === "cond") return [{ t: "Yes " }, { t: nf(r.out, 1), b: true }, { t: " · No " }, { t: nf(r.non, 1), b: true }];
-  if (n.type === "split") return [{ t: "A " }, { t: nf(r.out, 1), b: true }, { t: " · B " }, { t: nf(r.non, 1), b: true }];
-  if (n.type === "goal" || n.type === "exit") return [{ t: nf(r.inflow, 1), b: true }, { t: " people" }];
+  const b = baseOf(n.type);
+  if (b === "cond" || b === "split") {
+    const [ya, yb] = T.ports ?? ["Yes", "No"];
+    return [{ t: `${ya} ` }, { t: nf(r.out, 1), b: true }, { t: ` · ${yb} ` }, { t: nf(r.non, 1), b: true }];
+  }
+  if (b === "goal" || b === "exit") return [{ t: nf(r.inflow, 1), b: true }, { t: " people" }];
   return [{ t: `In ${nf(r.inflow)} → ` }, { t: nf(r.out, 1), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
 }
 
@@ -39,8 +46,8 @@ export const segText = (s: Seg[]) => s.map((x) => x.t).join("");
 
 /** Edge label tag: Yes/No, A/B, or No for a didn't-convert path. */
 export function edgeTag(fromType: string | undefined, port: "main" | "alt"): { text: string; alt: boolean } | null {
-  if (fromType === "cond") return port === "alt" ? { text: "No", alt: true } : { text: "Yes", alt: false };
-  if (fromType === "split") return port === "alt" ? { text: "B", alt: true } : { text: "A", alt: false };
+  const ports = fromType ? typeOf(fromType)?.ports : undefined;
+  if (ports) return port === "alt" ? { text: ports[1], alt: true } : { text: ports[0], alt: false };
   if (port === "alt") return { text: "No", alt: true };
   return null;
 }

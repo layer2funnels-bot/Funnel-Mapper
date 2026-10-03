@@ -37,8 +37,11 @@
   --bad: #f87171;
   --warn: #fbbf24;
   --edge: #64748b;
-  --chart-1: #10b981;
-  --chart-2: #fb923c;
+  /* categorical chart series, validated (lightness band, CVD separation, contrast) against #111827 */
+  --chart-1: #059669;
+  --chart-2: #ea580c;
+  --chart-3: #3b82f6;
+  --chart-4: #b45309;
   --alt: #fb923c;
   --backdrop: rgba(2, 6, 23, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -77,8 +80,11 @@
   --bad: #b91c1c;
   --warn: #b45309;
   --edge: #94a3b8;
+  /* categorical chart series, validated against #ffffff */
   --chart-1: #047857;
   --chart-2: #c2410c;
+  --chart-3: #2563eb;
+  --chart-4: #a16207;
   --alt: #c2410c;
   --backdrop: rgba(15, 23, 42, 0.45);
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);

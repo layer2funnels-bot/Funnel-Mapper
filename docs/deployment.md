@@ -57,6 +57,35 @@ PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run live-check
 - **Free-plan note:** Supabase pauses free projects after a week without activity. `npm run deploy` restores a paused project;
   the Pro plan avoids pausing and adds daily backups.
 
+## Databases that were migrated by hand (demo and production)
+
+The demo (`arwedmqmxrxllytzriat`) and production (`kyhlhacbmlbkiibvpsel`) databases were partly migrated through the
+Supabase dashboard / connector, which records its own timestamps and sometimes splits a migration into chunks.
+`npm run deploy` matches those by name (`pendingMigrations` in `scripts/deploy/migrations.mjs`, unit-tested in
+`tests/unit/deploy-migrations.test.ts`) and **refuses** to run when a gap would re-apply an older migration over newer
+ones. In that case, pass the last repo migration that is already in the database:
+
+```bash
+MIGRATIONS_BASELINE=20261009000000 npm run deploy   # demo: everything up to workspace_members is already applied
+```
+
+Pending V1-completion migrations (apply in order, together with the code that needs them):
+
+| Migration | What | Notes |
+|---|---|---|
+| `20261010000000_share_notes.sql` | Funnel notes stay off share links unless shared on purpose | Functions replaced in place; compatible with older code. |
+| `20261011000000_roles.sql` | Owner / Admin / Editor / Viewer on `workspace_members` | Replaces the role check constraint (`DROP CONSTRAINT`): apply with `npm run deploy`, the Supabase CLI or the SQL editor, not the dashboard connector. Renames `member` → `editor`, so deploy the code at the same time (older code still writes `member`). |
+| `20261012000000_client_archive.sql` | `clients.archived_at` | Additive. |
+
+Production additionally still needs everything from `20261003000000_team_workspace.sql` onwards (it has 3 of 12).
+
+Order of operations for an existing database: **migrations first, then the code** (the new code reads
+`clients.archived_at` and the new roles; the old code keeps working on the migrated database apart from changing a
+teammate's role, which briefly fails until the new code is live).
+- Production: run `npm run deploy` from the merged code. It applies the migrations, then deploys. Then run `npm run live-check`.
+- Demo: Vercel deploys `main` automatically, so apply the migrations (`MIGRATIONS_BASELINE=20261009000000 npm run deploy`,
+  or the CLI) right before merging.
+
 ## Doing it by hand instead
 
 See “Deploying (Supabase + Vercel)” in the README for the manual dashboard steps. The scripts do exactly the same thing.

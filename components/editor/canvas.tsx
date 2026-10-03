@@ -4,11 +4,11 @@ import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useRe
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATDARK, SIZED_TYPES, WIDTH_TYPES, typeOf } from "@/lib/catalog";
-import { addNode, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
+import { addNode, openQuickAdd, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
-const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist"]);
+const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link"]);
 const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -153,9 +153,9 @@ export function Canvas() {
       const raw = ev.dataTransfer.getData(DND_MIME);
       if (!raw) return;
       ev.preventDefault();
-      const { type, p, name } = JSON.parse(raw) as { type: string; p?: Record<string, unknown>; name?: string };
+      const { type, p, name, w, h } = JSON.parse(raw) as { type: string; p?: Record<string, unknown>; name?: string; w?: number; h?: number };
       const at = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-      addNode(type, at.x - 105, at.y - 48, { p, name });
+      addNode(type, at.x - 105, at.y - 48, { p, name, w, h });
     },
     [rf],
   );
@@ -182,6 +182,13 @@ export function Canvas() {
       onConnectEnd={onConnectEnd}
       isValidConnection={isValidConnection}
       onPaneClick={() => clearSelection()}
+      onDoubleClick={(e) => {
+        // double-click on empty canvas: floating quick-add at that spot
+        if (!(e.target instanceof Element) || !e.target.classList.contains("react-flow__pane")) return;
+        const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const at = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        openQuickAdd({ sx: e.clientX - box.left, sy: e.clientY - box.top, fx: at.x - 105, fy: at.y - 48 });
+      }}
       onDrop={onDrop}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(DND_MIME)) {

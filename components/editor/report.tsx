@@ -4,7 +4,7 @@ import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio, sym } from "@/lib/format";
 import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, warnings, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
 import type { Expense, Scenario } from "@/lib/graph";
-import { nid, setSettings, setTab, useEditor, type ReportTab } from "@/lib/editor/store";
+import { nid, setSection, setSettings, setTab, useEditor, type ReportTab } from "@/lib/editor/store";
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
@@ -396,9 +396,9 @@ function ScenariosTab() {
   const presets = () =>
     setSettings({
       scenarios: [
-        { id: nid(), name: "Conservative", whatif: { traffic: 0.8, conv: 0.75, price: 1, cost: 1.15 } },
-        { id: nid(), name: "Expected", whatif: { traffic: 1, conv: 1, price: 1, cost: 1 } },
-        { id: nid(), name: "Optimistic", whatif: { traffic: 1.25, conv: 1.2, price: 1, cost: 0.9 } },
+        { id: nid(), name: "Conservative", kind: "conservative", whatif: { traffic: 0.8, conv: 0.75, price: 1, cost: 1.15 } },
+        { id: nid(), name: "Expected", kind: "expected", whatif: { traffic: 1, conv: 1, price: 1, cost: 1 } },
+        { id: nid(), name: "Best case", kind: "best", whatif: { traffic: 1.25, conv: 1.2, price: 1, cost: 0.9 } },
       ],
     });
   const metrics: [string, (r: typeof base) => string][] = [
@@ -416,7 +416,7 @@ function ScenariosTab() {
       <p className="sub">Save named sets of assumptions and compare them side by side. Multipliers apply on top of the map (1 = as mapped).</p>
       {list.length === 0 && (
         <button type="button" className="btn mb-3" onClick={presets}>
-          Add conservative / expected / optimistic
+          Add conservative / expected / best case
         </button>
       )}
       {list.map((sc) => (
@@ -426,6 +426,28 @@ function ScenariosTab() {
               Scenario name
             </label>
             <input id={`sc-${sc.id}`} className="input" value={sc.name} onChange={(e) => upd(sc.id, { name: e.target.value })} />
+            <label className="sr-only" htmlFor={`sck-${sc.id}`}>
+              Scenario type
+            </label>
+            <select id={`sck-${sc.id}`} className="input w-auto! shrink-0" value={sc.kind ?? "custom"} onChange={(e) => upd(sc.id, { kind: e.target.value as Scenario["kind"] })}>
+              <option value="conservative">Conservative</option>
+              <option value="expected">Expected</option>
+              <option value="best">Best case</option>
+              <option value="custom">Custom</option>
+            </select>
+            <button
+              type="button"
+              className="btn icon shrink-0"
+              aria-label={`Duplicate ${sc.name}`}
+              title="Duplicate"
+              onClick={() => {
+                const i = list.findIndex((x) => x.id === sc.id);
+                const copy: Scenario = { ...structuredClone(sc), id: nid(), name: `${sc.name} (copy)`, kind: "custom" };
+                setSettings({ scenarios: [...list.slice(0, i + 1), copy, ...list.slice(i + 1)] });
+              }}
+            >
+              <Icon name="copy" size={16} />
+            </button>
             <button type="button" className="btn icon danger shrink-0" aria-label={`Remove ${sc.name}`} onClick={() => setSettings({ scenarios: list.filter((x) => x.id !== sc.id) })}>
               <Icon name="trash" size={16} />
             </button>
@@ -450,9 +472,17 @@ function ScenariosTab() {
           </button>
         </div>
       ))}
-      <button type="button" className="btn mb-4" onClick={() => setSettings({ scenarios: [...list, { id: nid(), name: `Scenario ${list.length + 1}`, whatif: { ...s.whatif } }] })}>
+      <button type="button" className="btn mb-4" onClick={() => setSettings({ scenarios: [...list, { id: nid(), name: `Custom ${list.length + 1}`, kind: "custom", whatif: { ...s.whatif } }] })}>
         <Icon name="plus" /> Save current what-if as scenario
       </button>
+      {list.length > 0 && (
+        <p className="sub">
+          Full comparison with differences, charts and every KPI:{" "}
+          <button type="button" className="link" onClick={() => setSection("scenarios")}>
+            Reports → Scenario comparison
+          </button>
+        </p>
+      )}
       {list.length > 0 && (
         <div className="fm-tblwrap">
           <table className="tbl">

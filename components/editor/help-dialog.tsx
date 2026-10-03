@@ -16,6 +16,7 @@ const KEYS: [string, string][] = [
   ["Ctrl S", "Save a version"],
   ["Ctrl + scroll", "Zoom"],
   ["Esc", "Clear selection"],
+  ["/ or double-click the canvas", "Quick add a block"],
   ["?", "This list"],
 ];
 

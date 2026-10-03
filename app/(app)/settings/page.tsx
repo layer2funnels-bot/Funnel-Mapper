@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
 import { AgencyLogo, IndependentForm, InviteForm, MemberRow, ProfileForm, WorkspaceForm } from "./settings-forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const { sb, user, profile, workspace, isAdmin, isTeam } = await requireUser();
+  const { sb, user, profile, workspace, role, isAdmin, isOwner, isTeam } = await requireUser();
   const { data: rows } = await sb.from("workspace_members").select("user_id, role, active").eq("workspace_id", workspace.id).order("created_at");
   const { data: people } = await sb.from("profiles").select("id, full_name, email").in("id", (rows ?? []).map((m) => m.user_id));
   const byId = new Map((people ?? []).map((p) => [p.id, p]));
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
         <h2 id="profile-h" className="mb-4 font-display text-lg font-bold">
           Your profile
         </h2>
-        <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={isAdmin ? "admin" : "member"} />
+        <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={role} />
       </section>
 
       <section className="card mb-6 p-6" aria-labelledby="brand-h">
@@ -56,7 +57,15 @@ export default async function SettingsPage() {
           <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
             Team
           </h2>
-          <p className="mb-4 text-sm text-muted">Everyone listed here shares this workspace’s clients, funnels and templates, and nothing else. There is no public sign-up: people join by invite only.</p>
+          <p className="mb-2 text-sm text-muted">Everyone listed here shares this workspace’s clients, funnels and templates, and nothing else. There is no public sign-up: people join by invite only.</p>
+          <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
+            {(["owner", "admin", "editor", "viewer"] as const).map((r) => (
+              <div key={r} className="contents">
+                <dt className="font-bold text-ink">{ROLE_LABEL[r]}</dt>
+                <dd className="m-0">{ROLE_HELP[r]}</dd>
+              </div>
+            ))}
+          </dl>
           {isAdmin && (
             <div className="mb-5 rounded-xl border border-line p-4">
               <h3 className="mb-2 text-sm font-bold">Invite a teammate</h3>
@@ -71,12 +80,12 @@ export default async function SettingsPage() {
           )}
           <ul className="m-0 list-none p-0" aria-label="Team members">
             {members.map((m) => (
-              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} canRemove={isAdmin && canInvite} />
+              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} isOwner={isOwner} canRemove={isAdmin && canInvite} />
             ))}
           </ul>
       </section>
 
-      {isTeam && isAdmin && (
+      {isTeam && isOwner && (
         <section className="card mb-6 p-6" aria-labelledby="indep-h">
           <h2 id="indep-h" className="mb-1 font-display text-lg font-bold">
             Independent accounts

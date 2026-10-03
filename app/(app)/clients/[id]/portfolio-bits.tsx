@@ -8,7 +8,7 @@ import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, ratio, timeAgo } from "@/lib/format";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
-import { deleteClientAction, deleteFunnelAction, duplicateFunnelAction, setFunnelStatusAction, updateClientFields } from "../../actions";
+import { archiveClientAction, deleteClientAction, deleteFunnelAction, duplicateFunnelAction, setFunnelStatusAction, updateClientFields } from "../../actions";
 
 export function ClientLogo({ id, url }: { id: string; url: string | null }) {
   const [u, setU] = useState(url);
@@ -58,6 +58,15 @@ export function ClientNotes({ id, notes }: { id: string; notes: string }) {
   );
 }
 
+export function ArchiveClient({ id, archived }: { id: string; archived: boolean }) {
+  const [pending, start] = useTransition();
+  return (
+    <button type="button" className="btn" disabled={pending} onClick={() => start(() => archiveClientAction(id, !archived))} title={archived ? "Back to the active portfolio" : "Hide from the active portfolio and dashboard (nothing is deleted)"}>
+      <Icon name="archive" /> {archived ? "Restore client" : "Archive client"}
+    </button>
+  );
+}
+
 export function DeleteClient({ id, name, funnels }: { id: string; name: string; funnels: number }) {
   const [pending, start] = useTransition();
   return (
@@ -80,16 +89,16 @@ export function DeleteClient({ id, name, funnels }: { id: string; name: string; 
 
 type FunnelItem = { id: string; name: string; description: string; status: string; summary: unknown; settings: unknown; graph: unknown; thumbnail_url: string | null; updated_at: string };
 
-export function FunnelList({ funnels, currency }: { funnels: FunnelItem[]; currency: string }) {
+export function FunnelList({ funnels, currency, canEdit = true }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean }) {
   const [showArchived, setShowArchived] = useState(false);
   const archived = funnels.filter((f) => f.status === "archived").length;
   const list = funnels.filter((f) => showArchived || f.status !== "archived");
-  if (!funnels.length) return <div className="card px-6 py-12 text-center text-sm text-muted">No funnels yet. Use “New funnel” to start from a template or a blank canvas.</div>;
+  if (!funnels.length) return <div className="card px-6 py-12 text-center text-sm text-muted">{canEdit ? "No funnels yet. Use “New funnel” to start from a template or a blank canvas." : "No funnels yet."}</div>;
   return (
     <>
       <ul className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Funnels">
         {list.map((f) => (
-          <FunnelCard key={f.id} f={f} currency={(f.settings as { currency?: string })?.currency ?? currency} />
+          <FunnelCard key={f.id} f={f} canEdit={canEdit} currency={(f.settings as { currency?: string })?.currency ?? currency} />
         ))}
       </ul>
       {archived > 0 && (
@@ -101,7 +110,7 @@ export function FunnelList({ funnels, currency }: { funnels: FunnelItem[]; curre
   );
 }
 
-function FunnelCard({ f, currency }: { f: FunnelItem; currency: string }) {
+function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string; canEdit: boolean }) {
   const [pending, start] = useTransition();
   const s = (f.summary ?? {}) as Partial<FunnelSummary>;
   return (
@@ -137,6 +146,12 @@ function FunnelCard({ f, currency }: { f: FunnelItem; currency: string }) {
         </dl>
         <div className="mt-auto flex flex-wrap items-center gap-2">
           <span className="mr-auto text-xs text-muted">Updated {timeAgo(f.updated_at)}</span>
+          <Link href={`/funnels/${f.id}?view=reports`} className="btn sm" aria-label={`Reports for ${f.name}`} title="Reports">
+            <Icon name="chart" size={16} />
+            <span className="sr-only md:not-sr-only">Reports</span>
+          </Link>
+          {canEdit && (
+          <>
           <label className="sr-only" htmlFor={`st-${f.id}`}>
             Status
           </label>
@@ -167,6 +182,8 @@ function FunnelCard({ f, currency }: { f: FunnelItem; currency: string }) {
           >
             <Icon name="trash" size={16} />
           </button>
+          </>
+          )}
         </div>
       </div>
     </li>

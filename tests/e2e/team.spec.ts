@@ -66,6 +66,28 @@ test.describe("team workspace", () => {
     await ctx.close();
   });
 
+  test("admin removes a teammate: account and email gone, their work kept and transferred", async ({ page }) => {
+    const svc = admin();
+    const email = `leaver.${Date.now()}@layer2funnels.test`;
+    const u = await svc.auth.admin.createUser({ email, password: "leaver-pass-1", email_confirm: true });
+    expect(u.error).toBeNull();
+    const id = u.data.user!.id;
+    await svc.from("profiles").update({ active: true }).eq("id", id);
+    const c = await svc.from("clients").insert({ name: `Leaver client ${Date.now()}`, owner_id: id }).select("id").single();
+    expect(c.error).toBeNull();
+
+    await page.goto("/settings");
+    const row = page.getByRole("listitem").filter({ hasText: email });
+    page.once("dialog", (d) => d.accept());
+    await row.getByRole("button", { name: "Remove" }).click();
+    await expect(page.getByRole("list", { name: "Team members" })).not.toContainText(email);
+    // the account is gone, the client survives and now belongs to the admin
+    expect((await svc.auth.admin.getUserById(id)).data.user).toBeNull();
+    const kept = await svc.from("clients").select("owner_id").eq("id", c.data!.id).single();
+    expect(kept.data!.owner_id).toBe("00000000-0000-4000-8000-000000000001");
+    await svc.from("clients").delete().eq("id", c.data!.id);
+  });
+
   test("magic link sign-in for a team member", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await ctx.newPage();

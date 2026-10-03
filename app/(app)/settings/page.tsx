@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           )}
           <ul className="m-0 list-none p-0" aria-label="Team members">
             {(members ?? []).map((m) => (
-              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} />
+              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} canRemove={isAdmin && canInvite} />
             ))}
           </ul>
         </section>

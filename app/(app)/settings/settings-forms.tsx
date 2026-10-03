@@ -3,7 +3,7 @@ import { useActionState, useState, useTransition } from "react";
 import { FormMessage, Submit } from "@/components/form-bits";
 import { LogoUpload } from "@/components/logo-upload";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
-import { createIndependentAccountAction, inviteMemberAction, setMemberAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction } from "../actions";
+import { createIndependentAccountAction, inviteMemberAction, removeMemberAction, setMemberAction, updateAgencyLogo, updateProfileAction, updateWorkspaceAction } from "../actions";
 
 export function ProfileForm({ fullName, email, role }: { fullName: string; email: string; role: string }) {
   const [state, action] = useActionState(updateProfileAction, undefined);
@@ -117,7 +117,7 @@ export function IndependentForm() {
 
 type Member = { id: string; full_name: string; email: string; role: string; active: boolean };
 
-export function MemberRow({ member: m, me, canManage }: { member: Member; me: boolean; canManage: boolean }) {
+export function MemberRow({ member: m, me, canManage, canRemove }: { member: Member; me: boolean; canManage: boolean; canRemove: boolean }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState("");
   const run = (patch: { role?: "admin" | "member"; active?: boolean }) =>
@@ -151,6 +151,23 @@ export function MemberRow({ member: m, me, canManage }: { member: Member; me: bo
           <button type="button" className={`btn sm ${m.active ? "danger" : ""}`} disabled={pending} onClick={() => (m.active ? confirm(`Remove ${m.email}'s access? They’re signed out and can’t see anything until reactivated.`) && run({ active: false }) : run({ active: true }))}>
             {m.active ? "Deactivate" : "Reactivate"}
           </button>
+          {canRemove && (
+            <button
+              type="button"
+              className="btn sm danger"
+              disabled={pending}
+              onClick={() =>
+                confirm(`Remove ${m.email} from the team?\n\nTheir account and email are deleted and they can’t sign in again (you can invite them later). Their clients, funnels and templates are kept and transferred to you.`) &&
+                start(async () => {
+                  setErr("");
+                  const r = await removeMemberAction(m.id);
+                  if (r?.error) setErr(r.error);
+                })
+              }
+            >
+              Remove
+            </button>
+          )}
         </>
       ) : (
         <span className="pill bg-brand-soft text-brand">{m.role === "admin" ? "Admin" : "Member"}</span>

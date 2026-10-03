@@ -207,6 +207,30 @@ export async function setMemberAction(id: string, patch: { role?: "admin" | "mem
   return { ok: true };
 }
 
+/**
+ * Remove a teammate for good: their account (and email) is deleted. Everything they created is first handed to the
+ * admin removing them, because the database deletes a user's rows along with the account. Team admins only, never
+ * yourself, and only people in your own workspace (RLS decides who you can see).
+ */
+export async function removeMemberAction(id: string): Promise<ActionResult> {
+  const { sb, user, isTeam } = await requireAdmin();
+  if (!isTeam) return { error: "Only the Layer2Funnels team workspace has teammates to remove." };
+  const target = uuid.parse(id);
+  if (target === user.id) return { error: "You can’t remove yourself." };
+  const { data: member } = await sb.from("profiles").select("id").eq("id", target).maybeSingle();
+  if (!member) return { error: "That person isn’t in your workspace." };
+  const admin = supabaseAdmin();
+  if (!admin) return { error: "Removing teammates needs SUPABASE_SERVICE_ROLE_KEY on the server. Until then, deactivate them." };
+  for (const t of ["clients", "funnels", "funnel_versions", "funnel_actuals", "share_links", "share_comments", "templates", "products"] as const) {
+    const { error } = await admin.from(t).update({ owner_id: user.id }).eq("owner_id", target);
+    if (error) return { error: `Couldn’t transfer their work (${t}): ${error.message}. Nothing was removed.` };
+  }
+  const { error } = await admin.auth.admin.deleteUser(target);
+  if (error) return { error: `Their work is now yours, but the account couldn’t be deleted: ${error.message}` };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 /** Where invite links send people back to: NEXT_PUBLIC_SITE_URL, else the address this request came in on. */
 async function siteUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");

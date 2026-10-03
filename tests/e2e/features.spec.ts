@@ -48,7 +48,7 @@ test.describe("modals", () => {
   test("dialogs open centred and inside the viewport (desktop and phone)", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Share" }).click();
+    await page.getByRole("button", { name: "Share", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Share with your client" })).toBeVisible();
     let p = await placement(page);
     expect(p.dx).toBeLessThanOrEqual(2);
@@ -73,7 +73,7 @@ test.describe("modals", () => {
 test.describe("share links (M5)", () => {
   async function makeLink(page: import("@playwright/test").Page, id: string, opts: { edit?: boolean; hide?: boolean } = {}) {
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Share" }).click();
+    await page.getByRole("button", { name: "Share", exact: true }).click();
     const dlg = page.getByRole("dialog", { name: "Share with your client" });
     if (opts.edit) await dlg.getByLabel("Let them edit the map").check();
     if (opts.hide) await dlg.getByLabel("Hide numbers (show the journey only)").check();
@@ -95,7 +95,7 @@ test.describe("share links (M5)", () => {
     await c.goto(link);
     await expect(c.locator(".react-flow__node")).toHaveCount(9);
     expect(await c.content()).not.toContain("SECRET");
-    await c.getByRole("button", { name: "Add Thank-you page" }).click();
+    await c.getByRole("button", { name: "Add Thank-you page", exact: true }).click();
     await expect(c.locator(".react-flow__node")).toHaveCount(10);
     await expect(c.locator(".fm-saved")).toHaveText(/Saved/, { timeout: 20_000 });
     await ctx.close();
@@ -120,7 +120,7 @@ test.describe("share links (M5)", () => {
     await expect(c.locator(".fm-nstats").first()).toBeHidden();
     await expect(c.getByRole("heading", { name: "The journey" })).toBeVisible();
     // can't edit when numbers are hidden, even if the link was created as editable
-    await expect(c.getByRole("button", { name: "Add Landing page" })).toHaveCount(0);
+    await expect(c.getByRole("button", { name: "Add Landing page", exact: true })).toHaveCount(0);
     expect(await c.locator("body").innerText()).not.toMatch(/£\s?\d/); // no money anywhere on screen
     await ctx.close();
   });
@@ -154,18 +154,18 @@ test.describe("reports and planning tools", () => {
     const before = await profit();
     // costs
     await page.getByRole("tab", { name: "Costs" }).click();
-    await page.getByRole("button", { name: "Add expense" }).click();
+    await page.getByRole("button", { name: "Add expense", exact: true }).click();
     await page.getByLabel("Expense name").fill("Funnel software");
     await page.getByLabel("Amount").fill("300");
     await expect.poll(profit).not.toBe(before);
-    await page.getByRole("button", { name: "Add expense" }).click();
+    await page.getByRole("button", { name: "Add expense", exact: true }).click();
     await page.getByLabel("Expense name").nth(1).fill("Build");
     await page.getByLabel("Amount").nth(1).fill("5000");
     await page.getByLabel("How often").nth(1).selectOption("one_time");
     await expect(page.locator(".statbox", { hasText: "Payback" })).toContainText("periods");
     // scenarios
     await page.getByRole("tab", { name: "Scenarios" }).click();
-    await page.getByRole("button", { name: "Add conservative / expected / optimistic" }).click();
+    await page.getByRole("button", { name: "Add conservative / expected / best case", exact: true }).click();
     const table = page.getByRole("table", { name: "Scenario comparison" });
     await expect(table.getByRole("columnheader")).toHaveCount(5);
     await expect(table.getByRole("row", { name: /Profit/ })).toBeVisible();
@@ -203,7 +203,7 @@ test.describe("reports and planning tools", () => {
   test("client products appear in the palette, ready to drop in", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add 6-Week Kickstart" }).click();
+    await page.getByRole("button", { name: "Add 6-Week Kickstart", exact: true }).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.getByLabel("Name", { exact: true })).toHaveValue("6-Week Kickstart");
     await expect(page.getByLabel("Price (£)")).toHaveValue("37");
@@ -248,7 +248,7 @@ test.describe("portfolio", () => {
     await page.waitForLoadState("networkidle");
     await page.getByRole("textbox", { name: "Notes", exact: true }).fill(`Prefers WhatsApp ${stamp}`);
     await expect(page.getByText("Saved", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Add product" }).click();
+    await page.getByRole("button", { name: "Add product", exact: true }).click();
     const dlg = page.getByRole("dialog");
     await dlg.getByLabel("Name").fill(`Glow membership ${stamp}`);
     await dlg.getByLabel("Offer type").selectOption("sub");

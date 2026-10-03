@@ -35,7 +35,7 @@ test.describe("reports / insights", () => {
     const { id, sb } = await createFunnel({ template: "quiz" });
     await page.goto(`/funnels/${id}?view=reports&section=goals`);
     const main = page.locator(".fm-rmain");
-    await main.getByRole("button", { name: "Add goal" }).click();
+    await main.getByRole("button", { name: "Add goal", exact: true }).click();
     await main.getByLabel("Name").fill("Dream profit");
     await main.getByLabel("Target").fill("20000");
     await expect(main.getByRole("region", { name: "Goal: Dream profit" })).toContainText("Per month");
@@ -53,7 +53,7 @@ test.describe("reports / insights", () => {
     // scenarios: presets from the map's Scenarios tab, compared in Reports with deltas
     await page.getByRole("button", { name: "Map", exact: true }).click();
     await page.getByRole("tab", { name: "Scenarios" }).click();
-    await page.getByRole("button", { name: "Add conservative / expected / best case" }).click();
+    await page.getByRole("button", { name: "Add conservative / expected / best case", exact: true }).click();
     await page.getByRole("button", { name: "Duplicate Best case" }).click();
     await expect(page.getByLabel("Scenario name").last()).toHaveValue("Best case (copy)");
     await page.getByRole("button", { name: "Reports → Scenario comparison" }).click();
@@ -145,11 +145,23 @@ test.describe("notes, layers, analytics and the library", () => {
     await side.getByRole("button", { name: "Favourite Callout" }).click();
     await side.getByRole("button", { name: "Favourite: Callout" }).click();
     await expect(page.locator(".fm-shape.callout")).toHaveCount(1);
-    await side.getByRole("button", { name: "Add Link / video" }).click();
+    await side.getByRole("button", { name: "Add Link / video", exact: true }).click();
     await page.getByLabel("Link (page, video or file)").fill("https://youtu.be/dQw4w9WgXcQ");
     await page.getByLabel("Title").fill("Sales video");
     await expect(page.locator(".fm-node.linkcard")).toContainText("Sales video");
     await expect(page.locator(".fm-node.linkcard .lthumb.video")).toBeVisible();
+    // floating quick-add: double-click empty canvas, search, Enter adds at that spot; "/" opens it too
+    const before = await nodes(page).count();
+    await page.locator(".react-flow__pane").dblclick({ position: { x: 120, y: 420 } });
+    await page.getByLabel("Search blocks to add").fill("upsell page");
+    await page.keyboard.press("Enter");
+    await expect(nodes(page)).toHaveCount(before + 1);
+    await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
+    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 20 } });
+    await page.keyboard.press("/");
+    await expect(page.getByLabel("Search blocks to add")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
   });
 });
 
@@ -166,7 +178,7 @@ test.describe("roles and clients", () => {
     // the editor is view-only: no share, no editing, but reports and analytics work
     await page.goto("/funnels/20000000-0000-4000-8000-000000000002");
     await expect(page.locator(".fm-saved")).toHaveText("View only");
-    await expect(page.getByRole("button", { name: "Share" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Edit this funnel" })).toHaveCount(0);
     await expect(page.getByLabel("Funnel name")).toHaveAttribute("readonly", "");
     await page.locator(".react-flow__node", { hasText: "Quiz funnel" }).first().click();

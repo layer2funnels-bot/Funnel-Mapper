@@ -34,7 +34,7 @@ test.describe("private internal tool", () => {
     await expect(page.getByRole("textbox", { name: "Funnel name" })).toHaveValue("PT tripwire funnel");
     // no way into the internal app from here
     await expect(page.getByRole("link", { name: /back to/i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Share" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Share", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /version history/i })).toHaveCount(0);
   });
 

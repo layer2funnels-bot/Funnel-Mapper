@@ -74,6 +74,8 @@ export interface EditorState {
   spot: string | null;
   /** Opened through a public share link (no account features: versions, actuals, products). */
   shared: boolean;
+  /** Floating quick-add: where it opened (screen px inside the canvas) and the flow position blocks go to. */
+  quick: { sx: number; sy: number; fx: number; fy: number } | null;
   /** Workspace viewer: always read-only (the database refuses their writes too). */
   viewer: boolean;
   /** Map (canvas) or the full-width Reports view. */
@@ -125,6 +127,7 @@ export const useEditor = create<EditorState>(() => ({
   toast: null,
   spot: null,
   shared: false,
+  quick: null,
   viewer: false,
   mode: "map",
   section: "overview",
@@ -248,6 +251,13 @@ export function clearSelection() {
 }
 export function setTab(tab: ReportTab) {
   set({ tab, panel: "inspector", mode: "map", selNodes: [], selEdge: null });
+}
+export function openQuickAdd(q: EditorState["quick"]) {
+  if (get().readOnly) return;
+  set({ quick: q });
+}
+export function closeQuickAdd() {
+  set({ quick: null });
 }
 export function setMode(mode: EditorMode) {
   set({ mode });

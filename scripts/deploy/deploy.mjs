@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { HISTORY_DDL, listMigrations, wrapMigration } from "./migrations.mjs";
+import { HISTORY_DDL, listMigrations, pendingMigrations, wrapMigration } from "./migrations.mjs";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const STATE_FILE = `${ROOT}.deploy/state.json`;
@@ -128,10 +128,16 @@ const sql = (query) => sb("POST", `/v1/projects/${state.supabaseRef}/database/qu
 async function supabaseMigrations() {
   step("Database migrations");
   await sql(HISTORY_DDL);
-  const applied = new Set((await sql("select version from supabase_migrations.schema_migrations")).map((r) => r.version));
+  const history = await sql("select version, name from supabase_migrations.schema_migrations");
+  let pending;
+  try {
+    // MIGRATIONS_BASELINE: the last repo migration already in a database migrated by hand (see docs/deployment.md)
+    pending = pendingMigrations(listMigrations(ROOT), history, process.env.MIGRATIONS_BASELINE || undefined);
+  } catch (e) {
+    fail(e.message);
+  }
   let n = 0;
-  for (const m of listMigrations(ROOT)) {
-    if (applied.has(m.version)) continue;
+  for (const m of pending) {
     await sql(wrapMigration(m));
     ok(`applied ${m.file}`);
     n++;

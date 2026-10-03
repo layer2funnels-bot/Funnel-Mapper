@@ -1,25 +1,29 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
-**Updated after the Batch 4 demo access fix, 3 Oct 2026.** Before that, Batch 4 (workspaces, team, editor panels). Before that, Batch 3 (client-facing exports). Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
+**Updated after the final V1 completion, 3 Oct 2026** (see "Final V1 completion" at the end; the tables reflect it). Before that: multiple workspaces, the Batch 4 demo access fix, Batch 4 (workspaces, team, editor panels). Before that, Batch 3 (client-facing exports). Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
 ## A. Executive summary
 
-- The core product loop works end to end: sign in, then client, funnel, canvas, live maths, what-if, scenarios, forecast, actuals, share, export. It is backed by 73 unit, 22 database-security and 59 browser tests.
-- **Maths is correct and has a single source.** All consumers import `lib/funnel-math.ts`. The golden quiz funnel computes exactly 89.1 customers, 6,032.11 revenue, 5,582.11 profit and 13.40x ROAS, in the engine and in the live editor's KPI bar. The "70.2 / 4,709" discrepancy does **not** reproduce on the current code.
-- **Confirmed P0 bugs:**
-  - The Share modal (and every `<dialog class="modal">`) opens pinned to the top-left corner.
-  - The client pricing model is missing; only a monthly retainer exists.
-  - The UI still uses the old **purple** brand, not the locked Emerald.
-- **The largest gaps against the handoff:**
-  - a Style panel and canvas primitives (shapes, images, checklists)
-  - connection styles and layers
-  - rich notes
-  - a first-class Reports area (reinvestment, MRR, month-to-month, published status)
-  - PDF report sections
-  - Owner/Admin/Editor/Viewer roles and independent-user isolation
+**Final V1 completion (3 Oct 2026, branch `claude/funnel-mapper-v1-completion-5r8743`).** Every in-scope V1 requirement of
+`docs/MASTER_HANDOFF.md` that was PARTIAL, FAIL or deferred is now implemented and tested. See table B and the
+"Final V1 completion" section.
+
+- **Product loop, end to end:** Map → Model → Simulate → Analyze → Forecast → Present.
+  - Canvas, then the authoritative engine, then scenarios, reports and goals, then the forecast and reinvestment.
+  - Then PDF / PNG / SVG / CSV / JSON, presentation and share links.
+- **One maths engine:** `lib/funnel-math.ts` feeds the KPI bar, inspector, Reports, dashboard summaries, PDF, CSV and map exports.
+  - The golden quiz funnel is unchanged: 89.1 customers, 6,032.11 revenue, 5,582.11 profit, 13.40x ROAS.
+  - New engine functions are additive: itemised forecast rows, reinvestment, periods, goals, step-rate impact, leaks.
+  - New block types reuse the existing formulas through `base`.
+- **Access:** invite-only; independent users and multiple workspaces (merged from `main`).
+  - Owner / Admin / Editor / Viewer per workspace, enforced in RLS.
+  - Funnel notes stay internal unless shared on purpose, enforced in the share RPC.
+- **Not done here, needs the owner:** the 3 new migrations are not yet applied to the demo or production databases.
+  - Production also still lacks migrations 4–9.
+  - `docs/deployment.md` has the exact order. The deploy script now handles hand-migrated histories safely.
 
 ## B. Current status by area
 
@@ -31,26 +35,26 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Canvas: infinite canvas, grid, zoom, minimap, fit, snap, undo/redo | PASS | `canvas.tsx`, store `undo/redo/snapV`; e2e `editor.spec.ts` |
 | Canvas: multi-select, copy/paste, duplicate, delete, align, nudge, frames | PASS | store `copySelection/paste/duplicateSelection/align/wrapInFrame`; e2e |
 | Canvas: lock/unlock per element, layer ordering, resize | PASS | Batch 2: `locked` (no move, resize, nudge, align, delete or Tidy; badge on canvas), `z` order (front, forward, backward, back; Ctrl ] / Ctrl [), resize handles for shapes, images and frames, width handles for text, notes and checklists. Flow blocks keep the standard size (by design, for Tidy and exports) |
-| Canvas primitives: shapes, images/logos, checklists | PASS (video/link/callout: not built) | Batch 2: `shape` (rect, rounded, ellipse, diamond, with text), `image` (upload, downscaled and kept in the funnel so share links and exports show it, or a URL; alt text; fit), `checklist` element; notes, headings and frames kept |
-| Block library (searchable, categorised, drag + tap) | PARTIAL | 69 blocks (24 traffic, 19 pages, 9 offers, 10 actions, 4 logic, 3 annotation); no Communication or Sales/CRM groups, no recents/favourites/custom icons |
+| Canvas primitives: shapes, images/logos, checklists, link/video, callout, line/arrow | PASS | Batch 2: `shape` (rect, rounded, ellipse, diamond), `image`, `checklist`. Final V1: circle, callout, line and arrow shapes (geometry shared by canvas and export, `lib/style.ts shapeGeom`), `link` element (page / video card; YouTube, Vimeo, Loom, Wistia show as video), presets for canvas text, subheading, rectangle, screenshot |
+| Block library (searchable, categorised, drag + tap, quick-add) | PASS | Final V1: 169 items in 8 groups (Traffic, Pages, Offers, Actions & events, **Communication**, **Sales & CRM**, Logic & goals, Notes & layout) covering the handoff table; new types reuse the existing maths through `base` (`membership` bills like `sub`, `qualifier`/`branch` split like `cond`, `multivar`/`randsplit` like `split`, `endp`/`lost` end like `exit`). Search over label, keywords and group; favourites (star) and recents (per device); floating quick-add (double-click the canvas or `/`). Custom icons per block (Style tab) and uploaded images. Tests: `tests/unit/reports.test.ts` (every type valid; reused maths equal), e2e `v1.spec.ts` library + quick-add |
 | Element Style tab (fill, border, font, alignment, opacity…) | PASS | Batch 2 `components/editor/style-panel.tsx`: icon library with search (blocks), font family, Font Size, weight (Regular/Medium/Semibold/Bold), line height, letter spacing, alignment, italic/underline/strikethrough, text colour, fill, border colour/width/style, radius, opacity, shadow, padding, size/position, Arrange (lock, order, duplicate, copy, delete). Multi-select gets Arrange too |
-| Plan / Analytics tabs per element | PARTIAL | Details / Style / **Plan** tabs (Plan = element checklist + internal notes); no per-element Analytics tab yet (numbers stay in Details) |
+| Plan / Analytics tabs per element | PASS | Details / Style / **Plan** (rich-text internal notes, checklist, per-period forecast for the step) / **Analytics** (numbers, share of visitors and revenue, a conversion goal for the step with its revenue and profit impact, per-period table). Tabs work read-only (viewers, view links); e2e `v1.spec.ts` |
 | Connections: main/alt port, share %, people labels | PASS | `flow-edge.tsx`, e2e "connect ports", "edit an edge" |
 | Connection styles | PASS | Batch 2: curved/straight/elbow, solid/dashed/dotted, colour, thickness, arrow none/end/both with size, label, "Skip step" and "No data" types. Presentation only: port, share % and flow maths are unchanged (unit-tested). The map export draws path, colour and dash |
-| Layers/views (Map/Numbers/Flow/Notes/Checklist; Clean vs Performance) | PARTIAL | View menu: "Show numbers on map", "Line thickness shows traffic", snap, minimap |
+| Layers/views (Numbers/Flow/Forecast/Notes/Checklist; Clean vs Performance) | PASS | View → Layers: Clean map / Performance map presets, Numbers, Flow (thickness), Notes (sticky notes and note badges), Checklists, Forecast (numbers per day/week/month/year on blocks and connections, with an on-canvas badge). Map images follow hidden layers. e2e `v1.spec.ts` |
 | Tidy Up | PASS | `lib/layout.ts`: flow blocks are laid out exactly as the prototype does; notes and headings keep their exact offset from their nearest block, use measured sizes (`widthOf`/`heightOf`), and are nudged only to avoid overlapping blocks or each other; frames refit around their blocks. Tests: `tests/unit/layout.test.ts` and e2e "Tidy up keeps notes and headings…" |
 | What-if, goal seek, revenue target | PASS | `report.tsx` "What-if" tab, `goalSeek`, `targetPlan` |
-| Goals (name/type/step, required daily/weekly/monthly/yearly numbers) | PARTIAL | one revenue target plus goal seek, and a `goal` block counts conversions; no named goals and no period breakdown |
-| Forecast | PARTIAL | `project()`: monthly, 1–60 months, growth %, active subs, MRR, cumulative; no daily/weekly/custom periods |
-| Scenarios | PARTIAL | `settings.scenarios`: what-if multiplier sets, Conservative/Expected/Optimistic preset, side by side, and in the PDF (Batch 3); no duplicate, not in the CSV |
+| Goals (name/type/step, required daily/weekly/monthly/yearly numbers) | PASS | `settings.goals`: named goals of type revenue, profit, customers, leads, people completing a step, or a step's conversion rate. `goalPlan()` (traffic scaled, goal seek for profit) gives required revenue, profit, traffic, traffic cost, leads and customers per day/week/month/year; conversion goals show the revenue/profit impact (`withStepRate`). Reports → Goals, element Analytics tab, PDF. The legacy revenue target is kept. Unit + e2e |
+| Forecast | PASS | `project()` itemised (ad spend, follow-up, delivery, expenses, leads, orders, cumulative revenue) and unchanged in its totals (golden test). Periods: day/week/month/quarter/year/custom days (`periodNumbers`); people, leads, purchases, revenue, ad spend, other costs, profit, ROI, ROAS. Forecast for any scenario via the Reports scenario picker. Recurring: active subscriptions, MRR, cumulative revenue and profit |
+| Scenarios | PASS | Conservative / Expected / Best case / Custom kinds, duplicate, show on map; Reports → Scenario comparison with differences against the baseline for traffic, leads, customers, revenue, ad spend, profit, ROAS, ROI, CPA, CPL, AOV, LTV, MRR; scenario snapshots feed every report section, the PDF and the CSV (scenario comparison block). One engine: `computeScenario` |
 | Expenses / Costs | PASS | Costs tab, `expenseTotals`, payback |
 | Actuals (planned vs actual) | PASS | `actuals.tsx`, `planVsActual`, e2e |
-| Notes (canvas-level and element-level, rich text) | PARTIAL | plain-text element notes and a funnel description; no rich text or canvas notes |
+| Notes (canvas-level and element-level, rich text) | PASS | `lib/rich-text.ts`: Markdown-style source parsed to a tree and rendered as React elements (never HTML): headings, bold, italic, underline, strikethrough, bullets, numbers, to-dos, indentation, links (http/https/mailto only), images and video links, alignment; toolbar with Ctrl B/I/U and preview. Used by sticky notes, element internal notes and **funnel notes** (toolbar → Notes). Funnel notes are internal unless "Show on client share links" is on: stripped by `get_shared_funnel` (migration `20261010000000_share_notes.sql`) and preserved on client saves. Exports print notes as plain text. Unit + DB + e2e |
 | Checklists | PASS | Batch 2: canvas checklist element (toggle on the canvas) and element-level checklists (Plan tab; ✓ n/m badge on the block): add, edit, complete, reorder, indent. Element checklists are internal: stripped from share links by `share_safe_graph` (migration `20261006000000`) and preserved when a client saves |
-| Reports / Insights as a first-class area | PARTIAL | editor right-panel tabs (Math, Steps, Sources, What-if, Costs, Scenarios, Forecast, Actuals) and dashboard KPIs; no report navigation, traffic reinvestment, month-to-month report, published/completion status, or revenue-by-product and expense charts |
-| Clients: portfolio, search, status, tags, details, logo, autosaved notes, products | PASS | `app/(app)/clients/*`, `logo-upload.tsx`, `products.tsx`; logo upload has no e2e test |
+| Reports / Insights as a first-class area | PASS | Map \| Reports switch in the editor toolbar, deep links `?view=reports&section=…`, "Reports" on every funnel card. 12 sections: Overview (project summary KPIs month + year, key leak with the gain of converting 10% better, revenue/profit chart, drop-off chart), Funnel data (step, type, visitors, conversion, customers/orders, revenue, cost, sources, status), Traffic sources, Offers & products, Expenses, Scenario comparison, Revenue & profit forecast, Goals & required numbers, MRR forecast, Month-to-month, Traffic reinvestment, Published status. Every figure from `lib/report-data.ts` (assembles engine results only); charts with tooltips, legends, validated palette, tables for every chart, empty states, responsive (section picker on narrow screens) |
+| Clients: portfolio, search, status, tags, details, logo, autosaved notes, products | PASS | `app/(app)/clients/*`, `logo-upload.tsx`, `products.tsx` (products can use every offer type); logo upload, preview, persist and remove covered by e2e `v1.spec.ts` |
 | Client pricing model (Fixed/One-time/Hourly/Commission/Retainer/Other) | PASS | migration `20261005000000_client_pricing.sql`; `lib/pricing.ts`; dynamic fields in `components/client-form.tsx`; shown on client page, list and dashboard (Agency MRR counts retainer, hourly, commission base fee and recurring "other"); existing clients read as retainers unchanged. Tests: `tests/unit/pricing.test.ts`, e2e "client pricing model…" |
-| Archive / past clients | PARTIAL | `past` status filter; no archive action |
+| Archive / past clients | PASS | `past` relationship status, plus Archive / Restore (`clients.archived_at`, migration `20261012000000_client_archive.sql`): archived clients leave the client list (Archived filter), dashboard and agency MRR; nothing is deleted. e2e |
 | Templates (5 built-in plus save as template) | PASS | `lib/templates.ts`, e2e |
 | Autosave, offline draft, version history and restore | PASS | `lib/editor/saver.ts`, `versions.tsx`, e2e |
 | Sharing (view/edit links, hide numbers, expiry, comments, notes never shared) | PASS | `share_safe_graph` RPC, e2e `privacy.spec.ts`, DB tests |
@@ -58,26 +62,26 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Presentation mode | PASS | `present.tsx` |
 | Auth: invite-only, no public sign-up, password reset, magic link | PASS | `app/(auth)/*`, `access_hardening` migration, e2e `team.spec.ts`. Team invites from Settings → Team (team admins) land in the team workspace |
 | Editor panel collapse (block library / details panel) | PASS | Batch 4: desktop toolbar toggles; the canvas takes the space; remembered in the editor view options; tablet and phone keep their drawers. e2e `workspaces.spec.ts` "editor panels" |
-| Roles | PARTIAL (deferred) | `admin` / `member` per workspace. Owner/Editor/Viewer are deferred: a real Viewer needs read-only RLS plus read-only handling of every UI write path. See `docs/concepts/workspaces-and-team.md` |
+| Roles (Owner / Admin / Editor / Viewer) | PASS | Per workspace membership (`workspace_members.role`), migration `20261011000000_roles.sql`; RLS: `can_write()` on every data policy, read policies for all members; protected owner, ownership handover, creators own workspaces; invite with a role; read-only UI for viewers on every write path. `docs/concepts/roles.md`; DB `roles.test.ts`, e2e `v1.spec.ts` |
 | Independent users (separate workspace, private sign-up URL, owner-created accounts) | PASS | Batch 4: `workspaces` table (team + personal), `workspace_id` on every data table; created from Settings → Independent accounts (team admins) or the private `/join/<INDEPENDENT_SIGNUP_CODE>` URL (404 otherwise). Tests: `tests/integration/workspaces.test.ts`, e2e `workspaces.spec.ts` |
 | RLS / data isolation | PASS | Batch 4: every policy is `workspace_id = current_workspace_id()`. Child rows inherit their parent's workspace via trigger. Storage is scoped by owner folder and thumbnail funnel. 37 DB tests, including cross-tenant reads, writes, attach and move attempts, storage, share links and templates |
-| Exports: CSV / JSON / import round-trip | PASS | `lib/export.ts`, `lib/graph.ts` import/export, `tests/unit/import.test.ts`, e2e exports |
-| Export: SVG / PNG | PASS | Batch 3: `lib/export.ts mapSvg` draws the canvas as it is: true bounds (measured element sizes, frame titles, sampled connection curves, labels), the app's fonts embedded as @font-face with text measured in the browser (`exporters.ts renderMapSvg`), wrapped notes/headings/shapes, block icons, element styles (fill, border, dash, radius, opacity, font, size, weight, colour, alignment, italic/underline/strike, letter spacing), shapes, images (remote ones inlined), checklists, frames, layer order, and connection styles (path via the canvas's own `edgePath`, dash, colour, width, traffic thickness, arrows, Yes/No, Skip, custom labels, No data). PNG = SVG × 2. Checked visually against the canvas. Light background only (no dark/transparent option) |
-| Export: PDF report | PASS | Batch 3: cover page (Emerald branding, map, 12 KPIs, steps) plus report pages: scenario comparison (as mapped, current what-if, every scenario, profit change), revenue & profit forecast (stats + revenue/costs and cumulative-profit charts), month by month, traffic sources, offer/product revenue (share bars), expenses (breakdown + items + one-time), goals & required numbers (day/week/month/year for the revenue target, goal blocks), full funnel data when the cover can't fit every step; page numbers. Every figure comes from `lib/report-data.ts`, which only assembles `compute`/`computeScenario`/`project`/`sourceRows`/`stepRows`/`targetPlan` results. Map image compressed (≈200 KB report) |
+| Exports: CSV / JSON / import round-trip | PASS | CSV now ends with a scenario comparison when scenarios exist; JSON round-trips goals, notes, reinvestment, step status and the new elements (all in the graph/settings schema). Unit-tested |
+| Export: SVG / PNG | PASS | Batch 3 fidelity work, plus final V1: new shapes and link cards drawn, rich notes as plain text, hidden layers left out, and Light / Dark / Transparent background (File → Export → Image background). Unit + checked visually |
+| Export: PDF report | PASS | Batch 3 sections plus final V1: Executive summary (year at today's rates, key leak), named goals with required numbers or conversion impact, MRR forecast, traffic reinvestment (only when a rate is chosen), build status. Every figure from `lib/report-data.ts`; checked visually |
 | Locked Emerald UI direction | PASS | Batch 2 `app/globals.css`: dark-first locked tokens (canvas #0B1220, library #0F172A, chrome #111827, panels #1E293B, borders #334155, text #E2E8F0/#94A3B8, Emerald #10B981/#059669/#047857/#34D399, semantic category colours); light theme kept as an option. Layout unchanged |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
-| Deployment | PARTIAL | Batch 1 and Batch 2 migrations are applied to the demo database. Demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 7 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
+| Deployment | READY (not applied) | `npm run deploy` now matches hand-migrated histories by name and refuses gaps (`MIGRATIONS_BASELINE`), unit-tested. Demo (`arwedmqmxrxllytzriat`) has everything up to `20261009000000_workspace_members`; production (`kyhlhacbmlbkiibvpsel`) has 3 of 12. The 3 V1-completion migrations are not applied to either database: they must go in right before this code (see docs/deployment.md) |
 
 ## C. Gap matrix
 
 | Bucket | Items |
 |---|---|
-| 1. Working, preserve | maths engine and tests; canvas core (drag, connect, select, copy/paste, align, frames, undo, minimap, snap); inspector numbers; KPI bar; report tabs; what-if/goal seek; costs; actuals; forecast; templates; autosave/offline/versions; sharing/comments/privacy; auth/invite/RLS/private storage; CSV/JSON import/export; presentation mode; dashboard; clients/products/logo |
-| 2. Complete enough | Tidy Up for flow blocks; scenario side-by-side; monthly forecast; responsive layouts |
-| 3. Broken | none known after Batch 1 |
-| 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in CSV); roles (admin/member); archive; reports area |
-| 5. Missing but required | Reports navigation with reinvestment, MRR, month-to-month and published status; Owner/Admin/Editor/Viewer roles (deferred in Batch 4) |
-| 6. Missing but clearly implied | e2e for logo upload; recents/favourites in the library |
+| 1. Working, preserve | everything in B marked PASS, including: maths engine and tests; canvas core (drag, connect, select, copy/paste, align, frames, undo, minimap, snap); inspector numbers; KPI bar; report tabs; what-if/goal seek; costs; actuals; forecast; templates; autosave/offline/versions; sharing/comments/privacy; auth/invite/RLS/private storage; CSV/JSON import/export; presentation mode; dashboard; clients/products/logo |
+| 2. Complete enough | Tidy Up for flow blocks (flow blocks keep a standard size); editorial pass on dashboard/list pages (Emerald tokens applied, layouts kept) |
+| 3. Broken | none known |
+| 4. Partially implemented | none of the in-scope V1 requirements (see the known limits below) |
+| 5. Missing but required | none |
+| 6. Missing but clearly implied | none known; small follow-ups are listed under "Known limits" |
 | 7. Out of scope (handoff §18) | AI features, multiplayer, tracking scripts, deep ad/CRM integrations, marketplace, benchmark DB, white-label portal |
 
 ## D. Test status
@@ -114,14 +118,14 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 | Bug | Current status |
 |---|---|
 | Maths discrepancy (70.2 / 4,709) | **Not reproducible.** The engine and the editor show 89.1 / 6,032 |
-| Tidy Up and canvas text | **FIXED** in Batch 1 (placement preserved, measured sizes, no overlaps) |
+| Tidy Up and canvas text | **FIXED** in Batch 1 (placement preserved, measured sizes, no overlaps). The intermittent e2e failure was the test reading boxes across zoom-animation frames, not the layout (positions are deterministic); the test now reads all boxes in one frame and passed 16/16 repeats |
 | PNG export fidelity | **FIXED** in Batch 3 (embedded fonts, true bounds, styles; compared visually with the canvas) |
 | PDF export fidelity and composition | **FIXED** in Batch 3 (all report sections, Emerald branding, page numbers) |
 | Share modal centring | **FIXED** in Batch 1 (shared `dialog.modal` rule) |
 | Client pricing model | **DONE** in Batch 1 |
-| Client logo | **PASS** (upload, preview, persist); no e2e test |
+| Client logo | **PASS** (upload, preview, persist, remove; e2e `v1.spec.ts`) |
 | Import/export round-trip | **PASS** (unit-tested) |
-| Auth/RLS cross-tenant | **PASS** for the team model; independent tenants are not implemented |
+| Auth/RLS cross-tenant | **PASS**: independent users, multiple workspaces and per-workspace roles, with cross-tenant and viewer write tests |
 | Autosave / versioning | **PASS** (e2e) |
 
 ## G. Security / auth / RLS: PASS for the current model
@@ -133,12 +137,15 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - Screenshots and thumbnails are private.
 - Share links go through RPCs that strip internal notes and screenshots, and hidden-number links strip all figures.
 - Independent users have isolated workspaces (Batch 4), covered by cross-tenant DB tests. The private sign-up URL is `/join/<code>`.
-- Remaining gap: Owner/Editor/Viewer roles (deferred).
+- Owner / Admin / Editor / Viewer per workspace: viewers can read but every write is refused by RLS (tables and storage); the owner can't be demoted, deactivated or removed except by their own handover.
+- Funnel-level notes are stripped from share links unless shared on purpose, and a client's edit link can't change them.
+- Rich text never renders HTML; links are limited to http(s)/mailto.
 
 ## H. UI/UX status: PASS for the locked Emerald tokens (Batch 2)
 
 - The locked Emerald tokens are applied, dark-first (light theme kept as an option). Fonts: Bricolage (display) and DM Sans.
-- Not yet done: a deliberate pass to reduce the card-heavy dashboard and list layouts towards "editorial / spatial" (structure was kept as instructed).
+- Reports use an editorial layout (typography, rules and spacing, no card stacks), and the chart palette is validated for colour-blind separation and contrast in both themes (`--chart-1..4`).
+- Kept as is: the card-based dashboard and client lists (working, tested; a visual restyle isn't a V1 requirement).
 - The layout follows the required structure:
   - top toolbar
   - left library (drawer on small screens)
@@ -277,11 +284,60 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - **Tests:** database 38/38 (new: create/switch/membership/isolation between created workspaces); unit 115/115; full e2e 80/80 (new: create and switch from the left menu; members can't create).
 - **Deferred:** an uploader's private screenshots are readable by every workspace they belong to (stored per user, not per workspace).
 
-## I. Recommended order for the remaining budget
+## Final V1 completion (done)
+
+**Plan (from this file's remaining PARTIAL/FAIL/deferred rows), in dependency order:**
+1. Engine and data model.
+2. Block library.
+3. Reports area with goals, forecast and scenarios.
+4. Notes, layers and the Analytics tab.
+5. Roles.
+6. Client archive, exports, the Tidy flake, deployment readiness and final QA.
+
+**What was built**
+- **Engine** (`lib/funnel-math.ts`, additive):
+  - `project()` rows itemised (ad spend, follow-up, delivery, expenses, leads, orders, cumulative revenue) plus optional reinvestment (paid traffic grows by the reinvested budget at today's cost per paid visitor; free traffic unchanged).
+  - `periodNumbers`/`periodFactor`, `goalPlan`, `withStepRate`/`stepRate`, `leaks`.
+  - `compute` accepts a `sources` filter.
+  - Type checks go through `baseOf()`/`isShareLogic()` so new block types reuse existing formulas.
+  - `lib/report-data.ts` assembles overview, leaks, reinvestment, goals and status.
+- **Data model** (`lib/graph.ts`, all optional or defaulted, so old funnels parse unchanged):
+  - `settings.goals`, `settings.notes {body, shared}`, `settings.reinvest {pct, months}` (opt-in, default 0%).
+  - `scenario.kind`, `node.status`.
+- **UI:**
+  - `components/editor/reports-view.tsx` + `report-charts.tsx` (Reports).
+  - `palette.tsx` (groups, favourites, recents), `quick-add.tsx`.
+  - `components/rich-text.tsx` + `lib/rich-text.ts`, `canvas-notes.tsx`.
+  - Layers in the View menu; Plan / Analytics tabs.
+  - Link/video node and SVG shapes; scenario kinds and duplicate.
+  - Client archive; role-aware settings, pages and editor.
+- **Migrations** (after `main`'s `20261009000000_workspace_members.sql`):
+  - `20261010000000_share_notes.sql`, `20261011000000_roles.sql`, `20261012000000_client_archive.sql`.
+  - Seed: `viewer@layer2funnels.test` (password `demo-password`), a Viewer in the team workspace.
+- **Merged `main`** (multiple workspaces, remove teammate): roles were rebuilt on `workspace_members`; my migrations were renumbered after it.
+- **Deploy tooling:** `pendingMigrations()` matches dashboard-applied histories by name (including chunked names), refuses gaps, and supports `MIGRATIONS_BASELINE`. The old script would have re-applied `init` on the demo and production databases.
+- **Bugs found and fixed on the way:**
+  - Inspector tabs were disabled for read-only users: they sat inside a disabled `<fieldset>`.
+  - Selecting a block while the funnel notes were open didn't show the block.
+  - The flaky Tidy e2e (a test race, not a layout bug).
+  - The DB test files ran in parallel against one database; they now run in sequence.
+
+**Known limits (accepted for V1)**
+- Reinvestment compounds: a very profitable funnel at a high rate grows to unrealistic numbers. That's the model (as in GERU-style tools). It's opt-in and starts from a prompt.
+- Rich text is stored as Markdown-style text with a toolbar and preview, not a WYSIWYG editor: safe by construction, and it round-trips through JSON and exports.
+- Recents and favourites are per device (browser storage).
+- jsPDF's Helvetica covers Windows-1252 only (non-Latin characters print as "?"). Remote images that block CORS don't reach the PNG/PDF.
+- Share-link recipients have no account (invite-only), so "duplicate from a share link" doesn't apply. Signed-in teammates use Duplicate funnel.
+- `profiles.role` is legacy (roles live on `workspace_members`).
+- `npm run gen:sql` also regenerates the already-applied built-in templates migration (its settings JSON gains the new default keys). Don't commit that file's diff.
+
+**Deployment status:** see table B, row "Deployment", and `docs/deployment.md` → "Databases that were migrated by hand".
+
+## I. Recommended order (history)
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)
 4. ~~Exports~~ (Batch 3)
 5. ~~Emerald re-skin~~ · 6. ~~Canvas completeness~~ (Batch 2). Follow-ups: rich-text notes, per-element Analytics tab, an editorial pass on card-heavy pages.
-7. **Reports area:** a report view built from existing `compute`/`project` output, adding traffic reinvestment, MRR, month-to-month, published status and required numbers per period.
-8. ~~Independent users / per-workspace tenancy~~ (Batch 4). **Roles** Owner/Admin/Editor/Viewer remain: a permission-system pass (read-only RLS + every UI write path).
-9. **Final QA and deploy:** finish the production migrations, run the full test suites and the live check.
+7. ~~**Reports area:**~~ (final V1 completion) a report view built from existing `compute`/`project` output, adding traffic reinvestment, MRR, month-to-month, published status and required numbers per period.
+8. ~~Independent users / per-workspace tenancy~~ (Batch 4). ~~Roles~~ (final V1 completion).
+9. ~~Final QA~~ (final V1 completion). **Deploy:** apply the pending migrations to the demo and production databases with the merge (owner's call: production was paused at the user's request), then `npm run live-check`.

@@ -38,7 +38,7 @@ import {
   setSettings,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, setSection, type ReportSection } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, openQuickAdd, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { CommentsPanel } from "./comments";
 import { CanvasNotes } from "./canvas-notes";
@@ -48,6 +48,7 @@ import { Inspector } from "./inspector";
 import { KpiBar } from "./kpi-bar";
 import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
+import { QuickAdd } from "./quick-add";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
 import { TemplateDialog } from "./template-dialog";
@@ -345,6 +346,15 @@ function EditorInner(props: EditorProps) {
         if (manage) manualVersion();
         return;
       }
+      if (ev.key === "/" && !mod) {
+        // quick-add at the centre of the canvas
+        ev.preventDefault();
+        const el = document.querySelector(".fm-stage")?.getBoundingClientRect();
+        if (!el) return;
+        const at = rf.screenToFlowPosition({ x: el.left + el.width / 2, y: el.top + el.height / 2 });
+        openQuickAdd({ sx: el.width / 2 - 150, sy: el.height / 3, fx: at.x - 105, fy: at.y - 48 });
+        return;
+      }
       if (ev.key === "Delete" || ev.key === "Backspace") {
         ev.preventDefault();
         deleteSelection();
@@ -361,7 +371,7 @@ function EditorInner(props: EditorProps) {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presenting, runTidy, manage]);
+  }, [presenting, runTidy, manage, rf]);
 
   // open the inspector sheet on small screens when something gets selected
   useEffect(
@@ -738,6 +748,7 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         <ZoomControls />
+        <QuickAdd />
         {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
           <button type="button" className="fm-period-badge" onClick={() => setOpt("period", "month")} title="Show monthly numbers">
             Numbers per {opts.period} · <u>back to monthly</u>

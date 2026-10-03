@@ -22,7 +22,7 @@ export interface LibPayload {
   w?: number;
   h?: number;
 }
-interface LibItem {
+export interface LibItem {
   key: string;
   label: string;
   icon: IconName;
@@ -52,7 +52,7 @@ const ANNOT_ITEMS: Omit<LibItem, "group">[] = [
   { key: "checklist", label: "Checklist", icon: "task", kw: "to-do tasks", payload: { type: "checklist" } },
 ];
 
-const ITEMS: LibItem[] = [
+export const ITEMS: LibItem[] = [
   ...(Object.entries(BLOCK_TYPES) as [BlockTypeKey, (typeof BLOCK_TYPES)[BlockTypeKey]][])
     .filter(([, t]) => t.cat !== "annot")
     .map(([k, t]) => ({ key: k, label: t.label, icon: t.icon, group: libOf(k), kw: t.kw ?? "", payload: { type: k } })),
@@ -106,7 +106,7 @@ const useList = (k: string) =>
 /** Small random offset so blocks added by tap don't stack exactly on top of each other. */
 const jitter = () => Math.random() * 80 - 40;
 
-const colorOf = (type: string) => {
+export const colorOf = (type: string) => {
   const T = typeOf(type);
   return CATCOLOR[T.color ?? T.cat];
 };

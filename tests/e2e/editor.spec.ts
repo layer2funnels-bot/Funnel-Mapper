@@ -25,14 +25,14 @@ test.describe("funnel editor", () => {
     await openEditor(page, id);
     await expect(page.locator(".fm-empty")).toBeVisible();
     const stage = await centre(page, ".fm-stage");
-    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
+    await page.getByRole("button", { name: "Add Landing page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp h3")).toHaveText("Landing page");
     await expect(page.locator(".fm-empty")).toBeHidden();
     // dropped where the mouse was (± snapping), not at the centre
     const box = (await nodes(page).first().boundingBox())!;
     expect(box.x).toBeLessThan(stage.x);
-    await page.getByRole("button", { name: "Add Facebook ads" }).click();
+    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).click();
     await expect(nodes(page)).toHaveCount(2);
     await expect(page.locator(".fm-insp h3")).toHaveText("Facebook ads");
   });
@@ -40,10 +40,10 @@ test.describe("funnel editor", () => {
   test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook ads" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
-    await page.getByRole("button", { name: "Add Landing page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
-    await page.getByRole("button", { name: "Add Thank-you page" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
-    await page.getByRole("button", { name: "Add Email sequence" }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
+    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
+    await page.getByRole("button", { name: "Add Landing page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
+    await page.getByRole("button", { name: "Add Thank-you page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
+    await page.getByRole("button", { name: "Add Email sequence", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
     await expect(nodes(page)).toHaveCount(4);
     const fb = node(page, "Facebook ads"),
       lp = node(page, "Landing page"),
@@ -244,7 +244,7 @@ test.describe("tablet and phone", () => {
     await expect(page.locator(".fm-side")).not.toBeInViewport();
     await page.getByRole("button", { name: "Show building blocks" }).click();
     await expect(page.locator(".fm-side")).toBeInViewport();
-    await page.getByRole("button", { name: "Add Landing page" }).click();
+    await page.getByRole("button", { name: "Add Landing page", exact: true }).click();
     await expect(page.locator(".fm-side")).not.toBeInViewport();
     await expect(nodes(page)).toHaveCount(10);
     // selecting opens the inspector sheet

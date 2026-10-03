@@ -4,7 +4,7 @@ import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useRe
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATDARK, SIZED_TYPES, WIDTH_TYPES, typeOf } from "@/lib/catalog";
-import { addNode, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
+import { addNode, openQuickAdd, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
@@ -182,6 +182,13 @@ export function Canvas() {
       onConnectEnd={onConnectEnd}
       isValidConnection={isValidConnection}
       onPaneClick={() => clearSelection()}
+      onDoubleClick={(e) => {
+        // double-click on empty canvas: floating quick-add at that spot
+        if (!(e.target instanceof Element) || !e.target.classList.contains("react-flow__pane")) return;
+        const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const at = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        openQuickAdd({ sx: e.clientX - box.left, sy: e.clientY - box.top, fx: at.x - 105, fy: at.y - 48 });
+      }}
       onDrop={onDrop}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(DND_MIME)) {

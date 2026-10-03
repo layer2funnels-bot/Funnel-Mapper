@@ -14,7 +14,7 @@ test.describe("canvas completeness (Batch 2)", () => {
   test("canvas text: Font Size label, text styling and persistence", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Heading text" }).click();
+    await page.getByRole("button", { name: "Add Heading text", exact: true }).click();
     await expect(page.getByLabel("Font Size")).toBeVisible();
     await expect(page.getByText("Size (px)")).toHaveCount(0);
     await page.getByLabel("Font Size").fill("40");
@@ -122,7 +122,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     await expect(page.getByRole("list", { name: "Checklist" }).getByRole("textbox").first()).toHaveValue("Book the guest");
     await expect(node(page, "Live webinar").locator(".fm-ntasks")).toHaveText("✓ 1/2");
     // canvas checklist element
-    await page.getByRole("button", { name: "Add Checklist" }).click();
+    await page.getByRole("button", { name: "Add Checklist", exact: true }).click();
     await page.getByLabel("Title").fill("Launch prep");
     await page.getByLabel("New checklist item").fill("Record the webinar");
     await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -141,12 +141,12 @@ test.describe("canvas completeness (Batch 2)", () => {
   test("shapes and images", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Shape" }).click();
+    await page.getByRole("button", { name: "Add Shape", exact: true }).click();
     await page.getByLabel("Shape", { exact: true }).selectOption("ellipse");
     await page.getByLabel("Text inside").fill("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toContainText("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toHaveCSS("border-radius", "50%");
-    await page.getByRole("button", { name: "Add Image / logo" }).click();
+    await page.getByRole("button", { name: "Add Image / logo", exact: true }).click();
     await expect(page.locator(".fm-image.empty")).toBeVisible();
     // 2×2 PNG
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYGD4z8DAwMDAwAAADwABRe/1oQAAAABJRU5ErkJggg==", "base64");

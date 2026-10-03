@@ -802,6 +802,20 @@ function Reinvest({ data }: SP) {
       </fieldset>
       {!rv.hasPaid ? (
         <Empty text="Reinvestment buys more paid traffic. Add a paid traffic source (with spend) to use it." />
+      ) : !rv.pct ? (
+        <div className="fm-rempty">
+          <b>Pick how much profit to reinvest</b>
+          <p>Each month, that share of last month’s profit buys extra paid traffic at today’s cost per visitor. Growth compounds, so start small.</p>
+          {!ro && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[25, 50, 75].map((v) => (
+                <button key={v} type="button" className="btn sm" onClick={() => set({ pct: v })}>
+                  Reinvest {v}%
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <Kpis

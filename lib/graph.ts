@@ -195,7 +195,7 @@ export const settingsSchema = z.object({
   /** Canvas-level notes. */
   notes: notesSchema.default({ body: "", shared: false }),
   /** Traffic reinvestment report: share of profit put back into ads each month. */
-  reinvest: z.object({ pct: finite.min(0).max(100).default(50), months: z.number().int().min(1).max(60).default(12) }).default({ pct: 50, months: 12 }),
+  reinvest: z.object({ pct: finite.min(0).max(100).default(0), months: z.number().int().min(1).max(60).default(12) }).default({ pct: 0, months: 12 }),
 });
 export type FunnelSettings = z.output<typeof settingsSchema>;
 

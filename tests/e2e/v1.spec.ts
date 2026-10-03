@@ -68,10 +68,11 @@ test.describe("reports / insights", () => {
     const { id } = await createFunnel({ template: "quiz" });
     await page.goto(`/funnels/${id}?view=reports&section=reinvest`);
     const main = page.locator(".fm-rmain");
-    await expect(main.getByLabel("Reinvest (% of profit)")).toHaveValue("50");
+    await expect(main.getByLabel("Reinvest (% of profit)")).toHaveValue("0");
+    await main.getByRole("button", { name: "Reinvest 50%" }).click();
     await expect(main.locator("tbody tr").nth(1)).toContainText("£2,791"); // half of month 1's £5,582 profit
     await main.getByLabel("Reinvest (% of profit)").fill("0");
-    await expect(main.locator("tbody tr").nth(1)).not.toContainText("£2,791");
+    await expect(main.getByText("Pick how much profit to reinvest")).toBeVisible();
     await page.locator(".fm-rnav").getByRole("button", { name: "Overview" }).click();
     await main.getByLabel("Scenario for these numbers").selectOption("base");
     await expect(main).toContainText("Numbers for As mapped");

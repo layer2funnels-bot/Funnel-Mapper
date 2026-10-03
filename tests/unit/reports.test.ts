@@ -97,11 +97,11 @@ describe("periods, goals and leaks come from compute()", () => {
 });
 
 describe("settings stay backward compatible", () => {
-  it("old settings get empty goals, private notes and a 50% reinvestment plan", () => {
+  it("old settings get empty goals, private notes and no reinvestment", () => {
     const s = parseSettings({ basis: "first", fixed: 0 });
     expect(s.goals).toEqual([]);
     expect(s.notes).toEqual({ body: "", shared: false });
-    expect(s.reinvest).toEqual({ pct: 50, months: 12 });
+    expect(s.reinvest).toEqual({ pct: 0, months: 12 });
   });
   it("step status is optional on nodes", () => {
     const n: FunnelNode = { id: "a", type: "landing", name: "", x: 0, y: 0, p: {}, status: "done" };

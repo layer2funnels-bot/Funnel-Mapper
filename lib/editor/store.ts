@@ -104,7 +104,7 @@ export const useEditor = create<EditorState>(() => ({
   nodes: [],
   edges: [],
   view: { x: 60, y: 40, k: 1 },
-  settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false, goals: [], notes: { body: "", shared: false }, reinvest: { pct: 50, months: 12 } },
+  settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false, goals: [], notes: { body: "", shared: false }, reinvest: { pct: 0, months: 12 } },
   R: blankResult,
   warnIds: new Set(),
   dims: {},

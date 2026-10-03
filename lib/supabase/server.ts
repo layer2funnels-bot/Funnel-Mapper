@@ -35,7 +35,9 @@ export const requireUser = cache(async () => {
     data: { user },
   } = await sb.auth.getUser();
   if (!user) redirect("/login");
-  const { data } = await sb.from("profiles").select("*, workspace:workspaces(*)").eq("id", user.id).maybeSingle();
+  const { data, error } = await sb.from("profiles").select("*, workspace:workspaces(*)").eq("id", user.id).maybeSingle();
+  // a failed query (e.g. a migration not yet applied) is an error, not a removed member: never sign people out for it
+  if (error) throw new Error(`Couldn't load your workspace: ${error.message}`);
   if (!data || !data.active || !data.workspace) redirect("/auth/removed");
   const { workspace, ...profile } = data;
   return { sb, user, profile, workspace, isAdmin: profile.role === "admin", isTeam: workspace.kind === "team" };

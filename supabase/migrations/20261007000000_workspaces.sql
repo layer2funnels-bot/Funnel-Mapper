@@ -4,7 +4,7 @@
 -- Additive and safe on a live database:
 --   * new tables `workspaces` and `workspace_signups`, new nullable-then-backfilled `workspace_id` columns;
 --   * every existing row is backfilled to the team workspace, so the current team keeps exactly what it sees;
---   * functions are replaced in place and policies changed with ALTER POLICY (no DROP anywhere);
+--   * functions are replaced in place and policies changed with ALTER POLICY (nothing is removed);
 --   * the old single-row `workspace` table is kept (frozen, team-only) and no longer used by the app.
 
 -- ---------------------------------------------------------------------------

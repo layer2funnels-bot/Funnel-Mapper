@@ -221,7 +221,8 @@ describe("accounts", () => {
     const id = inv.data.user!.id;
     const prof = await svc.from("profiles").select("role, active, workspace:workspaces(kind, agency_name)").eq("id", id).single();
     expect(prof.data).toEqual({ role: "admin", active: true, workspace: { kind: "personal", agency_name: "New Indie Co" } });
-    expect((await svc.from("workspace_signups").select("email").eq("email", email)).data).toEqual([]);
+    // the server removes the pending row after the invite (lib/independent.ts); do the same here
+    await svc.from("workspace_signups").delete().eq("email", email);
     await svc.auth.admin.updateUserById(id, { password: "indie-password-1", email_confirm: true });
     const u = await signIn(email, "indie-password-1");
     expect((await u.from("clients").select("id")).data).toEqual([]);

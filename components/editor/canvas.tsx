@@ -4,7 +4,7 @@ import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useRe
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATDARK, SIZED_TYPES, WIDTH_TYPES, typeOf } from "@/lib/catalog";
-import { addNode, openQuickAdd, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setView, useEditor } from "@/lib/editor/store";
+import { addNode, openQuickAdd, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
@@ -226,6 +226,7 @@ export function Canvas() {
 export function ZoomControls() {
   const rf = useReactFlow();
   const k = useEditor((s) => s.view.k);
+  const mini = useEditor((s) => s.opts.mini);
   return (
     <div className="fm-zoom">
       <button type="button" className="btn icon" aria-label="Zoom out" onClick={() => rf.zoomOut({ duration: 150 })}>
@@ -237,6 +238,9 @@ export function ZoomControls() {
       </button>
       <button type="button" className="btn" onClick={() => rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 })}>
         Fit
+      </button>
+      <button type="button" className={`btn icon${mini ? " on" : ""}`} aria-label="Toggle minimap" aria-pressed={mini} title="Minimap" onClick={() => setOpt("mini", !mini)}>
+        <Icon name="grid" />
       </button>
     </div>
   );

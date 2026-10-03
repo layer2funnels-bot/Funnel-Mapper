@@ -116,7 +116,7 @@ test.describe("funnel editor", () => {
     await expect(nodes(page)).toHaveCount(8);
     await page.getByRole("button", { name: "Redo" }).click();
     await expect(nodes(page)).toHaveCount(7);
-    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 20 } });
+    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
     await page.keyboard.press(`${mod}+a`);
     await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks selected");
     await page.keyboard.press("Escape");

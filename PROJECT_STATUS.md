@@ -335,6 +335,17 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 
 **Deployment status:** see table B, row "Deployment", and `docs/deployment.md` → "Databases that were migrated by hand".
 
+## Phase 1 (done): V2 foundations, 169-block visual system, D1 shell, D2 editor chrome
+
+Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, roles, reports, exports and block type keys unchanged.
+
+- **Baseline recorded before UI work** (local Supabase + production build): unit 139/139, DB 48/48, E2E 87/88 (the one failure, "client details, notes and products", is an intermittent save-before-reload race in the test: it passed 2/2 alone).
+- **Tokens:** `--lost` (orange, people lost) and `--attention` (amber).
+- **169-block visual system:** `lib/block-visuals.ts` (data) + `components/editor/block-visual.tsx` (renderers) + `BlockNode`; one card renderer for library, canvas, performance map, presentation and shared view. Interim baseline; the final Figma library replaces the data. Card footprint stays 210x96. Map export does not draw families yet.
+- **D1:** 232px sidebar, 64px rail, drawer, phone tab bar, workspace popover, top strip (quick search, New client / New funnel).
+- **D2:** V2 top bar, 48px rail, 256px library with categories, Clean | Performance switch, KPI strip with checks chip and "+9 more", mid-width overlay library.
+- **Tests:** unit 143/143 (+4 block-visual tests), DB 48/48; E2E 88/88 (two tests clicked a canvas point now covered by the Clean / Performance switch; the click moved).
+
 ## I. Recommended order (history)
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)

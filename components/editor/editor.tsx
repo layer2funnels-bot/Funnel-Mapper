@@ -36,10 +36,12 @@ import {
   setPositionsTransient,
   setReadOnly,
   setSettings,
+  setTab,
   showToast,
   undo,
   useEditor, reorder, setLocked, setMode, openQuickAdd, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
+import { EditorRail, ScenarioPill, ViewSwitch } from "./chrome";
 import { CommentsPanel } from "./comments";
 import { CanvasNotes } from "./canvas-notes";
 import { download, downloadPng, pdfReport, renderMapSvg, svgToPng } from "./exporters";
@@ -86,6 +88,11 @@ export function Editor(props: EditorProps) {
 }
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (!!t.closest("input, textarea, select, [contenteditable=true]") || !!document.querySelector("dialog[open]"));
+
+// 1021-1439px: the library opens as an overlay on the canvas and closes when you start working on the canvas or press Esc
+function closeOverlayLibrary() {
+  if (window.matchMedia("(min-width: 1021px) and (max-width: 1439px)").matches && !useEditor.getState().opts.hideSide) setOpt("hideSide", true);
+}
 
 function EditorInner(props: EditorProps) {
   const { mode, funnel, client, agency, share } = props;
@@ -157,6 +164,12 @@ function EditorInner(props: EditorProps) {
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
   const togglePanel = (which: "side" | "insp", value?: boolean) => setOpt(which === "side" ? "hideSide" : "hideInsp", value ?? !collapsed[which]);
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && closeOverlayLibrary();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, []);
 
   /* ---------- saving ---------- */
   const save: SaveFn = useCallback(
@@ -427,27 +440,12 @@ function EditorInner(props: EditorProps) {
   return (
     <div className={cls}>
       <header className="fm-top">
-        <button
-          type="button"
-          className="btn icon ghost fm-hide-sm"
-          aria-label={`${collapsed.side ? "Expand" : "Collapse"} ${readOnly ? "side panel" : "block library"}`}
-          title={`${collapsed.side ? "Show" : "Hide"} ${readOnly ? "side panel" : "block library"}`}
-          aria-expanded={!collapsed.side}
-          aria-controls="fm-side"
-          onClick={() => togglePanel("side")}
-        >
-          <Icon name="panelLeft" />
-        </button>
         {!readOnly && (
           <button type="button" className="btn icon fm-mobile-only" aria-label="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
             <Icon name="plus" />
           </button>
         )}
-        {owner ? (
-          <Link href={`/clients/${client.id}`} className="btn ghost icon" aria-label={`Back to ${client.name}`} title={`Back to ${client.name}`}>
-            <Icon name="back" />
-          </Link>
-        ) : (
+        {!owner && (
           <span className="flex items-center gap-2 font-display font-extrabold">
             {agency.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -458,6 +456,22 @@ function EditorInner(props: EditorProps) {
             <span className="fm-hide-sm">{agency.name}</span>
           </span>
         )}
+        <div className="fm-crumbs">
+          {owner && (
+            <>
+              <Link href={`/clients/${client.id}`} className="fm-crumb" aria-label={`Back to ${client.name}`} title={`Back to ${client.name}`}>
+                {client.name}
+              </Link>
+              <span className="sep" aria-hidden="true">
+                /
+              </span>
+            </>
+          )}
+          <label className="sr-only" htmlFor="fm-fname">
+            Funnel name
+          </label>
+          <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} />
+        </div>
         <Menu label="File">
           {(close) => (
             <>
@@ -515,6 +529,7 @@ function EditorInner(props: EditorProps) {
             </>
           )}
         </Menu>
+        {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
         {!share?.hideNumbers && (
           <div className="seg fm-modes" role="group" aria-label="View">
             <button type="button" aria-pressed={!reports} onClick={() => setMode("map")}>
@@ -527,10 +542,6 @@ function EditorInner(props: EditorProps) {
             </button>
           </div>
         )}
-        <label className="sr-only" htmlFor="fm-fname">
-          Funnel name
-        </label>
-        <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} />
         {canEdit && (
           <>
             <button type="button" className="btn icon" aria-label="Undo" title="Undo (Ctrl Z)" onClick={undo} disabled={readOnly || !canUndo}>
@@ -539,7 +550,7 @@ function EditorInner(props: EditorProps) {
             <button type="button" className="btn icon" aria-label="Redo" title="Redo (Ctrl Shift Z)" onClick={redo} disabled={readOnly || !canRedo}>
               <Icon name="redo" />
             </button>
-            <button type="button" className="btn primary" title="Tidy up layout (Ctrl Shift L)" onClick={() => runTidy()} disabled={readOnly}>
+            <button type="button" className="btn tidy" title="Tidy up layout (Ctrl Shift L)" onClick={() => runTidy()} disabled={readOnly}>
               <Icon name="sparkle" />
               <span className="fm-hide-sm">Tidy up</span>
             </button>
@@ -606,6 +617,18 @@ function EditorInner(props: EditorProps) {
                   </select>
                 </label>
               )}
+              {canEdit && (
+                <label className="fm-layer-period">
+                  Currency
+                  <select value={currency} disabled={readOnly} aria-label="Currency" onChange={(e) => isCurrency(e.target.value) && setSettings({ currency: e.target.value })}>
+                    {CURRENCY_CODES.map((c) => (
+                      <option key={c} value={c}>
+                        {CURRENCIES[c].label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <hr />
               <label>
                 <input type="checkbox" checked={opts.snap} onChange={(e) => setOpt("snap", e.target.checked)} /> Snap to grid
@@ -646,18 +669,6 @@ function EditorInner(props: EditorProps) {
             </>
           )}
         </Menu>
-        {canEdit && (
-          <label className="fm-hide-xs">
-            <span className="sr-only">Currency</span>
-            <select className="btn" value={currency} disabled={readOnly} onChange={(e) => isCurrency(e.target.value) && setSettings({ currency: e.target.value })}>
-              {CURRENCY_CODES.map((c) => (
-                <option key={c} value={c}>
-                  {CURRENCIES[c].label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <span className="fm-saved fm-hide-xs" data-s={saveStatus} role="status" aria-live="polite">
           <span className="dot" aria-hidden="true" />
           {saveLabel[saveStatus]}
@@ -677,7 +688,7 @@ function EditorInner(props: EditorProps) {
           <Icon name="panelRight" />
         </button>
         {(owner || notesShared) && (
-          <button type="button" className="btn icon" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
+          <button type="button" className="btn icon fm-mobile-only" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
             <Icon name="note" />
           </button>
         )}
@@ -685,6 +696,9 @@ function EditorInner(props: EditorProps) {
           <>
             <button type="button" className="btn icon fm-hide-sm" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="history" />
+            </button>
+            <button type="button" className="btn icon fm-hide-sm" aria-label="Present" title="Present to the client" onClick={() => setPresenting(true)} disabled={!hasNodes}>
+              <Icon name="play" />
             </button>
             <button type="button" className="btn fm-hide-sm relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
               <Icon name="comment" />
@@ -717,6 +731,16 @@ function EditorInner(props: EditorProps) {
         )}
       </header>
 
+      <EditorRail
+        readOnly={readOnly}
+        sideCollapsed={collapsed.side}
+        onToggleSide={() => togglePanel("side")}
+        showNotes={owner || notesShared}
+        notesActive={panel === "notes"}
+        onNotes={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}
+        onHelp={() => helpRef.current?.showModal()}
+      />
+
       <aside className="fm-side" id="fm-side" aria-label="Building blocks">
         {readOnly ? (
           <div className="px-1 py-2">
@@ -733,12 +757,13 @@ function EditorInner(props: EditorProps) {
             )}
           </div>
         ) : (
-          <Palette products={props.products ?? []} onPicked={() => setShowSide(false)} />
+          <Palette products={props.products ?? []} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />
         )}
       </aside>
 
-      <section className="fm-stage" aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)}>
+      <section className="fm-stage" aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
         {ready && <Canvas />}
+        {ready && !reports && !share?.hideNumbers && <ViewSwitch />}
         {ready && !hasNodes && (
           <div className="fm-empty">
             <div>

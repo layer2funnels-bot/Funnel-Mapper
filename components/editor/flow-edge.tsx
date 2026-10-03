@@ -1,27 +1,13 @@
 "use client";
-import { EdgeLabelRenderer, getSmoothStepPath, getStraightPath, Position, type EdgeProps } from "@xyflow/react";
+import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo } from "react";
 import { nf } from "@/lib/format";
 import { num } from "@/lib/funnel-math";
-import { curve, edgeTag } from "@/lib/editor/labels";
+import { edgePath, edgeTag } from "@/lib/editor/labels";
 import { selectEdge, useEditor } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
 
 type Data = { port: "main" | "alt"; fromType?: string; share: number; s?: EdgeStyle };
-
-/** Path + label point for the connection's line style (curved is the prototype's own bezier). */
-function edgePath(look: ReturnType<typeof edgeLook>, port: "main" | "alt", sx: number, sy: number, tx: number, ty: number): [string, number, number] {
-  if (look.path === "straight") {
-    const [d, lx, ly] = getStraightPath({ sourceX: sx, sourceY: sy, targetX: tx, targetY: ty });
-    return [d, lx, ly];
-  }
-  if (look.path === "elbow") {
-    const [d, lx, ly] = getSmoothStepPath({ sourceX: sx, sourceY: sy, sourcePosition: port === "alt" ? Position.Bottom : Position.Right, targetX: tx, targetY: ty, targetPosition: Position.Left, borderRadius: 10 });
-    return [d, lx, ly];
-  }
-  const [d, [mx, my]] = curve(sx, sy, port, tx, ty);
-  return [d, mx, my];
-}
 
 export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, selected, data }: EdgeProps & { data: Data }) {
   const flow = useEditor((s) => s.R.flows[id] ?? 0);

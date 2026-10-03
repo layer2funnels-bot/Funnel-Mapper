@@ -1,7 +1,7 @@
 # Funnel Mapper Pro: Project Status
 
 Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0677a63` (main), 2 Oct 2026.
-**Updated after Batch 2 (Emerald reskin + canvas completeness), 2 Oct 2026.** Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
+**Updated after Batch 3 (client-facing exports), 2 Oct 2026.** Before that, Batch 2 (Emerald reskin + canvas completeness). Earlier: **Batch 1 (core correctness + P0 fixes):** modal centring, golden maths test, a reliable password-reset test,
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
@@ -42,7 +42,7 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | What-if, goal seek, revenue target | PASS | `report.tsx` "What-if" tab, `goalSeek`, `targetPlan` |
 | Goals (name/type/step, required daily/weekly/monthly/yearly numbers) | PARTIAL | one revenue target plus goal seek, and a `goal` block counts conversions; no named goals and no period breakdown |
 | Forecast | PARTIAL | `project()`: monthly, 1–60 months, growth %, active subs, MRR, cumulative; no daily/weekly/custom periods |
-| Scenarios | PARTIAL | `settings.scenarios`: what-if multiplier sets, Conservative/Expected/Optimistic preset, side by side; no duplicate, and the PDF/CSV don't include scenarios |
+| Scenarios | PARTIAL | `settings.scenarios`: what-if multiplier sets, Conservative/Expected/Optimistic preset, side by side, and in the PDF (Batch 3); no duplicate, not in the CSV |
 | Expenses / Costs | PASS | Costs tab, `expenseTotals`, payback |
 | Actuals (planned vs actual) | PASS | `actuals.tsx`, `planVsActual`, e2e |
 | Notes (canvas-level and element-level, rich text) | PARTIAL | plain-text element notes and a funnel description; no rich text or canvas notes |
@@ -61,8 +61,8 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | Independent users (separate workspace, private sign-up URL, owner-created accounts) | FAIL | single shared workspace model |
 | RLS / data isolation | PASS (for the current model) | `is_team_member()` policies on every table, private storage; 22 DB tests cover anonymous, uninvited and deactivated users, self-promotion and share-link leakage. Cross-tenant tests are N/A until independent users exist |
 | Exports: CSV / JSON / import round-trip | PASS | `lib/export.ts`, `lib/graph.ts` import/export, `tests/unit/import.test.ts`, e2e exports |
-| Export: SVG / PNG | PARTIAL | the map is re-drawn as SVG (`lib/export.ts mapSvg`); web fonts aren't embedded (falls back to Arial in PNG), heading width is approximated; no light/dark/transparent choice. Visual fidelity not verified pixel by pixel (UNKNOWN) |
-| Export: PDF report | PARTIAL | `exporters.ts pdfReport`: branded header, KPI cards, map image, steps table; **missing** scenario comparison, forecast chart, sources, products, expenses and goals |
+| Export: SVG / PNG | PASS | Batch 3: `lib/export.ts mapSvg` draws the canvas as it is: true bounds (measured element sizes, frame titles, sampled connection curves, labels), the app's fonts embedded as @font-face with text measured in the browser (`exporters.ts renderMapSvg`), wrapped notes/headings/shapes, block icons, element styles (fill, border, dash, radius, opacity, font, size, weight, colour, alignment, italic/underline/strike, letter spacing), shapes, images (remote ones inlined), checklists, frames, layer order, and connection styles (path via the canvas's own `edgePath`, dash, colour, width, traffic thickness, arrows, Yes/No, Skip, custom labels, No data). PNG = SVG × 2. Checked visually against the canvas. Light background only (no dark/transparent option) |
+| Export: PDF report | PASS | Batch 3: cover page (Emerald branding, map, 12 KPIs, steps) plus report pages: scenario comparison (as mapped, current what-if, every scenario, profit change), revenue & profit forecast (stats + revenue/costs and cumulative-profit charts), month by month, traffic sources, offer/product revenue (share bars), expenses (breakdown + items + one-time), goals & required numbers (day/week/month/year for the revenue target, goal blocks), full funnel data when the cover can't fit every step; page numbers. Every figure comes from `lib/report-data.ts`, which only assembles `compute`/`computeScenario`/`project`/`sourceRows`/`stepRows`/`targetPlan` results. Map image compressed (≈200 KB report) |
 | Locked Emerald UI direction | PASS | Batch 2 `app/globals.css`: dark-first locked tokens (canvas #0B1220, library #0F172A, chrome #111827, panels #1E293B, borders #334155, text #E2E8F0/#94A3B8, Emerald #10B981/#059669/#047857/#34D399, semantic category colours); light theme kept as an option. Layout unchanged |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
 | Deployment | PARTIAL | Batch 1 and Batch 2 migrations are applied to the demo database. Demo live at https://funnel-mapper-demo.vercel.app (demo Supabase `arwedmqmxrxllytzriat`, auto-deploys from main). Production Supabase `kyhlhacbmlbkiibvpsel` has only 3 of 7 migrations applied (paused at the user's request). Supabase's connector hangs on any SQL that contains `DROP`, so production migrations need the ALTER-based variant (as used for the demo) or the CLI |
@@ -74,19 +74,19 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 | 1. Working, preserve | maths engine and tests; canvas core (drag, connect, select, copy/paste, align, frames, undo, minimap, snap); inspector numbers; KPI bar; report tabs; what-if/goal seek; costs; actuals; forecast; templates; autosave/offline/versions; sharing/comments/privacy; auth/invite/RLS/private storage; CSV/JSON import/export; presentation mode; dashboard; clients/products/logo |
 | 2. Complete enough | Tidy Up for flow blocks; scenario side-by-side; monthly forecast; responsive layouts |
 | 3. Broken | none known after Batch 1 |
-| 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in exports); PDF (missing sections); PNG/SVG fidelity; roles (admin/member); archive; reports area |
-| 5. Missing but required | connection styles; canvas shapes/images; per-element lock and layer order; Reports navigation with reinvestment, MRR, month-to-month and published status; PDF scenario/forecast/sources/expenses sections; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
-| 6. Missing but clearly implied | PDF/PNG consistency test (CSV/JSON now covered by the golden test); e2e for logo upload; recents/favourites in the library |
+| 4. Partially implemented | block library breadth; layers/views; notes (plain text); goals (one target); scenarios (no duplicate, not in CSV); roles (admin/member); archive; reports area |
+| 5. Missing but required | Reports navigation with reinvestment, MRR, month-to-month and published status; Owner/Admin/Editor/Viewer roles; independent-user isolation and cross-tenant tests |
+| 6. Missing but clearly implied | e2e for logo upload; recents/favourites in the library |
 | 7. Out of scope (handoff §18) | AI features, multiplayer, tracking scripts, deep ad/CRM integrations, marketplace, benchmark DB, white-label portal |
 
 ## D. Test status
 
-| Suite | Audit | After Batch 1 | After Batch 2 |
-|---|---|---|---|
-| Unit (Vitest) | 73/73 | 91/91 | **102/102** (+11 canvas: lock, layers, styles, connection styles, checklists, persistence, Tidy carrying new elements) |
-| Database/RLS | 22/22 | 22/22 | **22/22** (now also asserts element checklists never reach share links and survive a client save) |
-| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | **67/67** (+ canvas text styling, block style/icon/lock/order, connection styles, checklists, shapes and images) |
-| Typecheck / ESLint / `next build` | clean | clean | clean |
+| Suite | Audit | After Batch 1 | After Batch 2 | After Batch 3 |
+|---|---|---|---|---|
+| Unit (Vitest) | 73/73 | 91/91 | 102/102 | **115/115** (+13 `tests/unit/export-report.test.ts`: report data equals the engine on the golden funnel, map SVG keeps elements/styles/bounds, text wrap) |
+| Database/RLS | 22/22 | 22/22 | 22/22 | **22/22** |
+| E2E (Playwright, production build, fresh `db reset`) | 58/59 | 62/62 | 67/67 | **68/68** (+ `exports.spec.ts`: PDF sections and values vs the engine, SVG elements and embedded fonts, PNG size, KPIs unchanged) |
+| Typecheck / ESLint / `next build` | clean | clean | clean | clean |
 
 ## E. Maths status: PASS
 
@@ -114,8 +114,8 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 |---|---|
 | Maths discrepancy (70.2 / 4,709) | **Not reproducible.** The engine and the editor show 89.1 / 6,032 |
 | Tidy Up and canvas text | **FIXED** in Batch 1 (placement preserved, measured sizes, no overlaps) |
-| PNG export fidelity | **PARTIAL / UNKNOWN.** Re-drawn SVG without embedded fonts |
-| PDF export fidelity and composition | **PARTIAL.** Correct title and branding; missing report sections |
+| PNG export fidelity | **FIXED** in Batch 3 (embedded fonts, true bounds, styles; compared visually with the canvas) |
+| PDF export fidelity and composition | **FIXED** in Batch 3 (all report sections, Emerald branding, page numbers) |
 | Share modal centring | **FIXED** in Batch 1 (shared `dialog.modal` rule) |
 | Client pricing model | **DONE** in Batch 1 |
 | Client logo | **PASS** (upload, preview, persist); no e2e test |
@@ -173,12 +173,24 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
 - PDF/PNG don't apply block fill/border styles
 - the built-in "PT tripwire" template still has a purple stage frame (template content)
 
+## Batch 3 (done): client-facing exports
+
+- **New** `lib/report-data.ts`: report sections assembled from the engine (no formulas of its own).
+- `lib/export.ts`: `mapSvg` rewritten in place (same signature plus optional `widthOf`, `thick`, `fonts`, `measure`), `mapBounds`, `wrapText`; light palette moved to the locked slate/Emerald tokens.
+- `lib/editor/labels.ts`: `edgePath` moved here from `flow-edge.tsx` so the canvas and the export draw identical connections.
+- `components/editor/exporters.ts`: `renderMapSvg` (fonts, measuring, image inlining), multi-page `pdfReport`; `editor.tsx` passes settings and measured sizes.
+
+**Known export limits:**
+- jsPDF's built-in Helvetica covers Windows-1252 only: other characters in names (e.g. emoji, non-Latin scripts) print as "?"; ₹ prints as "Rs".
+- Block shadows are not drawn in the SVG/PNG; light background only (no dark/transparent option).
+- Text wrapping in the export is computed, so a line can occasionally break one word differently from the canvas.
+- Remote images that block cross-origin requests can't be inlined: they show in the .svg file but not in the PNG/PDF.
+- The required-numbers table covers the revenue target (`targetPlan`); goal-seek inputs are not saved, so they aren't in the PDF.
+
 ## I. Recommended order for the remaining budget
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)
-4. **Exports:**
-   - embed fonts and fix bounds in the SVG/PNG
-   - add scenario comparison, forecast chart, sources and expenses to the PDF, all from the same `compute` results
+4. ~~Exports~~ (Batch 3)
 5. ~~Emerald re-skin~~ · 6. ~~Canvas completeness~~ (Batch 2). Follow-ups: rich-text notes, per-element Analytics tab, an editorial pass on card-heavy pages.
 7. **Reports area:** a report view built from existing `compute`/`project` output, adding traffic reinvestment, MRR, month-to-month, published status and required numbers per period.
 8. **Roles and independent users** (an architectural decision: confirm before building):

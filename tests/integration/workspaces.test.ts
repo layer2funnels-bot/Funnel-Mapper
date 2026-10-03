@@ -211,7 +211,7 @@ describe("share links across workspaces", () => {
 });
 
 describe("accounts", () => {
-  it("an independent sign-up gets a fresh private workspace, as its admin", async () => {
+  it("an independent sign-up gets a fresh private workspace, as its owner", async () => {
     if (!SERVICE) return; // needs the local service key in .env.local
     const svc = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
     const email = `indie-${Date.now()}@example.test`;
@@ -220,7 +220,7 @@ describe("accounts", () => {
     expect(inv.error).toBeNull();
     const id = inv.data.user!.id;
     const prof = await svc.from("profiles").select("role, active, workspace:workspaces(kind, agency_name)").eq("id", id).single();
-    expect(prof.data).toEqual({ role: "admin", active: true, workspace: { kind: "personal", agency_name: "New Indie Co" } });
+    expect(prof.data).toEqual({ role: "owner", active: true, workspace: { kind: "personal", agency_name: "New Indie Co" } });
     // the server removes the pending row after the invite (lib/independent.ts); do the same here
     await svc.from("workspace_signups").delete().eq("email", email);
     await svc.auth.admin.updateUserById(id, { password: "indie-password-1", email_confirm: true });
@@ -240,7 +240,7 @@ describe("accounts", () => {
     const inv = await svc.auth.admin.inviteUserByEmail(email);
     expect(inv.error).toBeNull();
     const prof = await team.from("profiles").select("role, active, workspace_id").eq("email", email).single();
-    expect(prof.data).toEqual({ role: "member", active: true, workspace_id: TEAM_WS });
+    expect(prof.data).toEqual({ role: "editor", active: true, workspace_id: TEAM_WS });
     await svc.auth.admin.deleteUser(inv.data.user!.id);
   });
 });

@@ -14,6 +14,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
   const rf = useReactFlow();
   const [list, setList] = useState<ShareCommentRow[] | null>(null);
   const [showResolved, setShowResolved] = useState(false);
+  const viewer = useEditor((s) => s.viewer);
   const load = useCallback(async () => {
     const { data } = await supabaseBrowser().from("share_comments").select("*").eq("funnel_id", funnelId).order("created_at", { ascending: false });
     setList(data ?? []);
@@ -62,6 +63,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
                   </button>
                 )}
                 <p className="m-0 text-sm whitespace-pre-wrap">{c.body}</p>
+                {!viewer && (
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -85,6 +87,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
                     Delete
                   </button>
                 </div>
+                )}
               </li>
             );
           })}

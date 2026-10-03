@@ -8,13 +8,25 @@ import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
-export type SidePanel = "inspector" | "versions" | "comments";
-export type InspTab = "details" | "style" | "plan";
+export type SidePanel = "inspector" | "versions" | "comments" | "notes";
+export type InspTab = "details" | "style" | "plan" | "analytics";
+export type EditorMode = "map" | "reports";
+export type ReportSection = "overview" | "data" | "sources" | "offers" | "expenses" | "scenarios" | "forecast" | "goals" | "mrr" | "monthly" | "reinvest" | "status";
 export type SaveStatus = "saved" | "dirty" | "saving" | "offline" | "error" | "readonly";
 
 export interface ViewOpts {
+  /** Layers: numbers on blocks and connections. */
   nums: boolean;
+  /** Layers: line thickness shows traffic (flow). */
   thick: boolean;
+  /** Layers: sticky notes and internal-note badges. */
+  notes: boolean;
+  /** Layers: checklist elements and checklist badges. */
+  checks: boolean;
+  /** Forecast layer: numbers on the map per day / week / month / year (the funnel models a month). */
+  period: "day" | "week" | "month" | "year";
+  /** Background of exported map images (PNG / SVG). */
+  bg: "light" | "dark" | "transparent";
   snap: boolean;
   mini: boolean;
   /** Desktop: block library / details panel collapsed so the canvas gets the space. */
@@ -62,11 +74,16 @@ export interface EditorState {
   spot: string | null;
   /** Opened through a public share link (no account features: versions, actuals, products). */
   shared: boolean;
+  /** Workspace viewer: always read-only (the database refuses their writes too). */
+  viewer: boolean;
+  /** Map (canvas) or the full-width Reports view. */
+  mode: EditorMode;
+  section: ReportSection;
 }
 
 const OPTS_KEY = "fm-editor-opts";
 const loadOpts = (): ViewOpts => {
-  const d = { nums: true, thick: true, snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     return { ...d, ...JSON.parse(localStorage.getItem(OPTS_KEY) || "{}") };
   } catch {
@@ -87,7 +104,7 @@ export const useEditor = create<EditorState>(() => ({
   nodes: [],
   edges: [],
   view: { x: 60, y: 40, k: 1 },
-  settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false },
+  settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false, goals: [], notes: { body: "", shared: false }, reinvest: { pct: 50, months: 12 } },
   R: blankResult,
   warnIds: new Set(),
   dims: {},
@@ -96,7 +113,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: true, snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -108,6 +125,9 @@ export const useEditor = create<EditorState>(() => ({
   toast: null,
   spot: null,
   shared: false,
+  viewer: false,
+  mode: "map",
+  section: "overview",
 }));
 
 const get = () => useEditor.getState();
@@ -160,7 +180,7 @@ export function showToast(text: string) {
 }
 
 /* ---------------- lifecycle ---------------- */
-export function initEditor(p: { funnelId: string; clientId: string; name: string; graph: FunnelGraph; settings: FunnelSettings; readOnly?: boolean; shared?: boolean }) {
+export function initEditor(p: { funnelId: string; clientId: string; name: string; graph: FunnelGraph; settings: FunnelSettings; readOnly?: boolean; shared?: boolean; viewer?: boolean }) {
   clearTimeout(histTimer);
   const snap = { nodes: p.graph.nodes, edges: p.graph.edges, settings: p.settings, name: p.name };
   set({
@@ -179,12 +199,14 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     committed: snap,
     rev: 0,
     viewRev: 0,
-    readOnly: !!p.readOnly,
+    readOnly: !!p.readOnly || !!p.viewer,
     shared: !!p.shared,
+    viewer: !!p.viewer,
     spot: null,
     saveStatus: p.readOnly ? "readonly" : "saved",
     opts: loadOpts(),
     dims: {},
+    mode: "map",
   });
 }
 
@@ -225,7 +247,13 @@ export function clearSelection() {
   set({ selNodes: [], selEdge: null });
 }
 export function setTab(tab: ReportTab) {
-  set({ tab, panel: "inspector" });
+  set({ tab, panel: "inspector", mode: "map", selNodes: [], selEdge: null });
+}
+export function setMode(mode: EditorMode) {
+  set({ mode });
+}
+export function setSection(section: ReportSection) {
+  set({ section, mode: "reports" });
 }
 export function setPanel(panel: SidePanel) {
   set({ panel });
@@ -235,13 +263,15 @@ export function setInspTab(inspTab: InspTab) {
 }
 
 /* ---------------- nodes ---------------- */
-export function addNode(type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; desc?: string } = {}) {
+export function addNode(type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; desc?: string; w?: number; h?: number } = {}) {
   const T = typeOf(type);
   if (!T) return null;
   const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y), p: { ...defaultsFor(type), ...(extra.p ?? {}) }, ...(extra.desc ? { desc: extra.desc } : {}) };
   if (type === "frame") n.name = "Stage";
   const size = DEFAULT_SIZE[type];
   if (size) Object.assign(n, size);
+  if (typeof extra.w === "number" && extra.w > 0) n.w = extra.w;
+  if (typeof extra.h === "number" && extra.h > 0 && SIZED_TYPES.has(type)) n.h = extra.h;
   if (type === "checklist" && !extra.p?.items) n.p.items = [{ id: nid(), text: "First task", done: false }];
   // frames render below everything else
   apply({ nodes: type === "frame" ? [n, ...get().nodes] : [...get().nodes, n] }, { discrete: true });
@@ -520,6 +550,7 @@ export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
   } catch {}
 }
 export function setReadOnly(readOnly: boolean) {
+  if (!readOnly && get().viewer) return;
   set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved" });
 }
 export function setSaveStatus(saveStatus: SaveStatus) {

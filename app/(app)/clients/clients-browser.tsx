@@ -45,6 +45,8 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
   const [niche, setNiche] = useState("");
   const [tag, setTag] = useState("");
   const [sort, setSort] = useState<Sort>("updated");
+  const [archived, setArchived] = useState(false);
+  const archivedCount = clients.filter((c) => c.archived_at).length;
   const [view, setView] = useViewPref();
   const niches = useMemo(() => [...new Set(clients.map((c) => c.niche).filter(Boolean))].sort(), [clients]);
   const tags = useMemo(() => [...new Set(clients.flatMap((c) => c.tags))].sort(), [clients]);
@@ -56,7 +58,8 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
         (!s || [c.name, c.business_name, c.email, c.niche, c.country, ...c.tags].some((v) => v.toLowerCase().includes(s))) &&
         (!status || c.status === status) &&
         (!niche || c.niche === niche) &&
-        (!tag || c.tags.includes(tag)),
+        (!tag || c.tags.includes(tag)) &&
+        !!c.archived_at === archived,
     );
     const cmp: Record<Sort, (a: ClientListItem, b: ClientListItem) => number> = {
       updated: (a, b) => b.updated_at.localeCompare(a.updated_at),
@@ -66,7 +69,7 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
       funnels: (a, b) => b.funnels - a.funnels,
     };
     return out.sort(cmp[sort]);
-  }, [clients, q, status, niche, tag, sort]);
+  }, [clients, q, status, niche, tag, sort, archived]);
 
   return (
     <>
@@ -103,6 +106,11 @@ export function ClientsBrowser({ clients, initialStatus = "" }: { clients: Clien
           <option value="value">Highest value</option>
           <option value="funnels">Most funnels</option>
         </select>
+        {(archivedCount > 0 || archived) && (
+          <button type="button" className="btn" aria-pressed={archived} onClick={() => setArchived((a) => !a)}>
+            <Icon name="archive" /> {archived ? "Back to active clients" : `Archived (${archivedCount})`}
+          </button>
+        )}
         <div className="seg" role="group" aria-label="View">
           <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} aria-label="Card view" className="px-3!">
             <Icon name="grid" />

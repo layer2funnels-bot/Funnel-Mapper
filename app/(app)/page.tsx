@@ -21,15 +21,16 @@ function byCurrency(rows: { cur: string; v: number }[]) {
 }
 
 export default async function Dashboard() {
-  const { sb, profile, workspace, isTeam } = await requireUser();
+  const { sb, profile, workspace, isTeam, canEdit } = await requireUser();
   const [{ data: clients }, { data: funnels }, tpls] = await Promise.all([
-    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").order("name"),
+    // archived clients (and their funnels) are out of the active portfolio
+    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).order("name"),
     sb.from("funnels").select("id, name, status, client_id, summary, settings, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
     templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
   ]);
   const cl = clients ?? [];
-  const fs = funnels ?? [];
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));
+  const fs = (funnels ?? []).filter((f) => clientById[f.client_id]);
   const curOf = (f: (typeof fs)[number]) => ((f.settings as { currency?: string })?.currency ?? clientById[f.client_id]?.currency ?? workspace.default_currency);
   const sum = (f: (typeof fs)[number]) => (f.summary ?? {}) as Partial<FunnelSummary>;
   const active = cl.filter((c) => c.status === "active");
@@ -40,10 +41,14 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader title={`Hi${profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}`} sub={`${workspace.agency_name || "Layer2Funnels"} at a glance.`}>
-        <Link className="btn" href="/clients/new">
-          <Icon name="plus" /> New client
-        </Link>
-        <NewFunnelButton clients={cl.map((c) => ({ id: c.id, name: c.name }))} templates={tpls} />
+        {canEdit && (
+          <>
+            <Link className="btn" href="/clients/new">
+              <Icon name="plus" /> New client
+            </Link>
+            <NewFunnelButton clients={cl.map((c) => ({ id: c.id, name: c.name }))} templates={tpls} />
+          </>
+        )}
       </PageHeader>
 
       <section aria-label="Totals" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

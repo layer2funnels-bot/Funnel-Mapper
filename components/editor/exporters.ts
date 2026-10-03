@@ -462,6 +462,47 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
         },
       });
 
+    // --- executive summary: the year at today's rates and the biggest leak
+    const O = D.overview;
+    sections.push({
+      title: "Executive summary",
+      full: true,
+      h: TITLE + 14 + (O.keyLeak ? 10 : 0),
+      draw: (x, y, w) => {
+        const stats: [string, string, RGB?][] = [
+          ["Traffic per year", nf(O.year.people)],
+          ["Leads per year", nf(O.year.leads)],
+          ["Customers per year", nf(O.year.customers)],
+          ["Revenue per year", ms(O.year.revenue)],
+          ["Profit per year", ms(O.year.profit), signed(O.year.profit)],
+          ["ROI", pct(R.roi)],
+        ];
+        const sw = (w - 5 * 3) / 6;
+        stats.forEach(([l, v, c], i) => {
+          const sx = x + i * (sw + 3);
+          fill(C.soft);
+          doc.roundedRect(sx, y, sw, 14, 2, 2, "F");
+          font(7);
+          ink(C.muted);
+          doc.text(fit(l, sw - 5), sx + 3, y + 5);
+          font(11, true);
+          ink(c ?? C.ink);
+          doc.text(fit(v, sw - 5), sx + 3, y + 11);
+        });
+        if (O.keyLeak) {
+          const L = O.keyLeak;
+          fill(C.orange);
+          doc.rect(x, y + 17, 0.8, 7, "F");
+          font(8.5, true);
+          ink(C.ink);
+          doc.text(fit(`Key leak: ${L.name}`, w - 4), x + 3, y + 20);
+          font(7.5);
+          ink(C.muted);
+          doc.text(fit(`${nf(L.lost, 1)} of ${nf(L.inn, 1)} people (${pct(L.dropPct)}) don't move on each month. Converting 10% better here adds about ${m(L.revenueGain)} revenue and ${m(L.profitGain)} profit a month.`, w - 4), x + 3, y + 24);
+        }
+      },
+    });
+
     // --- scenario comparison
     if (D.scenarios.length > 1) {
       const cols = D.scenarios.slice(0, 9);
@@ -604,6 +645,67 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
         },
       });
     }
+
+    // --- named goals: required numbers per period (traffic-scaled) or a step's conversion target
+    for (const gr of G.items) {
+      const g = gr.goal;
+      const isMoney = g.kind === "revenue" || g.kind === "profit";
+      const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : nf(v, 1));
+      const title = `Goal: ${g.name || gr.label}`;
+      const status = `${gr.label}: ${fv(gr.current)} now, target ${fv(g.value)} (${pct(gr.progress)}).`;
+      if (g.kind === "conversion") {
+        sections.push({
+          title,
+          h: TITLE + 11,
+          draw: (x, y, w) => {
+            font(8);
+            ink(C.ink);
+            doc.text(fit(status, w), x + 1, y + 3.5);
+            font(7.5);
+            ink(C.muted);
+            doc.text(fit(gr.impact ? `At the target rate: revenue ${m(gr.impact.rev)} and profit ${m(gr.impact.profit)} per month.` : "Pick a step and a target rate.", w), x + 1, y + 8);
+          },
+        });
+      } else if (gr.required.length) {
+        tableSection(
+          title,
+          [{ h: "Period", w: 1, a: "left" }, { h: "Revenue", w: 1.1 }, { h: "Profit", w: 1.1 }, { h: "Traffic", w: 1 }, { h: "Traffic cost", w: 1.1 }, { h: "Leads", w: 0.9 }, { h: "Customers", w: 1 }],
+          gr.required.map(([p, rev, profit, vis, spend, leads, cust]) => [{ t: p, b: true }, m(rev), { t: m(profit), c: signed(profit) }, nf(vis), m(spend), nf(leads, 1), nf(cust, 1)]),
+          { note: `${status} Needs ${nf(gr.plan?.multiplier ?? NaN, 2)}x today's traffic at today's rates.` },
+        );
+      }
+    }
+
+    // --- MRR forecast (subscriptions)
+    if (F.rows.some((r) => r.mrr > 0))
+      tableSection(
+        "MRR forecast",
+        [{ h: "Month", w: 0.6, a: "left" }, { h: "New cust.", w: 0.9 }, { h: "Active subs", w: 0.9 }, { h: "MRR", w: 1 }, { h: "Revenue", w: 1 }, { h: "Cum. revenue", w: 1.1 }, { h: "Traffic cost", w: 1 }, { h: "Expenses", w: 1 }, { h: "Profit", w: 1 }],
+        F.rows.map((r) => [String(r.month), nf(r.newCustomers, 1), nf(r.activeSubs, 1), m(r.mrr), m(r.revenue), m(r.cumulativeRevenue), m(r.adSpend), m(r.expenses + r.followUp + r.delivery), { t: m(r.profit), c: signed(r.profit) }]),
+        { full: true, note: "Subscriptions renew monthly with churn of 1 / average stay. Expenses include follow-up, delivery and fixed costs." },
+      );
+
+    // --- traffic reinvestment
+    const RV = D.reinvest;
+    if (RV.hasPaid && RV.pct > 0)
+      tableSection(
+        `Traffic reinvestment: ${nf(RV.pct)}% of profit back into ads`,
+        [{ h: "Month", w: 0.6, a: "left" }, { h: "Ad budget", w: 1 }, { h: "Reinvested", w: 1 }, { h: "Traffic", w: 1 }, { h: "Revenue", w: 1.1 }, { h: "Profit", w: 1.1 }, { h: "Cumulative", w: 1.1 }],
+        [
+          ...RV.rows.map((r): Cell[] => [String(r.month), m(r.adSpend), r.reinvested ? m(r.reinvested) : "–", nf(r.traffic), m(r.revenue), { t: m(r.profit), c: signed(r.profit) }, { t: m(r.cumulative), c: signed(r.cumulative) }]),
+          [`${RV.months} months`, m(RV.rows.reduce((a, r) => a + r.adSpend, 0)), m(RV.total.reinvested), nf(RV.total.traffic), m(RV.total.revenue), { t: m(RV.total.profit), c: signed(RV.total.profit) }, ""],
+        ],
+        { full: true, total: true, note: `Without reinvestment: revenue ${m(RV.plainTotal.revenue)}, profit ${m(RV.plainTotal.profit)} over the same ${RV.months} months.` },
+      );
+
+    // --- published / completion status
+    const ST = D.status;
+    if (ST.total && ST.steps.some((x) => x.status !== "planned"))
+      tableSection(
+        `Build status: ${pct(ST.pct)} live (${ST.done} of ${ST.total} steps)`,
+        [{ h: "Step", w: 2, a: "left" }, { h: "Type", w: 1.4, a: "left" }, { h: "Status", w: 1, a: "left" }],
+        [...ST.steps].sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0)).map((x) => [x.name, x.label, { t: x.status === "done" ? "Live / done" : x.status === "building" ? "In progress" : "Planned", b: x.status !== "done" }]),
+      );
 
     // --- full funnel data when the cover page could not fit every step
     if (overflow > 0) tableSection("Funnel data", stepCols, steps.map(stepCells), { full: true });

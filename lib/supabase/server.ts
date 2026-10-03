@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Database } from "./database.types";
+import type { Role } from "../roles";
 
 /** Server Supabase client bound to the request's auth cookies. */
 export async function supabaseServer() {
@@ -40,5 +41,18 @@ export const requireUser = cache(async () => {
   if (error) throw new Error(`Couldn't load your workspace: ${error.message}`);
   if (!data || !data.active || !data.workspace) redirect("/auth/removed");
   const { workspace, ...profile } = data;
-  return { sb, user, profile, workspace, isAdmin: profile.role === "admin", isTeam: workspace.kind === "team" };
+  const role = profile.role as Role;
+  return {
+    sb,
+    user,
+    profile,
+    workspace,
+    role,
+    /** Owner or admin: manages members and branding. */
+    isAdmin: role === "owner" || role === "admin",
+    isOwner: role === "owner",
+    /** Everyone but viewers may change data (RLS enforces the same rule). */
+    canEdit: role !== "viewer",
+    isTeam: workspace.kind === "team",
+  };
 });

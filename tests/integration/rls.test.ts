@@ -54,7 +54,7 @@ describe("private access", () => {
     expect((await u.auth.signInWithPassword({ email, password: "uninvited-pass-1" })).error).toBeNull();
     expect((await u.from("clients").select("id")).data ?? []).toEqual([]);
     const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
-    expect(prof.data).toEqual({ active: false, role: "member" });
+    expect(prof.data).toEqual({ active: false, role: "editor" });
     // an admin activates them → they're in
     await admin.from("profiles").update({ active: true }).eq("email", email);
     expect(((await u.from("clients").select("id")).data ?? []).length).toBeGreaterThan(0);
@@ -68,7 +68,7 @@ describe("private access", () => {
     const inv = await svc.auth.admin.inviteUserByEmail(email);
     expect(inv.error).toBeNull();
     const prof = await admin.from("profiles").select("active, role").eq("email", email).single();
-    expect(prof.data).toEqual({ active: true, role: "member" });
+    expect(prof.data).toEqual({ active: true, role: "editor" });
     await svc.auth.admin.deleteUser(inv.data.user!.id);
   });
   it("a deactivated member sees nothing and can't write", async () => {
@@ -135,9 +135,9 @@ describe("shared workspace", () => {
     const back = await mate.from("clients").select("id");
     expect(back.data!.length).toBeGreaterThan(0);
   });
-  it("the last admin can't demote themselves", async () => {
+  it("the owner can't demote themselves (ownership only moves by handover)", async () => {
     const me = (await admin.auth.getUser()).data.user!.id;
-    const { error } = await admin.from("profiles").update({ role: "member" }).eq("id", me);
+    const { error } = await admin.from("profiles").update({ role: "editor" }).eq("id", me);
     expect(error).not.toBeNull();
   });
 });
@@ -204,6 +204,28 @@ describe("share links", () => {
     expect(n.desc).toBe("INTERNAL: client is price sensitive");
     expect(n.shot).toBe("screens/x.png");
     expect(n.checklist).toEqual([{ id: "t1", text: "INTERNAL TASK: chase invoice", done: false }]);
+  });
+  it("funnel notes stay internal unless shared on purpose, and a client can't change them", async () => {
+    const f = await admin.from("funnels").select("settings").eq("id", TRIPWIRE).single();
+    const before = f.data!.settings as Record<string, unknown>;
+    try {
+      await admin.from("funnels").update({ settings: { ...before, notes: { body: "STRATEGY: raise prices", shared: false } } }).eq("id", TRIPWIRE);
+      let r = await anon.rpc("get_shared_funnel", { p_token: "demo-share-token" });
+      expect(JSON.stringify(r.data)).not.toContain("STRATEGY");
+      expect(r.data.funnel.settings.notes).toBeUndefined();
+      await admin.from("funnels").update({ settings: { ...before, notes: { body: "PLAN: for the client", shared: true } } }).eq("id", TRIPWIRE);
+      r = await anon.rpc("get_shared_funnel", { p_token: "demo-share-token" });
+      expect(r.data.funnel.settings.notes).toEqual({ body: "PLAN: for the client", shared: true });
+      // an editable link can't overwrite (or unshare) the notes
+      const ins = await admin.from("share_links").insert({ funnel_id: TRIPWIRE, can_edit: true }).select("token").single();
+      const d = (await anon.rpc("get_shared_funnel", { p_token: ins.data!.token })).data;
+      const save = await anon.rpc("save_shared_funnel", { p_token: ins.data!.token, p_graph: d.funnel.graph, p_settings: { ...d.funnel.settings, notes: { body: "client wrote this", shared: false } } });
+      expect(save.error).toBeNull();
+      const after = await admin.from("funnels").select("settings").eq("id", TRIPWIRE).single();
+      expect((after.data!.settings as { notes: unknown }).notes).toEqual({ body: "PLAN: for the client", shared: true });
+    } finally {
+      await admin.from("funnels").update({ settings: before }).eq("id", TRIPWIRE);
+    }
   });
   it("hidden-number links strip prices and settings even when the RPC is called directly, and can't edit", async () => {
     const ins = await admin.from("share_links").insert({ funnel_id: WEBINAR, hide_numbers: true, can_edit: true }).select("token").single();

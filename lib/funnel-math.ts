@@ -1,7 +1,7 @@
 // Funnel math engine. Pure functions only: no React, no DOM, no I/O.
 // compute(), trafficVals(), offerVals() and warnings() are faithful ports of the prototype;
 // with default settings (no expenses, price/cost multipliers = 1) results are identical to it.
-import { PER_MONTH, isAnnot, typeOf, type Interval, type NodeParams } from "./catalog";
+import { PER_MONTH, baseOf, isAnnot, isShareLogic, typeOf, type Interval, type NodeParams } from "./catalog";
 import type { Expense, FunnelEdge, FunnelNode, FunnelSettings, WhatIf } from "./graph";
 
 /** Same coercion as the prototype's num(): anything non-finite becomes 0. */
@@ -46,7 +46,7 @@ export function offerVals(n: { type: string; p: NodeParams }, priceMult = 1): Of
   let first = eff,
     ltv = eff,
     mrr = 0;
-  if (n.type === "sub") {
+  if (baseOf(n.type) === "sub") {
     const pm = PER_MONTH[p.interval as Interval] || 1,
       pays = Math.max(1, num(p.life) * pm),
       trial = num(p.trialDays) > 0;
@@ -56,7 +56,7 @@ export function offerVals(n: { type: string; p: NodeParams }, priceMult = 1): Of
     ltv = setup + (trial ? trialPrice : 0) + eff * pays;
     mrr = eff * pm;
   }
-  if (n.type === "plan") {
+  if (baseOf(n.type) === "plan") {
     first = eff;
     ltv = eff * Math.max(1, num(p.pays));
   }
@@ -163,6 +163,8 @@ function flowOrder(nodes: FunnelNode[], live: FunnelEdge[]) {
 export interface ComputeOptions {
   /** Only let this traffic source emit visitors (per-source breakdown). */
   only?: string;
+  /** Only let these traffic sources emit visitors (paid / free split for reinvestment). */
+  sources?: string[];
 }
 
 export function compute(g: GraphLike, s: MathSettings, opts: ComputeOptions = {}): FunnelResult {
@@ -171,6 +173,7 @@ export function compute(g: GraphLike, s: MathSettings, opts: ComputeOptions = {}
     wp = num(s.whatif?.price) || 1,
     wk = num(s.whatif?.cost) || 1;
   const only = opts.only;
+  const allowed = opts.sources ? new Set(opts.sources) : null;
   const B: Record<string, FunnelNode> = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
   const N: Record<string, NodeResult> = {};
   g.nodes.forEach((n) => (N[n.id] = emptyNode()));
@@ -185,11 +188,11 @@ export function compute(g: GraphLike, s: MathSettings, opts: ComputeOptions = {}
     if (!T || T.cat === "annot") continue;
     if (T.cat === "traffic") {
       const v = trafficVals(n, wk),
-        on = !only || only === id;
+        on = (!only || only === id) && (!allowed || allowed.has(id));
       r.out = on ? v.vis * wt : 0;
       r.spend = on ? v.spend * wt : 0;
       r.non = 0;
-    } else if (n.type === "cond" || n.type === "split") {
+    } else if (isShareLogic(n.type)) {
       r.out = (r.inflow * num(n.p.pct)) / 100;
       r.non = r.inflow - r.out;
     } else {
@@ -238,9 +241,9 @@ export function compute(g: GraphLike, s: MathSettings, opts: ComputeOptions = {}
       t.cogs += r.cogs;
       t.mrr += r.mrr;
       if (n.p.newc) t.cust += r.out;
-      if (n.type === "sub") t.subs += r.out;
+      if (baseOf(n.type) === "sub") t.subs += r.out;
     }
-    if (n.type === "goal") t.goals += r.out;
+    if (baseOf(n.type) === "goal") t.goals += r.out;
   }
 
   const ex = expenseTotals(s.expenses);
@@ -283,10 +286,11 @@ export function warnings(g: GraphLike): string[] {
     if (!T || T.cat === "annot") continue;
     const outs = g.edges.filter((e) => e.from === n.id);
     if (T.cat !== "traffic" && !g.edges.some((e) => e.to === n.id)) w.push(`“${n.name}” has no incoming connection, so nobody reaches it.`);
-    if (n.type === "cond" && (!outs.some((e) => e.port !== "alt") || !outs.some((e) => e.port === "alt")))
-      w.push(`Condition “${n.name}” is missing its ${!outs.some((e) => e.port !== "alt") ? "Yes" : "No"} path.`);
-    if (n.type === "split" && outs.length < 2) w.push(`A/B split “${n.name}” needs both an A and a B path.`);
-    if (n.type === "sub" && !num(n.p.life)) w.push(`Subscription “${n.name}” has 0 months average stay, so lifetime value equals one payment.`);
+    const [yes, no] = T.ports ?? ["Yes", "No"];
+    if (baseOf(n.type) === "cond" && (!outs.some((e) => e.port !== "alt") || !outs.some((e) => e.port === "alt")))
+      w.push(`Condition “${n.name}” is missing its ${!outs.some((e) => e.port !== "alt") ? yes : no} path.`);
+    if (baseOf(n.type) === "split" && outs.length < 2) w.push(`Split “${n.name}” needs both a ${yes} and a ${no} path.`);
+    if (baseOf(n.type) === "sub" && !num(n.p.life)) w.push(`Subscription “${n.name}” has 0 months average stay, so lifetime value equals one payment.`);
   }
   if (!g.nodes.some((n) => typeOf(n.type)?.cat === "traffic") && g.nodes.length) w.push("Add a traffic source so numbers can flow.");
   return w;
@@ -300,8 +304,8 @@ export function warnNodeIds(g: GraphLike): Set<string> {
     if (!T || T.cat === "annot") continue;
     const outs = g.edges.filter((e) => e.from === n.id);
     if (T.cat !== "traffic" && !g.edges.some((e) => e.to === n.id)) ids.add(n.id);
-    if (n.type === "cond" && (!outs.some((e) => e.port !== "alt") || !outs.some((e) => e.port === "alt"))) ids.add(n.id);
-    if (n.type === "split" && outs.length < 2) ids.add(n.id);
+    if (baseOf(n.type) === "cond" && (!outs.some((e) => e.port !== "alt") || !outs.some((e) => e.port === "alt"))) ids.add(n.id);
+    if (baseOf(n.type) === "split" && outs.length < 2) ids.add(n.id);
   }
   return ids;
 }
@@ -418,39 +422,78 @@ export function goalSeek(g: GraphLike, s: MathSettings, lever: SeekLever, metric
 export interface ProjectionRow {
   month: number;
   traffic: number;
+  leads: number;
   newCustomers: number;
+  orders: number;
   activeSubs: number;
   revenue: number;
+  /** Ad spend this month. */
+  adSpend: number;
+  /** Follow-up costs (SMS, calls…) this month. */
+  followUp: number;
+  /** Delivery cost and affiliate commission this month. */
+  delivery: number;
+  /** Business expenses: fixed costs, monthly and per-order expenses, plus one-time costs in month 1. */
+  expenses: number;
   costs: number;
   profit: number;
   cumulative: number;
+  /** Revenue received to date. */
+  cumulativeRevenue: number;
   mrr: number;
+  /** Profit from the previous month put back into ads this month (traffic reinvestment only). */
+  reinvested: number;
+}
+
+export interface ProjectOptions {
+  /**
+   * Share (0–100) of each month's profit spent on extra paid traffic the next month, at the funnel's current cost
+   * per paid visitor. Free traffic is unaffected. 0 = no reinvestment (the plain forecast).
+   */
+  reinvestPct?: number;
 }
 
 /**
- * Projects cash over `months`. Each month launches a cohort equal to compute() with traffic scaled by
- * (1 + growth%)^m. One-time offers pay once; subscriptions pay `first` then `eff × per-month` each month,
- * retained with monthly churn 1/life; payment plans spread their payments over their schedule.
+ * Projects cash over `months`. Each month launches a cohort: compute() with traffic scaled by (1 + growth%)^m
+ * (with reinvestment, paid traffic also grows by the reinvested budget). Results are linear in traffic, so a
+ * cohort is free-traffic results + paid scale × paid-traffic results.
+ * One-time offers pay once; subscriptions pay `first` then `eff × per-month` each month, retained with monthly
+ * churn 1/life; payment plans spread their payments over their schedule.
  * Costs: ad spend, follow-up costs, delivery (on sale), affiliate % (on cash received), fixed + monthly
  * expenses every month, per-sale expenses on each order, one-time expenses in month 1.
  */
-export function project(g: GraphLike, s: MathSettings, months = 12, growthPct = 0): ProjectionRow[] {
+export function project(g: GraphLike, s: MathSettings, months = 12, growthPct = 0, opts: ProjectOptions = {}): ProjectionRow[] {
   const wp = num(s.whatif?.price) || 1;
-  const base = compute(g, { ...s, basis: "first" });
+  const sb: MathSettings = { ...s, basis: "first" };
+  const base = compute(g, sb);
   const ex = expenseTotals(s.expenses);
   const offers = g.nodes.filter((n) => typeOf(n.type)?.cat === "offer");
+  const reinvest = Math.max(0, num(opts.reinvestPct)) / 100;
+  // split traffic only when reinvesting (otherwise the paid part is the whole funnel and scales the same)
+  const paidIds = g.nodes.filter((n) => typeOf(n.type)?.cat === "traffic" && base.N[n.id]?.spend > 0).map((n) => n.id);
+  const paid = reinvest > 0 && paidIds.length ? compute(g, sb, { sources: paidIds }) : null;
+  const free = paid ? compute(g, sb, { sources: g.nodes.filter((n) => typeOf(n.type)?.cat === "traffic" && !paidIds.includes(n.id)).map((n) => n.id) }) : null;
+
   const revenue = new Array(months).fill(0),
     affCost = new Array(months).fill(0),
     activeSubs = new Array(months).fill(0),
     mrrArr = new Array(months).fill(0);
-  const cohortScale: number[] = [];
-  for (let m = 0; m < months; m++) cohortScale.push(Math.pow(1 + num(growthPct) / 100, m));
+  const rows: ProjectionRow[] = [];
+  let cum = 0,
+    cumRev = 0,
+    lastProfit = 0;
 
   for (let c = 0; c < months; c++) {
-    const k = cohortScale[c];
+    const g0 = Math.pow(1 + num(growthPct) / 100, c);
+    const reinvested = paid && c > 0 ? reinvest * Math.max(0, lastProfit) : 0;
+    // paid traffic scale: the grown budget plus the reinvested budget at today's cost per paid visitor
+    const kPaid = paid ? g0 + (paid.spend > 0 ? reinvested / paid.spend : 0) : g0;
+    const kFree = g0;
+    const out = (id: string) => (paid && free ? free.N[id].out * kFree + paid.N[id].out * kPaid : base.N[id].out * g0);
+    const tot = (k: keyof FunnelResult) => (paid && free ? (free[k] as number) * kFree + (paid[k] as number) * kPaid : (base[k] as number) * g0);
+
     for (const n of offers) {
-      const r = base.N[n.id],
-        buyers = r.out * k;
+      const buyers = out(n.id);
       if (!buyers) continue;
       const v = offerVals(n, wp),
         keep = 1 - num(n.p.refund) / 100,
@@ -460,7 +503,7 @@ export function project(g: GraphLike, s: MathSettings, months = 12, growthPct = 
         revenue[m] += amount * keep;
         affCost[m] += amount * keep * aff;
       };
-      if (n.type === "sub") {
+      if (baseOf(n.type) === "sub") {
         const pm = PER_MONTH[n.p.interval as Interval] || 1;
         const life = num(n.p.life),
           churn = life > 0 ? Math.min(1, 1 / life) : 1;
@@ -475,25 +518,181 @@ export function project(g: GraphLike, s: MathSettings, months = 12, growthPct = 
           activeSubs[c + a] += alive * keep;
           mrrArr[c + a] += alive * keep * v.mrr;
         }
-      } else if (n.type === "plan") {
+      } else if (baseOf(n.type) === "plan") {
         const pays = Math.max(1, num(n.p.pays)),
           step = 1 / (PER_MONTH[n.p.interval as Interval] || 1);
         for (let i = 0; i < pays; i++) pay(c + Math.floor(i * step), buyers * v.eff);
       } else pay(c, buyers * v.first);
     }
-  }
 
-  const rows: ProjectionRow[] = [];
-  let cum = 0;
-  for (let m = 0; m < months; m++) {
-    const k = cohortScale[m];
-    const fulfil = offers.reduce((acc, n) => acc + base.N[n.id].out * k * num(n.p.fulfil), 0);
-    const costs = (base.spend + base.actCost) * k + fulfil + affCost[m] + num(s.fixed) + ex.monthly + ex.perSale * base.orders * k + (m === 0 ? ex.oneTime : 0);
+    // every cohort up to this month has paid in, so this month's revenue is final
+    const m = c;
+    const fulfil = offers.reduce((acc, n) => acc + out(n.id) * num(n.p.fulfil), 0);
+    const adSpend = tot("spend"),
+      followUp = tot("actCost"),
+      orders = tot("orders");
+    const delivery = fulfil + affCost[m];
+    const expenses = num(s.fixed) + ex.monthly + ex.perSale * orders + (m === 0 ? ex.oneTime : 0);
+    const costs = adSpend + followUp + delivery + expenses;
     const profit = revenue[m] - costs;
     cum += profit;
-    rows.push({ month: m + 1, traffic: base.traffic * k, newCustomers: base.cust * k, activeSubs: activeSubs[m], revenue: revenue[m], costs, profit, cumulative: cum, mrr: mrrArr[m] });
+    cumRev += revenue[m];
+    lastProfit = profit;
+    rows.push({
+      month: m + 1,
+      traffic: tot("traffic"),
+      leads: tot("leads"),
+      newCustomers: tot("cust"),
+      orders,
+      activeSubs: activeSubs[m],
+      revenue: revenue[m],
+      adSpend,
+      followUp,
+      delivery,
+      expenses,
+      costs,
+      profit,
+      cumulative: cum,
+      cumulativeRevenue: cumRev,
+      mrr: mrrArr[m],
+      reinvested,
+    });
   }
   return rows;
+}
+
+/* ---------------- periods ---------------- */
+/** The funnel models one month (as the forecast does). Factors from a month to other periods. */
+export const PERIOD_FACTORS = { day: 12 / 365, week: 12 / 52, month: 1, quarter: 3, year: 12 } as const;
+export type PeriodKey = keyof typeof PERIOD_FACTORS;
+export const periodFactor = (p: PeriodKey | number) => (typeof p === "number" ? (Math.max(0, p) * 12) / 365 : PERIOD_FACTORS[p]);
+
+export interface PeriodNumbers {
+  people: number;
+  leads: number;
+  customers: number;
+  orders: number;
+  revenue: number;
+  adSpend: number;
+  expenses: number;
+  costs: number;
+  profit: number;
+  roi: number;
+  roas: number;
+  cpc: number;
+  cpl: number;
+  cpa: number;
+}
+/** One month's results scaled to another period (everything in the funnel is linear in time, so ratios hold). */
+export function periodNumbers(R: FunnelResult, factor: number): PeriodNumbers {
+  const k = factor;
+  return {
+    people: R.traffic * k,
+    leads: R.leads * k,
+    customers: R.cust * k,
+    orders: R.orders * k,
+    revenue: R.rev * k,
+    adSpend: R.spend * k,
+    expenses: (R.costs - R.spend) * k,
+    costs: R.costs * k,
+    profit: R.profit * k,
+    roi: R.roi,
+    roas: R.roas,
+    cpc: R.cpc,
+    cpl: R.cpl,
+    cpa: R.cpa,
+  };
+}
+
+/* ---------------- goals ---------------- */
+export type GoalKind = "revenue" | "profit" | "customers" | "leads" | "step" | "conversion";
+
+export interface GoalPlan {
+  /** False when the goal can't be reached by changing traffic alone. */
+  reachable: boolean;
+  /** Traffic multiplier needed (1 = today). */
+  multiplier: number;
+  /** Monthly results at the required traffic (from compute()). */
+  R: FunnelResult | null;
+}
+
+/**
+ * What it takes to hit a monthly goal by scaling traffic at today's rates: goal seek on the traffic lever, then
+ * compute() at that traffic. `step` goals count people completing a block (`nodeId`).
+ */
+export function goalPlan(g: GraphLike, s: MathSettings, goal: { kind: GoalKind; value: number; nodeId?: string }): GoalPlan {
+  const target = num(goal.value);
+  const at = (k: number) => compute(g, { ...s, whatif: { ...s.whatif, traffic: (num(s.whatif?.traffic) || 1) * k } });
+  if (!(target > 0) || goal.kind === "conversion") return { reachable: false, multiplier: NaN, R: null };
+  let k: number;
+  if (goal.kind === "step") {
+    const now = compute(g, s).N[goal.nodeId ?? ""]?.out ?? 0;
+    k = now > 0 ? target / now : NaN;
+  } else {
+    const metric = goal.kind === "revenue" ? "rev" : goal.kind === "customers" ? "cust" : goal.kind;
+    const base = compute(g, s);
+    const cur = base[metric];
+    // revenue, customers and leads are proportional to traffic; profit isn't (fixed costs), so seek it
+    if (metric !== "profit") k = cur > 0 ? target / cur : NaN;
+    else k = goalSeekValue((m) => at(m).profit - target, 0.0001, 10000);
+  }
+  if (!Number.isFinite(k) || k <= 0) return { reachable: false, multiplier: NaN, R: null };
+  return { reachable: true, multiplier: k, R: at(k) };
+}
+
+/** Bisection on a monotonic function; NaN when the root isn't bracketed. */
+function goalSeekValue(f: (m: number) => number, lo: number, hi: number) {
+  let a = lo,
+    b = hi,
+    fa = f(a);
+  const fb = f(b);
+  if (!Number.isFinite(fa) || !Number.isFinite(fb) || Math.sign(fa) === Math.sign(fb)) return fa === 0 ? a : NaN;
+  for (let i = 0; i < 100; i++) {
+    const m = (a + b) / 2,
+      fm = f(m);
+    if (Math.abs(fm) < 1e-7 || b - a < 1e-9) return m;
+    if (Math.sign(fm) === Math.sign(fa)) {
+      a = m;
+      fa = fm;
+    } else b = m;
+  }
+  return (a + b) / 2;
+}
+
+/** Results if one block converted at `rate` % (Yes / A share for share logic) instead of today's rate. */
+export function withStepRate(g: GraphLike, s: MathSettings, nodeId: string, rate: number): FunnelResult {
+  const key = (n: { type: string }) => (isShareLogic(n.type) ? "pct" : "cr");
+  const nodes = g.nodes.map((n) => (n.id === nodeId ? { ...n, p: { ...n.p, [key(n)]: Math.max(0, Math.min(100, num(rate))) } } : n));
+  return compute({ nodes, edges: g.edges }, s);
+}
+/** A block's own rate (conversion %, or Yes / A share for share logic). */
+export const stepRate = (n: { type: string; p: NodeParams }) => num(isShareLogic(n.type) ? n.p.pct : n.p.cr);
+
+/* ---------------- leaks ---------------- */
+export interface Leak {
+  id: string;
+  name: string;
+  label: string;
+  inn: number;
+  lost: number;
+  dropPct: number;
+  /** Monthly revenue and profit gained if this step converted 10% better (relative). */
+  revenueGain: number;
+  profitGain: number;
+}
+/**
+ * Steps ranked by people lost (pages, offers and actions; share logic isn't a leak, it routes people).
+ * The top one is the funnel's key leak.
+ */
+export function leaks(g: GraphLike, s: MathSettings, R: FunnelResult = compute(g, s)): Leak[] {
+  return g.nodes
+    .filter((n) => ["page", "offer", "action"].includes(typeOf(n.type)?.cat) && R.N[n.id]?.inflow > 0 && R.N[n.id].non > 0)
+    .map((n) => {
+      const r = R.N[n.id];
+      const better = withStepRate(g, s, n.id, stepRate(n) * 1.1);
+      return { id: n.id, name: n.name, label: typeOf(n.type).label, inn: r.inflow, lost: r.non, dropPct: r.non / r.inflow, revenueGain: better.rev - R.rev, profitGain: better.profit - R.profit };
+    })
+    .sort((a, b) => b.lost - a.lost);
 }
 
 /* ---------------- planned vs actual ---------------- */

@@ -198,3 +198,63 @@ describe("wrapText", () => {
     expect(wrapText("abcdefghij", 40, 10, 400, "x", measure)).toEqual(["abcd", "efgh", "ij"]);
   });
 });
+
+describe("V1 completion: report data, CSV and map export additions", () => {
+  it("overview, leaks, reinvestment, goals and status come from the engine", async () => {
+    const { graph, settings } = golden({ goals: [{ id: "g1", name: "Dream profit", kind: "profit", value: 20000 }, { id: "g2", name: "Trial rate", kind: "conversion", value: 25, nodeId: "quiz-tl" }], reinvest: { pct: 40, months: 6 } });
+    const R = compute(graph, settings);
+    const D = reportData(graph, settings, R);
+    expect(D.overview.year.revenue).toBeCloseTo(R.rev * 12, 6);
+    expect(D.overview.keyLeak?.name).toBe("Quiz funnel");
+    expect(D.reinvest.rows).toHaveLength(6);
+    expect(D.reinvest.rows[1].reinvested).toBeCloseTo(D.reinvest.rows[0].profit > 0 ? D.reinvest.rows[0].profit * 0.4 : 0, 6);
+    expect(D.reinvest.plain).toEqual(project(graph, settings, 6, 5));
+    const [profitGoal, rateGoal] = D.goals.items;
+    expect(profitGoal.plan?.R?.profit).toBeCloseTo(20000, 2);
+    expect(profitGoal.required.find(([p]) => p === "Per month")?.[2]).toBeCloseTo(20000, 2);
+    expect(rateGoal.current).toBe(15);
+    expect(rateGoal.impact?.N["quiz-tl"].out).toBeCloseTo(250, 6);
+    expect(D.status).toMatchObject({ total: 11, done: 0, planned: 11, pct: 0 });
+  });
+
+  it("CSV carries a scenario comparison when scenarios exist", async () => {
+    const { stepsCsv } = await import("@/lib/export");
+    const { graph, settings } = golden();
+    const R = compute(graph, settings);
+    const csv = stepsCsv(graph, R, reportData(graph, settings, R).scenarios);
+    expect(csv).toContain('"Scenario comparison","As mapped","Conservative","Optimistic"');
+    expect(csv).toContain(`"Revenue","${R.rev.toFixed(2)}"`);
+    const cons = computeScenario(graph, settings, settings.scenarios[0]);
+    expect(csv).toContain(`"Profit","${compute(graph, { ...settings, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 } }).profit.toFixed(2)}","${cons.profit.toFixed(2)}"`);
+    expect(stepsCsv(graph, R)).not.toContain("Scenario comparison");
+  });
+
+  it("map export draws callouts, lines, arrows, link cards and rich notes as plain text; dark and transparent backgrounds", async () => {
+    const { paletteFor, DARK_PALETTE } = await import("@/lib/export");
+    const n = (id: string, type: string, p: Record<string, unknown>, x = 0, w = 200, h = 100): FunnelNode => ({ id, type, name: id, x, y: 0, w, h, p });
+    const g: FunnelGraph = {
+      nodes: [
+        n("c", "shape", { shape: "callout", text: "Hello" }),
+        n("l", "shape", { shape: "arrow", dir: "d1" }, 300),
+        n("k", "link", { url: "https://youtu.be/abc", title: "Sales video" }, 600, 280, 64),
+        n("t", "note", { text: "## Plan\n- **bold** item" }, 1000, 210, 96),
+      ],
+      edges: [],
+      view: { x: 0, y: 0, k: 1 },
+    };
+    const R = compute(g, blankSettings());
+    const light = mapSvg(g, R, { currency: "GBP", nums: true });
+    expect(light).toMatch(/<path transform="translate\(0,0\)" d="M/);
+    expect(light).toContain("<polygon points=");
+    expect(light).toContain("Sales video");
+    expect(light).toContain("youtu.be");
+    expect(light).toContain("• bold item");
+    expect(light).not.toContain("**");
+    const dark = mapSvg(g, R, { currency: "GBP", nums: true, palette: paletteFor("dark") });
+    expect(dark).toContain(`fill="${DARK_PALETTE.bg}"`);
+    const clear = mapSvg(g, R, { currency: "GBP", nums: true, palette: paletteFor("transparent") });
+    expect(clear).toContain('<rect width="100%" height="100%" fill="none"/>');
+    // an empty link card is editor-only
+    expect(mapSvg({ ...g, nodes: [n("k2", "link", { url: "" })] }, R, { currency: "GBP", nums: true })).not.toContain("No link");
+  });
+});

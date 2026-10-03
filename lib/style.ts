@@ -118,3 +118,44 @@ export function cleanStyle<T extends object>(s: T): T | undefined {
   const out = Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined && v !== "" && v !== null)) as T;
   return Object.keys(out).length ? out : undefined;
 }
+
+/* ---------------- shape geometry (canvas + export) ---------------- */
+export interface ShapeGeom {
+  /** Path in the element's own box (0,0)–(w,h). */
+  d: string;
+  /** Open path: stroke only (lines and arrows). */
+  open: boolean;
+  /** Arrow head polygon points, if any. */
+  head?: string;
+}
+/** Geometry for the SVG-drawn shapes: callouts, lines and arrows. Others are boxes / ellipses / diamonds. */
+export function shapeGeom(kind: string, w: number, h: number, dir = "h", sw = 2): ShapeGeom | null {
+  if (kind === "callout") {
+    const r = Math.min(14, w / 4, h / 4),
+      bh = h * 0.78,
+      tx = Math.min(w * 0.22, 60);
+    const d = `M${r} 0H${w - r}Q${w} 0 ${w} ${r}V${bh - r}Q${w} ${bh} ${w - r} ${bh}H${tx + 26}L${tx} ${h}L${tx + 8} ${bh}H${r}Q0 ${bh} 0 ${bh - r}V${r}Q0 0 ${r} 0Z`;
+    return { d, open: false };
+  }
+  if (kind === "line" || kind === "arrow") {
+    const m = sw / 2 + 1;
+    const [x1, y1, x2, y2] =
+      dir === "v" ? [w / 2, m, w / 2, h - m] : dir === "d1" ? [m, m, w - m, h - m] : dir === "d2" ? [m, h - m, w - m, m] : [m, h / 2, w - m, h / 2];
+    if (kind === "line") return { d: `M${r2(x1)} ${r2(y1)}L${r2(x2)} ${r2(y2)}`, open: true };
+    const a = Math.atan2(y2 - y1, x2 - x1),
+      L = Math.max(10, sw * 4.5),
+      W = L * 0.55;
+    const bx = x2 - Math.cos(a) * L,
+      by = y2 - Math.sin(a) * L;
+    const head = [
+      [x2, y2],
+      [bx + Math.sin(a) * W, by - Math.cos(a) * W],
+      [bx - Math.sin(a) * W, by + Math.cos(a) * W],
+    ]
+      .map(([x, y]) => `${r2(x)},${r2(y)}`)
+      .join(" ");
+    return { d: `M${r2(x1)} ${r2(y1)}L${r2(bx)} ${r2(by)}`, open: true, head };
+  }
+  return null;
+}
+const r2 = (v: number) => Math.round(v * 100) / 100;

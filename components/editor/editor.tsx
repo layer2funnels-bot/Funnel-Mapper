@@ -8,7 +8,8 @@ import { Menu } from "@/components/menu";
 import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelSettings } from "@/lib/graph";
-import { fileName, stepsCsv } from "@/lib/export";
+import { fileName, paletteFor, stepsCsv } from "@/lib/export";
+import { reportData } from "@/lib/report-data";
 import { elkLayout, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -37,15 +38,17 @@ import {
   setSettings,
   showToast,
   undo,
-  useEditor, reorder, setLocked } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, setSection, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { CommentsPanel } from "./comments";
+import { CanvasNotes } from "./canvas-notes";
 import { download, downloadPng, pdfReport, renderMapSvg, svgToPng } from "./exporters";
 import { HelpDialog } from "./help-dialog";
 import { Inspector } from "./inspector";
 import { KpiBar } from "./kpi-bar";
 import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
+import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
 import { TemplateDialog } from "./template-dialog";
 import { ShareComments } from "./share-comments";
@@ -60,6 +63,8 @@ export interface EditorProps {
   products?: PaletteProduct[];
   lastVersionAt?: number;
   share?: { token: string; canEdit: boolean; hideNumbers: boolean; allowComments: boolean; comments: ShareCommentLite[] };
+  /** Workspace viewer: sees the funnel, its reports, versions and comments; changes nothing. */
+  viewer?: boolean;
   unresolvedComments?: number;
 }
 export interface ShareCommentLite {
@@ -84,6 +89,8 @@ const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (!!t.clo
 function EditorInner(props: EditorProps) {
   const { mode, funnel, client, agency, share } = props;
   const owner = mode === "owner";
+  // owners, admins and editors manage the funnel (versions, share links, templates, status); viewers only look
+  const manage = owner && !props.viewer;
   const rf = useReactFlow();
   // the store is initialised for this funnel (set synchronously by initEditor in the effect below)
   const ready = useEditor((s) => s.funnelId === funnel.id);
@@ -109,10 +116,13 @@ function EditorInner(props: EditorProps) {
   const canRedo = useEditor((s) => s.future.length > 0);
   const toast = useEditor((s) => s.toast);
   const hasNodes = useEditor((s) => s.nodes.length > 0);
+  const notesShared = useEditor((s) => s.settings.notes.shared && !!s.settings.notes.body.trim());
+  const viewMode = useEditor((s) => s.mode);
+  const reports = viewMode === "reports" && !share?.hideNumbers;
 
   /* ---------- init ---------- */
   useEffect(() => {
-    const canEdit = owner || !!share?.canEdit;
+    const canEdit = manage || !!share?.canEdit;
     const narrow = window.matchMedia("(max-width: 640px)").matches;
     let graph = funnel.graph,
       settings = funnel.settings,
@@ -128,8 +138,14 @@ function EditorInner(props: EditorProps) {
       } else if (d) clearDraft(funnel.id);
     }
     if (share?.hideNumbers) settings = { ...settings, hideNumbers: true };
-    initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit || narrow, shared: !owner });
+    initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit || narrow, shared: !owner, viewer: !!props.viewer });
     if (share?.hideNumbers) setOpt("nums", false);
+    // deep link: ?view=reports[&section=goals]
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("view") === "reports" && !share?.hideNumbers) {
+      const sec = q.get("section");
+      setSection(REPORT_SECTIONS.some(([k]) => k === sec) ? (sec as ReportSection) : "overview");
+    }
     if (restored) {
       markDirty();
       showToast("Restored unsaved changes from this device. Syncing…");
@@ -160,9 +176,9 @@ function EditorInner(props: EditorProps) {
   useAutosave({
     funnelId: funnel.id,
     save,
-    saveVersion: owner ? async (p) => void (await supabaseBrowser().from("funnel_versions").insert({ funnel_id: funnel.id, graph: p.graph as never, settings: p.settings as never, label: "Autosave", auto: true })) : undefined,
+    saveVersion: manage ? async (p) => void (await supabaseBrowser().from("funnel_versions").insert({ funnel_id: funnel.id, graph: p.graph as never, settings: p.settings as never, label: "Autosave", auto: true })) : undefined,
     lastVersionAt: props.lastVersionAt,
-    enabled: ready && (owner || !!share?.canEdit),
+    enabled: ready && (manage || !!share?.canEdit),
   });
 
   /* ---------- layout ---------- */
@@ -209,10 +225,13 @@ function EditorInner(props: EditorProps) {
       const nums = s.opts.nums && !s.settings.hideNumbers;
       try {
         if (kind === "json") download(fileName(s.name, "json"), JSON.stringify(exportFunnelFile({ ...editorSnapshot(), description: funnel.description }), null, 1), "application/json");
-        if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R), "text/csv");
+        if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R, s.settings.scenarios.length ? reportData(g, s.settings, s.R).scenarios : []), "text/csv");
         const map = { heightOf, widthOf, thick: s.opts.thick };
-        if (kind === "svg") download(fileName(s.name, "svg"), await renderMapSvg(g, s.R, { currency: s.settings.currency, nums, ...map }), "image/svg+xml");
-        if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(g, s.R, { currency: s.settings.currency, nums, ...map }));
+        const img = { ...map, palette: paletteFor(s.opts.bg) };
+        // the map image shows what's on screen: hidden layers (notes, checklists) stay out of it
+        const shown = { nodes: s.nodes.filter((n) => (s.opts.notes || n.type !== "note") && (s.opts.checks || n.type !== "checklist")), edges: s.edges };
+        if (kind === "svg") download(fileName(s.name, "svg"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }), "image/svg+xml");
+        if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }));
         if (kind === "pdf") {
           showToast("Building PDF…");
           const blob = await pdfReport(g, s.R, { funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
@@ -323,7 +342,7 @@ function EditorInner(props: EditorProps) {
       }
       if (mod && k === "s") {
         ev.preventDefault();
-        if (owner) manualVersion();
+        if (manage) manualVersion();
         return;
       }
       if (ev.key === "Delete" || ev.key === "Backspace") {
@@ -342,13 +361,35 @@ function EditorInner(props: EditorProps) {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presenting, runTidy, owner]);
+  }, [presenting, runTidy, manage]);
 
   // open the inspector sheet on small screens when something gets selected
   useEffect(
     () =>
       useEditor.subscribe((s, p) => {
-        if ((s.selNodes !== p.selNodes || s.selEdge !== p.selEdge) && (s.selNodes.length || s.selEdge)) setShowInsp(true);
+        if ((s.selNodes !== p.selNodes || s.selEdge !== p.selEdge) && (s.selNodes.length || s.selEdge)) {
+          setShowInsp(true);
+          // picking a block while the funnel notes are open shows that block's details
+          if (s.panel === "notes") setPanel("inspector");
+        }
+      }),
+    [],
+  );
+
+  // keep the address in sync with Map / Reports so the view can be bookmarked or shared with the team
+  useEffect(
+    () =>
+      useEditor.subscribe((st, prev) => {
+        if (st.mode === prev.mode && st.section === prev.section) return;
+        const u = new URL(window.location.href);
+        if (st.mode === "reports") {
+          u.searchParams.set("view", "reports");
+          u.searchParams.set("section", st.section);
+        } else {
+          u.searchParams.delete("view");
+          u.searchParams.delete("section");
+        }
+        window.history.replaceState(window.history.state, "", u);
       }),
     [],
   );
@@ -360,8 +401,8 @@ function EditorInner(props: EditorProps) {
   }, [toast]);
 
   const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
-  const canEdit = owner || !!share?.canEdit;
-  const cls = ["fm-editor", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
+  const canEdit = manage || !!share?.canEdit;
+  const cls = ["fm-editor", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
   if (presenting)
     return (
@@ -412,19 +453,25 @@ function EditorInner(props: EditorProps) {
             <>
               {owner && (
                 <>
-                  <button type="button" role="menuitem" onClick={() => (close(), manualVersion())}>
-                    Save version<kbd>Ctrl S</kbd>
-                  </button>
+                  {manage && (
+                    <button type="button" role="menuitem" onClick={() => (close(), manualVersion())}>
+                      Save version<kbd>Ctrl S</kbd>
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => (close(), setPanel("versions"), setShowInsp(true))}>
                     Version history
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), tplRef.current?.showModal())}>
-                    Save as template
-                  </button>
-                  <hr />
-                  <button type="button" role="menuitem" onClick={() => (close(), fileRef.current?.click())} disabled={readOnly}>
-                    Import funnel (.json)
-                  </button>
+                  {manage && (
+                    <>
+                      <button type="button" role="menuitem" onClick={() => (close(), tplRef.current?.showModal())}>
+                        Save as template
+                      </button>
+                      <hr />
+                      <button type="button" role="menuitem" onClick={() => (close(), fileRef.current?.click())} disabled={readOnly}>
+                        Import funnel (.json)
+                      </button>
+                    </>
+                  )}
                 </>
               )}
               <div className="ph">Export</div>
@@ -437,6 +484,14 @@ function EditorInner(props: EditorProps) {
               <button type="button" role="menuitem" onClick={() => (close(), doExport("svg"))}>
                 Map image (.svg)
               </button>
+              <label className="fm-layer-period">
+                Image background
+                <select value={opts.bg} onChange={(e) => setOpt("bg", e.target.value as typeof opts.bg)} aria-label="Map image background">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="transparent">Transparent</option>
+                </select>
+              </label>
               <button type="button" role="menuitem" onClick={() => (close(), doExport("csv"))}>
                 Step report (.csv)
               </button>
@@ -450,10 +505,22 @@ function EditorInner(props: EditorProps) {
             </>
           )}
         </Menu>
+        {!share?.hideNumbers && (
+          <div className="seg fm-modes" role="group" aria-label="View">
+            <button type="button" aria-pressed={!reports} onClick={() => setMode("map")}>
+              <Icon name="layers" size={15} />
+              <span className="fm-hide-xs">Map</span>
+            </button>
+            <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights">
+              <Icon name="chart" size={15} />
+              <span className="fm-hide-xs">Reports</span>
+            </button>
+          </div>
+        )}
         <label className="sr-only" htmlFor="fm-fname">
           Funnel name
         </label>
-        <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !owner} />
+        <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} />
         {canEdit && (
           <>
             <button type="button" className="btn icon" aria-label="Undo" title="Undo (Ctrl Z)" onClick={undo} disabled={readOnly || !canUndo}>
@@ -469,7 +536,7 @@ function EditorInner(props: EditorProps) {
           </>
         )}
         <span className="flex-1" />
-        {owner && (
+        {manage && (
           <label className="fm-hide-sm">
             <span className="sr-only">Funnel status</span>
             <select
@@ -493,14 +560,43 @@ function EditorInner(props: EditorProps) {
         <Menu label="View" align="right">
           {(close) => (
             <>
+              <div className="ph">Layers</div>
+              {!share?.hideNumbers && (
+                <div className="fm-layer-presets">
+                  <button type="button" role="menuitemcheckbox" aria-checked={!opts.nums && !opts.thick} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
+                    Clean map
+                  </button>
+                  <button type="button" role="menuitemcheckbox" aria-checked={opts.nums && opts.thick} onClick={() => (setOpt("nums", true), setOpt("thick", true))}>
+                    Performance map
+                  </button>
+                </div>
+              )}
               {!share?.hideNumbers && (
                 <label>
-                  <input type="checkbox" checked={opts.nums} onChange={(e) => setOpt("nums", e.target.checked)} /> Show numbers on map
+                  <input type="checkbox" checked={opts.nums} onChange={(e) => setOpt("nums", e.target.checked)} /> Numbers on the map
                 </label>
               )}
               <label>
-                <input type="checkbox" checked={opts.thick} onChange={(e) => setOpt("thick", e.target.checked)} /> Line thickness shows traffic
+                <input type="checkbox" checked={opts.thick} onChange={(e) => setOpt("thick", e.target.checked)} /> Flow: line thickness shows traffic
               </label>
+              <label>
+                <input type="checkbox" checked={opts.notes} onChange={(e) => setOpt("notes", e.target.checked)} /> Notes
+              </label>
+              <label>
+                <input type="checkbox" checked={opts.checks} onChange={(e) => setOpt("checks", e.target.checked)} /> Checklists
+              </label>
+              {!share?.hideNumbers && (
+                <label className="fm-layer-period">
+                  Forecast: numbers per
+                  <select value={opts.period} onChange={(e) => setOpt("period", e.target.value as typeof opts.period)} aria-label="Numbers on the map per">
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                </label>
+              )}
+              <hr />
               <label>
                 <input type="checkbox" checked={opts.snap} onChange={(e) => setOpt("snap", e.target.checked)} /> Snap to grid
               </label>
@@ -512,7 +608,7 @@ function EditorInner(props: EditorProps) {
                   <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} /> View only (lock editing)
                 </label>
               )}
-              {owner && (
+              {manage && (
                 <label>
                   <input type="checkbox" checked={hideNumbersSetting} onChange={(e) => setSettings({ hideNumbers: e.target.checked })} /> Hide numbers on share links
                 </label>
@@ -570,6 +666,11 @@ function EditorInner(props: EditorProps) {
         >
           <Icon name="panelRight" />
         </button>
+        {(owner || notesShared) && (
+          <button type="button" className="btn icon" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
+            <Icon name="note" />
+          </button>
+        )}
         {owner && (
           <>
             <button type="button" className="btn icon fm-hide-sm" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
@@ -579,17 +680,24 @@ function EditorInner(props: EditorProps) {
               <Icon name="comment" />
               {commentCount > 0 && <span className="pill bg-brand px-1.5! py-0! text-brand-ink">{commentCount}</span>}
             </button>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => {
-                setShareOpen(true);
-                shareRef.current?.showModal();
-              }}
-            >
-              <Icon name="share" />
-              <span className="fm-hide-sm">Share</span>
-            </button>
+            {manage && (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => {
+                  setShareOpen(true);
+                  shareRef.current?.showModal();
+                }}
+              >
+                <Icon name="share" />
+                <span className="fm-hide-sm">Share</span>
+              </button>
+            )}
+            {props.viewer && (
+              <span className="pill bg-brand-soft text-brand" title="You have view-only access to this workspace">
+                View only
+              </span>
+            )}
           </>
         )}
         {mode === "share" && (
@@ -630,6 +738,11 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         <ZoomControls />
+        {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
+          <button type="button" className="fm-period-badge" onClick={() => setOpt("period", "month")} title="Show monthly numbers">
+            Numbers per {opts.period} · <u>back to monthly</u>
+          </button>
+        )}
       </section>
 
       <aside className="fm-insp" id="fm-insp" aria-label="Details">
@@ -638,8 +751,10 @@ function EditorInner(props: EditorProps) {
             <Icon name="close" />
           </button>
         </div>
-        {owner && panel === "versions" ? (
-          <VersionsPanel onSaved={uploadThumbnail} />
+        {panel === "notes" && (owner || notesShared) ? (
+          <CanvasNotes />
+        ) : owner && panel === "versions" ? (
+          <VersionsPanel onSaved={manage ? uploadThumbnail : undefined} />
         ) : owner && panel === "comments" ? (
           <CommentsPanel onCount={setCommentCount} />
         ) : (
@@ -651,6 +766,7 @@ function EditorInner(props: EditorProps) {
       </aside>
 
       {!share?.hideNumbers && <KpiBar />}
+      {reports && <ReportsView />}
 
       <input
         ref={fileRef}
@@ -664,8 +780,8 @@ function EditorInner(props: EditorProps) {
         }}
       />
       <HelpDialog ref={helpRef} />
-      {owner && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
-      {owner && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
+      {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} />}
+      {manage && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
       {toast && (
         <div className="fm-toast" role="status" key={toast.id}>
           {toast.text}

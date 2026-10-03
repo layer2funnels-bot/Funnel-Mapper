@@ -12,7 +12,7 @@ import { DeleteTemplate } from "./delete-template";
 export const metadata: Metadata = { title: "Templates" };
 
 export default async function TemplatesPage() {
-  const { sb, isTeam } = await requireUser();
+  const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: templates }, { data: clients }, opts] = await Promise.all([
     sb.from("templates").select("*").order("owner_id", { nullsFirst: true }).order("created_at"),
     sb.from("clients").select("id, name").order("name"),
@@ -39,8 +39,8 @@ export default async function TemplatesPage() {
             {g.nodes.filter((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label").length} blocks · plans {money(R.rev, s.currency)} revenue · ROAS {ratio(R.roas)}
           </p>
           <div className="mt-auto flex gap-2 pt-2">
-            <NewFunnelButton clients={clients ?? []} templates={opts} defaultSource={value} label="Use template" className="btn primary sm" />
-            {t.owner_id && <DeleteTemplate id={t.id} name={t.name} />}
+            {canEdit && <NewFunnelButton clients={clients ?? []} templates={opts} defaultSource={value} label="Use template" className="btn primary sm" />}
+            {canEdit && t.owner_id && <DeleteTemplate id={t.id} name={t.name} />}
           </div>
         </div>
       </li>

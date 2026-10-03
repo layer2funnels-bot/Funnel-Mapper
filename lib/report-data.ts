@@ -1,10 +1,32 @@
 // Report sections for client exports (PDF). Pure assembly of results from lib/funnel-math.ts:
 // nothing here recalculates the funnel; every figure comes from compute / computeScenario / project / sourceRows / targetPlan.
-import { isAnnot } from "./catalog";
-import { compute, computeScenario, expenseTotals, num, project, sourceRows, stepRows, targetPlan, type FunnelResult, type GraphLike, type ProjectionRow, type SourceRow } from "./funnel-math";
-import type { FunnelSettings } from "./graph";
+import { baseOf, isAnnot, typeOf } from "./catalog";
+import {
+  compute,
+  computeScenario,
+  expenseTotals,
+  goalPlan,
+  leaks,
+  num,
+  periodNumbers,
+  project,
+  sourceRows,
+  stepRate,
+  stepRows,
+  targetPlan,
+  withStepRate,
+  type FunnelResult,
+  type GoalPlan,
+  type GraphLike,
+  type Leak,
+  type PeriodNumbers,
+  type ProjectionRow,
+  type SourceRow,
+} from "./funnel-math";
+import type { FunnelNode, FunnelSettings, Goal, StepStatus } from "./graph";
 
-export type ReportSettings = Pick<FunnelSettings, "basis" | "fixed" | "whatif" | "expenses" | "scenarios" | "projection" | "target">;
+export type ReportSettings = Pick<FunnelSettings, "basis" | "fixed" | "whatif" | "expenses" | "scenarios" | "projection" | "target"> &
+  Partial<Pick<FunnelSettings, "goals" | "reinvest">>;
 
 const NEUTRAL = { traffic: 1, conv: 1, price: 1, cost: 1 };
 const isNeutral = (w: Partial<typeof NEUTRAL> | undefined) => !w || (Object.keys(NEUTRAL) as (keyof typeof NEUTRAL)[]).every((k) => (num(w[k]) || 1) === 1);
@@ -35,7 +57,22 @@ export interface ReportData {
     oneTime: number;
     items: { name: string; category: string; kind: string; amount: number; perPeriod: number }[];
   };
+  overview: { month: PeriodNumbers; year: PeriodNumbers; keyLeak: Leak | null };
+  leaks: Leak[];
+  reinvest: {
+    pct: number;
+    months: number;
+    rows: ProjectionRow[];
+    /** The same months without reinvestment, for comparison. */
+    plain: ProjectionRow[];
+    total: { revenue: number; profit: number; traffic: number; reinvested: number };
+    plainTotal: { revenue: number; profit: number; traffic: number };
+    /** Reinvestment needs paid traffic (it buys more of it). */
+    hasPaid: boolean;
+  };
+  status: StatusReport;
   goals: {
+    items: GoalReport[];
     target: number;
     plan: ReturnType<typeof targetPlan> | null;
     /** [period, revenue, visitors, ad spend, customers] needed for the revenue target. */
@@ -43,6 +80,71 @@ export interface ReportData {
     blocks: { name: string; people: number }[];
   };
 }
+
+export interface GoalReport {
+  goal: Goal;
+  /** What the goal measures, e.g. "Monthly profit" or "Conversion at Sales page". */
+  label: string;
+  current: number;
+  /** current ÷ target (capped at 1 for display by the caller). */
+  progress: number;
+  /** Required monthly numbers (traffic-scaling goals). */
+  plan: GoalPlan | null;
+  /** [period, revenue, profit, visitors, ad spend, leads, customers] at the required traffic. */
+  required: [string, number, number, number, number, number, number][];
+  /** Conversion goals: results if the step converted at the target rate. */
+  impact: FunnelResult | null;
+  stepName?: string;
+}
+
+export interface StatusReport {
+  total: number;
+  done: number;
+  building: number;
+  planned: number;
+  /** done ÷ total (0 when there are no steps). */
+  pct: number;
+  steps: { id: string; name: string; label: string; status: StepStatus }[];
+}
+
+const GOAL_LABEL: Record<Goal["kind"], string> = {
+  revenue: "Monthly revenue",
+  profit: "Monthly profit",
+  customers: "New customers per month",
+  leads: "Leads per month",
+  step: "People completing",
+  conversion: "Conversion at",
+};
+
+/** Planned vs built steps (flow blocks only). */
+export function statusReport(nodes: FunnelNode[]): StatusReport {
+  const steps = nodes.filter((n) => typeOf(n.type) && !isAnnot(n.type)).map((n) => ({ id: n.id, name: n.name, label: typeOf(n.type).label, status: n.status ?? "planned" }));
+  const c = (k: StepStatus) => steps.filter((x) => x.status === k).length;
+  return { total: steps.length, done: c("done"), building: c("building"), planned: c("planned"), pct: steps.length ? c("done") / steps.length : 0, steps };
+}
+
+/** Progress and required numbers for one named goal. */
+export function goalReport(g: GraphLike, s: ReportSettings, R: FunnelResult, goal: Goal): GoalReport {
+  const node = goal.nodeId ? g.nodes.find((n) => n.id === goal.nodeId) : undefined;
+  const target = num(goal.value);
+  const label = goal.kind === "step" || goal.kind === "conversion" ? `${GOAL_LABEL[goal.kind]} ${node?.name ?? "(pick a step)"}` : GOAL_LABEL[goal.kind];
+  if (goal.kind === "conversion") {
+    const current = node ? stepRate(node) : NaN;
+    return { goal, label, current, progress: target ? current / target : 0, plan: null, required: [], impact: node && target > 0 ? withStepRate(g, s, node.id, target) : null, stepName: node?.name };
+  }
+  const current = goal.kind === "revenue" ? R.rev : goal.kind === "profit" ? R.profit : goal.kind === "customers" ? R.cust : goal.kind === "leads" ? R.leads : node ? (R.N[node.id]?.out ?? 0) : NaN;
+  const plan = (goal.kind === "step" && !node) ? null : goalPlan(g, s, { kind: goal.kind, value: target, nodeId: goal.nodeId });
+  const required: GoalReport["required"] =
+    plan?.reachable && plan.R ? PERIODS.map(([p, k]) => [p, plan.R!.rev * k, plan.R!.profit * k, plan.R!.traffic * k, plan.R!.spend * k, plan.R!.leads * k, plan.R!.cust * k]) : [];
+  return { goal, label, current, progress: target ? current / target : 0, plan, required, impact: null, stepName: node?.name };
+}
+
+const sumRows = (rows: ProjectionRow[]) => ({
+  revenue: rows.reduce((a, r) => a + r.revenue, 0),
+  profit: rows.reduce((a, r) => a + r.profit, 0),
+  traffic: rows.reduce((a, r) => a + r.traffic, 0),
+  reinvested: rows.reduce((a, r) => a + r.reinvested, 0),
+});
 
 const KIND_LABEL = { monthly: "Every month", per_sale: "Per order", one_time: "One-time" } as const;
 
@@ -80,9 +182,19 @@ export function reportData(g: GraphLike, s: ReportSettings, R: FunnelResult): Re
   const target = num(s.target);
   const plan = target > 0 ? targetPlan(R, target) : null;
   const required: ReportData["goals"]["required"] = plan ? PERIODS.map(([p, k]) => [p, target * k, plan.visitorsNeeded * k, plan.spendNeeded * k, plan.customersNeeded * k]) : [];
-  const blocks = g.nodes.filter((n) => n.type === "goal" && !isAnnot(n.type)).map((n) => ({ name: n.name, people: R.N[n.id]?.inflow ?? 0 }));
+  const blocks = g.nodes.filter((n) => baseOf(n.type) === "goal" && !isAnnot(n.type)).map((n) => ({ name: n.name, people: R.N[n.id]?.inflow ?? 0 }));
+
+  const L = leaks(g, s, R);
+  const rv = s.reinvest ?? { pct: 0, months: 12 };
+  const reRows = project(g, s, rv.months, growth, { reinvestPct: rv.pct });
+  const plainRows = project(g, s, rv.months, growth);
+  const hasPaid = g.nodes.some((n) => typeOf(n.type)?.cat === "traffic" && (R.N[n.id]?.spend ?? 0) > 0);
 
   return {
+    overview: { month: periodNumbers(R, 1), year: periodNumbers(R, 12), keyLeak: L[0] ?? null },
+    leaks: L,
+    reinvest: { pct: rv.pct, months: rv.months, rows: reRows, plain: plainRows, total: sumRows(reRows), plainTotal: sumRows(plainRows), hasPaid },
+    status: statusReport(g.nodes as FunnelNode[]),
     scenarios,
     hasScenarios: s.scenarios.length > 0,
     forecast: {
@@ -98,6 +210,6 @@ export function reportData(g: GraphLike, s: ReportSettings, R: FunnelResult): Re
     sources: sourceRows(g, s),
     offers,
     expenses: { lines, total: R.costs, oneTime: R.oneTime, items },
-    goals: { target, plan, required, blocks },
+    goals: { items: (s.goals ?? []).map((x) => goalReport(g, s, R, x)), target, plan, required, blocks },
   };
 }

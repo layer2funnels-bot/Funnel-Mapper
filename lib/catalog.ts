@@ -90,10 +90,38 @@ export interface NodeParams {
   [k: string]: unknown;
 }
 
+/** Block-library groups (presentation only; the maths uses `cat`). */
+export type LibGroup = "traffic" | "page" | "offer" | "action" | "comms" | "sales" | "logic" | "annot";
+export const LIB_GROUPS: Record<LibGroup, string> = {
+  traffic: "Traffic sources",
+  page: "Pages",
+  offer: "Offers & checkout",
+  action: "Actions & events",
+  comms: "Communication",
+  sales: "Sales & CRM",
+  logic: "Logic & goals",
+  annot: "Notes & layout",
+};
+
+/**
+ * Behaviour a block type borrows from a built-in one, so new types reuse the existing maths instead of adding
+ * formulas: "sub" (recurring billing), "plan" (instalments), "cond" (Yes/No share), "split" (A/B share),
+ * "goal" (counts completions), "exit" (end of the journey: no way out).
+ */
+export type BaseKind = "sub" | "plan" | "cond" | "split" | "goal" | "exit";
+
 export interface BlockType {
   cat: Category;
   label: string;
   icon: IconName;
+  /** Library group when it differs from the maths category. */
+  lib?: LibGroup;
+  /** Behaviour borrowed from a built-in type (see BaseKind). */
+  base?: BaseKind;
+  /** Port labels for share-based logic (Yes/No, A/B…). */
+  ports?: [string, string];
+  /** Extra search words for the library. */
+  kw?: string;
   /** Overrides the category colour (goal / exit). */
   color?: ColorKey;
   /** Label for the conversion-rate field on action blocks. */
@@ -130,6 +158,15 @@ export const TYPES = {
   poster: { cat: "traffic", label: "Poster / QR", icon: "qr", d: { ...FREE, visitors: 200, spend: 50 } },
   event: { cat: "traffic", label: "Event / offline", icon: "cal", d: { ...FREE, visitors: 80, spend: 100 } },
   direct: { cat: "traffic", label: "Direct / word of mouth", icon: "users", d: { ...FREE, visitors: 100 } },
+  bingads: { cat: "traffic", label: "Bing / Microsoft ads", icon: "search", d: { ...PAID, model: "cpc", cpc: 0.9, clicks: 600 } },
+  redditads: { cat: "traffic", label: "Reddit ads", icon: "chat", d: { ...PAID, model: "cpm", cpm: 5, ctr: 0.6 } },
+  display: { cat: "traffic", label: "Display ads", icon: "window", d: { ...PAID, model: "cpm", cpm: 3, ctr: 0.3 } },
+  native: { cat: "traffic", label: "Native ads", icon: "page", d: { ...PAID, model: "cpc", cpc: 0.4, clicks: 1200 } },
+  liorg: { cat: "traffic", label: "LinkedIn posts", icon: "brief", d: FREE },
+  partner: { cat: "traffic", label: "Partner", icon: "handshake", d: { ...FREE, visitors: 200 } },
+  push: { cat: "traffic", label: "Push notifications", icon: "bell", d: { ...FREE, visitors: 150 } },
+  commsrc: { cat: "traffic", label: "Community", icon: "users", d: { ...FREE, visitors: 120 } },
+  existing: { cat: "traffic", label: "Existing customers", icon: "star", kw: "customer list repeat", d: { ...FREE, visitors: 250 } },
   customsrc: { cat: "traffic", label: "Custom source", icon: "zap", d: FREE },
 
   landing: { cat: "page", label: "Landing page", icon: "layout", d: { cr: 30, lead: false } },
@@ -150,6 +187,24 @@ export const TYPES = {
   popup: { cat: "page", label: "Pop-up", icon: "window", d: { cr: 5, lead: true } },
   community: { cat: "page", label: "Community / group", icon: "users", d: { cr: 60, lead: false } },
   members: { cat: "page", label: "Members area", icon: "star", d: { cr: 100, lead: false } },
+  squeeze: { cat: "page", label: "Squeeze page", icon: "form", kw: "opt-in lead magnet", d: { cr: 40, lead: true } },
+  leadmag: { cat: "page", label: "Lead magnet page", icon: "gift", d: { cr: 35, lead: true } },
+  content: { cat: "page", label: "Content page", icon: "book", d: { cr: 15, lead: false } },
+  webreg: { cat: "page", label: "Webinar registration", icon: "form", d: { cr: 35, lead: true } },
+  productp: { cat: "page", label: "Product page", icon: "box", d: { cr: 25, lead: false } },
+  orderp: { cat: "page", label: "Order form", icon: "card", d: { cr: 60, lead: false } },
+  cartp: { cat: "page", label: "Cart", icon: "cart", d: { cr: 50, lead: false } },
+  qualify: { cat: "page", label: "Qualification form", icon: "quiz", d: { cr: 50, lead: true } },
+  callconf: { cat: "page", label: "Call confirmation", icon: "phone", d: { cr: 100, lead: false } },
+  proposalp: { cat: "page", label: "Proposal page", icon: "page", d: { cr: 40, lead: false } },
+  contract: { cat: "page", label: "Contract / e-sign", icon: "edit", d: { cr: 80, lead: false } },
+  login: { cat: "page", label: "Login page", icon: "lock", d: { cr: 90, lead: false } },
+  course: { cat: "page", label: "Course", icon: "book", d: { cr: 70, lead: false } },
+  lesson: { cat: "page", label: "Lesson", icon: "play", d: { cr: 80, lead: false } },
+  upsellp: { cat: "page", label: "Upsell page", icon: "up", kw: "oto one-time offer", d: { cr: 100, lead: false } },
+  downsellp: { cat: "page", label: "Downsell page", icon: "down", d: { cr: 100, lead: false } },
+  modal: { cat: "page", label: "Modal", icon: "window", d: { cr: 8, lead: true } },
+  external: { cat: "page", label: "External website", icon: "globe", d: { cr: 20, lead: false } },
   custompage: { cat: "page", label: "Custom page", icon: "page", d: { cr: 50, lead: false } },
 
   checkout: { cat: "offer", label: "Checkout (front-end)", icon: "cart", d: { ...OFF, cr: 10, price: 37, newc: true } },
@@ -157,26 +212,87 @@ export const TYPES = {
   bump: { cat: "offer", label: "Order bump", icon: "plus", d: { ...OFF, cr: 25, price: 9 } },
   upsell: { cat: "offer", label: "Upsell (OTO)", icon: "up", d: { ...OFF, cr: 20, price: 97 } },
   downsell: { cat: "offer", label: "Downsell", icon: "down", d: { ...OFF, cr: 15, price: 27 } },
-  sub: { cat: "offer", label: "Subscription", icon: "repeat", d: { ...OFF, cr: 30, price: 69.99, interval: "monthly", trialDays: 0, trialPrice: 0, setup: 0, life: 6 } },
+  sub: { cat: "offer", label: "Subscription", icon: "repeat", base: "sub", d: { ...OFF, cr: 30, price: 69.99, interval: "monthly", trialDays: 0, trialPrice: 0, setup: 0, life: 6 } },
   trial: { cat: "offer", label: "Free / paid trial", icon: "gift", d: { ...OFF, cr: 30, price: 0, newc: false } },
-  plan: { cat: "offer", label: "Payment plan", icon: "card", d: { ...OFF, cr: 10, price: 333, pays: 3, interval: "monthly", newc: true } },
+  plan: { cat: "offer", label: "Payment plan", icon: "card", base: "plan", d: { ...OFF, cr: 10, price: 333, pays: 3, interval: "monthly", newc: true } },
   hightick: { cat: "offer", label: "High-ticket program", icon: "crown", d: { ...OFF, cr: 20, price: 3000, newc: true } },
+  service: { cat: "offer", label: "Service", icon: "brief", d: { ...OFF, cr: 20, price: 500, newc: true } },
+  digital: { cat: "offer", label: "Digital product", icon: "download", d: { ...OFF, cr: 10, price: 27, newc: true } },
+  coursep: { cat: "offer", label: "Online course", icon: "book", d: { ...OFF, cr: 8, price: 197, newc: true } },
+  coaching: { cat: "offer", label: "Coaching", icon: "users", d: { ...OFF, cr: 15, price: 1500, newc: true } },
+  membership: { cat: "offer", label: "Membership", icon: "star", base: "sub", d: { ...OFF, cr: 20, price: 39, newc: true, interval: "monthly", trialDays: 0, trialPrice: 0, setup: 0, life: 6 } },
+  oto: { cat: "offer", label: "One-time offer (OTO)", icon: "zap", d: { ...OFF, cr: 15, price: 67 } },
+  bundle: { cat: "offer", label: "Bundle", icon: "box", d: { ...OFF, cr: 12, price: 147, newc: true } },
+  coupon: { cat: "offer", label: "Discount / coupon", icon: "tag", d: { ...OFF, cr: 18, price: 97, disc: 20, newc: true } },
+  freeoffer: { cat: "offer", label: "Free offer", icon: "gift", kw: "free plus shipping", d: { ...OFF, cr: 30, price: 0 } },
 
-  seq: { cat: "action", label: "Email sequence", icon: "mail", crl: "Click-through rate", d: { cr: 20, costPer: 0, count: 5 } },
-  sms: { cat: "action", label: "SMS follow-up", icon: "sms", crl: "Click-through rate", d: { cr: 25, costPer: 0.04 } },
-  follow: { cat: "action", label: "WhatsApp follow-up", icon: "chat", crl: "Reply rate", d: { cr: 40, costPer: 0 } },
-  dm: { cat: "action", label: "DM automation", icon: "bot", crl: "Reply / click rate", d: { cr: 60, costPer: 0 } },
-  call: { cat: "action", label: "Sales call", icon: "phone", crl: "Show-up rate", d: { cr: 70, costPer: 0 } },
-  retaud: { cat: "action", label: "Retargeting audience", icon: "eye", crl: "Re-engage rate", d: { cr: 10, costPer: 0.3 } },
+  seq: { cat: "action", lib: "comms", label: "Email sequence", icon: "mail", crl: "Click-through rate", d: { cr: 20, costPer: 0, count: 5 } },
+  sms: { cat: "action", lib: "comms", label: "SMS follow-up", icon: "sms", crl: "Click-through rate", d: { cr: 25, costPer: 0.04 } },
+  follow: { cat: "action", lib: "comms", label: "WhatsApp follow-up", icon: "chat", crl: "Reply rate", d: { cr: 40, costPer: 0 } },
+  dm: { cat: "action", lib: "comms", label: "DM automation", icon: "bot", crl: "Reply / click rate", d: { cr: 60, costPer: 0 } },
+  call: { cat: "action", lib: "sales", label: "Sales call", icon: "phone", crl: "Show-up rate", d: { cr: 70, costPer: 0 } },
+  retaud: { cat: "action", lib: "comms", label: "Retargeting audience", icon: "eye", crl: "Re-engage rate", d: { cr: 10, costPer: 0.3 } },
   wait: { cat: "action", label: "Wait / delay", icon: "clock", crl: "Still active after wait", d: { cr: 100, costPer: 0, days: 3 } },
-  tagact: { cat: "action", label: "Add tag / CRM", icon: "tag", crl: "Pass-through", d: { cr: 100, costPer: 0 } },
+  tagact: { cat: "action", lib: "sales", label: "Add tag / CRM", icon: "tag", crl: "Pass-through", d: { cr: 100, costPer: 0 } },
   webhook: { cat: "action", label: "Zapier / webhook", icon: "zap", crl: "Pass-through", d: { cr: 100, costPer: 0 } },
   task: { cat: "action", label: "Manual task", icon: "task", crl: "Completed", d: { cr: 100, costPer: 0 } },
+  leadact: { cat: "action", label: "Lead captured", icon: "users", crl: "Pass-through", d: { cr: 100, costPer: 0 } },
+  formsub: { cat: "action", label: "Form submitted", icon: "form", crl: "Submit rate", d: { cr: 60, costPer: 0 } },
+  optinact: { cat: "action", label: "Opt-in", icon: "check", crl: "Opt-in rate", d: { cr: 40, costPer: 0 } },
+  addcart: { cat: "action", label: "Add to cart", icon: "cart", crl: "Add-to-cart rate", d: { cr: 20, costPer: 0 } },
+  checkoutst: { cat: "action", label: "Checkout started", icon: "card", crl: "Started checkout", d: { cr: 50, costPer: 0 } },
+  purchaseact: { cat: "action", label: "Purchase event", icon: "cart", crl: "Purchase rate", kw: "payment order", d: { cr: 100, costPer: 0 } },
+  trialstart: { cat: "action", label: "Trial started", icon: "gift", crl: "Trial start rate", d: { cr: 30, costPer: 0 } },
+  upgrade: { cat: "action", label: "Upgrade", icon: "up", crl: "Upgrade rate", d: { cr: 15, costPer: 0 } },
+  renewal: { cat: "action", label: "Renewal", icon: "repeat", crl: "Renewal rate", d: { cr: 80, costPer: 0 } },
+  clickact: { cat: "action", label: "Link click", icon: "link", crl: "Click rate", d: { cr: 10, costPer: 0 } },
+  watch: { cat: "action", label: "Watch video", icon: "video", crl: "Watch rate", d: { cr: 50, costPer: 0 } },
+  vidcomplete: { cat: "action", label: "Video completed", icon: "play", crl: "Completion rate", d: { cr: 30, costPer: 0 } },
+  scroll: { cat: "action", label: "Scroll depth", icon: "down", crl: "Reached depth", d: { cr: 40, costPer: 0 } },
+  downloadact: { cat: "action", label: "Download", icon: "download", crl: "Download rate", d: { cr: 60, costPer: 0 } },
+  openact: { cat: "action", label: "Email opened", icon: "mail", crl: "Open rate", d: { cr: 35, costPer: 0 } },
+  replyact: { cat: "action", label: "Reply", icon: "chat", crl: "Reply rate", d: { cr: 8, costPer: 0 } },
+  shareact: { cat: "action", label: "Share", icon: "share", crl: "Share rate", d: { cr: 5, costPer: 0 } },
+  loginact: { cat: "action", label: "Logged in", icon: "lock", crl: "Login rate", d: { cr: 80, costPer: 0 } },
+  coursestart: { cat: "action", label: "Course started", icon: "book", crl: "Start rate", d: { cr: 70, costPer: 0 } },
+  coursedone: { cat: "action", label: "Course completed", icon: "check", crl: "Completion rate", d: { cr: 35, costPer: 0 } },
+  review: { cat: "action", label: "Review left", icon: "star", crl: "Review rate", d: { cr: 10, costPer: 0 } },
+  referact: { cat: "action", label: "Referral made", icon: "handshake", crl: "Referral rate", d: { cr: 5, costPer: 0 } },
+  repeat: { cat: "action", label: "Repeat purchase", icon: "repeat", crl: "Repeat rate", d: { cr: 20, costPer: 0 } },
+  cancel: { cat: "action", label: "Cancellation", icon: "exit", crl: "Cancellation rate", d: { cr: 10, costPer: 0 } },
+  refundact: { cat: "action", label: "Refund", icon: "down", crl: "Refund rate", d: { cr: 5, costPer: 0 } },
 
-  cond: { cat: "logic", label: "Condition (Yes / No)", icon: "diamond", d: { pct: 50 } },
-  split: { cat: "logic", label: "A/B split test", icon: "split", d: { pct: 50 } },
-  goal: { cat: "logic", label: "Goal / conversion", icon: "goal", color: "goal", d: { cr: 100 } },
-  exit: { cat: "logic", label: "Exit / drop-off", icon: "exit", color: "goal", d: { cr: 100 } },
+  emailone: { cat: "action", lib: "comms", label: "Email", icon: "mail", crl: "Click-through rate", d: { cr: 15, costPer: 0 } },
+  phone: { cat: "action", lib: "comms", label: "Phone call", icon: "phone", crl: "Answer rate", d: { cr: 40, costPer: 1 } },
+  followup: { cat: "action", lib: "comms", label: "Follow-up", icon: "repeat", crl: "Response rate", d: { cr: 20, costPer: 0 } },
+  nurture: { cat: "action", lib: "comms", label: "Nurture sequence", icon: "mail", crl: "Re-engage rate", d: { cr: 10, costPer: 0, count: 7 } },
+  reminder: { cat: "action", lib: "comms", label: "Reminder", icon: "clock", crl: "Show-up after reminder", d: { cr: 80, costPer: 0 } },
+  notify: { cat: "action", lib: "comms", label: "Notification", icon: "bell", crl: "Click rate", d: { cr: 8, costPer: 0 } },
+
+  mql: { cat: "action", lib: "sales", label: "MQL", icon: "users", crl: "Marketing qualified", kw: "marketing qualified lead", d: { cr: 40, costPer: 0 } },
+  sqlq: { cat: "action", lib: "sales", label: "SQL", icon: "target", crl: "Sales qualified", kw: "sales qualified lead", d: { cr: 50, costPer: 0 } },
+  qualified: { cat: "action", lib: "sales", label: "Qualified lead", icon: "check", crl: "Qualified", d: { cr: 50, costPer: 0 } },
+  application: { cat: "action", lib: "sales", label: "Application review", icon: "form", crl: "Approved", d: { cr: 60, costPer: 0 } },
+  appointment: { cat: "action", lib: "sales", label: "Appointment booked", icon: "cal", crl: "Booking rate", d: { cr: 30, costPer: 0 } },
+  noshow: { cat: "action", lib: "sales", label: "No-show recovery", icon: "clock", crl: "Rebooked", d: { cr: 25, costPer: 0 } },
+  demo: { cat: "action", lib: "sales", label: "Demo", icon: "video", crl: "Attended", d: { cr: 70, costPer: 0 } },
+  meeting: { cat: "action", lib: "sales", label: "Meeting", icon: "users", crl: "Attended", d: { cr: 75, costPer: 0 } },
+  proposal: { cat: "action", lib: "sales", label: "Proposal sent", icon: "page", crl: "Accepted", d: { cr: 40, costPer: 0 } },
+  negotiation: { cat: "action", lib: "sales", label: "Negotiation", icon: "handshake", crl: "Agreed", d: { cr: 60, costPer: 0 } },
+  won: { cat: "action", lib: "sales", label: "Deal won", icon: "crown", crl: "Pass-through", d: { cr: 100, costPer: 0 } },
+  lost: { cat: "logic", lib: "sales", label: "Deal lost", icon: "exit", base: "exit", color: "goal", d: { cr: 100 } },
+  pipeline: { cat: "action", lib: "sales", label: "Pipeline stage", icon: "layout", crl: "Moves on", d: { cr: 50, costPer: 0 } },
+
+  cond: { cat: "logic", label: "Condition (Yes / No)", icon: "diamond", base: "cond", ports: ["Yes", "No"], d: { pct: 50 } },
+  split: { cat: "logic", label: "A/B split test", icon: "split", base: "split", ports: ["A", "B"], d: { pct: 50 } },
+  multivar: { cat: "logic", label: "Multivariate test", icon: "split", base: "split", ports: ["A", "Others"], kw: "split test variants", d: { pct: 34 } },
+  randsplit: { cat: "logic", label: "Percentage split", icon: "split", base: "split", ports: ["Share", "Rest"], kw: "random split", d: { pct: 50 } },
+  qualifier: { cat: "logic", label: "Qualification", icon: "diamond", base: "cond", ports: ["Qualified", "Not"], d: { pct: 40 } },
+  branch: { cat: "logic", label: "Branch", icon: "diamond", base: "cond", ports: ["Path 1", "Path 2"], d: { pct: 50 } },
+  merge: { cat: "logic", label: "Merge paths", icon: "merge", d: { cr: 100 } },
+  goal: { cat: "logic", label: "Goal / conversion", icon: "goal", color: "goal", base: "goal", d: { cr: 100 } },
+  exit: { cat: "logic", label: "Exit / drop-off", icon: "exit", color: "goal", base: "exit", d: { cr: 100 } },
+  endp: { cat: "logic", label: "End", icon: "flag", color: "goal", base: "exit", d: { cr: 100 } },
 
   note: { cat: "annot", label: "Sticky note", icon: "note", d: { text: "Write a note…" } },
   label: { cat: "annot", label: "Heading text", icon: "text", d: { text: "Stage name", size: 28 } },
@@ -184,6 +300,7 @@ export const TYPES = {
   shape: { cat: "annot", label: "Shape", icon: "shape", d: { shape: "rounded", text: "" } },
   image: { cat: "annot", label: "Image / logo", icon: "image", d: { src: "", alt: "", fit: "contain" } },
   checklist: { cat: "annot", label: "Checklist", icon: "task", d: { title: "Checklist", items: [] } },
+  link: { cat: "annot", label: "Link / video", icon: "link", kw: "embed preview youtube loom url", d: { url: "", title: "" } },
 } satisfies Record<string, BlockType>;
 
 export type BlockTypeKey = keyof typeof TYPES;
@@ -192,6 +309,12 @@ export const BLOCK_TYPES = TYPES as Record<BlockTypeKey, BlockType>;
 export const isBlockType = (t: string): t is BlockTypeKey => Object.prototype.hasOwnProperty.call(TYPES, t);
 export const typeOf = (t: string): BlockType => BLOCK_TYPES[t as BlockTypeKey];
 export const isAnnot = (t: string) => typeOf(t)?.cat === "annot";
+/** Built-in behaviour of a type: its `base`, else the type itself (so "cond" → "cond", "membership" → "sub"). */
+export const baseOf = (t: string): string => typeOf(t)?.base ?? t;
+/** Yes/No or A/B share logic (people split by a percentage instead of a conversion rate). */
+export const isShareLogic = (t: string) => baseOf(t) === "cond" || baseOf(t) === "split";
+/** Library group of a type. */
+export const libOf = (t: string): LibGroup => typeOf(t)?.lib ?? typeOf(t)?.cat;
 
 export const PER_MONTH: Record<Interval, number> = { weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, yearly: 1 / 12 };
 export const INT_LABEL: Record<Interval, string> = { weekly: "week", monthly: "month", quarterly: "quarter", yearly: "year" };
@@ -199,18 +322,30 @@ export const INT_LABEL: Record<Interval, string> = { weekly: "week", monthly: "m
 /** Annotation types drawn at a stored size (w × h) and resizable in both directions. */
 export const SIZED_TYPES = new Set(["frame", "shape", "image"]);
 /** Annotation types with a stored width only (height follows the content). */
-export const WIDTH_TYPES = new Set(["label", "note", "checklist"]);
+export const WIDTH_TYPES = new Set(["label", "note", "checklist", "link"]);
 export const DEFAULT_SIZE: Record<string, { w: number; h?: number }> = {
   frame: { w: 520, h: 300 },
   shape: { w: 200, h: 120 },
   image: { w: 320, h: 200 },
   checklist: { w: 260 },
+  link: { w: 280 },
 };
 export const SHAPES: [string, string][] = [
   ["rect", "Rectangle"],
   ["rounded", "Rounded"],
   ["ellipse", "Ellipse"],
   ["diamond", "Diamond"],
+  ["circle", "Circle"],
+  ["callout", "Callout"],
+  ["line", "Line"],
+  ["arrow", "Arrow"],
+];
+/** Direction of line / arrow shapes inside their box. */
+export const LINE_DIRS: [string, string][] = [
+  ["h", "Horizontal"],
+  ["v", "Vertical"],
+  ["d1", "Diagonal ↘"],
+  ["d2", "Diagonal ↗"],
 ];
 
 /** Default node height (px). Notes and headings can be taller; the editor uses measured heights when available. */
@@ -221,9 +356,9 @@ export const nodeW = (type: string) => (typeOf(type)?.cat === "logic" ? 170 : 21
 export function portsFor(type: string) {
   const T = typeOf(type);
   const hasIn = T.cat !== "traffic" && T.cat !== "annot";
-  const hasOut = T.cat !== "annot" && type !== "exit";
-  const hasAlt = ["page", "offer", "action"].includes(T.cat) || type === "cond" || type === "split";
-  const labels: [string, string] | null = type === "cond" ? ["Yes", "No"] : type === "split" ? ["A", "B"] : null;
+  const hasOut = T.cat !== "annot" && baseOf(type) !== "exit";
+  const hasAlt = ["page", "offer", "action"].includes(T.cat) || isShareLogic(type);
+  const labels: [string, string] | null = T.ports ?? null;
   return { hasIn, hasOut, hasAlt, labels };
 }
 

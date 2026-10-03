@@ -7,7 +7,10 @@ import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, useEditor } from "@/lib/editor/store";
 import { nodeStats, subLabel } from "@/lib/editor/labels";
-import { boxCss, textCss } from "@/lib/style";
+import { periodFactor } from "@/lib/funnel-math";
+import { boxCss, shapeGeom, textCss } from "@/lib/style";
+import { hostOf, isVideoUrl } from "@/lib/rich-text";
+import { RichText } from "@/components/rich-text";
 
 type P = NodeProps & { data: { id: string } };
 
@@ -58,12 +61,15 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const cur = useEditor((s) => s.settings.currency);
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const spot = useEditor((s) => s.spot);
+  const period = useEditor((s) => s.opts.period);
+  const shared = useEditor((s) => s.shared);
   if (!n) return null;
   const T = typeOf(n.type);
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
   const logic = T.cat === "logic";
   const cc = CATCOLOR[T.color ?? T.cat];
-  const stats = nodeStats(n, R, cur);
+  const stats = nodeStats(n, R, cur, periodFactor(period));
+  const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
   const cls = ["fm-node", logic && "logic", selected && "sel", warn && "warn", spot && (spot === id ? "spot" : "dim")].filter(Boolean).join(" ");
   return (
@@ -81,6 +87,11 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       </div>
       <div className="fm-nstats">
         {stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}
+        {internal && (
+          <span className="fm-nnote" title="Has internal notes (Plan tab)">
+            <Icon name="note" size={11} />
+          </span>
+        )}
         {tasks.length > 0 && (
           <span className="fm-ntasks" title="Checklist">
             ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
@@ -102,9 +113,7 @@ export const NoteNode = memo(function NoteNode({ id, selected }: P) {
       <WidthResizer n={n} selected={selected} minW={120} />
       <div className={`fm-node note${selected ? " sel" : ""}`} style={{ ...(n.w ? { width: n.w } : {}), ...boxCss(n.s) }} aria-label="Sticky note">
         <LockBadge n={n} />
-        <div className="ntext" style={textCss(n.s)}>
-          {String(n.p.text ?? "")}
-        </div>
+        <RichText className="ntext rich" style={textCss(n.s)} text={String(n.p.text ?? "")} />
       </div>
     </>
   );
@@ -149,18 +158,34 @@ export const ShapeNode = memo(function ShapeNode({ id, selected }: P) {
   const s = n.s ?? {};
   const text = String(n.p.text ?? "");
   const box = boxCss(s);
+  const w = n.w ?? 200,
+    h = n.h ?? 120;
+  const geom = shapeGeom(shape, w, h, String(n.p.dir ?? "h"), s.borderW ?? 2);
+  const drawn = shape === "diamond" || !!geom;
+  const dash = s.borderStyle === "dashed" ? "6 4" : s.borderStyle === "dotted" ? "1.5 3" : undefined;
   return (
     <>
-      <Resizer n={n} selected={selected} />
-      <div className={`fm-shape ${shape}${selected ? " sel" : ""}`} style={shape === "diamond" ? { opacity: box.opacity, boxShadow: undefined } : box} aria-label={`Shape: ${text || shape}`}>
+      <Resizer n={n} selected={selected} minW={geom?.open ? 16 : 40} minH={geom?.open ? 12 : 30} />
+      <div className={`fm-shape ${shape}${selected ? " sel" : ""}`} style={drawn ? { opacity: box.opacity, boxShadow: undefined } : box} aria-label={`Shape: ${text || shape}`}>
+        {geom && (
+          <svg className="fm-diamond" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+            <path
+              d={geom.d}
+              className={geom.open ? "open" : undefined}
+              style={{ fill: geom.open ? "none" : s.fill, stroke: s.border, strokeWidth: s.borderW ?? (geom.open ? 2 : 1.5), strokeDasharray: dash }}
+              vectorEffect="non-scaling-stroke"
+            />
+            {geom.head && <polygon points={geom.head} className="head" style={{ fill: s.border }} />}
+          </svg>
+        )}
         {shape === "diamond" && (
           <svg className="fm-diamond" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             <polygon points="50,1 99,50 50,99 1,50" style={{ fill: s.fill, stroke: s.border, strokeWidth: s.borderW ?? 1.5, strokeDasharray: s.borderStyle === "dashed" ? "6 4" : s.borderStyle === "dotted" ? "1.5 3" : undefined }} vectorEffect="non-scaling-stroke" />
           </svg>
         )}
         <LockBadge n={n} />
-        {text && (
-          <div className="stext" style={textCss(s)}>
+        {text && !geom?.open && (
+          <div className="stext" style={{ ...textCss(s), ...(shape === "callout" ? { marginBottom: h * 0.22 } : {}) }}>
             {text}
           </div>
         )}
@@ -227,4 +252,33 @@ export const ChecklistNode = memo(function ChecklistNode({ id, selected }: P) {
   );
 });
 
-export const nodeTypes = { block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode, shape: ShapeNode, image: ImageNode, checklist: ChecklistNode };
+export const LinkNode = memo(function LinkNode({ id, selected }: P) {
+  const n = useNode(id);
+  if (!n) return null;
+  const url = String(n.p.url ?? "");
+  const video = url && isVideoUrl(url);
+  const title = String(n.p.title ?? "") || (url ? hostOf(url) : "Add a link in the inspector");
+  return (
+    <>
+      <WidthResizer n={n} selected={selected} minW={180} />
+      <div className={`fm-node linkcard${selected ? " sel" : ""}`} style={{ ...(n.w ? { width: n.w } : {}), ...boxCss(n.s) }} aria-label={`${video ? "Video" : "Link"}: ${title}`}>
+        <LockBadge n={n} />
+        <span className={`lthumb${video ? " video" : ""}`} aria-hidden="true">
+          <Icon name={video ? "play" : "link"} size={18} />
+        </span>
+        <span className="lbody">
+          <b style={textCss(n.s)}>{title}</b>
+          {url ? (
+            <a className="nodrag" href={url} target="_blank" rel="noopener noreferrer nofollow" onClick={(e) => e.stopPropagation()}>
+              {hostOf(url)} ↗
+            </a>
+          ) : (
+            <small>No link yet</small>
+          )}
+        </span>
+      </div>
+    </>
+  );
+});
+
+export const nodeTypes = { block: BlockNode, note: NoteNode, label: LabelNode, frame: FrameNode, shape: ShapeNode, image: ImageNode, checklist: ChecklistNode, link: LinkNode };

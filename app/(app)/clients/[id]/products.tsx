@@ -1,23 +1,23 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
-import { INT_LABEL, typeOf, type Interval } from "@/lib/catalog";
+import { INT_LABEL, typeOf, type Interval, baseOf } from "@/lib/catalog";
 import { money } from "@/lib/format";
 import type { ProductRow } from "@/lib/schemas";
 import { deleteProductAction, saveProductAction, type ProductInput } from "../../actions";
 
-const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick"] as const;
+const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick", "service", "digital", "coursep", "coaching", "membership", "oto", "bundle", "coupon", "freeoffer"] as const;
 type P = ProductInput["params"];
 
 function describe(type: string, p: P, cur: string) {
   const eff = (p.price ?? 0) * (1 - (p.disc ?? 0) / 100);
-  if (type === "sub") return `${money(eff, cur)}/${INT_LABEL[(p.interval ?? "monthly") as Interval]} · ${p.life ?? 0} mo avg${p.trialDays ? ` · ${p.trialDays}-day trial` : ""}`;
-  if (type === "plan") return `${p.pays ?? 1} × ${money(eff, cur)}`;
+  if (baseOf(type) === "sub") return `${money(eff, cur)}/${INT_LABEL[(p.interval ?? "monthly") as Interval]} · ${p.life ?? 0} mo avg${p.trialDays ? ` · ${p.trialDays}-day trial` : ""}`;
+  if (baseOf(type) === "plan") return `${p.pays ?? 1} × ${money(eff, cur)}`;
   return money(eff, cur);
 }
 
 /** Reusable offers for this client (and agency-wide ones). They appear in the editor palette, ready to drop in. */
-export function ProductLibrary({ clientId, products, currency }: { clientId: string; products: ProductRow[]; currency: string }) {
+export function ProductLibrary({ clientId, products, currency, readOnly = false }: { clientId: string; products: ProductRow[]; currency: string; readOnly?: boolean }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [edit, setEdit] = useState<ProductRow | null>(null);
   const [pending, start] = useTransition();
@@ -31,9 +31,11 @@ export function ProductLibrary({ clientId, products, currency }: { clientId: str
         <h2 id="products-h" className="flex-1 font-display text-xl font-bold">
           Products <span className="text-base font-medium text-muted">({products.length})</span>
         </h2>
-        <button type="button" className="btn" onClick={() => open(null)}>
-          <Icon name="plus" /> Add product
-        </button>
+        {!readOnly && (
+          <button type="button" className="btn" onClick={() => open(null)}>
+            <Icon name="plus" /> Add product
+          </button>
+        )}
       </div>
       {products.length === 0 ? (
         <div className="card px-6 py-8 text-center text-sm text-muted">Save this client’s offers once (price, buy rate, billing) and drop them into any funnel from the editor’s palette.</div>
@@ -62,6 +64,8 @@ export function ProductLibrary({ clientId, products, currency }: { clientId: str
                     <td>{describe(p.type, params, currency)}</td>
                     <td className="r">{params.cr ?? 0}%</td>
                     <td className="r pr-4 whitespace-nowrap">
+                      {!readOnly && (
+                      <>
                       <button type="button" className="btn sm icon" aria-label={`Edit ${p.name}`} onClick={() => open(p)}>
                         <Icon name="edit" size={16} />
                       </button>{" "}
@@ -74,6 +78,8 @@ export function ProductLibrary({ clientId, products, currency }: { clientId: str
                       >
                         <Icon name="trash" size={16} />
                       </button>
+                      </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -114,8 +120,8 @@ function ProductForm({ clientId, product, onDone }: { clientId: string; product:
             refund: n("refund") ?? 0,
             fulfil: n("fulfil") ?? 0,
             aff: n("aff") ?? 0,
-            ...(type === "sub" ? { interval: (fd.get("interval") as Interval) ?? "monthly", life: n("life") ?? 0, trialDays: n("trialDays") ?? 0, trialPrice: n("trialPrice") ?? 0, setup: n("setup") ?? 0 } : {}),
-            ...(type === "plan" ? { pays: n("pays") ?? 1, interval: (fd.get("interval") as Interval) ?? "monthly" } : {}),
+            ...(baseOf(type) === "sub" ? { interval: (fd.get("interval") as Interval) ?? "monthly", life: n("life") ?? 0, trialDays: n("trialDays") ?? 0, trialPrice: n("trialPrice") ?? 0, setup: n("setup") ?? 0 } : {}),
+            ...(baseOf(type) === "plan" ? { pays: n("pays") ?? 1, interval: (fd.get("interval") as Interval) ?? "monthly" } : {}),
           },
         };
         start(async () => {
@@ -149,7 +155,7 @@ function ProductForm({ clientId, product, onDone }: { clientId: string; product:
       </div>
       <div className="row2">
         <div className="field">
-          <label htmlFor="pf-price">{type === "sub" ? "Price per period" : type === "plan" ? "Each payment" : "Price"}</label>
+          <label htmlFor="pf-price">{baseOf(type) === "sub" ? "Price per period" : baseOf(type) === "plan" ? "Each payment" : "Price"}</label>
           <input className="input" id="pf-price" name="price" type="number" min="0" step="any" defaultValue={init.price ?? 0} />
         </div>
         <div className="field">
@@ -157,7 +163,7 @@ function ProductForm({ clientId, product, onDone }: { clientId: string; product:
           <input className="input" id="pf-cr" name="cr" type="number" min="0" max="100" step="any" defaultValue={init.cr ?? 10} />
         </div>
       </div>
-      {type === "sub" && (
+      {baseOf(type) === "sub" && (
         <>
           <div className="row2">
             <div className="field">
@@ -190,7 +196,7 @@ function ProductForm({ clientId, product, onDone }: { clientId: string; product:
           </div>
         </>
       )}
-      {type === "plan" && (
+      {baseOf(type) === "plan" && (
         <div className="row2">
           <div className="field">
             <label htmlFor="pf-pays">Number of payments</label>

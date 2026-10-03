@@ -2,7 +2,7 @@
 import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo } from "react";
 import { nf } from "@/lib/format";
-import { num } from "@/lib/funnel-math";
+import { num, periodFactor } from "@/lib/funnel-math";
 import { edgePath, edgeTag } from "@/lib/editor/labels";
 import { selectEdge, useEditor } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
@@ -10,13 +10,15 @@ import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
 type Data = { port: "main" | "alt"; fromType?: string; share: number; s?: EdgeStyle };
 
 export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, selected, data }: EdgeProps & { data: Data }) {
-  const flow = useEditor((s) => s.R.flows[id] ?? 0);
+  const flow0 = useEditor((s) => s.R.flows[id] ?? 0);
+  const k = useEditor((s) => periodFactor(s.opts.period));
+  const flow = flow0 * k;
   const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows)));
   const thick = useEditor((s) => s.opts.thick);
   const port = data?.port ?? "main";
   const look = edgeLook(data?.s);
   const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY);
-  const w = look.width ?? (thick ? 2 + 6 * Math.sqrt(flow / maxF) : 2);
+  const w = look.width ?? (thick ? 2 + 6 * Math.sqrt(flow0 / maxF) : 2);
   const tag = edgeTag(data?.fromType, port);
   const share = num(data?.share ?? 100);
   const marker = look.arrow !== "none" ? `fm-arrow-${id}` : null;

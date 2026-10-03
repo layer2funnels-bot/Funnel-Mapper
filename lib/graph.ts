@@ -58,7 +58,15 @@ export const nodeSchema = z.object({
   z: finite.optional(),
   /** Element-level checklist (internal: never shown on share links). */
   checklist: z.array(checklistItemSchema).optional(),
+  /** Build status of a funnel step (published / completion reporting). Absent = planned. */
+  status: z.enum(["planned", "building", "done"]).optional(),
 });
+export const STEP_STATUSES = [
+  ["planned", "Planned"],
+  ["building", "In progress"],
+  ["done", "Live / done"],
+] as const;
+export type StepStatus = (typeof STEP_STATUSES)[number][0];
 
 export const edgeSchema = z.object({
   id: z.string().min(1),
@@ -95,6 +103,7 @@ export interface FunnelNode {
   locked?: boolean;
   z?: number;
   checklist?: ChecklistItem[];
+  status?: StepStatus;
 }
 export interface FunnelEdge {
   id: string;
@@ -138,9 +147,12 @@ export const whatifSchema = z.object({
 });
 export type WhatIf = z.infer<typeof whatifSchema>;
 
+export const SCENARIO_KINDS = ["conservative", "expected", "best", "custom"] as const;
 export const scenarioSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** Conservative / Expected / Best case, or a custom set of assumptions. */
+  kind: z.enum(SCENARIO_KINDS).optional(),
   whatif: whatifSchema,
   fixed: finite.optional(),
 });
@@ -151,6 +163,21 @@ export const projectionSchema = z.object({
   /** Monthly traffic growth, % (can be negative). */
   growth: finite.default(0),
 });
+
+export const GOAL_KINDS = ["revenue", "profit", "customers", "leads", "step", "conversion"] as const;
+export const goalSchema = z.object({
+  id: z.string(),
+  name: z.string().default(""),
+  /** Monthly revenue / profit / customers / leads, people completing a step, or a step's conversion rate (%). */
+  kind: z.enum(GOAL_KINDS).default("revenue"),
+  value: finite.default(0),
+  /** The funnel step the goal belongs to (required for step and conversion goals). */
+  nodeId: z.string().optional(),
+});
+export type Goal = z.infer<typeof goalSchema>;
+
+/** Canvas-level notes (rich text). Internal unless `shared` is switched on. */
+export const notesSchema = z.object({ body: z.string().max(100_000).default(""), shared: z.boolean().default(false) });
 
 export const settingsSchema = z.object({
   basis: z.enum(["first", "ltv"]).default("first"),
@@ -163,6 +190,12 @@ export const settingsSchema = z.object({
   projection: projectionSchema.default({ months: 12, growth: 0 }),
   /** Hide numbers on the public share page. */
   hideNumbers: z.boolean().default(false),
+  /** Named goals (reports: required numbers, progress). */
+  goals: z.array(goalSchema).default([]),
+  /** Canvas-level notes. */
+  notes: notesSchema.default({ body: "", shared: false }),
+  /** Traffic reinvestment report: share of profit put back into ads each month. */
+  reinvest: z.object({ pct: finite.min(0).max(100).default(50), months: z.number().int().min(1).max(60).default(12) }).default({ pct: 50, months: 12 }),
 });
 export type FunnelSettings = z.output<typeof settingsSchema>;
 

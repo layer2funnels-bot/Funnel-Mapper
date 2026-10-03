@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
 import { AgencyLogo, IndependentForm, InviteForm, MemberRow, ProfileForm, WorkspaceForm } from "./settings-forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const { sb, user, profile, workspace, isAdmin, isTeam } = await requireUser();
+  const { sb, user, profile, workspace, isAdmin, isOwner, isTeam } = await requireUser();
   // RLS returns only this workspace's members
   const { data: members } = await sb.from("profiles").select("id, full_name, email, role, active, created_at").order("created_at");
   const canInvite = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -55,7 +56,15 @@ export default async function SettingsPage() {
           <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
             Team
           </h2>
-          <p className="mb-4 text-sm text-muted">Everyone listed here shares the same clients, funnels and templates. There is no public sign-up: people join by invite only.</p>
+          <p className="mb-2 text-sm text-muted">Everyone listed here shares the same clients, funnels and templates. There is no public sign-up: people join by invite only.</p>
+          <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
+            {(["owner", "admin", "editor", "viewer"] as const).map((r) => (
+              <div key={r} className="contents">
+                <dt className="font-bold text-ink">{ROLE_LABEL[r]}</dt>
+                <dd className="m-0">{ROLE_HELP[r]}</dd>
+              </div>
+            ))}
+          </dl>
           {isAdmin && (
             <div className="mb-5 rounded-xl border border-line p-4">
               <h3 className="mb-2 text-sm font-bold">Invite a teammate</h3>
@@ -70,7 +79,7 @@ export default async function SettingsPage() {
           )}
           <ul className="m-0 list-none p-0" aria-label="Team members">
             {(members ?? []).map((m) => (
-              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} />
+              <MemberRow key={m.id} member={m} me={m.id === user.id} canManage={isAdmin} isOwner={isOwner} />
             ))}
           </ul>
         </section>
@@ -83,7 +92,7 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      {isTeam && isAdmin && (
+      {isTeam && isOwner && (
         <section className="card mb-6 p-6" aria-labelledby="indep-h">
           <h2 id="indep-h" className="mb-1 font-display text-lg font-bold">
             Independent accounts

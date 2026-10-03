@@ -151,7 +151,7 @@ test.describe("funnel editor", () => {
     // keyboard shortcut + ELK alternative
     await page.keyboard.press(`${mod}+Shift+l`);
     await expect.poll(() => pos(page, first.id)).toEqual({ x: FX.quiz.tidy[0].x, y: FX.quiz.tidy[0].y });
-    await page.getByRole("button", { name: "View" }).click();
+    await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByRole("menuitem", { name: "Tidy up (ELK layered)" }).click();
     await expect(page.locator(".fm-toast")).toContainText("ELK");
   });
@@ -168,13 +168,15 @@ test.describe("funnel editor", () => {
       c = await pos(page, coaching.id);
     expect(n.x - c.x, "same horizontal offset").toBe(before.dx);
     expect(n.y - c.y, "still below that block, not re-anchored").toBeGreaterThanOrEqual(before.dy);
-    // on screen, the note overlaps no funnel block (frames are containers and may enclose it)
-    const box = (await page.locator(`.react-flow__node[data-id="${note.id}"]`).boundingBox())!;
-    for (const b of graph.nodes.filter((x) => !["note", "label", "frame"].includes(x.type))) {
-      const r = (await page.locator(`.react-flow__node[data-id="${b.id}"]`).boundingBox())!;
+    // on screen, the note overlaps no funnel block (frames are containers and may enclose it).
+    // Every box is read in the same frame: "fit to screen" is still zooming, and boxes read one by one would mix zoom levels.
+    const blocks = graph.nodes.filter((x) => !["note", "label", "frame"].includes(x.type));
+    const boxes = await page.evaluate((ids) => ids.map((i) => document.querySelector(`.react-flow__node[data-id="${i}"]`)!.getBoundingClientRect().toJSON() as DOMRect), [note.id, ...blocks.map((b) => b.id)]);
+    const [box, ...rest] = boxes;
+    rest.forEach((r, i) => {
       const hit = box.x < r.x + r.width && box.x + box.width > r.x && box.y < r.y + r.height && box.y + box.height > r.y;
-      expect(hit, `note overlaps ${b.name}`).toBe(false);
-    }
+      expect(hit, `note overlaps ${blocks[i].name}`).toBe(false);
+    });
   });
 
   test("keyboard: nudge, help, shortcuts don't fire while typing", async ({ page }) => {
@@ -212,12 +214,12 @@ test.describe("funnel editor", () => {
   test("dark mode", async ({ page }) => {
     const { id } = await createFunnel({ template: "tripwire" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "View" }).click();
+    await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     const theme = await page.evaluate(() => document.documentElement.dataset.theme);
     expect(["dark", "light"]).toContain(theme);
     if (theme !== "dark") {
-      await page.getByRole("button", { name: "View" }).click();
+      await page.getByRole("button", { name: "View", exact: true }).click();
       await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     }
     // locked Emerald dark tokens: panels #1E293B, workspace chrome / blocks #111827
@@ -264,7 +266,7 @@ test.describe("tablet and phone", () => {
     await expect(page.getByRole("button", { name: "Show building blocks" })).toHaveCount(0);
     await expect(page.locator(".fm-kpis")).toBeVisible();
     await page.screenshot({ path: "test-results/editor-phone.png" });
-    await page.getByRole("button", { name: "View" }).click();
+    await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByText("View only (lock editing)").click();
     await expect(page.getByRole("button", { name: "Show building blocks" })).toBeVisible();
     await ctx.close();

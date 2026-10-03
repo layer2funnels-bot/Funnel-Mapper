@@ -8,7 +8,7 @@ import { addNode, canConnect, clearSelection, connect, frameMembers, layerOf, mo
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
-const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist"]);
+const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link"]);
 const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -153,9 +153,9 @@ export function Canvas() {
       const raw = ev.dataTransfer.getData(DND_MIME);
       if (!raw) return;
       ev.preventDefault();
-      const { type, p, name } = JSON.parse(raw) as { type: string; p?: Record<string, unknown>; name?: string };
+      const { type, p, name, w, h } = JSON.parse(raw) as { type: string; p?: Record<string, unknown>; name?: string; w?: number; h?: number };
       const at = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-      addNode(type, at.x - 105, at.y - 48, { p, name });
+      addNode(type, at.x - 105, at.y - 48, { p, name, w, h });
     },
     [rf],
   );

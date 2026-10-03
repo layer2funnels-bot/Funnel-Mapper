@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Clients" };
 
 export default async function ClientsPage({ searchParams }: PageProps<"/clients">) {
   const sp = await searchParams;
-  const { sb } = await requireUser();
+  const { sb, canEdit } = await requireUser();
   const [{ data: clients }, { data: funnels }] = await Promise.all([
     sb.from("clients").select("*").order("updated_at", { ascending: false }),
     sb.from("funnels").select("client_id, status"),
@@ -24,9 +24,11 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
   return (
     <>
       <PageHeader title="Clients" sub={`${items.length} client${items.length === 1 ? "" : "s"} in your portfolio`}>
-        <Link className="btn primary" href="/clients/new">
-          <Icon name="plus" /> New client
-        </Link>
+        {canEdit && (
+          <Link className="btn primary" href="/clients/new">
+            <Icon name="plus" /> New client
+          </Link>
+        )}
       </PageHeader>
       <ClientsBrowser clients={items} initialStatus={typeof sp.status === "string" ? sp.status : ""} />
     </>

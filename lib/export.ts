@@ -1,11 +1,12 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
-import { CATHEX, NH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
+import { CATDARK, CATHEX, NH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
 import { nf } from "./format";
 import { num, stepRows, type FunnelResult } from "./funnel-math";
 import type { FunnelEdge, FunnelNode } from "./graph";
 import { ICONS, type IconName } from "./icons";
 import { edgePath, edgeTag, nodeStats, subLabel } from "./editor/labels";
-import { DASH, FONT_FAMILIES, edgeLook } from "./style";
+import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
+import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -17,7 +18,11 @@ export const fileName = (name: string, ext: string) =>
     .replace(/\s+/g, "-")
     .toLowerCase() + `.${ext}`;
 
-export function stepsCsv(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult): string {
+/**
+ * Step report CSV: every step, the funnel totals, then (optional) a scenario comparison with one column per
+ * scenario. `scenarios` are results from compute / computeScenario (lib/report-data.ts `scenarios`).
+ */
+export function stepsCsv(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, scenarios: { name: string; R: FunnelResult }[] = []): string {
   const rows: unknown[][] = [["Step", "Type", "In", "Out", "Not converting", "Conversion %", "Revenue", "Cost"]];
   stepRows(g, R).forEach((r) => rows.push([r.name, r.label, r.inn.toFixed(1), r.out.toFixed(1), r.non.toFixed(1), r.inn ? ((r.out / r.inn) * 100).toFixed(1) : "", r.rev.toFixed(2), r.cost.toFixed(2)]));
   rows.push([]);
@@ -43,6 +48,28 @@ export function stepsCsv(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Fun
       ["LTV per customer", R.ltvc],
     ] as [string, number][]
   ).forEach(([a, b]) => rows.push([a, Number.isFinite(b) ? b.toFixed(2) : ""]));
+  if (scenarios.length) {
+    rows.push([]);
+    rows.push(["Scenario comparison", ...scenarios.map((x) => x.name)]);
+    const f = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : "");
+    (
+      [
+        ["Traffic", (r) => r.traffic],
+        ["Leads", (r) => r.leads],
+        ["Customers", (r) => r.cust],
+        ["Revenue", (r) => r.rev],
+        ["Ad spend", (r) => r.spend],
+        ["Profit", (r) => r.profit],
+        ["ROAS", (r) => r.roas],
+        ["ROI", (r) => r.roi],
+        ["CPA", (r) => r.cpa],
+        ["CPL", (r) => r.cpl],
+        ["AOV", (r) => r.aov],
+        ["LTV per customer", (r) => r.ltvc],
+        ["MRR", (r) => r.mrr],
+      ] as [string, (r: FunnelResult) => number][]
+    ).forEach(([label, get]) => rows.push([label, ...scenarios.map((x) => f(get(x.R)))]));
+  }
   return rows.map((r) => r.map(csvq).join(",")).join("\n");
 }
 
@@ -65,6 +92,12 @@ export interface SvgPalette {
 }
 /** Light theme tokens (app/globals.css [data-theme="light"]): client exports are printed on white. */
 export const LIGHT_PALETTE: SvgPalette = { bg: "#F8FAFC", panel: "#FFFFFF", panel2: "#F1F5F9", line: "#DBE2EA", ink: "#0F172A", muted: "#475569", edge: "#94A3B8", alt: "#C2410C", good: "#15803D", brand: "#047857", catInk: "#FFFFFF", cat: CATHEX };
+
+/** Dark theme tokens (the locked dark-first palette): for slides and dark documents. */
+export const DARK_PALETTE: SvgPalette = { bg: "#0B1220", panel: "#111827", panel2: "#1E293B", line: "#334155", ink: "#E2E8F0", muted: "#94A3B8", edge: "#64748B", alt: "#FB923C", good: "#22C55E", brand: "#34D399", catInk: "#0B1220", cat: CATDARK };
+export type ImageBackground = "light" | "dark" | "transparent";
+/** Palette for a map image background ("transparent" = light elements on no background). */
+export const paletteFor = (bg: ImageBackground): SvgPalette => (bg === "dark" ? DARK_PALETTE : bg === "transparent" ? { ...LIGHT_PALETTE, bg: "none" } : LIGHT_PALETTE);
 
 /** Text width in px. The browser passes a canvas-based measure with the real fonts; this fallback approximates. */
 export type Measure = (text: string, size: number, weight: number, family: string) => number;
@@ -329,18 +362,23 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
         sw = s?.borderW ?? 1.5,
         dash = s?.borderStyle ? BORDER_DASH[s.borderStyle] : undefined;
       const st = `fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}`;
-      let o =
-        shape === "ellipse"
+      const geom = shapeGeom(shape, w, h, String(n.p.dir ?? "h"), s?.borderW ?? 2);
+      let o = geom
+        ? geom.open
+          ? `<g transform="translate(${n2(n.x)},${n2(n.y)})"><path d="${geom.d}" fill="none" stroke="${esc(s?.border ?? P.muted)}" stroke-width="${s?.borderW ?? 2}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ""}/>${geom.head ? `<polygon points="${geom.head}" fill="${esc(s?.border ?? P.muted)}"/>` : ""}</g>`
+          : `<path transform="translate(${n2(n.x)},${n2(n.y)})" d="${geom.d}" ${st}/>`
+        : shape === "ellipse" || shape === "circle"
           ? `<ellipse cx="${n.x + w / 2}" cy="${n.y + h / 2}" rx="${n2(w / 2 - sw / 2)}" ry="${n2(h / 2 - sw / 2)}" ${st}/>`
           : shape === "diamond"
             ? `<polygon points="${n2(n.x + w / 2)},${n2(n.y + h * 0.01)} ${n2(n.x + w * 0.99)},${n2(n.y + h / 2)} ${n2(n.x + w / 2)},${n2(n.y + h * 0.99)} ${n2(n.x + w * 0.01)},${n2(n.y + h / 2)}" ${st}/>`
             : box(n.x, n.y, w, h, s, { fill: P.panel2, stroke: P.line, sw: 1.5, r: shape === "rect" ? 0 : 16 });
       const text = String(n.p.text ?? "");
-      if (text) {
+      if (text && !geom?.open) {
         const t = look(s, { size: 14, lh: 18.2, weight: 600, align: "center", rel: true });
         const pad = s?.pad ?? 0;
+        const th = shape === "callout" ? h * 0.78 : h;
         const lines = wrapText(text, w - 24 - pad * 2, t.size, t.weight, t.family, measure);
-        o += textBlock(lines, n.x + 12 + pad, w - 24 - pad * 2, n.y + (h - lines.length * t.lh) / 2, t);
+        o += textBlock(lines, n.x + 12 + pad, w - 24 - pad * 2, n.y + (th - lines.length * t.lh) / 2, t);
       }
       body += group(s, o);
       boxes.push([n.x, n.y, w, h]);
@@ -390,9 +428,28 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       const px = (s?.pad ?? 12) + 1.5,
         py = (s?.pad ?? 10) + 1.5;
       const t = look(s, { size: 13, lh: 18, weight: 400, color: "#422006" });
-      const lines = wrapText(String(n.p.text ?? ""), w - px * 2, t.size, t.weight, t.family, measure);
+      const lines = wrapText(richToPlain(String(n.p.text ?? "")), w - px * 2, t.size, t.weight, t.family, measure);
       const h = Math.max(96, H0(n), lines.length * t.lh + py * 2);
       body += group(s, box(n.x, n.y, w, h, s, { fill: "#FDE68A", stroke: "#FCD34D", sw: 1.5, r: 14 }) + textBlock(lines, n.x + px, w - px * 2, n.y + py, t));
+      boxes.push([n.x, n.y, w, h]);
+      return;
+    }
+    if (n.type === "link") {
+      const url = String(n.p.url ?? "");
+      if (!url) return; // an empty link card is editor-only
+      const w = W0(n),
+        h = Math.max(60, H0(n));
+      const video = isVideoUrl(url);
+      const tt = look(s, { size: 13.5, lh: 18, weight: 700 });
+      const title = ellipsis(String(n.p.title ?? "") || hostOf(url), w - 76, tt.size, tt.weight, tt.family, measure);
+      let o = box(n.x, n.y, w, h, s, { fill: P.panel, stroke: P.line, sw: 1.5, r: 14 });
+      o += `<rect x="${n2(n.x + 12)}" y="${n2(n.y + (h - 40) / 2)}" width="40" height="40" rx="9" fill="${video ? "#FEE2E2" : P.panel2}"/>`;
+      o += video
+        ? `<path d="M${n2(n.x + 28)} ${n2(n.y + h / 2 - 7)} l10 7 l-10 7z" fill="#DC2626"/>`
+        : `<g transform="translate(${n2(n.x + 23)},${n2(n.y + h / 2 - 9)}) scale(0.75)" fill="none" stroke="${P.muted}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.link}</g>`;
+      o += textBlock([title], n.x + 62, w - 74, n.y + h / 2 - 18, { ...tt, align: "left" });
+      o += `<text x="${n2(n.x + 62)}" y="${n2(n.y + h / 2 + 14)}" font-size="12" font-family="${esc(F.sans)}" fill="${P.brand}">${esc(hostOf(url))}</text>`;
+      body += group(s, o);
       boxes.push([n.x, n.y, w, h]);
       return;
     }

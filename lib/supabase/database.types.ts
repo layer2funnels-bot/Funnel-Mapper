@@ -25,13 +25,13 @@ export type Database = {
           Tables: {
             "clients": {
                   Row: {
-                    "billing_frequency": string,"business_name": string,"commission_pct": number,"country": string,"created_at": string,"currency": string,"email": string,"hours_per_month": number,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"pricing_amount": number,"pricing_model": string,"pricing_notes": string,"project_end": string | null,"project_start": string | null,"status": string,"tags": (string)[],"updated_at": string,"website": string,"workspace_id": string
+                    "archived_at": string | null,"billing_frequency": string,"business_name": string,"commission_pct": number,"country": string,"created_at": string,"currency": string,"email": string,"hours_per_month": number,"id": string,"logo_url": string | null,"monthly_retainer": number,"name": string,"niche": string,"notes": string,"owner_id": string,"phone": string,"pricing_amount": number,"pricing_model": string,"pricing_notes": string,"project_end": string | null,"project_start": string | null,"status": string,"tags": (string)[],"updated_at": string,"website": string,"workspace_id": string
                   }
                   Insert: {
-                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
+                    "archived_at"?: string | null,"billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name": string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
                   }
                   Update: {
-                    "billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
+                    "archived_at"?: string | null,"billing_frequency"?: string,"business_name"?: string,"commission_pct"?: number,"country"?: string,"created_at"?: string,"currency"?: string,"email"?: string,"hours_per_month"?: number,"id"?: string,"logo_url"?: string | null,"monthly_retainer"?: number,"name"?: string,"niche"?: string,"notes"?: string,"owner_id"?: string,"phone"?: string,"pricing_amount"?: number,"pricing_model"?: string,"pricing_notes"?: string,"project_end"?: string | null,"project_start"?: string | null,"status"?: string,"tags"?: (string)[],"updated_at"?: string,"website"?: string,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -284,6 +284,9 @@ isOneToOne: false
             "add_share_comment":
 { Args: { "p_author": string,"p_body": string,"p_node_id": string,"p_token": string }; Returns: string
                            },
+"can_write":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "current_workspace_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -294,6 +297,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "is_team_member":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"is_workspace_owner":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "save_shared_funnel":
@@ -307,6 +313,9 @@ isOneToOne: false
                            },
 "team_workspace_id":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"transfer_ownership":
+{ Args: { "p_to": string }; Returns: undefined
                            }
           }
           Enums: {

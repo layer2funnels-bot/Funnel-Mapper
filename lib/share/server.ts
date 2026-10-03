@@ -30,10 +30,12 @@ export async function getShared(token: string) {
   const d = p.data;
   let graph = parseGraph(d.funnel.graph);
   let settings = parseSettings(d.funnel.settings);
+  // funnel notes are internal unless shared on purpose (the RPC already strips them; never trust that alone)
+  if (!settings.notes.shared) settings = { ...settings, notes: { body: "", shared: false } };
   if (d.link.hide_numbers || settings.hideNumbers) {
     // Numbers hidden: never send prices, rates or costs to the browser, only the journey.
     graph = { ...graph, nodes: graph.nodes.map((n) => (isAnnot(n.type) ? n : { ...n, p: {} })) };
-    settings = { ...settings, fixed: 0, target: 0, expenses: [], scenarios: [], whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, hideNumbers: true };
+    settings = { ...settings, fixed: 0, target: 0, expenses: [], scenarios: [], goals: [], whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, hideNumbers: true };
     d.link.hide_numbers = true;
   }
   return { ...d, graph, settings };

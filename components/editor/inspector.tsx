@@ -1,12 +1,15 @@
 "use client";
 import { useMemo } from "react";
 import { LogoUpload } from "@/components/logo-upload";
-import { CATS, FRAME_COLORS, INT_LABEL, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
-import { money, nf } from "@/lib/format";
-import { num, offerVals } from "@/lib/funnel-math";
-import type { FunnelEdge, FunnelNode } from "@/lib/graph";
+import { baseOf, isAnnot, isShareLogic, CATS, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { money, nf, pct } from "@/lib/format";
+import { Icon } from "@/components/icon";
+import { RichTextField } from "@/components/rich-text";
+import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } from "@/lib/funnel-math";
+import { STEP_STATUSES, type FunnelEdge, type FunnelNode, type StepStatus } from "@/lib/graph";
+import { safeUrl } from "@/lib/rich-text";
 import { sym } from "@/lib/format";
-import { align, deleteSelection, selectNodes, duplicateSelection, setInspTab, setLocked, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, nid, setSection, setSettings, deleteSelection, selectNodes, duplicateSelection, setInspTab, setLocked, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
@@ -88,11 +91,17 @@ function NodeInspector({ n }: { n: FunnelNode }) {
   const ro = useEditor((s) => s.readOnly);
   const shared = useEditor((s) => s.shared);
   const tab = useEditor((s) => s.inspTab);
-  const tabs: [InspTab, string][] = [["details", "Details"], ["style", "Style"], ...(!shared && n.type !== "checklist" ? ([["plan", "Plan"]] as [InspTab, string][]) : [])];
+  const flow = !isAnnot(n.type);
+  const tabs: [InspTab, string][] = [
+    ["details", "Details"],
+    ["style", "Style"],
+    ...(!shared && n.type !== "checklist" ? ([["plan", "Plan"]] as [InspTab, string][]) : []),
+    ...(flow ? ([["analytics", "Analytics"]] as [InspTab, string][]) : []),
+  ];
   const cur = tabs.some(([k]) => k === tab) ? tab : "details";
   const choose = setInspTab;
   return (
-    <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+    <>
       <h3>
         {T.label}
         {n.locked && <span className="ml-2 align-middle text-xs font-semibold text-muted">· Locked</span>}
@@ -105,6 +114,7 @@ function NodeInspector({ n }: { n: FunnelNode }) {
           </button>
         ))}
       </div>
+      <fieldset disabled={ro && cur !== "analytics"} className="m-0 min-w-0 border-0 p-0">
       {cur === "details" && <NodeDetails n={n} />}
       {cur === "style" && (
         <>
@@ -114,12 +124,15 @@ function NodeInspector({ n }: { n: FunnelNode }) {
       )}
       {cur === "plan" && (
         <>
+          <InternalNotes n={n} />
           <ChecklistEditor n={n} />
-          <TextField label="Internal notes" help="Team only. Never shown on client share links, presentations or PDF reports." value={n.desc ?? ""} placeholder="Copy ideas, owner, status…" multiline onChange={(v) => updateNode(n.id, { desc: v })} />
-          <p className="text-xs text-muted">The checklist and notes are internal: they never appear on client share links.</p>
+          {flow && <PeriodForecast n={n} />}
+          <p className="text-xs text-muted">The notes and checklist are internal: they never appear on client share links.</p>
         </>
       )}
-    </fieldset>
+      {cur === "analytics" && <NodeAnalytics n={n} />}
+      </fieldset>
+    </>
   );
 }
 
@@ -134,7 +147,7 @@ function NodeDetails({ n }: { n: FunnelNode }) {
   return (
     <>
       {n.type === "note" ? (
-        <TextField label="Note" value={String(p.text ?? "")} onChange={P("text")} multiline />
+        <RichTextField label="Note" value={String(p.text ?? "")} onChange={P("text")} rows={7} disabled={ro} help="Headings, bold, italic, lists, links and images. Shown on the map (and on share links)." />
       ) : n.type === "label" ? (
         <>
           <TextField label="Text" value={String(p.text ?? "")} onChange={P("text")} multiline />
@@ -154,10 +167,29 @@ function NodeDetails({ n }: { n: FunnelNode }) {
               </select>
             )}
           </Field>
-          <TextField label="Text inside" value={String(p.text ?? "")} onChange={P("text")} multiline />
+          {p.shape === "line" || p.shape === "arrow" ? (
+            <Field label="Direction">
+              {(id) => (
+                <select id={id} className="input" value={String(p.dir ?? "h")} onChange={(e) => P("dir")(e.target.value)}>
+                  {LINE_DIRS.map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          ) : (
+            <TextField label="Text inside" value={String(p.text ?? "")} onChange={P("text")} multiline />
+          )}
         </>
       ) : n.type === "image" ? (
         <ImageFields n={n} />
+      ) : n.type === "link" ? (
+        <>
+          <TextField label="Link (page, video or file)" type="url" value={String(p.url ?? "")} placeholder="https://" onChange={(v) => P("url")(safeUrl(v))} help="YouTube, Vimeo, Loom and Wistia links show as videos. Opens in a new tab." />
+          <TextField label="Title" value={String(p.title ?? "")} placeholder="e.g. Sales video walkthrough" onChange={P("title")} />
+        </>
       ) : n.type === "checklist" ? (
         <>
           <TextField label="Title" value={String(p.title ?? "")} onChange={P("title")} />
@@ -181,10 +213,10 @@ function NodeDetails({ n }: { n: FunnelNode }) {
       ) : (
         <>
           <TextField
-            label={n.type === "cond" ? "Question" : "Name"}
+            label={baseOf(n.type) === "cond" ? "Question" : "Name"}
             value={n.name}
             onChange={(v) => updateNode(n.id, { name: v })}
-            help={n.type === "cond" ? "For example “Bought the Kickstart?” or “Opened the email?”" : undefined}
+            help={baseOf(n.type) === "cond" ? "For example “Bought the Kickstart?” or “Opened the email?”" : undefined}
           />
           {T.cat === "traffic" && (
             <>
@@ -222,8 +254,12 @@ function NodeDetails({ n }: { n: FunnelNode }) {
               )}
             </>
           )}
-          {n.type === "cond" && <NumField label="Yes (%)" value={num(p.pct)} onChange={P("pct")} min={0} max={100} help="Share of people who answer yes. Everyone else follows the No path (bottom dot)." />}
-          {n.type === "split" && <NumField label="Version A (%)" value={num(p.pct)} onChange={P("pct")} min={0} max={100} help="Version B gets the rest. Connect A from the right dot and B from the bottom dot." />}
+          {baseOf(n.type) === "cond" && (
+            <NumField label={`${T.ports?.[0] ?? "Yes"} (%)`} value={num(p.pct)} onChange={P("pct")} min={0} max={100} help={`Share of people who go the ${T.ports?.[0] ?? "Yes"} way. Everyone else follows the ${T.ports?.[1] ?? "No"} path (bottom dot).`} />
+          )}
+          {baseOf(n.type) === "split" && (
+            <NumField label={`${T.ports?.[0] ?? "A"} (%)`} value={num(p.pct)} onChange={P("pct")} min={0} max={100} help={`${T.ports?.[1] ?? "B"} gets the rest. Connect ${T.ports?.[0] ?? "A"} from the right dot and ${T.ports?.[1] ?? "B"} from the bottom dot; split it further with the share on each connection.`} />
+          )}
           {T.cat === "page" && (
             <>
               <NumField label="Conversion rate (%)" value={num(p.cr)} onChange={P("cr")} min={0} max={100} help="Share of visitors who move on. The rest follow the bottom dot." />
@@ -249,14 +285,140 @@ function NodeDetails({ n }: { n: FunnelNode }) {
               <LogoUpload bucket="screenshots" label="Screenshot" url={n.shot ?? null} name={`shot-${n.id}`} onChange={async (u) => updateNode(n.id, { shot: u ?? undefined })} />
             </div>
           )}
-          {n.type === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
-          <NodeStats n={n} />
-          {n.type !== "goal" && !shared && (
-            <TextField label="Internal notes" help="Team only. Never shown on client share links, presentations or PDF reports." value={n.desc ?? ""} placeholder="Copy ideas, owner, status…" multiline onChange={(v) => updateNode(n.id, { desc: v })} />
+          {baseOf(n.type) === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
+          {!shared && (
+            <Field label="Build status" help="Track which steps are planned, in progress or live. Shown in Reports → Published status.">
+              {(id) => (
+                <select id={id} className="input" value={n.status ?? "planned"} onChange={(e) => updateNode(n.id, { status: e.target.value as StepStatus })}>
+                  {STEP_STATUSES.map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
           )}
+          <NodeStats n={n} />
+          {baseOf(n.type) !== "goal" && !shared && <InternalNotes n={n} />}
         </>
       )}
       <Actions ro={ro} n={n} />
+    </>
+  );
+}
+
+function InternalNotes({ n }: { n: FunnelNode }) {
+  const ro = useEditor((s) => s.readOnly);
+  return (
+    <RichTextField
+      label="Internal notes"
+      help="Team only. Never shown on client share links, presentations or PDF reports."
+      value={n.desc ?? ""}
+      placeholder="Copy ideas, owner, status…"
+      disabled={ro}
+      onChange={(v) => updateNode(n.id, { desc: v })}
+    />
+  );
+}
+
+/** This step's numbers per day / week / month / year (the funnel models a month). */
+function PeriodForecast({ n }: { n: FunnelNode }) {
+  const r = useEditor((s) => s.R.N[n.id]);
+  const cur = useEditor((s) => s.settings.currency);
+  const shared = useEditor((s) => s.shared && s.settings.hideNumbers);
+  if (!r || shared) return null;
+  const T = typeOf(n.type);
+  const inn = T.cat === "traffic" ? r.out : r.inflow;
+  return (
+    <div className="mb-3">
+      <h4>Forecast for this step</h4>
+      <div className="fm-tblwrap">
+        <table className="tbl">
+          <caption className="sr-only">Forecast for {n.name}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Per</th>
+              <th scope="col" className="r">In</th>
+              <th scope="col" className="r">Out</th>
+              {T.cat === "offer" && <th scope="col" className="r">Revenue</th>}
+              {(T.cat === "traffic" || T.cat === "action") && <th scope="col" className="r">Cost</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {(["day", "week", "month", "year"] as PeriodKey[]).map((k) => {
+              const f = periodFactor(k);
+              return (
+                <tr key={k}>
+                  <th scope="row" className="font-semibold">{k[0].toUpperCase() + k.slice(1)}</th>
+                  <td className="r">{nf(inn * f, 1)}</td>
+                  <td className="r">{nf(r.out * f, 1)}</td>
+                  {T.cat === "offer" && <td className="r">{money(r.rev * f, cur)}</td>}
+                  {(T.cat === "traffic" || T.cat === "action") && <td className="r">{money((r.spend + r.cost) * f, cur)}</td>}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Analytics tab: this step's numbers, its place in the funnel and a conversion goal. */
+function NodeAnalytics({ n }: { n: FunnelNode }) {
+  const R = useEditor((s) => s.R);
+  const nodes = useEditor((s) => s.nodes);
+  const edges = useEditor((s) => s.edges);
+  const settings = useEditor((s) => s.settings);
+  const ro = useEditor((s) => s.readOnly);
+  const shared = useEditor((s) => s.shared);
+  const r = R.N[n.id];
+  const T = typeOf(n.type);
+  const m = (v: number) => money(v, settings.currency);
+  const goal = settings.goals.find((g) => g.kind === "conversion" && g.nodeId === n.id);
+  const rateable = ["page", "offer", "action"].includes(T.cat) || isShareLogic(n.type);
+  const impact = useMemo(() => (goal && goal.value > 0 ? withStepRate({ nodes, edges }, settings, n.id, goal.value) : null), [goal, nodes, edges, settings, n.id]);
+  if (!r) return null;
+  const inn = T.cat === "traffic" ? r.out : r.inflow;
+  const setGoal = (v: number) => {
+    const rest = settings.goals.filter((g) => g !== goal);
+    setSettings({ goals: v > 0 ? [...rest, { id: goal?.id ?? nid(), name: goal?.name || `${n.name} conversion`, kind: "conversion", value: v, nodeId: n.id }] : rest });
+  };
+  return (
+    <>
+      <h4>Numbers (per month)</h4>
+      <NodeStats n={n} />
+      <StatBox
+        items={[
+          ["Share of all visitors", pct(R.traffic ? inn / R.traffic : NaN)],
+          ...(T.cat !== "traffic" ? ([["Conversion here", pct(inn ? r.out / inn : NaN)]] as [string, string][]) : []),
+          ...(T.cat === "offer" ? ([["Share of revenue", pct(R.rev ? r.rev / R.rev : NaN)]] as [string, string][]) : []),
+          ...(T.cat === "traffic" && r.spend ? ([["Cost per visitor", m(r.spend / r.out)]] as [string, string][]) : []),
+        ]}
+      />
+      {rateable && !(shared && settings.hideNumbers) && (
+        <>
+          <h4>Goal</h4>
+          <fieldset disabled={ro || shared} className="m-0 border-0 p-0">
+            <NumField label={`Target ${isShareLogic(n.type) ? "share" : "conversion"} (%)`} value={goal?.value || undefined} min={0} max={100} onChange={setGoal} help={`Today: ${nf(stepRate(n), 1)}%. Saved as a goal in Reports → Goals.`} />
+          </fieldset>
+          {impact && (
+            <StatBox
+              items={[
+                ["Revenue at target", m(impact.rev)],
+                ["Change", `${impact.rev - R.rev >= 0 ? "+" : ""}${m(impact.rev - R.rev)}`],
+                ["Profit at target", m(impact.profit)],
+                ["Customers at target", nf(impact.cust, 1)],
+              ]}
+            />
+          )}
+        </>
+      )}
+      <PeriodForecast n={n} />
+      <button type="button" className="btn mb-3" onClick={() => setSection("data")}>
+        <Icon name="chart" size={16} /> Open reports
+      </button>
     </>
   );
 }
@@ -268,7 +430,7 @@ function OfferFields({ n, C }: { n: FunnelNode; C: string }) {
   return (
     <>
       <NumField label="Buy rate (%)" value={num(p.cr)} onChange={P("cr")} min={0} max={100} help="Share of people reaching this offer who buy. Non-buyers follow the bottom dot." />
-      {n.type === "sub" ? (
+      {baseOf(n.type) === "sub" ? (
         <>
           <div className="field">
             <span className="lbl">Billing</span>
@@ -294,7 +456,7 @@ function OfferFields({ n, C }: { n: FunnelNode; C: string }) {
           </div>
           <NumField label="Average customer stays (months)" value={num(p.life)} onChange={P("life")} min={0} help="Used for lifetime value. 1 ÷ monthly churn: 10% churn ≈ 10 months." />
         </>
-      ) : n.type === "plan" ? (
+      ) : baseOf(n.type) === "plan" ? (
         <>
           <div className="row2">
             <NumField label="Number of payments" value={num(p.pays)} onChange={P("pays")} min={1} />
@@ -360,7 +522,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
           ["Buying", nf(r.out, 1)],
           ["Cash now", m(r.cash)],
           ["Lifetime value", m(r.ltv)],
-          ...(n.type === "sub"
+          ...(baseOf(n.type) === "sub"
             ? ([
                 ["MRR", m(r.mrr)],
                 ["LTV / subscriber", m(v.ltv)],
@@ -372,8 +534,8 @@ function NodeStats({ n }: { n: FunnelNode }) {
       />
     );
   }
-  const yes = n.type === "cond" ? "Yes" : n.type === "split" ? "Version A" : "Moving on",
-    no = n.type === "cond" ? "No" : n.type === "split" ? "Version B" : "Dropping off";
+  const yes = T.ports?.[0] ?? "Moving on",
+    no = T.ports?.[1] ?? "Dropping off";
   return (
     <StatBox
       items={[
@@ -391,7 +553,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
   const b = useEditor((s) => s.nodes.find((n) => n.id === e.to));
   const flow = useEditor((s) => s.R.flows[e.id] ?? 0);
   const ro = useEditor((s) => s.readOnly);
-  const labels: [string, string] = a?.type === "cond" ? ["Yes", "No"] : a?.type === "split" ? ["Version A", "Version B"] : ["People who converted", "People who didn’t convert"];
+  const labels: [string, string] = (a && typeOf(a.type).ports) || ["People who converted", "People who didn’t convert"];
   return (
     <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
       <h3>Connection</h3>

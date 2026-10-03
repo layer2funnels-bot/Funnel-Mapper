@@ -112,7 +112,7 @@ export function ArrangeBar({ ids }: { ids: string[] }) {
 
 /* ---------------- style ---------------- */
 
-const TEXT_TYPES = new Set(["label", "note", "shape", "checklist", "frame"]);
+const TEXT_TYPES = new Set(["label", "note", "shape", "checklist", "frame", "link"]);
 
 export function StylePanel({ n }: { n: FunnelNode }) {
   const st: NodeStyle = n.s ?? {};
@@ -263,7 +263,7 @@ function SizeFields({ n }: { n: FunnelNode }) {
     moveNodes({ [n.id]: { x: n.x, y: n.y, ...patch } });
   };
   const sized = ["frame", "shape", "image"].includes(n.type);
-  const widthOnly = ["label", "note", "checklist"].includes(n.type);
+  const widthOnly = ["label", "note", "checklist", "link"].includes(n.type);
   return (
     <div className="fm-sec">
       <h4>Size and position</h4>

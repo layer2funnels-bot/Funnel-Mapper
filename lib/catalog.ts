@@ -301,6 +301,8 @@ export const TYPES = {
   image: { cat: "annot", label: "Image / logo", icon: "image", d: { src: "", alt: "", fit: "contain" } },
   checklist: { cat: "annot", label: "Checklist", icon: "task", d: { title: "Checklist", items: [] } },
   link: { cat: "annot", label: "Link / video", icon: "link", kw: "embed preview youtube loom url", d: { url: "", title: "" } },
+  // Widget: live numbers on the map (scope, up to 4 metrics, display, size). Added from the canvas menus, not the 169-item library.
+  widget: { cat: "annot", label: "Widget", icon: "chart", d: { scope: "funnel", display: "number", metrics: ["revenue"], wsize: "M" } },
 } satisfies Record<string, BlockType>;
 
 export type BlockTypeKey = keyof typeof TYPES;
@@ -323,6 +325,8 @@ export const INT_LABEL: Record<Interval, string> = { weekly: "week", monthly: "m
 export const SIZED_TYPES = new Set(["frame", "shape", "image"]);
 /** Annotation types with a stored width only (height follows the content). */
 export const WIDTH_TYPES = new Set(["label", "note", "checklist", "link"]);
+/** Widgets are laid out by their size (S / M / L), not by a stored width. */
+export const WIDGET_SIZES = { S: { w: 150, h: 64 }, M: { w: 230, h: 112 }, L: { w: 340, h: 196 } } as const;
 export const DEFAULT_SIZE: Record<string, { w: number; h?: number }> = {
   frame: { w: 520, h: 300 },
   shape: { w: 200, h: 120 },
@@ -348,9 +352,34 @@ export const LINE_DIRS: [string, string][] = [
   ["d2", "Diagonal ↗"],
 ];
 
-/** Default node height (px). Notes and headings can be taller; the editor uses measured heights when available. */
-export const NH = 96;
-export const nodeW = (type: string) => (typeOf(type)?.cat === "logic" ? 170 : 210);
+/**
+ * Canonical block footprint (V2 handoff, "Canonical dimensions"): every flow block is 200px wide; page and offer
+ * blocks carry a preview strip and are 38px taller than the rest. Library, canvas, Performance map, Presentation,
+ * Shared view, Tidy Up and every export read these three values. Layout only: it never touches the maths.
+ */
+export const NH = 76;
+export const NH_TALL = 114;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept so callers can stay per-type if a family ever differs
+export const nodeW = (type?: string): number => 200;
+/** Height of a flow block (px). Notes and headings can be taller; the editor uses measured heights when available. */
+export const blockH = (type: string) => {
+  const c = typeOf(type)?.cat;
+  return c === "page" || c === "offer" ? NH_TALL : NH;
+};
+
+/**
+ * Block types a block can be switched to without changing how its numbers are calculated: same maths category and the
+ * same special behaviour (recurring billing, instalments, Yes/No, A/B, goal, exit). Wait only changes into itself.
+ */
+export function retypeTargets(type: string): string[] {
+  const T = typeOf(type);
+  if (!T || T.cat === "annot" || type === "wait") return [];
+  const cls = (t: string) => {
+    const b = baseOf(t);
+    return ["sub", "plan", "cond", "split", "goal", "exit"].includes(b) ? b : "plain";
+  };
+  return (Object.keys(TYPES) as BlockTypeKey[]).filter((k) => k !== type && k !== "wait" && TYPES[k].cat === T.cat && cls(k) === cls(type) && (T.cat !== "logic" || BLOCK_TYPES[k].color === T.color));
+}
 
 /** Port rules: which handles a block shows. */
 export function portsFor(type: string) {

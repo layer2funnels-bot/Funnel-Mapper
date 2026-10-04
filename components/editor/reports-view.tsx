@@ -8,24 +8,43 @@ import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
 import { compute, computeScenario, periodFactor, periodNumbers, type FunnelResult, type PeriodKey } from "@/lib/funnel-math";
 import { GOAL_KINDS, STEP_STATUSES, type FunnelSettings, type Goal, type StepStatus } from "@/lib/graph";
 import { reportData, statusReport, type GoalReport } from "@/lib/report-data";
-import { nid, setSection, setSettings, setTab, updateNode, useEditor, type ReportSection } from "@/lib/editor/store";
+import { nid, setInspTab, setOpt, setSection, setSettings, setTab, showToast, updateNode, useEditor, type ReportSection } from "@/lib/editor/store";
+import { useFocusBlock } from "./focus";
+import { WidgetCard } from "./widget-node";
 import { NumInput } from "./fields";
 import { BarsChart, PairBars, TimeChart } from "./report-charts";
 
-export const REPORT_SECTIONS: [ReportSection, string][] = [
-  ["overview", "Overview"],
-  ["data", "Funnel data"],
-  ["sources", "Traffic sources"],
-  ["offers", "Offers & products"],
-  ["expenses", "Expenses"],
-  ["scenarios", "Scenario comparison"],
-  ["forecast", "Revenue & profit forecast"],
-  ["goals", "Goals & required numbers"],
-  ["mrr", "MRR forecast"],
-  ["monthly", "Month-to-month"],
-  ["reinvest", "Traffic reinvestment"],
-  ["status", "Published status"],
+/** Report navigation, grouped as in the V2 design. */
+export const REPORT_GROUPS: { name: string; items: [ReportSection, string][] }[] = [
+  {
+    name: "Summary",
+    items: [
+      ["overview", "Overview"],
+      ["data", "Funnel data"],
+      ["status", "Published status"],
+    ],
+  },
+  {
+    name: "Money",
+    items: [
+      ["sources", "Traffic sources"],
+      ["offers", "Offers & products"],
+      ["expenses", "Expenses"],
+    ],
+  },
+  {
+    name: "Planning",
+    items: [
+      ["scenarios", "Scenario comparison"],
+      ["forecast", "Revenue & profit forecast"],
+      ["goals", "Goals & required numbers"],
+      ["mrr", "MRR forecast"],
+      ["monthly", "Month-to-month"],
+      ["reinvest", "Traffic reinvestment"],
+    ],
+  },
 ];
+export const REPORT_SECTIONS: [ReportSection, string][] = REPORT_GROUPS.flatMap((g) => g.items);
 
 const NEUTRAL = { traffic: 1, conv: 1, price: 1, cost: 1 };
 const GOAL_KIND_LABEL: Record<Goal["kind"], string> = { revenue: "Revenue / month", profit: "Profit / month", customers: "Customers / month", leads: "Leads / month", step: "People completing a step", conversion: "Conversion rate at a step (%)" };
@@ -44,7 +63,7 @@ export function snapshotSettings(s: FunnelSettings, snap: string): FunnelSetting
   return sc ? { ...s, whatif: sc.whatif, fixed: sc.fixed ?? s.fixed } : s;
 }
 
-export function ReportsView() {
+export function ReportsView({ onExportPdf }: { onExportPdf?: () => void }) {
   const section = useEditor((s) => s.section);
   const onSection = setSection;
   const nodes = useEditor((s) => s.nodes);
@@ -64,22 +83,31 @@ export function ReportsView() {
     <div className="fm-reports">
       <nav className="fm-rnav" aria-label="Report sections">
         <h2>Reports</h2>
-        <ul>
-          {REPORT_SECTIONS.map(([k, l]) => (
-            <li key={k}>
-              <button type="button" aria-current={section === k ? "page" : undefined} onClick={() => onSection(k)}>
-                {l}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {REPORT_GROUPS.map((g) => (
+          <div key={g.name} className="fm-rgroup">
+            <h3>{g.name}</h3>
+            <ul>
+              {g.items.map(([k, l]) => (
+                <li key={k}>
+                  <button type="button" aria-current={section === k ? "page" : undefined} onClick={() => onSection(k)}>
+                    {l}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
         <label className="fm-rnav-sel">
           <span className="sr-only">Report section</span>
           <select className="input" value={section} onChange={(e) => onSection(e.target.value as ReportSection)}>
-            {REPORT_SECTIONS.map(([k, l]) => (
-              <option key={k} value={k}>
-                {l}
-              </option>
+            {REPORT_GROUPS.map((g) => (
+              <optgroup key={g.name} label={g.name}>
+                {g.items.map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -92,6 +120,11 @@ export function ReportsView() {
               Numbers for <b>{snapName}</b>, per month unless stated. Same engine as the map, the KPI bar and the PDF report.
             </p>
           </div>
+          {onExportPdf && (
+            <button type="button" className="btn" onClick={onExportPdf}>
+              <Icon name="download" size={15} /> Export PDF
+            </button>
+          )}
           {section !== "scenarios" && (
             <label className="fm-rsnap">
               <span>Scenario</span>
@@ -166,21 +199,31 @@ const useMoney = () => {
 const signed = (v: number, f: (v: number) => string) => (Number.isFinite(v) && v > 0 ? "+" : "") + f(v);
 const cls = (v: number) => (v >= 0 ? "pos" : "neg");
 
-function Kpis({ items }: { items: [string, React.ReactNode, string?][] }) {
+/** KPI tiles. A caption can link to the report section that explains the number. */
+function Kpis({ items, onSection }: { items: [string, React.ReactNode, string?, ReportSection?][]; onSection?: (s: ReportSection) => void }) {
   return (
     <dl className="fm-rkpis">
-      {items.map(([a, b, c]) => (
+      {items.map(([a, b, c, to]) => (
         <div key={a}>
           <dt>{a}</dt>
           <dd>{b}</dd>
-          {c && <small>{c}</small>}
+          {c &&
+            (to && onSection ? (
+              <small>
+                <button type="button" className="link" onClick={() => onSection(to)} title={`Open ${REPORT_SECTIONS.find(([k]) => k === to)?.[1]}`}>
+                  {c}
+                </button>
+              </small>
+            ) : (
+              <small>{c}</small>
+            ))}
         </div>
       ))}
     </dl>
   );
 }
 
-function Table({ caption, head, rows, foot, right = true, text = [] }: { caption: string; head: React.ReactNode[]; rows: React.ReactNode[][]; foot?: React.ReactNode[]; right?: boolean; text?: number[] }) {
+function Table({ caption, head, rows, foot, right = true, text = [], highlight = -1 }: { caption: string; head: React.ReactNode[]; rows: React.ReactNode[][]; foot?: React.ReactNode[]; right?: boolean; text?: number[]; highlight?: number }) {
   const r = (i: number) => (i && right && !text.includes(i) ? "r" : undefined);
   return (
     <div className="fm-tblwrap">
@@ -197,7 +240,7 @@ function Table({ caption, head, rows, foot, right = true, text = [] }: { caption
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i}>
+            <tr key={i} className={i === highlight ? "hl" : undefined} ref={i === highlight ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}>
               {row.map((c, k) => (k === 0 ? <th scope="row" key={k}>{c}</th> : <td key={k} className={r(k)}>{c}</td>))}
             </tr>
           ))}
@@ -217,31 +260,71 @@ function Table({ caption, head, rows, foot, right = true, text = [] }: { caption
 /* ---------------- overview ---------------- */
 function Overview({ data, R, onSection }: SP) {
   const { m, ms } = useMoney();
+  const focus = useFocusBlock();
+  const nodes = useEditor((x) => x.nodes);
+  const [per, setPer] = useState<"month" | "year">("month");
   const mo = data.overview.month,
     yr = data.overview.year,
     L = data.overview.keyLeak;
   const f = data.forecast;
+  const A = per === "month" ? mo : yr;
+  const other = per === "month" ? yr : mo;
+  const otherLabel = per === "month" ? "a year" : "a month";
+  const widgets = nodes.filter((n) => n.type === "widget");
+  const tryWhatIf = (id: string) => {
+    focus(id);
+    setInspTab("analytics");
+    setOpt("hideInsp", false);
+    showToast("Step what-if: set a better conversion rate under “Goal for this step”");
+  };
   return (
     <>
-      <h3 className="fm-rh">Project summary</h3>
+      <div className="fm-rtitle-row">
+        <h3 className="fm-rh">Project summary</h3>
+        <div className="seg" role="group" aria-label="Period">
+          <button type="button" aria-pressed={per === "month"} onClick={() => setPer("month")}>
+            This month
+          </button>
+          <button type="button" aria-pressed={per === "year"} onClick={() => setPer("year")}>
+            Year
+          </button>
+        </div>
+      </div>
       <Kpis
         items={[
-          ["Traffic", nf(mo.people), `${nf(yr.people)} a year`],
-          ["Leads", nf(mo.leads, 1), `${nf(yr.leads)} a year`],
-          ["Customers", nf(mo.customers, 1), `${nf(yr.customers)} a year`],
-          ["Revenue", m(mo.revenue), `${ms(yr.revenue)} a year`],
-          ["Profit", <span key="p" className={cls(mo.profit)}>{m(mo.profit)}</span>, `${ms(yr.profit)} a year`],
-          ["ROAS", ratio(R.roas), "Revenue ÷ ad spend"],
-          ["ROI", pct(R.roi), "Profit ÷ all costs"],
+          ["Traffic", nf(A.people), `${nf(other.people)} ${otherLabel}`, "sources"],
+          ["Leads", nf(A.leads, 1), `${nf(other.leads)} ${otherLabel}`, "data"],
+          ["Customers", nf(A.customers, 1), `${nf(other.customers)} ${otherLabel}`, "offers"],
+          ["Revenue", m(A.revenue), `${ms(other.revenue)} ${otherLabel}`, "forecast"],
+          ["Profit", <span key="p" className={cls(A.profit)}>{m(A.profit)}</span>, `${ms(other.profit)} ${otherLabel}`, "expenses"],
+          ["ROAS", ratio(R.roas), "Revenue ÷ ad spend", "sources"],
+        ]}
+        onSection={onSection}
+      />
+      <h3 className="fm-rh">Unit economics</h3>
+      <Kpis
+        items={[
           ["CPC", m(R.cpc), "Ad spend ÷ paid visitors"],
           ["CPL", m(R.cpl), "Ad spend ÷ leads"],
           ["CPA", m(R.cpa), "Ad spend ÷ new customers"],
           ["AOV", m(R.aov), "Revenue ÷ new customers"],
-          ["LTV / customer", m(R.ltvc), "Lifetime revenue ÷ new customers"],
-          ["MRR", m(R.mrr), "From subscriptions"],
+          ["LTV / customer", m(R.ltvc), "Lifetime revenue ÷ new customers", "forecast"],
+          ["MRR", m(R.mrr), "From subscriptions", "mrr"],
+          ["ROI", pct(R.roi), "Profit ÷ all costs", "expenses"],
           ["Conversion", pct(R.conv), "New customers ÷ visitors"],
         ]}
+        onSection={onSection}
       />
+      {widgets.length > 0 && (
+        <>
+          <h3 className="fm-rh">Widgets</h3>
+          <div className="fm-rwidgets">
+            {widgets.map((w) => (
+              <WidgetCard key={w.id} id={w.id} fluid />
+            ))}
+          </div>
+        </>
+      )}
       {L && (
         <div className="fm-rcallout" role="note">
           <span className="ic" aria-hidden="true">
@@ -253,6 +336,14 @@ function Overview({ data, R, onSection }: SP) {
               {nf(L.lost, 1)} of {nf(L.inn, 1)} people ({pct(L.dropPct)}) don’t move on at this {L.label.toLowerCase()} each month. Converting 10% better here adds about <b>{m(L.revenueGain)}</b> revenue and{" "}
               <b>{m(L.profitGain)}</b> profit a month.
             </p>
+            <div className="fm-rcallout-actions">
+              <button type="button" className="btn sm" onClick={() => focus(L.id)}>
+                Show on map
+              </button>
+              <button type="button" className="btn sm" onClick={() => tryWhatIf(L.id)}>
+                Try in What-if
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -267,8 +358,14 @@ function Overview({ data, R, onSection }: SP) {
           fmt={ms}
           zero
         />
-        <BarsChart title="People lost per step (largest first)" data={data.leaks.slice(0, 8).map((x) => ({ name: x.name, value: x.lost }))} fmt={(v) => nf(v, 1)} color="var(--chart-2)" />
+        <BarsChart title="People lost per step (click a bar to find it on the map)" data={data.leaks.slice(0, 8).map((x) => ({ id: x.id, name: x.name, value: x.lost }))} fmt={(v) => nf(v, 1)} color="var(--chart-2)" onPick={focus} />
       </div>
+      <Table
+        caption="People lost per step"
+        head={["Step", "Type", "People in", "Lost", "Drop-off", ""]}
+        text={[1, 5]}
+        rows={data.leaks.slice(0, 8).map((x) => [x.name, x.label, nf(x.inn, 1), nf(x.lost, 1), pct(x.dropPct), <button key="b" type="button" className="link" onClick={() => focus(x.id)}>Show on map</button>])}
+      />
       <p className="sub">
         Forecast settings and more charts: <button type="button" className="link" onClick={() => onSection("forecast")}>Revenue & profit forecast</button> · Every step:{" "}
         <button type="button" className="link" onClick={() => onSection("data")}>Funnel data</button>
@@ -307,10 +404,12 @@ function FunnelData({ R, s }: SP) {
     return (id: string) => [...walk(id)].join(", ");
   }, [edges, nodes]);
   void s;
+  const focusId = useEditor((x) => x.reportFocus);
   return (
     <>
       <p className="sub">Every step in journey order: people in, conversion, people out, revenue and costs.</p>
       <Table
+        highlight={focusId ? rows.findIndex((n) => n.id === focusId) : -1}
         caption="Funnel data"
         text={[1, 7, 8]}
         head={["Step", "Type", "Visitors", "Conversion", "Customers / orders", "Revenue", "Cost", "Sources", "Status"]}

@@ -49,7 +49,7 @@ test.describe("modals", () => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
     await page.getByRole("button", { name: "Share", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Share with your client" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: /^Share with/ })).toBeVisible();
     let p = await placement(page);
     expect(p.dx).toBeLessThanOrEqual(2);
     expect(p.dy).toBeLessThanOrEqual(2);
@@ -74,9 +74,9 @@ test.describe("share links (M5)", () => {
   async function makeLink(page: import("@playwright/test").Page, id: string, opts: { edit?: boolean; hide?: boolean } = {}) {
     await openEditor(page, id);
     await page.getByRole("button", { name: "Share", exact: true }).click();
-    const dlg = page.getByRole("dialog", { name: "Share with your client" });
-    if (opts.edit) await dlg.getByLabel("Let them edit the map").check();
-    if (opts.hide) await dlg.getByLabel("Hide numbers (show the journey only)").check();
+    const dlg = page.getByRole("dialog", { name: /^Share with/ });
+    if (opts.edit) await dlg.getByRole("group", { name: "Permission" }).getByRole("button", { name: "Edit", exact: true }).click();
+    if (opts.hide) await dlg.getByLabel("Show numbers").uncheck();
     await dlg.getByRole("button", { name: "Create link" }).click();
     const link = await dlg.getByRole("textbox", { name: "Share link" }).first().inputValue();
     await dlg.getByRole("button", { name: "Done", exact: true }).click();
@@ -180,7 +180,7 @@ test.describe("reports and planning tools", () => {
     await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
     await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
     await page.getByRole("button", { name: "Apply to what-if" }).click();
-    await page.getByRole("tab", { name: "Math" }).click();
+    await page.getByRole("tab", { name: "Overview" }).click();
     await expect(page.locator(".rline", { hasText: "Profit" }).first()).toContainText("£50,000");
   });
 
@@ -191,11 +191,18 @@ test.describe("reports and planning tools", () => {
     await page.getByRole("menuitem", { name: "Present" }).click();
     const card = page.getByRole("region", { name: "Presentation" });
     await expect(card).toContainText("Overview");
-    await card.getByRole("button", { name: "Next step" }).click();
-    await expect(card).toContainText("Step 1 of 9");
-    await expect(card).toContainText("LinkedIn ads");
+    await card.getByRole("button", { name: "Next stage" }).click();
+    await expect(card).toContainText("Stage 1 of 3");
+    await expect(card.getByRole("heading", { name: "Acquire" })).toBeVisible();
+    await expect(card).toContainText("visits");
     await page.keyboard.press("ArrowRight");
-    await expect(card).toContainText("Step 2 of 9");
+    await expect(card).toContainText("Stage 2 of 3");
+    await expect(card.getByRole("heading", { name: "Convert" })).toBeVisible();
+    // Clean hides the numbers, Numbers brings them back
+    await card.getByRole("button", { name: "Clean" }).click();
+    await expect(card).not.toContainText("customers ·");
+    await card.getByRole("button", { name: "Numbers" }).click();
+    await expect(card).toContainText("customers");
     await page.keyboard.press("Escape");
     await expect(page.locator(".fm-top")).toBeVisible();
   });
@@ -233,6 +240,8 @@ test.describe("portfolio", () => {
     await expect(totals).toContainText("Planned revenue");
     await expect(totals).toContainText("£");
     await page.goto("/clients");
+    await expect(page.getByRole("table")).toBeVisible(); // V2: the table is the default view
+    await page.getByRole("button", { name: "Card view" }).click();
     await page.getByLabel("Filter by status").selectOption("proposal");
     await expect(page.getByRole("list", { name: "Clients" }).getByRole("listitem")).toHaveCount(1);
     await page.getByLabel("Filter by status").selectOption("");
@@ -246,8 +255,10 @@ test.describe("portfolio", () => {
     const stamp = Date.now();
     await page.goto("/clients/10000000-0000-4000-8000-000000000004");
     await page.waitForLoadState("networkidle");
+    await page.getByRole("tab", { name: "Notes" }).click();
     await page.getByRole("textbox", { name: "Notes", exact: true }).fill(`Prefers WhatsApp ${stamp}`);
     await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: /Products/ }).click();
     await page.getByRole("button", { name: "Add product", exact: true }).click();
     const dlg = page.getByRole("dialog");
     await dlg.getByLabel("Name").fill(`Glow membership ${stamp}`);
@@ -255,11 +266,14 @@ test.describe("portfolio", () => {
     await dlg.getByLabel("Price per period").fill("39");
     await dlg.getByRole("button", { name: "Save product" }).click();
     await expect(page.getByRole("cell", { name: `Glow membership ${stamp}`, exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Details" }).click();
     await page.getByLabel("Phone").fill("+971 50 111 2222");
     await page.getByRole("button", { name: "Save details" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Saved" }).last()).toBeVisible();
     await page.reload();
+    await page.getByRole("tab", { name: "Notes" }).click();
     await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(`Prefers WhatsApp ${stamp}`);
+    await page.getByRole("tab", { name: "Details" }).click();
     await expect(page.getByLabel("Phone")).toHaveValue("+971 50 111 2222");
   });
 
@@ -267,6 +281,7 @@ test.describe("portfolio", () => {
     // an existing (pre-pricing-model) retainer client still reads as a retainer
     await page.goto("/clients/10000000-0000-4000-8000-000000000001");
     await expect(page.getByText("£1,500/month retainer")).toBeVisible();
+    await page.getByRole("tab", { name: "Details" }).click();
     await expect(page.getByLabel("Pricing model")).toHaveValue("retainer");
     await expect(page.getByLabel("Monthly retainer")).toHaveValue("1500");
 
@@ -281,6 +296,7 @@ test.describe("portfolio", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
     await expect(page.getByText("£80.00/hour · ~10 h/month")).toBeVisible();
 
+    await page.getByRole("tab", { name: "Details" }).click();
     await page.getByLabel("Pricing model").selectOption("fixed");
     await page.getByLabel("Project fee").fill("5000");
     await page.getByLabel("Project start").fill("2026-01-05");

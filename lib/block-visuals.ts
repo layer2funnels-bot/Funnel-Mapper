@@ -165,3 +165,20 @@ export const WIREFRAMES: Record<Wireframe, WfShape[]> = {
     ["r", 102, 8, 56, 3.5, 1.5, "m"], ["r", 102, 15, 40, 2.5, 1.5, "d"], ["p", "M150 20a4 4 0 1 1-1.2-2.8", "ao"],
   ],
 };
+
+// ---- card geometry (shared by the canvas CSS in editor.css and the SVG map export in lib/export.ts) -----------
+/** Vertical rhythm of a flow block (px). The card is `nodeW` x `blockH` (lib/catalog.ts) with these parts inside. */
+export const CARD = { border: 1, padY: 8, head: 33, stats: 16, strip: 30, bar: 4, goalBar: 6, dashedStats: 6 } as const;
+
+export type TileShape = "circle" | "rounded" | "square" | "diamond" | "pill";
+/** Per family: card corner radii [tl, tr, br, bl], horizontal padding [left, right], tile shape/size, and extras. */
+export const FAMILY_GEOM: Record<Family, { radii: [number, number, number, number]; pad: [number, number]; tile: TileShape; tileSize: number; tileR: number; dashedStats: boolean; hatch: boolean }> = {
+  source: { radii: [26, 10, 10, 26], pad: [16, 10], tile: "circle", tileSize: 32, tileR: 16, dashedStats: true, hatch: false },
+  page: { radii: [10, 10, 10, 10], pad: [10, 10], tile: "rounded", tileSize: 28, tileR: 6, dashedStats: false, hatch: false },
+  offer: { radii: [10, 10, 10, 10], pad: [10, 10], tile: "rounded", tileSize: 28, tileR: 6, dashedStats: false, hatch: false },
+  message: { radii: [24, 24, 24, 24], pad: [16, 16], tile: "circle", tileSize: 32, tileR: 16, dashedStats: true, hatch: false },
+  action: { radii: [24, 24, 24, 24], pad: [16, 16], tile: "diamond", tileSize: 32, tileR: 8, dashedStats: false, hatch: false },
+  logic: { radii: [4, 4, 4, 4], pad: [10, 10], tile: "square", tileSize: 32, tileR: 4, dashedStats: false, hatch: true },
+  goal: { radii: [24, 24, 24, 24], pad: [16, 16], tile: "pill", tileSize: 32, tileR: 12, dashedStats: false, hatch: false },
+  note: { radii: [14, 14, 14, 14], pad: [10, 10], tile: "rounded", tileSize: 32, tileR: 9, dashedStats: false, hatch: false },
+};

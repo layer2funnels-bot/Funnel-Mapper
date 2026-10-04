@@ -71,7 +71,7 @@ export function TimeChart({ title, data, x = "month", series, fmt, height = 200,
 }
 
 /** One measure per category, as horizontal bars (names stay readable). Negative values are allowed. */
-export function BarsChart({ title, data, fmt, color = "var(--chart-1)", negColor = "var(--chart-2)" }: { title: string; data: { name: string; value: number }[]; fmt: Fmt; color?: string; negColor?: string }) {
+export function BarsChart({ title, data, fmt, color = "var(--chart-1)", negColor = "var(--chart-2)", onPick }: { title: string; data: { name: string; value: number; id?: string }[]; fmt: Fmt; color?: string; negColor?: string; onPick?: (id: string) => void }) {
   const h = Math.max(80, data.length * 34 + 24);
   return (
     <figure className="fm-chart" aria-label={`${title}. The table has the same numbers.`}>
@@ -84,7 +84,7 @@ export function BarsChart({ title, data, fmt, color = "var(--chart-1)", negColor
             <YAxis type="category" dataKey="name" {...axis} width={140} axisLine={false} tickFormatter={(v: string) => (v.length > 20 ? v.slice(0, 19) + "…" : v)} />
             <ReferenceLine x={0} stroke="var(--muted)" />
             <Tooltip content={(p) => <Tip {...(p as TooltipContentProps<number, string>)} fmt={fmt} />} cursor={{ fill: "var(--line)", fillOpacity: 0.35 }} />
-            <Bar dataKey="value" name={title} radius={[0, 4, 4, 0]} isAnimationActive={false} maxBarSize={22}>
+            <Bar dataKey="value" name={title} radius={[0, 4, 4, 0]} isAnimationActive={false} maxBarSize={22} cursor={onPick ? "pointer" : undefined} onClick={(d) => { const id = (d as unknown as { id?: string }).id; if (id && onPick) onPick(id); }}>
               {data.map((d, i) => (
                 <Cell key={i} fill={d.value < 0 ? negColor : color} />
               ))}

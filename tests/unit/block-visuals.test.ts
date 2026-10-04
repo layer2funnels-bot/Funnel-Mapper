@@ -6,7 +6,7 @@ const keys = Object.keys(BLOCK_TYPES) as BlockTypeKey[];
 
 describe("block visual system", () => {
   it("defines a visual for every block type without touching its identity", () => {
-    expect(keys.length).toBe(159); // 152 flow blocks + 7 layout types; the 169 library items add 17 annotation presets
+    expect(keys.length).toBe(160); // 152 flow blocks + 8 layout types (incl. widget); the 169 library items add 17 annotation presets, widgets are not library items
     for (const k of keys) {
       const v = visualOf(k);
       expect(FAMILIES[v.family], k).toBeTruthy();

@@ -1,18 +1,33 @@
 "use client";
 import "@xyflow/react/dist/base.css";
-import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type ConnectionLineComponentProps, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { CATDARK, SIZED_TYPES, WIDTH_TYPES, typeOf } from "@/lib/catalog";
-import { addNode, openQuickAdd, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, useEditor } from "@/lib/editor/store";
+import { CATDARK, SIZED_TYPES, WIDTH_TYPES, isAnnot, typeOf } from "@/lib/catalog";
+import { addNode, applyEyedropper, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
-const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link"]);
+const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link", "widget"]);
 const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 export const DND_MIME = "application/x-funnel-block";
+
+/** The line being dragged off a port: Emerald while it can land, amber when the block under it can't take people. */
+function ConnectionLine({ fromX, fromY, toX, toY, fromPosition, connectionStatus }: ConnectionLineComponentProps) {
+  const bad = connectionStatus === "invalid";
+  const alt = fromPosition === "bottom";
+  const dx = Math.max(40, Math.abs(toX - fromX) / 2);
+  const d = alt ? `M ${fromX} ${fromY} C ${fromX} ${fromY + 60}, ${toX - dx} ${toY}, ${toX} ${toY}` : `M ${fromX} ${fromY} C ${fromX + dx} ${fromY}, ${toX - dx} ${toY}, ${toX} ${toY}`;
+  const c = bad ? "var(--attention)" : "var(--brand)";
+  return (
+    <g className="fm-connline" data-invalid={bad || undefined}>
+      <path d={d} fill="none" stroke={c} strokeWidth={2.5} strokeDasharray="6 5" strokeLinecap="round" />
+      <circle cx={toX} cy={toY} r={6} fill="var(--panel)" stroke={c} strokeWidth={2.5} />
+    </g>
+  );
+}
 
 export function Canvas() {
   const nodes = useEditor((s) => s.nodes);
@@ -66,7 +81,7 @@ export function Canvas() {
         targetHandle: "in",
         type: "flow",
         selected: selEdge === e.id,
-        data: { port: e.port, fromType: B[e.from]?.type, share: e.share, s: e.s },
+        data: { port: e.port, fromType: B[e.from]?.type, from: e.from, to: e.to, share: e.share, s: e.s },
       }));
   }, [edges, nodes, selEdge]);
 
@@ -112,6 +127,7 @@ export function Canvas() {
   }, []);
 
   const onNodeDragStart = useCallback((_: unknown, node: Node) => {
+    setDragging(true);
     const s = useEditor.getState();
     const n = s.nodes.find((x) => x.id === node.id);
     if (n?.type !== "frame") {
@@ -139,14 +155,28 @@ export function Canvas() {
   const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, c.sourceHandle === "alt" ? "alt" : "main"), []);
   const onConnect = useCallback((c: Connection) => connect(c.source, c.sourceHandle === "alt" ? "alt" : "main", c.target), []);
   // Like the prototype: dropping a connection anywhere on a block (not just its input dot) connects to it.
-  const onConnectEnd = useCallback((ev: MouseEvent | TouchEvent, state: FinalConnectionState) => {
-    if (state.isValid || !state.fromNode || state.fromHandle?.type !== "source") return;
-    const pt = "changedTouches" in ev ? ev.changedTouches[0] : ev;
-    const target = document.elementFromPoint(pt.clientX, pt.clientY)?.closest(".react-flow__node")?.getAttribute("data-id");
-    if (!target) return;
-    const port = state.fromHandle.id === "alt" ? "alt" : "main";
-    if (canConnect(state.fromNode.id, target, port)) connect(state.fromNode.id, port, target);
-  }, []);
+  const onConnectEnd = useCallback(
+    (ev: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      if (state.isValid || !state.fromNode || state.fromHandle?.type !== "source") return;
+      const pt = "changedTouches" in ev ? ev.changedTouches[0] : ev;
+      const port = state.fromHandle.id === "alt" ? "alt" : "main";
+      const hit = document.elementFromPoint(pt.clientX, pt.clientY);
+      const target = hit?.closest(".react-flow__node")?.getAttribute("data-id");
+      if (target) {
+        // released on an existing block: connect directly (no Quick Add), or say why not
+        if (canConnect(state.fromNode.id, target, port)) connect(state.fromNode.id, port, target);
+        else if (target !== state.fromNode.id) showToast("That block can’t take people from here");
+        return;
+      }
+      // released on empty canvas: Quick Add at the endpoint, already wired to the port it came from
+      if (!hit?.closest(".react-flow__pane") || useEditor.getState().readOnly) return;
+      const box = (document.querySelector(".fm-stage") as HTMLElement | null)?.getBoundingClientRect();
+      if (!box) return;
+      const at = rf.screenToFlowPosition({ x: pt.clientX, y: pt.clientY });
+      openQuickAdd({ sx: Math.max(8, Math.min(box.width - 308, pt.clientX - box.left + 14)), sy: Math.max(8, Math.min(box.height - 400, pt.clientY - box.top - 20)), fx: at.x, fy: at.y, from: { id: state.fromNode.id, port } });
+    },
+    [rf],
+  );
 
   const onDrop = useCallback(
     (ev: React.DragEvent) => {
@@ -159,6 +189,41 @@ export function Canvas() {
     },
     [rf],
   );
+
+  // touch: a long press opens the same menus as a right-click
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>(".fm-stage .react-flow");
+    if (!root) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let start: { x: number; y: number } | null = null;
+    const cancel = () => {
+      clearTimeout(timer);
+      start = null;
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" || e.isPrimary === false) return;
+      cancel();
+      start = { x: e.clientX, y: e.clientY };
+      const target = e.target as Element;
+      timer = setTimeout(() => {
+        if (!start) return;
+        target.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: start.x, clientY: start.y }));
+        start = null;
+      }, 550);
+    };
+    const move = (e: PointerEvent) => start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10 && cancel();
+    root.addEventListener("pointerdown", down);
+    root.addEventListener("pointermove", move);
+    root.addEventListener("pointerup", cancel);
+    root.addEventListener("pointercancel", cancel);
+    return () => {
+      cancel();
+      root.removeEventListener("pointerdown", down);
+      root.removeEventListener("pointermove", move);
+      root.removeEventListener("pointerup", cancel);
+      root.removeEventListener("pointercancel", cancel);
+    };
+  }, []);
 
   const miniColor = useCallback((n: Node) => {
     const node = useEditor.getState().nodes.find((x) => x.id === n.id);
@@ -177,7 +242,42 @@ export function Canvas() {
       onEdgesChange={onEdgesChange}
       onEdgeClick={(_, e) => selectEdge(e.id)}
       onNodeDragStart={onNodeDragStart}
-      onNodeDragStop={() => (frameDrag.current = null)}
+      onNodeDragStop={() => {
+        frameDrag.current = null;
+        setDragging(false);
+      }}
+      onMoveStart={(ev) => ev && setDragging(true)}
+      onNodeClick={(_, node) => {
+        const st = useEditor.getState();
+        if (st.eyedrop) return applyEyedropper(node.id);
+        // phone "Select blocks" mode: taps add or remove blocks from the selection
+        if (st.selectMode) selectNodes(st.selNodes.includes(node.id) ? st.selNodes.filter((x) => x !== node.id) : [...st.selNodes, node.id]);
+      }}
+      onNodeDoubleClick={(_, node) => {
+        const n = useEditor.getState().nodes.find((x) => x.id === node.id);
+        if (n && !isAnnot(n.type)) startRename(n.id);
+      }}
+      onNodeContextMenu={(ev, node) => {
+        ev.preventDefault();
+        const st = useEditor.getState();
+        if (!st.selNodes.includes(node.id)) selectNodes([node.id]);
+        openMenu({ kind: useEditor.getState().selNodes.length > 1 ? "selection" : "block", x: ev.clientX, y: ev.clientY, id: node.id });
+      }}
+      onSelectionContextMenu={(ev) => {
+        ev.preventDefault();
+        openMenu({ kind: "selection", x: ev.clientX, y: ev.clientY });
+      }}
+      onEdgeContextMenu={(ev, edge) => {
+        ev.preventDefault();
+        selectEdge(edge.id);
+        openMenu({ kind: "edge", x: ev.clientX, y: ev.clientY, id: edge.id });
+      }}
+      onPaneContextMenu={(ev) => {
+        ev.preventDefault();
+        clearSelection();
+        const at = rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+        openMenu({ kind: "pane", x: ev.clientX, y: ev.clientY, fx: at.x, fy: at.y });
+      }}
       onConnect={onConnect}
       onConnectEnd={onConnectEnd}
       isValidConnection={isValidConnection}
@@ -199,7 +299,10 @@ export function Canvas() {
       defaultViewport={{ x: view.x, y: view.y, zoom: view.k }}
       fitView={fitOnInit}
       fitViewOptions={{ padding: 0.15, maxZoom: 1.2 }}
-      onMoveEnd={(_, vp) => setView({ x: Math.round(vp.x), y: Math.round(vp.y), k: Math.round(vp.zoom * 1000) / 1000 })}
+      onMoveEnd={(_, vp) => {
+        setDragging(false);
+        setView({ x: Math.round(vp.x), y: Math.round(vp.y), k: Math.round(vp.zoom * 1000) / 1000 });
+      }}
       minZoom={0.2}
       maxZoom={2.5}
       snapToGrid={opts.snap}
@@ -214,7 +317,8 @@ export function Canvas() {
       elementsSelectable
       zoomOnDoubleClick={false}
       connectionRadius={30}
-      attributionPosition="top-right"
+      connectionLineComponent={ConnectionLine}
+      attributionPosition="bottom-center"
       aria-label="Funnel canvas"
     >
       <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="var(--dot)" />

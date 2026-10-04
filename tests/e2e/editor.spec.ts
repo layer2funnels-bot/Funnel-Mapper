@@ -1,11 +1,10 @@
 import { expect, test } from "@playwright/test";
-import fixtures from "../fixtures/prototype-results.json";
 import { money } from "../../lib/format";
 import { compute } from "../../lib/funnel-math";
 import { blankSettings } from "../../lib/graph";
+import { tidyLayout } from "../../lib/layout";
 import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved } from "./helpers";
 
-const FX = fixtures as Record<string, { tidy: { x: number; y: number }[] }>;
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
 test.describe("funnel editor", () => {
@@ -89,7 +88,8 @@ test.describe("funnel editor", () => {
     const a = (await node(page, "LinkedIn ads").boundingBox())!;
     const b = (await node(page, "Application").boundingBox())!;
     await drag(page, { x: a.x - 20, y: a.y - 30 }, { x: b.x + b.width + 10, y: b.y + b.height + 20 }, { shift: true });
-    await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks selected");
+    await expect(page.locator(".fm-insp h3")).toHaveText("3 blocks");
+    await page.getByRole("tab", { name: "Arrange" }).click(); // several blocks: Style | Arrange
     await page.getByRole("button", { name: "Put in a stage frame" }).click();
     await expect(page.locator(".fm-frame")).toHaveCount(1);
   });
@@ -118,9 +118,9 @@ test.describe("funnel editor", () => {
     await expect(nodes(page)).toHaveCount(7);
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
     await page.keyboard.press(`${mod}+a`);
-    await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks selected");
+    await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks");
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("tab", { name: "Math" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
   });
 
   test("dragging a frame carries the blocks inside it", async ({ page }) => {
@@ -145,12 +145,14 @@ test.describe("funnel editor", () => {
     const first = graph.nodes[0];
     await page.getByRole("button", { name: "Tidy up" }).click();
     await expect(page.locator(".fm-toast")).toContainText("Layout tidied");
-    for (const [i, n] of graph.nodes.entries()) expect(await pos(page, n.id), n.name).toEqual({ x: FX.quiz.tidy[i].x, y: FX.quiz.tidy[i].y });
+    // the app's canonical footprint (200 x 76, page and offer 114): the same layout the unit tests pin, centre-aligned rows
+    const laid = tidyLayout(graph.nodes, graph.edges);
+    for (const [i, n] of graph.nodes.entries()) expect(await pos(page, n.id), n.name).toEqual({ x: laid[i].x, y: laid[i].y });
     await page.keyboard.press(`${mod}+z`);
     await expect.poll(() => pos(page, first.id)).toEqual({ x: first.x, y: first.y });
     // keyboard shortcut + ELK alternative
     await page.keyboard.press(`${mod}+Shift+l`);
-    await expect.poll(() => pos(page, first.id)).toEqual({ x: FX.quiz.tidy[0].x, y: FX.quiz.tidy[0].y });
+    await expect.poll(() => pos(page, first.id)).toEqual({ x: laid[0].x, y: laid[0].y });
     await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByRole("menuitem", { name: "Tidy up (ELK layered)" }).click();
     await expect(page.locator(".fm-toast")).toContainText("ELK");
@@ -257,18 +259,31 @@ test.describe("tablet and phone", () => {
     await ctx.close();
   });
 
-  test("phone: opens view-only, can switch to editing", async ({ browser }) => {
+  test("phone: compact bar, KPI chips, and a 68px action bar when a block is selected", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const { id } = await createFunnel({ template: "tripwire" });
     await page.goto(`/funnels/${id}`);
     await expect(nodes(page)).toHaveCount(11);
-    await expect(page.getByRole("button", { name: "Show building blocks" })).toHaveCount(0);
+    // top bar: back, name, Reports, overflow; the KPI chips scroll inside their own strip
+    await expect(page.getByRole("link", { name: /^Back to/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.locator(".fm-kpis")).toBeVisible();
+    // no horizontal page scroll
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    // the library opens from the 52px + button
+    const fab = page.getByRole("button", { name: "Show building blocks" });
+    expect((await fab.boundingBox())!.width).toBeGreaterThanOrEqual(52);
+    // selecting a block swaps the KPI chips for the action bar; there is no floating toolbar on a phone
+    await page.locator(".react-flow__node").first().dispatchEvent("click");
+    const bar = page.getByRole("toolbar", { name: "Block actions" });
+    await expect(bar).toBeVisible();
+    expect((await bar.boundingBox())!.height).toBeGreaterThanOrEqual(68);
+    await expect(bar.getByRole("button", { name: "Next step" })).toBeVisible();
+    await expect(page.locator(".fm-ftb")).toBeHidden();
     await page.screenshot({ path: "test-results/editor-phone.png" });
-    await page.getByRole("button", { name: "View", exact: true }).click();
-    await page.getByText("View only (lock editing)").click();
-    await expect(page.getByRole("button", { name: "Show building blocks" })).toBeVisible();
     await ctx.close();
   });
+
 });

@@ -2,33 +2,61 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio, sym } from "@/lib/format";
-import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, warnings, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
+import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
+import { healthChecks } from "@/lib/health";
+import { useFocusBlock } from "./focus";
 import type { Expense, Scenario } from "@/lib/graph";
 import { nid, setSection, setSettings, setTab, useEditor, type ReportTab } from "@/lib/editor/store";
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
 
-const TABS: [ReportTab, string][] = [
-  ["math", "Math"],
-  ["steps", "Steps"],
-  ["sources", "Sources"],
-  ["plan", "What-if"],
-  ["costs", "Costs"],
-  ["scenarios", "Scenarios"],
-  ["forecast", "Forecast"],
-  ["actuals", "Actuals"],
+/** Funnel scope (nothing selected): three groups, in the order of the product loop. Tab keys are unchanged. */
+const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
+  {
+    name: "Model",
+    tabs: [
+      ["math", "Overview"],
+      ["steps", "Steps"],
+      ["sources", "Sources"],
+      ["costs", "Costs"],
+    ],
+  },
+  {
+    name: "Simulate",
+    tabs: [
+      ["plan", "What-if"],
+      ["scenarios", "Scenarios"],
+    ],
+  },
+  {
+    name: "Track",
+    tabs: [
+      ["forecast", "Forecast"],
+      ["actuals", "Actuals"],
+    ],
+  },
 ];
 
 export function Report() {
   const tab = useEditor((s) => s.tab);
   return (
     <>
-      <div className="tabs" role="tablist" aria-label="Reports">
-        {TABS.map(([k, l]) => (
-          <button key={k} role="tab" id={`tab-${k}`} aria-controls="rbody" aria-selected={tab === k} onClick={() => setTab(k)}>
-            {l}
-          </button>
+      <h3 className="fm-scope">Funnel</h3>
+      <div className="fm-groups" role="tablist" aria-label="Funnel tools">
+        {GROUPS.map((g) => (
+          <div className="fm-group" key={g.name}>
+            <span className="gname" aria-hidden="true">
+              {g.name}
+            </span>
+            <div className="gtabs">
+              {g.tabs.map(([k, l]) => (
+                <button key={k} role="tab" id={`tab-${k}`} aria-controls="rbody" aria-selected={tab === k} onClick={() => setTab(k)}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
       <div id="rbody" role="tabpanel" aria-labelledby={`tab-${tab}`}>
@@ -60,7 +88,8 @@ function MathTab() {
   const ro = useEditor((s) => s.readOnly);
   const m = useM();
   const shared = useEditor((s) => s.shared);
-  const w = useMemo(() => (shared ? [] : warnings({ nodes, edges })), [nodes, edges, shared]);
+  const w = useMemo(() => (shared ? [] : healthChecks({ nodes, edges })), [nodes, edges, shared]);
+  const focus = useFocusBlock();
   const rows: [string, React.ReactNode, string][] = [
     ["Revenue", m(R.rev), basis === "ltv" ? "Lifetime value of every sale, after refunds" : "First payment of every sale, after refunds"],
     ["Ad spend", m(R.spend), "Total spent on traffic"],
@@ -86,15 +115,33 @@ function MathTab() {
   ];
   return (
     <>
-      {w.length > 0 && (
-        <div className="warns" role="status">
-          <b>Check these</b>
-          <ul className="m-0 p-0">
-            {w.map((x) => (
-              <li key={x}>{x}</li>
-            ))}
-          </ul>
-        </div>
+      {!shared && (
+        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Funnel health">
+          <h4>Health</h4>
+          {w.length === 0 ? (
+            <p className="ok">
+              <Icon name="check" size={14} /> Every block is connected and every Yes/No has both paths.
+            </p>
+          ) : (
+            <ul>
+              {w.map((c) => (
+                <li key={c.id}>
+                  {c.nodeId ? (
+                    <button type="button" onClick={() => focus(c.nodeId!)} title="Select this block and zoom to it">
+                      <Icon name="alert" size={14} />
+                      <span>{c.text}</span>
+                    </button>
+                  ) : (
+                    <span className="plain">
+                      <Icon name="alert" size={14} />
+                      <span>{c.text}</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
       <fieldset disabled={ro} className="m-0 border-0 p-0">
         <div className="field">

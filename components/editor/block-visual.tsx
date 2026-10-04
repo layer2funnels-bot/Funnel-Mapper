@@ -1,12 +1,13 @@
 "use client";
 // Shared renderers for the block visual system (lib/block-visuals.ts). Used by the canvas card (nodes.tsx),
 // the library tiles (palette.tsx) and Quick Add, so one block reads the same everywhere.
+import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { baseOf, CATCOLOR, typeOf, type Interval } from "@/lib/catalog";
-import type { FunnelNode, StepStatus } from "@/lib/graph";
+import { useSignedUrl } from "@/components/signed-image";
+import { CATCOLOR, typeOf } from "@/lib/catalog";
+import type { StepStatus } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
-import { money, nf } from "@/lib/format";
-import { num } from "@/lib/funnel-math";
+import { offerSubtitle, priceTab } from "@/lib/editor/labels";
 import { visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type WfShape, type Wireframe } from "@/lib/block-visuals";
 
 const PAINT: Record<WfPaint, { fill: string; stroke: string }> = {
@@ -23,10 +24,21 @@ function Shape({ s }: { s: WfShape }) {
   return <path d={s[1]} {...PAINT[s[2]]} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />;
 }
 
+/** The captured / uploaded page screenshot (private bucket, signed URL) drawn over the wireframe once it has loaded. */
+export function PageShot({ path }: { path: string }) {
+  const url = useSignedUrl("screenshots", /^https?:|^data:/.test(path) ? null : path);
+  const src = /^https?:|^data:/.test(path) ? path : url;
+  const [bad, setBad] = useState(false);
+  if (!src || bad) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- user screenshot
+  return <img className="fm-shot" src={src} alt="" draggable={false} onError={() => setBad(true)} />;
+}
+
 /** Semantic page wireframe (preview strip). Replaced by a real screenshot in a later phase, never by a generic placeholder. */
-export function WireframeStrip({ kind, accent }: { kind: Wireframe; accent: string }) {
+export function WireframeStrip({ kind, accent, shot }: { kind: Wireframe; accent: string; shot?: string }) {
   return (
     <div className="fm-wf" style={{ ["--wfa" as string]: accent }} aria-hidden="true">
+      {shot && <PageShot path={shot} />}
       <svg viewBox={`0 0 ${WF_SIZE.w} ${WF_SIZE.h}`} preserveAspectRatio="xMidYMid meet" strokeWidth={1}>
         {WIREFRAMES[kind].map((s, i) => (
           <Shape key={i} s={s} />
@@ -34,28 +46,6 @@ export function WireframeStrip({ kind, accent }: { kind: Wireframe; accent: stri
       </svg>
     </div>
   );
-}
-
-const SHORT: Record<Interval, string> = { weekly: "wk", monthly: "mo", quarterly: "qtr", yearly: "yr" };
-
-/** Price tab text for offer blocks: `$37`, `↑ $297`, `↓ $27`, `+ $9`, `$70 / mo`, `3 × $333`. */
-export function priceTab(n: FunnelNode, cur: string): string {
-  const p = n.p,
-    eff = num(p.price) * (1 - num(p.disc) / 100),
-    b = baseOf(n.type);
-  if (b === "sub") return `${money(eff, cur)} / ${SHORT[p.interval as Interval] ?? "mo"}`;
-  if (b === "plan") return `${num(p.pays)} × ${money(eff, cur)}`;
-  const lead = n.type === "upsell" || n.type === "oto" ? "↑ " : n.type === "downsell" ? "↓ " : n.type === "bump" ? "+ " : "";
-  return lead + money(eff, cur);
-}
-
-/** Second line of an offer card (the price lives in the price tab). */
-export function offerSubtitle(n: FunnelNode): string {
-  const p = n.p,
-    parts = [typeOf(n.type).label];
-  if (num(p.disc)) parts.push(`−${nf(num(p.disc))}%`);
-  if (baseOf(n.type) === "sub" && num(p.trialDays)) parts.push(`${p.trialDays}-day trial`);
-  return parts.join(" · ");
 }
 
 const STATUS_LABEL: Record<StepStatus, string> = { planned: "Planned", building: "In progress", done: "Live" };
@@ -88,3 +78,5 @@ export function BlockTile({ type, icon, size = 16 }: { type: string; icon: IconN
     </span>
   );
 }
+
+export { offerSubtitle, priceTab };

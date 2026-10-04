@@ -2,9 +2,11 @@
 // Editor state (Zustand). Holds the funnel graph + settings, selection, undo/redo history and view options.
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
-import { DEFAULT_SIZE, defaultsFor, FRAME_COLORS, isAnnot, nodeW, NH, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
+import { blockH, DEFAULT_SIZE, defaultsFor, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
+import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
+import { tidyLayout } from "../layout";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
@@ -41,6 +43,49 @@ interface Snapshot {
   name: string;
 }
 
+export interface StylePreset {
+  id: string;
+  name: string;
+  style: NodeStyle;
+}
+/** A saved selection (blocks and the connections between them) that can be placed again in any funnel of the workspace. */
+export interface WorkspaceBlock {
+  id: string;
+  name: string;
+  nodes: FunnelNode[];
+  edges: FunnelEdge[];
+}
+
+export interface ClientProduct {
+  id: string;
+  name: string;
+  type: string;
+  params: NodeParams;
+}
+
+/** Floating Quick Add: where it opened (screen px inside the canvas) and where the block goes (flow px). */
+export interface QuickAddState {
+  sx: number;
+  sy: number;
+  fx: number;
+  fy: number;
+  /** Opened by dragging a connection off a port into empty space: the new block lands at `fx/fy` (its in-port at that point) and is connected. */
+  from?: { id: string; port: "main" | "alt" };
+  /** Opened from "Insert step on line": the block goes onto this connection. */
+  edge?: string;
+}
+
+/** Right-click / long-press menu. Coordinates are client px. */
+export interface MenuState {
+  kind: "block" | "edge" | "selection" | "pane";
+  x: number;
+  y: number;
+  id?: string;
+  /** Flow position under the pointer (pane menu: where "Add …" puts things). */
+  fx?: number;
+  fy?: number;
+}
+
 export interface EditorState {
   funnelId: string;
   clientId: string;
@@ -51,6 +96,35 @@ export interface EditorState {
   settings: FunnelSettings;
   R: FunnelResult;
   warnIds: Set<string>;
+  /** The client's saved products (library "Client products" and Quick Add). */
+  products: ClientProduct[];
+  /** Actuals rows of this funnel (loaded on demand for Trend widgets). */
+  actuals: ActualRowDb[] | null;
+  /** Left panel: block library, funnel outline or workspace blocks. */
+  sideTab: "library" | "outline" | "blocks";
+  /** Saved style presets and blocks of this workspace (table workspace_assets). */
+  stylePresets: StylePreset[];
+  workspaceBlocks: WorkspaceBlock[];
+  /** Phone: tap blocks to add them to the selection. */
+  selectMode: boolean;
+  /** Presentation: the steps of the stage being shown (others dim). */
+  stageIds: string[] | null;
+  /** Open context menu. */
+  menu: MenuState | null;
+  /** Copied style (Copy style / Paste style / eyedropper). */
+  styleClip: NodeStyle | null;
+  /** Eyedropper armed: the next block clicked receives this block's style. */
+  eyedrop: string | null;
+  /** A canvas drag is in progress (the floating toolbar hides). */
+  dragging: boolean;
+  /** Reports → Funnel data: step to highlight ("Open in Reports"). */
+  reportFocus: string | null;
+  /** Change-type picker: the block it is open for. */
+  typePicker: string | null;
+  /** Block whose name is being edited on the canvas. */
+  renaming: string | null;
+  /** Block losing the most people (Performance map badge). */
+  keyLeak: string | null;
   /** Measured DOM sizes (notes and headings grow with text); used by React Flow, layout and frame wrapping. */
   dims: Record<string, { width: number; height: number }>;
   selNodes: string[];
@@ -69,13 +143,13 @@ export interface EditorState {
   past: Snapshot[];
   future: Snapshot[];
   committed: Snapshot | null;
-  toast: { text: string; id: number } | null;
+  toast: { text: string; id: number; action?: string; run?: () => void } | null;
   /** Presentation mode: the block in focus (others dim). */
   spot: string | null;
   /** Opened through a public share link (no account features: versions, actuals, products). */
   shared: boolean;
   /** Floating quick-add: where it opened (screen px inside the canvas) and the flow position blocks go to. */
-  quick: { sx: number; sy: number; fx: number; fy: number } | null;
+  quick: QuickAddState | null;
   /** Workspace viewer: always read-only (the database refuses their writes too). */
   viewer: boolean;
   /** Map (canvas) or the full-width Reports view. */
@@ -112,6 +186,21 @@ export const useEditor = create<EditorState>(() => ({
   settings: { basis: "first", fixed: 0, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 }, target: 0, currency: "GBP", expenses: [], scenarios: [], projection: { months: 12, growth: 0 }, hideNumbers: false, goals: [], notes: { body: "", shared: false }, reinvest: { pct: 0, months: 12 } },
   R: blankResult,
   warnIds: new Set(),
+  keyLeak: null,
+  products: [],
+  actuals: null,
+  sideTab: "library",
+  selectMode: false,
+  stageIds: null,
+  stylePresets: [],
+  workspaceBlocks: [],
+  menu: null,
+  typePicker: null,
+  styleClip: null,
+  eyedrop: null,
+  dragging: false,
+  reportFocus: null,
+  renaming: null,
   dims: {},
   selNodes: [],
   selEdge: null,
@@ -141,9 +230,26 @@ const set = useEditor.setState;
 
 /* ---------------- internals ---------------- */
 const snapshot = (s: EditorState = get()): Snapshot => ({ nodes: s.nodes, edges: s.edges, settings: s.settings, name: s.name });
-const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => ({ R: compute({ nodes, edges }, settings), warnIds: warnNodeIds({ nodes, edges }) });
+/** The funnel's key leak: the page, offer or action that loses the most people (same ranking as lib/funnel-math leaks()). */
+export function keyLeakOf(nodes: FunnelNode[], R: FunnelResult): string | null {
+  let best: string | null = null,
+    most = 0;
+  for (const n of nodes) {
+    if (!["page", "offer", "action"].includes(typeOf(n.type)?.cat)) continue;
+    const r = R.N[n.id];
+    if (r && r.inflow > 0 && r.non > most) {
+      most = r.non;
+      best = n.id;
+    }
+  }
+  return best;
+}
+const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => {
+  const R = compute({ nodes, edges }, settings);
+  return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R) };
+};
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
-export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : NH));
+export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)));
 export const widthOf = (n: FunnelNode) => n.w ?? get().dims[n.id]?.width ?? (n.type === "label" ? 300 : nodeW(n.type));
 
 let histTimer: ReturnType<typeof setTimeout> | undefined;
@@ -181,8 +287,8 @@ function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" |
   if (opts.discrete) commitHistory();
 }
 
-export function showToast(text: string) {
-  set({ toast: { text, id: Date.now() } });
+export function showToast(text: string, action?: string, run?: () => void) {
+  set({ toast: { text, id: Date.now(), ...(action && run ? { action, run } : {}) } });
 }
 
 /* ---------------- lifecycle ---------------- */
@@ -261,6 +367,70 @@ export function openQuickAdd(q: EditorState["quick"]) {
 }
 export function closeQuickAdd() {
   set({ quick: null });
+}
+export function setActuals(actuals: ActualRowDb[] | null) {
+  set({ actuals });
+}
+/** Add a widget at (x, y). Scope "frame" needs the frame's id, "selection" the steps it covers. */
+export function addWidget(cfg: { scope: "funnel" | "frame" | "selection"; frameId?: string; nodeIds?: string[]; display?: "number" | "trend" | "chart"; metrics?: string[]; wsize?: "S" | "M" | "L" }, x: number, y: number) {
+  return addNode("widget", x, y, { p: { ...cfg, metrics: cfg.metrics ?? ["revenue", "profit"] }, name: cfg.scope === "frame" ? "Stage widget" : cfg.scope === "selection" ? "Selection widget" : "Funnel widget" });
+}
+export function setSideTab(sideTab: EditorState["sideTab"]) {
+  set({ sideTab });
+  setOpt("hideSide", false);
+}
+export function setAssets(a: { stylePresets?: StylePreset[]; workspaceBlocks?: WorkspaceBlock[] }) {
+  set(a);
+}
+/** Place a saved group of blocks (workspace block) with fresh ids, its top-left at (x, y). One undo step; the copy is selected. */
+export function insertSnippet(snip: { nodes: FunnelNode[]; edges: FunnelEdge[] }, x: number, y: number) {
+  if (get().readOnly || !snip.nodes.length) return;
+  const ox = Math.min(...snip.nodes.map((n) => n.x)),
+    oy = Math.min(...snip.nodes.map((n) => n.y));
+  const c = cloneSet(
+    snip.nodes.map((n) => n.id),
+    snapV(x) - ox,
+    snapV(y) - oy,
+    snip,
+  );
+  apply({ nodes: [...get().nodes, ...c.nodes], edges: [...get().edges, ...c.edges] }, { discrete: true });
+  selectNodes(c.nodes.map((n) => n.id));
+}
+export function setProducts(products: ClientProduct[]) {
+  set({ products });
+}
+/** Switch the block and close the picker, with a toast that offers Undo (one undo step). */
+export function closeTypePickerAndRetype(id: string, type: string) {
+  const ok = retypeNode(id, type);
+  set({ typePicker: null });
+  if (ok) showToast(`Changed to ${typeOf(type).label}`, "Undo", undo);
+}
+export function openTypePicker(typePicker: string | null) {
+  set({ typePicker });
+}
+/** Tidy only the selected flow blocks among themselves; the group keeps its top-left corner. One undo step. */
+export function tidySelection() {
+  const s = get();
+  const ids = new Set(s.selNodes);
+  const sel = s.nodes.filter((n) => ids.has(n.id) && !n.locked && !isAnnot(n.type));
+  if (sel.length < 2 || s.readOnly) return showToast("Select two or more blocks to tidy");
+  const laid = tidyLayout(sel, s.edges.filter((e) => ids.has(e.from) && ids.has(e.to)), { heightOf, widthOf, snap: s.opts.snap });
+  const ox = Math.min(...sel.map((n) => n.x)) - Math.min(...laid.map((n) => n.x));
+  const oy = Math.min(...sel.map((n) => n.y)) - Math.min(...laid.map((n) => n.y));
+  moveNodes(Object.fromEntries(laid.map((n) => [n.id, { x: snapV(n.x + ox), y: snapV(n.y + oy) }])), { discrete: true });
+}
+export function openMenu(menu: MenuState | null) {
+  set({ menu });
+}
+export function setDragging(dragging: boolean) {
+  if (get().dragging !== dragging) set({ dragging });
+}
+export function setReportFocus(reportFocus: string | null) {
+  set({ reportFocus });
+}
+export function startRename(id: string | null) {
+  if (id && (get().readOnly || get().nodes.find((n) => n.id === id)?.locked)) return;
+  set({ renaming: id });
 }
 export function setMode(mode: EditorMode) {
   set({ mode });
@@ -414,6 +584,49 @@ export function reorder(kind: "front" | "forward" | "backward" | "back", ids: st
   apply({ nodes: all.map((n) => (sel.has(n.id) ? { ...n, z: z(n) } : n)) }, { math: false, discrete: true });
 }
 
+/* ---------------- style clipboard / quick styles ---------------- */
+export function copyStyle(id: string = get().selNodes[0]) {
+  const n = get().nodes.find((x) => x.id === id);
+  if (!n) return false;
+  set({ styleClip: n.s ? { ...n.s } : {} });
+  showToast("Style copied");
+  return true;
+}
+/** Paste the copied style onto the selection (or `ids`). One undo step; the toast offers Undo. */
+export function pasteStyle(ids: string[] = get().selNodes) {
+  const clip = get().styleClip;
+  const sel = new Set(ids);
+  const targets = get().nodes.filter((n) => sel.has(n.id) && !n.locked);
+  if (!clip || !targets.length || get().readOnly) {
+    if (!clip) showToast("Copy a style first");
+    return false;
+  }
+  const st = cleanStyle({ ...clip });
+  apply({ nodes: get().nodes.map((n) => (sel.has(n.id) && !n.locked ? withStyle(n, st ? { ...st } : undefined) : n)) }, { math: false, discrete: true });
+  showToast(`Style pasted on ${targets.length} ${targets.length === 1 ? "block" : "blocks"}`, "Undo", undo);
+  return true;
+}
+/** Replace the style of the selection with a quick style (null = Default). */
+export function applyQuickStyle(style: NodeStyle | null, ids: string[] = get().selNodes) {
+  const sel = new Set(ids);
+  if (get().readOnly) return;
+  apply({ nodes: get().nodes.map((n) => (sel.has(n.id) && !n.locked ? withStyle(n, style ? { ...style } : undefined) : n)) }, { math: false, discrete: true });
+}
+/** Eyedropper: give `targetId` the style of the armed block, then disarm. */
+export function applyEyedropper(targetId: string) {
+  const src = get().eyedrop;
+  if (!src || src === targetId) return;
+  const from = get().nodes.find((n) => n.id === src);
+  set({ eyedrop: null });
+  if (!from) return;
+  set({ styleClip: from.s ? { ...from.s } : {} });
+  pasteStyle([targetId]);
+}
+export function armEyedropper(id: string | null) {
+  set({ eyedrop: id });
+  if (id) showToast("Click a block to give it this style. Esc cancels.");
+}
+
 /** Merge into an element's style; empty values reset that property. */
 export function setNodeStyle(id: string, patch: Partial<NodeStyle>, ids: string[] = [id]) {
   const sel = new Set(ids);
@@ -541,6 +754,84 @@ export function connect(from: string, port: "main" | "alt", to: string) {
   apply({ edges: [...get().edges, e] }, { discrete: true });
   selectEdge(e.id);
 }
+/**
+ * Change a block's type in place (Change page type / block type). Keeps id, position, connections, URL, thumbnail,
+ * status, notes and every parameter: values for fields the new type shares carry over, fields it doesn't show are kept
+ * hidden so switching back restores them. Only types with the same maths are offered (retypeTargets), so the numbers
+ * don't change. One undo step.
+ */
+export function retypeNode(id: string, type: string) {
+  const n = get().nodes.find((x) => x.id === id);
+  if (!n || get().readOnly || n.locked || !retypeTargets(n.type).includes(type)) return false;
+  const was = typeOf(n.type),
+    T = typeOf(type);
+  const s = n.s && n.s.icon ? { ...n.s, icon: undefined } : n.s;
+  apply({ nodes: get().nodes.map((x) => (x.id === id ? { ...x, type, name: x.name === was.label ? T.label : x.name, p: { ...defaultsFor(type), ...x.p }, ...(s ? { s: cleanStyle(s) } : {}) } : x)) }, { discrete: true });
+  return true;
+}
+
+/** Block types that may follow a connection (they receive people): no traffic sources, no layout elements. */
+export const canFollowType = (type: string) => canReceive(type);
+/** Block types that may sit in the middle of a line (receive and pass people on). */
+export const canInsertType = (type: string) => canReceive(type) && portsFor(type).hasOut;
+
+/**
+ * Add a block at the end of a dragged connection and connect it, as ONE change: one undo step, one autosave.
+ * The block's in-port lands on (x, y); the new block is selected so the inspector follows.
+ */
+export function addConnectedNode(from: { id: string; port: "main" | "alt" }, type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; w?: number; h?: number } = {}) {
+  const T = typeOf(type);
+  const src = get().nodes.find((n) => n.id === from.id);
+  if (!T || !src || !canFollowType(type) || get().readOnly) return null;
+  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
+  const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port };
+  apply({ nodes: [...get().nodes, n], edges: [...get().edges, e] }, { discrete: true });
+  selectNodes([n.id]);
+  return n;
+}
+
+/** Put a new step in the middle of a connection: A→B becomes A→N→B (A→N keeps the line's port, share and style). One undo step. */
+export function insertStepOnEdge(edgeId: string, type: string, extra: { p?: NodeParams; name?: string } = {}) {
+  const s = get();
+  const e = s.edges.find((x) => x.id === edgeId);
+  const a = e && s.nodes.find((n) => n.id === e.from),
+    b = e && s.nodes.find((n) => n.id === e.to);
+  const T = typeOf(type);
+  if (!e || !a || !b || !T || !canInsertType(type) || s.readOnly) return null;
+  const ax = a.x + nodeW(a.type),
+    ay = a.y + heightOf(a) / 2,
+    by = b.y + heightOf(b) / 2;
+  const mx = (ax + b.x) / 2,
+    my = e.port === "alt" ? Math.max(a.y + heightOf(a) + 70, (ay + by) / 2) : (ay + by) / 2;
+  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(mx - nodeW(type) / 2), y: snapV(my - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
+  const first: FunnelEdge = { ...e, to: n.id };
+  const second: FunnelEdge = { id: "e" + nid(), from: n.id, to: b.id, share: 100, port: "main" };
+  apply({ nodes: [...s.nodes, n], edges: [...s.edges.filter((x) => x.id !== e.id), first, second] }, { discrete: true });
+  selectNodes([n.id]);
+  return n;
+}
+
+/** Reverse a connection's direction (B→A). Refused when the ends can't take the new roles. */
+export function flipEdge(id: string) {
+  const s = get();
+  const e = s.edges.find((x) => x.id === id);
+  if (!e || s.readOnly) return false;
+  const a = s.nodes.find((n) => n.id === e.from),
+    b = s.nodes.find((n) => n.id === e.to);
+  if (!a || !b) return false;
+  if (!canReceive(a.type) || !portsFor(b.type).hasOut) {
+    showToast("Can’t flip: that block can’t take people from the other end");
+    return false;
+  }
+  if (s.edges.some((x) => x.from === b.id && x.to === a.id && (x.port || "main") === "main")) {
+    showToast("Can’t flip: there is already a connection that way");
+    return false;
+  }
+  apply({ edges: s.edges.map((x) => (x.id === id ? { ...x, from: b.id, to: a.id, port: "main" } : x)) }, { discrete: true });
+  selectEdge(id);
+  return true;
+}
+
 export function updateEdge(id: string, patch: Partial<Omit<FunnelEdge, "id">>) {
   apply({ edges: get().edges.map((e) => (e.id === id ? { ...e, ...patch } : e)) });
 }

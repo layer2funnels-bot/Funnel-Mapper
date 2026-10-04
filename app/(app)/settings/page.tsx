@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
+import { SettingsNav } from "./settings-nav";
 import { AgencyLogo, IndependentForm, InviteForm, MemberRow, ProfileForm, WorkspaceForm } from "./settings-forms";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -17,17 +18,27 @@ export default async function SettingsPage() {
   const canInvite = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
   const joinCode = process.env.INDEPENDENT_SIGNUP_CODE ?? "";
   const joinUrl = canInvite && joinCode.length >= 8 ? `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/join/${joinCode}` : "";
+  const sections = [
+    { id: "profile", label: "Profile" },
+    { id: "workspace", label: "Workspace & branding" },
+    { id: "team", label: "Team" },
+    ...(isTeam && isOwner ? [{ id: "independent", label: "Independent accounts" }] : []),
+    { id: "appearance", label: "Appearance" },
+  ];
   return (
-    <div className="max-w-[820px]">
+    <div className="max-w-[1040px]">
       <PageHeader title="Settings" sub={isTeam ? "Your profile, the team workspace and its branding." : "Your profile, your private workspace and its branding."} />
-      <section className="card mb-6 p-6" aria-labelledby="profile-h">
+      <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
+      <SettingsNav sections={sections} />
+      <div className="max-w-[820px] min-w-0">
+      <section id="profile" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="profile-h">
         <h2 id="profile-h" className="mb-4 font-display text-lg font-bold">
           Your profile
         </h2>
         <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={role} />
       </section>
 
-      <section className="card mb-6 p-6" aria-labelledby="brand-h">
+      <section id="workspace" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="brand-h">
         <h2 id="brand-h" className="mb-1 font-display text-lg font-bold">
           Workspace
         </h2>
@@ -53,7 +64,7 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      <section className="card mb-6 p-6" aria-labelledby="team-h">
+      <section id="team" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="team-h">
           <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
             Team
           </h2>
@@ -86,7 +97,7 @@ export default async function SettingsPage() {
       </section>
 
       {isTeam && isOwner && (
-        <section className="card mb-6 p-6" aria-labelledby="indep-h">
+        <section id="independent" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="indep-h">
           <h2 id="indep-h" className="mb-1 font-display text-lg font-bold">
             Independent accounts
           </h2>
@@ -112,7 +123,7 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      <section className="card mb-6 p-6" aria-labelledby="look-h">
+      <section id="appearance" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="look-h">
         <h2 id="look-h" className="mb-3 font-display text-lg font-bold">
           Appearance
         </h2>
@@ -131,6 +142,8 @@ export default async function SettingsPage() {
           </form>
         </div>
       </section>
+      </div>
+      </div>
     </div>
   );
 }

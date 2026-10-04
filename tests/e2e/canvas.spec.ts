@@ -85,6 +85,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     const label = page.locator(".fm-elabel", { hasText: "720" }).first();
     await label.click();
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
+    await styleTab(page).click(); // connection inspector: Flow | Style
     await page.getByRole("group", { name: "Path" }).getByRole("button", { name: "Elbow" }).click();
     await page.getByRole("group", { name: "Line", exact: true }).getByRole("button", { name: "Dashed" }).click();
     await page.getByLabel("Line colour", { exact: true }).fill("#fb923c");

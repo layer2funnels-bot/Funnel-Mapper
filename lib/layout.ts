@@ -1,7 +1,7 @@
 // Auto-layout ("Tidy up"). tidyLayout() is a pure port of the prototype's tidy(): a layered (Sugiyama-style)
 // layout tuned for funnels: traffic on the left, converted paths straight across, "didn't convert" paths below.
 // elkLayout() is an alternative using elkjs' layered algorithm with fixed port sides.
-import { NH, isAnnot, nodeW, typeOf } from "./catalog";
+import { NH, blockH, isAnnot, nodeW, typeOf } from "./catalog";
 import type { FunnelEdge, FunnelNode } from "./graph";
 
 export interface LayoutOptions {
@@ -10,11 +10,14 @@ export interface LayoutOptions {
   /** Measured node widths (headings size to their text). Defaults to the catalog width. */
   widthOf?: (n: FunnelNode) => number;
   snap?: boolean;
+  /** Width of a flow block by type (defaults to the canonical footprint) and the rank column width. */
+  blockW?: (type: string) => number;
+  colW?: number;
 }
 
 /** Fallback annotation sizes when nothing was measured (matches the editor's defaults). */
 const annotW = (n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type));
-const defaultH = (n: FunnelNode) => n.h ?? (n.type === "label" ? 40 : NH);
+const defaultH = (n: FunnelNode) => n.h ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type));
 
 const GRID = 11;
 const snapper = (on: boolean) => (v: number) => (on ? Math.round(v / GRID) * GRID : Math.round(v));
@@ -25,8 +28,8 @@ const snapper = (on: boolean) => (v: number) => (on ? Math.round(v / GRID) * GRI
  * offset from the nearest block (so text placed above, beside or below a step stays there), and is only nudged when the
  * new layout would make it overlap a block or another annotation.
  */
-function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<string, FunnelNode>, nodeH: (n: FunnelNode) => number, widthOf: (n: FunnelNode) => number) {
-  const W = (n: FunnelNode) => (isAnnot(n.type) ? widthOf(n) : nodeW(n.type));
+function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<string, FunnelNode>, nodeH: (n: FunnelNode) => number, widthOf: (n: FunnelNode) => number, bw: (type: string) => number = nodeW) {
+  const W = (n: FunnelNode) => (isAnnot(n.type) ? widthOf(n) : bw(n.type));
   const center = (n: FunnelNode): [number, number] => [n.x + W(n) / 2, n.y + nodeH(n) / 2];
   const frames = nodes
     .filter((n) => n.type === "frame")
@@ -97,7 +100,7 @@ function captureAnnotations(nodes: FunnelNode[], flow: FunnelNode[], B: Record<s
       if (!ms.length) return;
       const x0 = Math.min(...ms.map((n) => n.x)) - 30,
         y0 = Math.min(...ms.map((n) => n.y)) - 44,
-        x1 = Math.max(...ms.map((n) => n.x + nodeW(n.type))) + 30,
+        x1 = Math.max(...ms.map((n) => n.x + bw(n.type))) + 30,
         y1 = Math.max(...ms.map((n) => n.y + nodeH(n))) + 40;
       Object.assign(f, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
     });
@@ -116,7 +119,8 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   const E = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
 
   // remember annotations: frames by membership, notes/labels by their offset from the nearest block
-  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf);
+  const bw = opts.blockW ?? nodeW;
+  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf, bw);
 
   // 1. break cycles (DFS, traffic first, main paths before alt)
   const out: Record<string, FunnelEdge[]> = {},
@@ -209,10 +213,11 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   // 4. y positions: follow the main parent, alt children sit lower; isotonic fit keeps order + spacing
   const GAPY = 56,
     GAPX = 120,
-    COLW = 210,
+    COLW = opts.colW ?? 200,
     y: Record<string, number> = {};
+  // y[] holds block CENTRES: objects on a row are centre-aligned (page and offer cards are taller), so lines stay straight
   const place = (c: string[], desired: number[]) => {
-    const sp = c.map((id) => nodeH(B[id]) + GAPY),
+    const sp = c.map((id, i) => (nodeH(B[id]) + nodeH(B[c[i + 1] ?? id])) / 2 + GAPY),
       off = [0];
     for (let i = 1; i < c.length; i++) off[i] = off[i - 1] + sp[i - 1];
     // pool adjacent violators on z = y - off
@@ -236,7 +241,7 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
       if (!ps.length) return i * (NH + GAPY);
       const w = ps.map((e) => (e.port === "alt" ? 1 : 3)),
         t = w.reduce((a, b) => a + b, 0);
-      return ps.reduce((s, e, j) => s + (y[e.from] + (e.port === "alt" ? NH + GAPY : 0)) * w[j], 0) / t;
+      return ps.reduce((s, e, j) => s + (y[e.from] + (e.port === "alt" ? (nodeH(B[e.from]) + nodeH(B[id])) / 2 + GAPY : 0)) * w[j], 0) / t;
     });
     place(c, d);
   });
@@ -249,11 +254,11 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
     });
     place(c, d);
   }
-  const minY = Math.min(...topo.map((id) => y[id]));
+  const minY = Math.min(...topo.map((id) => y[id] - nodeH(B[id]) / 2));
   topo.forEach((id) => {
     const n = B[id];
-    n.x = snap(80 + rank[id] * (COLW + GAPX) + (COLW - nodeW(n.type)) / 2);
-    n.y = snap(80 + y[id] - minY);
+    n.x = snap(80 + rank[id] * (COLW + GAPX) + (COLW - bw(n.type)) / 2);
+    n.y = snap(80 + y[id] - nodeH(n) / 2 - minY);
   });
 
   // 5. carry annotations along
@@ -292,7 +297,7 @@ export async function elkLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: 
     },
     children: flow.map((n) => ({
       id: n.id,
-      width: nodeW(n.type),
+      width: (opts.blockW ?? nodeW)(n.type),
       height: nodeH(n),
       layoutOptions: { "elk.portConstraints": "FIXED_SIDE" },
       ports: [
@@ -308,7 +313,7 @@ export async function elkLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: 
   res.children?.forEach((c) => (pos[c.id] = { x: c.x ?? 0, y: c.y ?? 0 }));
 
   const B: Record<string, FunnelNode> = Object.fromEntries(nodes.map((n) => [n.id, { ...n }]));
-  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf);
+  const carryAnnotations = captureAnnotations(nodes, flow, B, nodeH, widthOf, opts.blockW ?? nodeW);
   flow.forEach((n) => {
     B[n.id].x = snap(80 + pos[n.id].x);
     B[n.id].y = snap(80 + pos[n.id].y);
@@ -318,7 +323,7 @@ export async function elkLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: 
 }
 
 /* ---------------- layout quality metrics (used by tests and the comparison page) ---------------- */
-export function layoutMetrics(nodes: FunnelNode[], edges: FunnelEdge[], heightOf: (n: FunnelNode) => number = () => NH) {
+export function layoutMetrics(nodes: FunnelNode[], edges: FunnelEdge[], heightOf: (n: FunnelNode) => number = (n) => blockH(n.type)) {
   const flow = nodes.filter((n) => !isAnnot(n.type));
   const B = Object.fromEntries(flow.map((n) => [n.id, n]));
   let overlaps = 0;

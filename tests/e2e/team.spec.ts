@@ -102,7 +102,7 @@ test.describe("team workspace", () => {
     const url = new URL(href);
     await page.goto(url.pathname + url.search);
     await expect(page).toHaveURL("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Hi");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
     await ctx.close();
   });
 

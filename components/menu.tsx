@@ -31,7 +31,7 @@ export function Menu({ label, children, align = "left", className = "btn", butto
   }, [open]);
   return (
     <div className="relative" ref={ref}>
-      <button type="button" className={className} aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className={className} aria-label={buttonContent ? label : undefined} aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
         {buttonContent ?? label}
       </button>
       {open && (

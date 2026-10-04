@@ -1,10 +1,11 @@
 "use client";
-import { useReactFlow } from "@xyflow/react";
+import { useBand } from "@/lib/use-band";
+import { useFocusBlock } from "./focus";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio } from "@/lib/format";
-import { warnings } from "@/lib/funnel-math";
-import { setTab, clearSelection, selectNodes, useEditor } from "@/lib/editor/store";
+import { healthChecks } from "@/lib/health";
+import { setTab, clearSelection, useEditor } from "@/lib/editor/store";
 
 /** Popover above the strip; closes on outside click and Escape. */
 function Pop({ label, button, children, wide }: { label: string; button: (open: boolean) => React.ReactNode; children: (close: () => void) => React.ReactNode; wide?: boolean }) {
@@ -37,6 +38,7 @@ function Pop({ label, button, children, wide }: { label: string; button: (open: 
 
 /** Bottom strip (V2 D2): checks chip, the six headline numbers, "+N more", and the unit the numbers are in. Every figure is the engine's `R`. */
 export function KpiBar() {
+  const band = useBand();
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const basis = useEditor((s) => s.settings.basis);
@@ -44,9 +46,9 @@ export function KpiBar() {
   const edges = useEditor((s) => s.edges);
   const warnIds = useEditor((s) => s.warnIds);
   const shared = useEditor((s) => s.shared);
-  const rf = useReactFlow();
+  const focus = useFocusBlock();
   // checks are for the team, not for clients viewing a share link
-  const checks = shared ? [] : warnings({ nodes, edges });
+  const checks = shared ? [] : healthChecks({ nodes, edges });
   const hasTraffic = nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label");
   const m = (v: number) => money(v, cur);
   const main: [string, React.ReactNode][] = [
@@ -69,6 +71,19 @@ export function KpiBar() {
     ["LTV / customer", m(R.ltvc)],
   ];
   const named = nodes.filter((n) => warnIds.has(n.id));
+  // bands: what the strip shows; everything else goes into "+N more" (phone: every figure, scrolling)
+  const all = [...main, ...more];
+  const SHOW: Record<string, string[] | "all"> = {
+    xl: main.map(([k]) => k),
+    lg: main.map(([k]) => k),
+    md: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS", "Customers"],
+    tablet: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS"],
+    phone: "all",
+  };
+  const rule = SHOW[band];
+  const strip = rule === "all" ? all : all.filter(([k]) => rule.includes(k));
+  const rest = rule === "all" ? [] : all.filter(([k]) => !rule.includes(k));
+  const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
     <footer className="fm-kpis" aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
@@ -78,7 +93,8 @@ export function KpiBar() {
             checks.length > 0 ? (
               <span className="fm-chk warn">
                 <Icon name="alert" size={14} />
-                {checks.length} {checks.length === 1 ? "check" : "checks"}
+                {checks.length}
+                {!compactChecks && (checks.length === 1 ? " check" : " checks")}
               </span>
             ) : (
               <span className="fm-chk ok">
@@ -97,7 +113,7 @@ export function KpiBar() {
                 <>
                   <ul>
                     {checks.map((c) => (
-                      <li key={c}>{c}</li>
+                      <li key={c.id}>{c.text}</li>
                     ))}
                   </ul>
                   {named.length > 0 && (
@@ -108,8 +124,7 @@ export function KpiBar() {
                           type="button"
                           onClick={() => {
                             close();
-                            selectNodes([n.id]);
-                            rf.fitView({ nodes: [{ id: n.id }], padding: 1.6, duration: 350, maxZoom: 1.2 });
+                            focus(n.id);
                           }}
                         >
                           Show “{n.name}”
@@ -135,32 +150,34 @@ export function KpiBar() {
           )}
         </Pop>
       )}
-      {main.map(([a, b]) => (
+      {strip.map(([a, b]) => (
         <div className="fm-kpi" key={a}>
           <div>{a}</div>
           <b>{b}</b>
         </div>
       ))}
-      <Pop
-        label="More numbers"
-        wide
-        button={() => (
-          <>
-            <span className="fm-kmore">+{more.length} more</span>
-          </>
-        )}
-      >
-        {() => (
-          <dl className="fm-kgrid">
-            {more.map(([a, b]) => (
-              <div key={a}>
-                <dt>{a}</dt>
-                <dd>{b}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </Pop>
+      {rest.length > 0 && (
+        <Pop
+          label="More numbers"
+          wide
+          button={() => (
+            <>
+              <span className="fm-kmore">+{rest.length}{band === "md" || band === "tablet" ? "" : " more"}</span>
+            </>
+          )}
+        >
+          {() => (
+            <dl className="fm-kgrid">
+              {rest.map(([a, b]) => (
+                <div key={a}>
+                  <dt>{a}</dt>
+                  <dd>{b}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </Pop>
+      )}
       <span className="fm-kunit">per month · {cur}</span>
     </footer>
   );

@@ -11,7 +11,7 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Typecheck, ESLint, `next build` | clean |
 | Unit (Vitest) | 194/194 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 99/99 (includes 12 new `v2.spec.ts` tests for the V2 interactions: context menus, Quick Add, Change Page Type, widgets, share, presentation, responsive bands) |
+| E2E (Playwright, prod build) | 103/103 (includes 16 `v2.spec.ts` tests: the V2 interactions plus the 4 finishing-pass tests) |
 
 ## Built in this run (reused systems named)
 

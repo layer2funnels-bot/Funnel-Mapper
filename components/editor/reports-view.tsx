@@ -208,16 +208,19 @@ function Kpis({ items, onSection }: { items: [string, React.ReactNode, string?, 
         <div key={a}>
           <dt>{a}</dt>
           <dd>{b}</dd>
-          {c &&
-            (to && onSection ? (
-              <small>
-                <button type="button" className="link" onClick={() => onSection(to)} title={`Open ${REPORT_SECTIONS.find(([k]) => k === to)?.[1]}`}>
-                  {c}
-                </button>
-              </small>
-            ) : (
-              <small>{c}</small>
-            ))}
+          {c && (
+            <dd className="cap">
+              {to && onSection ? (
+                <small>
+                  <button type="button" className="link" onClick={() => onSection(to)} title={`Open ${REPORT_SECTIONS.find(([k]) => k === to)?.[1]}`}>
+                    {c}
+                  </button>
+                </small>
+              ) : (
+                <small>{c}</small>
+              )}
+            </dd>
+          )}
         </div>
       ))}
     </dl>
@@ -227,7 +230,7 @@ function Kpis({ items, onSection }: { items: [string, React.ReactNode, string?, 
 function Table({ caption, head, rows, foot, right = true, text = [], highlight = -1 }: { caption: string; head: React.ReactNode[]; rows: React.ReactNode[][]; foot?: React.ReactNode[]; right?: boolean; text?: number[]; highlight?: number }) {
   const r = (i: number) => (i && right && !text.includes(i) ? "r" : undefined);
   return (
-    <div className="fm-tblwrap">
+    <div tabIndex={0} role="region" aria-label={`${caption} (scrolls sideways when it is wider than the screen)`} className="fm-tblwrap">
       <table className="tbl fm-rtbl">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -578,7 +581,7 @@ function Scenarios() {
         </div>
       )}
       <BarsChart title="Profit per month by scenario" data={cols.map((c) => ({ name: c.name, value: c.R.profit }))} fmt={ms} />
-      <div className="fm-tblwrap">
+      <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
         <table className="tbl fm-rtbl">
           <caption className="sr-only">Scenario comparison</caption>
           <thead>

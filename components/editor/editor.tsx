@@ -157,6 +157,15 @@ function EditorInner(props: EditorProps) {
   const notesShared = useEditor((s) => s.settings.notes.shared && !!s.settings.notes.body.trim());
   const viewMode = useEditor((s) => s.mode);
   const reports = viewMode === "reports" && !share?.hideNumbers;
+  // Reports covers the map, library, details and KPI bar (they stay mounted underneath). React Flow draws its blocks with an inline
+  // `visibility: visible`, which beats the hidden parent, so the covered parts are made inert: no Tab stops, nothing read aloud.
+  useEffect(() => {
+    if (!reports) return;
+    const parts = Array.from(document.querySelectorAll<HTMLElement>(".fm-editor > .fm-rail, .fm-editor > .fm-side, .fm-editor > .fm-stage, .fm-editor > .fm-insp, .fm-editor > .fm-kpis"));
+    parts.forEach((el) => el.setAttribute("inert", ""));
+    return () => parts.forEach((el) => el.removeAttribute("inert"));
+  }, [reports]);
+
 
   /* ---------- init ---------- */
   useEffect(() => {
@@ -1018,6 +1027,10 @@ function EditorInner(props: EditorProps) {
           role="separator"
           aria-orientation="horizontal"
           aria-label="Drag to resize the details sheet"
+          aria-valuenow={Math.round(sheetH)}
+          aria-valuemin={30}
+          aria-valuemax={90}
+          aria-valuetext={`${Math.round(sheetH)}% of the screen`}
           tabIndex={0}
           onPointerDown={(e) => {
             (e.target as HTMLElement).setPointerCapture(e.pointerId);

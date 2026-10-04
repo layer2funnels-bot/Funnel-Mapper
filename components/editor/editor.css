@@ -2203,6 +2203,12 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+.fm-rkpis dd.cap {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 400;
+}
 .fm-rkpis small {
   display: block;
   font-size: 11.5px;
@@ -4355,4 +4361,21 @@ dialog.fm-sharedlg {
   font-size: 12px;
   font-weight: 700;
   pointer-events: none;
+}
+.fm-tblwrap:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (max-width: 1023px) {
+  /* touch targets: the zoom bar, Tidy up and the small segmented controls */
+  .fm-zoom .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .btn.tidy {
+    min-width: 44px;
+  }
+  .fm-avp-head .seg button {
+    min-height: 40px;
+  }
 }

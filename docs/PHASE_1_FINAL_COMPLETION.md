@@ -11,7 +11,7 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Typecheck, ESLint, `next build` | clean |
 | Unit (Vitest) | 204/204 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 108 tests: 107 passed in the full run; the one failure ("admin creates a workspace from the left menu", a Clients-page timing flake unrelated to the editor) passed alone and in 3 re-runs. Includes 19 `v2.spec.ts` tests (3 for Simulate) and 2 axe scans of Simulate (light, dark) |
+| E2E (Playwright, prod build) | 112/112 (includes 23 `v2.spec.ts` tests: 3 Simulate, 5 QA regressions; 2 axe scans of Simulate; the PDF Actual-vs-Plan page in `exports.spec.ts`) |
 
 ## Built in this run (reused systems named)
 

@@ -9,7 +9,7 @@ import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelSettings } from "@/lib/graph";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
-import { reportData } from "@/lib/report-data";
+import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { elkLayout, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -51,7 +51,7 @@ import { useBand } from "@/lib/use-band";
 import { PhoneActionBar } from "./phone-bar";
 import { SharedWidgets } from "./widget-node";
 import { SimulatePanel } from "./simulate";
-import { loadAssets } from "./assets";
+import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
@@ -290,7 +290,9 @@ function EditorInner(props: EditorProps) {
         if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }));
         if (kind === "pdf") {
           showToast("Building PDF…");
-          const blob = await pdfReport(g, s.R, { funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
+          if (!s.shared) await ensureActuals();
+          const actualVsPlan = s.shared ? [] : monthlyPlanVsActual(g, s.R, (useEditor.getState().actuals ?? []) as never);
+          const blob = await pdfReport(g, s.R, { actualVsPlan, funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
           download(fileName(s.name, "pdf"), blob);
         }
       } catch (e) {

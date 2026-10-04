@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { compute } from "../../lib/funnel-math";
 import { money, nf } from "../../lib/format";
 import { blankSettings, type FunnelGraph, type FunnelSettings } from "../../lib/graph";
-import { reportData } from "../../lib/report-data";
+import { monthlyPlanVsActual, reportData } from "../../lib/report-data";
 import { builtinTemplate } from "../../lib/templates";
 import { createFunnel, openEditor } from "./helpers";
 
@@ -110,4 +110,36 @@ test("client exports: PDF report sections match the maths; SVG/PNG keep the canv
   // the live editor still shows the same numbers after exporting
   await expect(page.locator(".fm-kpis")).toContainText("89.1");
   await expect(page.locator(".fm-kpis")).toContainText("13.4x");
+});
+
+test("PDF report: Actual vs plan page appears only with entered actuals and prints the same rows as Month-to-month", async ({ page }) => {
+  const g = graph();
+  const { id, sb } = await createFunnel({ graph: g, settings, name: `E2E pdf actuals ${Date.now()}` });
+  await openEditor(page, id);
+  const text0 = (await exportAs(page, "PDF report for client")).toString("latin1");
+  expect(text0.includes("(Actual vs plan by month")).toBe(false);
+
+  const paid = g.nodes.find((n) => n.name === "Paid membership")!;
+  const ins = await sb.from("funnel_actuals").insert([
+    { funnel_id: id, node_id: paid.id, period_start: "2026-01-01", period_end: "2026-01-31", revenue: 3000, spend: 400 },
+    { funnel_id: id, node_id: paid.id, period_start: "2026-02-01", period_end: "2026-02-28", revenue: 4500, spend: 380 },
+  ]);
+  expect(ins.error).toBeNull();
+  await page.reload();
+  await expect(page.locator(".fm-saved")).toContainText(/Saved/);
+  const text = (await exportAs(page, "PDF report for client")).toString("latin1");
+  const has = (t: string) => expect(text.includes(t), `PDF contains ${t}`).toBe(true);
+  has("(Actual vs plan by month");
+  has("3,000)");
+  has("4,500)");
+  has("(Jan 26)");
+  has("(Feb 26)");
+  // plan numbers are the engine's, scaled to the days entered (same function the report uses)
+  const full: FunnelSettings = { ...blankSettings(), ...settings };
+  const rows = monthlyPlanVsActual(g, compute(g, full), [
+    { node_id: paid.id, period_start: "2026-01-01", period_end: "2026-01-31", visitors: null, conversions: null, revenue: 3000, spend: 400 },
+    { node_id: paid.id, period_start: "2026-02-01", period_end: "2026-02-28", visitors: null, conversions: null, revenue: 4500, spend: 380 },
+  ]);
+  has(`${money(rows[0].planRev, "GBP").replace("£", "")})`);
+  has(`${money(rows[1].planRev, "GBP").replace("£", "")})`);
 });

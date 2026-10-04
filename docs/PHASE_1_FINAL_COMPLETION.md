@@ -9,9 +9,9 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Check | Result |
 |---|---|
 | Typecheck, ESLint, `next build` | clean |
-| Unit (Vitest) | 204/204 (was 143) |
+| Unit (Vitest) | 209/209 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 112/112 (includes 23 `v2.spec.ts` tests: 3 Simulate, 5 QA regressions; 2 axe scans of Simulate; the PDF Actual-vs-Plan page in `exports.spec.ts`) |
+| E2E (Playwright, prod build) | 151/151 (new specs this pass: thumbnail, quick-add at 8 widths, widgets, a11y-surfaces in both themes, touch-targets, keyboard, no-page-scroll; the suite starts a local capture stand-in) |
 
 ## Built in this run (reused systems named)
 
@@ -186,7 +186,7 @@ and charts of the same engine results by design. Known difference: a share link 
   animation are not in the PDF (a PDF is a client report of one snapshot); the engine's Traffic reinvestment compounds hard at 30% on a 13x ROAS funnel (the numbers are
   the existing maths, unchanged); LinkedIn and Bing blocks have no platform mark (not in the licensed set).
 
-## Earlier remaining list (superseded by the section above)
+## Earlier remaining list (superseded by "Final Phase 1 QA and completion pass" above)
 Light-theme and 1536 / 1280 / 430 / 414 viewport pass for the new components; migrations (workspace_assets and the earlier pending ones) must be applied to the
 demo / production databases by the owner; `CAPTURE_URL_TEMPLATE` for automatic page screenshots; final Figma 169 library visuals (swap data in
 `lib/block-visuals.ts` and the `.fam-*` CSS only). The Simulate deltas are not in the PDF (the PDF is a client report of one snapshot).

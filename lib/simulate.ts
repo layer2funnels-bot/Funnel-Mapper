@@ -209,3 +209,26 @@ export function assumptionChanges(now: FunnelNode[], base: FunnelNode[]): Assump
   }
   return out;
 }
+
+/* ---------------- people flow (animation parameters) ---------------- */
+// The animation is drawn from the engine's numbers and nothing else: how many dots travel along a connection and how fast.
+// Dots are evenly staggered (no randomness), so the same numbers always look the same.
+
+/** Dots on a connection: none without people, otherwise 1 to 8 growing with the square root of its share of the busiest line. */
+export function flowDots(flow: number, maxFlow: number, crowded = false): number {
+  if (!(flow > 0) || !(maxFlow > 0)) return 0;
+  const cap = crowded ? 3 : 8;
+  return Math.max(1, Math.min(cap, Math.round(1 + (cap - 1) * Math.sqrt(Math.min(1, flow / maxFlow)))));
+}
+
+/** Seconds for a dot to cross a connection of about `length` px at a steady walking pace. */
+export function dotSeconds(length: number): number {
+  return Math.max(0.9, Math.min(6, length / 150));
+}
+
+/** Dots falling away from a step that loses people nowhere: 0 to 3 by the share lost. */
+export function lostDots(lost: number, inflow: number): number {
+  if (!(lost > 0) || !(inflow > 0)) return 0;
+  const f = lost / inflow;
+  return f > 0.66 ? 3 : f > 0.33 ? 2 : 1;
+}

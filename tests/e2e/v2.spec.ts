@@ -423,6 +423,79 @@ test.describe("V2 Simulate", () => {
   });
 });
 
+test.describe("V2 Simulate: watching the funnel", () => {
+  test("Play flow draws people moving along the connections in proportion to the engine's flows, and Pause stops it", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const panel = page.getByLabel("Simulate", { exact: true });
+    await expect(page.locator(".fm-flowdots")).toHaveCount(0);
+    const play = panel.locator(".fm-playbtn");
+    await play.click();
+    await expect(play).toHaveAttribute("aria-pressed", "true");
+    await expect(panel.getByRole("button", { name: "Pause flow" })).toBeVisible();
+    // every connection that carries people has dots, the busiest has the most, and "didn't convert" lines are orange
+    const dotsOn = async (edgeLabel: string) =>
+      page.locator(".react-flow__edge", { has: page.locator("path.fm-edge") }).evaluateAll((els, l) => els.filter((e) => (document.querySelector(`[data-edge="${e.getAttribute("data-id")}"]`)?.textContent ?? "").replace(/\s/g, "").startsWith(l)).map((e) => e.querySelectorAll(".fm-flowdots circle").length), edgeLabel);
+    await expect(page.locator(".fm-flowdots circle").first()).toBeAttached();
+    const counts = await page.locator(".react-flow__edge").evaluateAll((els) => els.map((e) => e.querySelectorAll(".fm-flowdots circle").length));
+    expect(Math.max(...counts)).toBe(8);
+    expect(Math.min(...counts.filter((c) => c > 0))).toBeLessThan(8);
+    expect(counts.filter((c) => c > 0).length).toBeGreaterThanOrEqual(8);
+    expect(await dotsOn("1,500")).toBeTruthy();
+    await expect(page.locator(".fm-flowdots.alt circle").first()).toBeAttached(); // lost / didn't convert
+    await expect(page.locator(".fm-lostfx i").first()).toBeAttached(); // people lost where nothing follows
+    // dots are SVG animations on the line itself
+    await expect(page.locator(".fm-flowdots circle animateMotion").first()).toHaveAttribute("repeatCount", "indefinite");
+    await panel.getByRole("button", { name: "Pause flow" }).click();
+    await expect(page.locator(".fm-flowdots")).toHaveCount(0);
+    await expect(page.locator(".fm-lostfx")).toHaveCount(0);
+    // changing an assumption changes how many people move (fewer dots on the quiz's outgoing line)
+    const quizOut = async () => page.locator(".react-flow__edge").evaluateAll((els) => els.map((e) => e.querySelectorAll(".fm-flowdots circle").length).reduce((a, b) => a + b, 0));
+    await play.click();
+    const all1 = await quizOut();
+    await panel.getByLabel("Traffic", { exact: true }).fill("0.25");
+    await expect.poll(quizOut).toBeLessThanOrEqual(all1);
+  });
+
+  test("Before / After redraws the whole map and the KPI strip from the baseline run, without touching the funnel", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    const kpis = page.getByRole("contentinfo", { name: "Funnel numbers" });
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const panel = page.getByLabel("Simulate", { exact: true });
+    await panel.getByLabel("Conversion rates").fill("0.8");
+    await expect(kpis).not.toContainText("£6,032");
+    await expect(node(page, "Paid membership")).not.toContainText("£4,199");
+    await expect(page.locator(".fm-simchip").first()).toBeVisible();
+    // Before: the golden numbers everywhere, no change chips, a badge on the canvas
+    await panel.getByRole("button", { name: "Before", exact: true }).click();
+    await expect(kpis).toContainText("£6,032");
+    await expect(kpis).toContainText("13.4x");
+    await expect(node(page, "Paid membership")).toContainText("£4,199");
+    await expect(page.locator(".fm-simchip")).toHaveCount(0);
+    await expect(page.locator(".fm-before-badge")).toBeVisible();
+    // and After brings the changes back
+    await panel.getByRole("button", { name: "After", exact: true }).click();
+    await expect(kpis).not.toContainText("£6,032");
+    await expect(page.locator(".fm-before-badge")).toHaveCount(0);
+    await expect(page.locator(".fm-simchip").first()).toBeVisible();
+    // the funnel itself was never changed by looking at Before
+    await panel.getByRole("button", { name: "Revert all" }).click();
+    await expect(kpis).toContainText("£6,032");
+  });
+
+  test("with reduced motion the flow animation is off and says why", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const play = page.getByLabel("Simulate", { exact: true }).getByRole("button", { name: "Play flow" });
+    await expect(play).toBeDisabled();
+    await expect(page.locator(".fm-flowdots")).toHaveCount(0);
+  });
+});
+
 test.describe("V2 QA regressions", () => {
   test("list pages hydrate without React errors and keep the saved light theme", async ({ page }) => {
     await page.goto("/templates");

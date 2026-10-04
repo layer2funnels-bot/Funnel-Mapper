@@ -198,6 +198,7 @@ function EditorInner(props: EditorProps) {
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
   const simOn = useEditor((s) => !!s.simBase);
+  const simBefore = useEditor((s) => s.simBefore);
   const toggleSim = () => {
     if (simOn) return stopSim();
     startSim();
@@ -983,6 +984,11 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
+        {simBefore && !reports && (
+          <div className="fm-before-badge" role="status">
+            Before your changes
+          </div>
+        )}
         {ready && !reports && <FloatingToolbar />}
         {ready && !hasNodes && (
           <div className="fm-empty">

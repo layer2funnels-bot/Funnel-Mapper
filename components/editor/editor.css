@@ -3265,6 +3265,7 @@ dialog.fm-typepick {
 .fm-rwidgets {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  align-items: start; /* each card is as tall as its content, an S is not an L */
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -4275,4 +4276,83 @@ dialog.fm-sharedlg {
   .fm-quick.sheet {
     animation: none;
   }
+}
+
+/* people flow: dots travel along each connection (their number follows the engine's flow); orange = people lost */
+.fm-flowdots circle {
+  fill: var(--brand);
+  stroke: var(--bg);
+  stroke-width: 1.2;
+  pointer-events: none;
+}
+.fm-flowdots.alt circle {
+  fill: var(--lost);
+}
+.fm-lostfx {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  display: flex;
+  gap: 7px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.fm-lostfx i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lost);
+  opacity: 0;
+  animation: fm-fall 1.6s ease-in infinite;
+}
+@keyframes fm-fall {
+  0% {
+    transform: translateY(2px);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(22px);
+    opacity: 0;
+  }
+}
+.fm-sim-view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0 10px;
+  background: var(--panel2);
+}
+.fm-sim-view .seg button {
+  min-height: 32px;
+  padding: 4px 14px;
+}
+.fm-playbtn.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+.fm-sim-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-kpis.before {
+  box-shadow: inset 0 2px 0 var(--attention);
+}
+.fm-before-badge {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--attention);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
 }

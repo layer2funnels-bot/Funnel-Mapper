@@ -109,6 +109,10 @@ export interface EditorState {
   assetsStatus: "idle" | "loading" | "ready" | "error";
   /** Simulate: the map as it was when simulating started (null = not simulating). Everything shown as a change is live minus this. */
   simBase: SimBase | null;
+  /** Simulate: the people-flow animation is running. */
+  simPlay: boolean;
+  /** Simulate: the map shows the baseline (before your changes) instead of now. */
+  simBefore: boolean;
   /** Phone: tap blocks to add them to the selection. */
   selectMode: boolean;
   /** Presentation: the steps of the stage being shown (others dim). */
@@ -200,6 +204,8 @@ export const useEditor = create<EditorState>(() => ({
   workspaceBlocks: [],
   assetsStatus: "idle",
   simBase: null,
+  simPlay: false,
+  simBefore: false,
   menu: null,
   typePicker: null,
   styleClip: null,
@@ -326,6 +332,8 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     dims: {},
     mode: "map",
     simBase: null,
+    simPlay: false,
+    simBefore: false,
     panel: "inspector",
   });
 }
@@ -396,14 +404,22 @@ const takeBase = (): SimBase => {
 export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
-  set({ simBase: takeBase(), panel: "simulate" });
+  set({ simBase: takeBase(), simPlay: false, simBefore: false, panel: "simulate" });
   setOpt("nums", true);
   setOpt("thick", true);
 }
 /** Stop simulating and keep whatever the map says now. */
 export function stopSim() {
-  set((s) => ({ simBase: null, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+  set((s) => ({ simBase: null, simPlay: false, simBefore: false, panel: s.panel === "simulate" ? "inspector" : s.panel }));
 }
+export function setSimPlay(simPlay: boolean) {
+  set({ simPlay });
+}
+export function setSimBefore(simBefore: boolean) {
+  set({ simBefore: simBefore && !!get().simBase });
+}
+/** The results the map draws: the live run, or the baseline while "Before" is on in Simulate. */
+export const shownR = (s: Pick<EditorState, "R" | "simBase" | "simBefore">): FunnelResult => (s.simBefore && s.simBase ? s.simBase.R : s.R);
 /** Use the map as it is now as the new "before". */
 export function rebaseSim() {
   if (get().simBase) set({ simBase: takeBase() });
@@ -902,7 +918,7 @@ export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
 }
 export function setReadOnly(readOnly: boolean) {
   if (!readOnly && get().viewer) return;
-  set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved", ...(readOnly ? { simBase: null, panel: get().panel === "simulate" ? "inspector" : get().panel } : {}) });
+  set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved", ...(readOnly ? { simBase: null, simPlay: false, simBefore: false, panel: get().panel === "simulate" ? "inspector" : get().panel } : {}) });
 }
 export function setSaveStatus(saveStatus: SaveStatus) {
   if (get().readOnly && saveStatus !== "readonly") return;

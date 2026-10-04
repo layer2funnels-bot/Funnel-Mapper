@@ -60,7 +60,7 @@ export function WidgetCard({ id, selected = false, fluid = false }: { id: string
   const chartMetric = shown.find((v) => ["revenue", "profit", "leads", "customers", "mrr"].includes(v.metric));
   const series = cfg.display === "chart" && chartMetric ? chartSeries(chartMetric.metric, { nodes, edges: useEditor.getState().edges }, settings, R, chartMetric.value) : [];
   return (
-    <div className={`fm-widget w-${cfg.size}${selected ? " sel" : ""}${invalid ? " invalid" : ""}`} style={fluid ? { width: "100%", minHeight: dims.h } : { width: dims.w, minHeight: dims.h }} role="group" aria-label={`Widget: ${scopeLabel}`}>
+    <div className={`fm-widget w-${cfg.size}${selected ? " sel" : ""}${invalid ? " invalid" : ""}`} style={fluid ? { width: "100%" } : { width: dims.w, minHeight: dims.h }} role="group" aria-label={`Widget: ${scopeLabel}`}>
       <div className="wg-scope">{scopeLabel}</div>
       {invalid ? (
         <p className="wg-empty">{cfg.scope === "frame" ? "The frame was removed. Pick another scope in the panel." : "None of its steps are left."}</p>

@@ -89,7 +89,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
         <button className="btn icon max-sm:hidden" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
           <Icon name="menu" />
         </button>
-        <Link href="/" className="flex items-center gap-2 font-display text-[17px] font-extrabold text-ink no-underline">
+        <Link href="/" className="fm-brandlink flex items-center gap-2 font-display text-[17px] font-extrabold text-ink no-underline">
           <BrandMark size={26} /> Funnel Mapper Pro
         </Link>
       </div>

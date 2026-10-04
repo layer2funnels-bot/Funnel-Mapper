@@ -184,7 +184,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
         disabled: ro,
         run: () => {
           const box = document.querySelector(".fm-stage")?.getBoundingClientRect();
-          if (box) openQuickAdd({ sx: Math.max(8, Math.min(box.width - 308, menu.x - box.left)), sy: Math.max(8, Math.min(box.height - 400, menu.y - box.top)), fx: at.x - 100, fy: at.y - 38 });
+          if (box) openQuickAdd({ sx: menu.x - box.left, sy: menu.y - box.top, fx: at.x - 100, fy: at.y - 38 });
         },
       },
       { label: "Add text", icon: "text", disabled: ro, run: () => addNode("label", at.x, at.y, { p: { text: "Text", size: 15 } }) },

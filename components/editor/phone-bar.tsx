@@ -36,7 +36,7 @@ export function PhoneActionBar() {
   const next = () => {
     if (!n || !portsFor(n.type).hasOut) return;
     const box = document.querySelector(".fm-stage")?.getBoundingClientRect();
-    openQuickAdd({ sx: 8, sy: Math.max(8, (box?.height ?? 600) - 430), fx: n.x + nodeW(n.type) + 80, fy: n.y + heightOf(n) / 2, from: { id: n.id, port: "main" } });
+    openQuickAdd({ sx: 8, sy: (box?.height ?? 600) / 3, fx: n.x + nodeW(n.type) + 80, fy: n.y + heightOf(n) / 2, from: { id: n.id, port: "main" } });
   };
   return (
     <div className="fm-actionbar" role="toolbar" aria-label={n ? "Block actions" : sel.length > 1 ? "Selection actions" : edge ? "Connection actions" : "Select blocks"}>

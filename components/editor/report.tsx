@@ -186,7 +186,7 @@ function StepsTab() {
   return (
     <>
       <p className="sub">Every block in flow order, with drop-off.</p>
-      <div className="fm-tblwrap">
+      <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
         <table className="tbl">
           <thead>
             <tr>
@@ -223,7 +223,7 @@ function SourcesTab() {
   return (
     <>
       <p className="sub">What each traffic source brings in on its own.</p>
-      <div className="fm-tblwrap">
+      <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
         <table className="tbl">
           <thead>
             <tr>
@@ -539,7 +539,7 @@ function ScenariosTab() {
         </p>
       )}
       {list.length > 0 && (
-        <div className="fm-tblwrap">
+        <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
           <table className="tbl">
             <caption className="sr-only">Scenario comparison</caption>
             <thead>
@@ -613,7 +613,7 @@ function ForecastTab() {
         {table ? "Hide" : "Show"} table
       </button>
       {table && (
-        <div className="fm-tblwrap">
+        <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
           <table className="tbl">
             <thead>
               <tr>

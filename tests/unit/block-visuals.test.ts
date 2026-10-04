@@ -57,3 +57,18 @@ describe("block visual system", () => {
     expect(hasSplitBar("goal")).toBe(false);
   });
 });
+
+describe("brand marks", () => {
+  it("only platform blocks have a mark, each on its brand tint, with a valid path", async () => {
+    const { BRAND_MARKS } = await import("@/lib/brand-marks");
+    const { visualOf } = await import("@/lib/block-visuals");
+    const { isBlockType } = await import("@/lib/catalog");
+    const keys = Object.keys(BRAND_MARKS);
+    expect(keys.length).toBeGreaterThan(10);
+    for (const k of keys) {
+      expect(isBlockType(k), k).toBe(true);
+      expect(visualOf(k).brand, `${k} has a brand tint`).toBeTruthy();
+      expect(BRAND_MARKS[k], k).toMatch(/^M[\d.\- ,a-zA-Z]+$/);
+    }
+  });
+});

@@ -9,7 +9,7 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Check | Result |
 |---|---|
 | Typecheck, ESLint, `next build` | clean |
-| Unit (Vitest) | 189/189 (was 143) |
+| Unit (Vitest) | 194/194 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
 | E2E (Playwright, prod build) | 99/99 (includes 12 new `v2.spec.ts` tests for the V2 interactions: context menus, Quick Add, Change Page Type, widgets, share, presentation, responsive bands) |
 
@@ -64,7 +64,20 @@ Share V2 (View / Comment / Edit, numbers, notes, expiry, per-link permission, li
 - Screenshots stay stripped from share links (privacy rule kept).
 - Auto-capture needs a provider (`CAPTURE_URL_TEMPLATE`); without it the editor says so and offers upload.
 
-## Remaining (see the checkpoint message for priorities)
-Not visually QA'd at every viewport; brand marks (Simple Icons) not added; light-theme pass for new components not done; no new E2E specs for
-the new interactions (toolbar, menus, Quick Add from a connection, widgets, retype, Wait); Month-to-month Actual vs Plan chart not added;
-shared-view phone widget column not specific; migration not applied to demo / production databases.
+## Finishing pass (P0/P1 close-out)
+- **Month-to-month Actual vs Plan**: `monthlyPlanVsActual` (lib/report-data.ts) buckets entered Actuals by calendar month and takes the plan from
+  `planVsActual` (the Actuals tab's own function, same days / 30.44 scale), so no new maths. Reports > Month-to-month shows a chart (Actual solid Emerald,
+  Plan dashed slate), a Revenue / Ad spend switch, a table with variance (ad spend over plan reads red), and loading and empty states. Hidden on share links.
+- **Shared view on a phone**: widgets leave the map (they were 150px chips) and stack in one full-width column behind a "Widgets · N" button above the
+  KPI strip. Desktop and tablet keep them on the map. Reports cards on a phone are no longer trimmed to chips.
+- **Brand marks**: `lib/brand-marks.ts` (Simple Icons, CC0) for Facebook, Instagram, Google Ads, YouTube, TikTok, Pinterest, X, Reddit and WhatsApp blocks, on
+  the library tiles, the canvas card and SVG / PNG / PDF export. LinkedIn and Bing are not in the set and keep the tinted glyph. A user-chosen icon wins over the mark.
+- **Hover / loading / tooltip states**: tooltips (`title`) on every remaining icon-only button; hover and press states for Quick Add rows and categories, the
+  presentation progress, the FAB and toolbar / menu buttons; disabled styling; Workspace blocks loading, error (with retry) and empty states
+  (`assetsStatus`); `role="status"` on the existing Loading lines.
+- No change to `lib/funnel-math.ts`, the database or RLS. No migration was added or applied.
+
+## Remaining
+Light-theme and 1536 / 1280 / 430 / 414 viewport pass for the new components; migrations (workspace_assets and the earlier pending ones) must be applied to the
+demo / production databases by the owner; `CAPTURE_URL_TEMPLATE` for automatic page screenshots; final Figma 169 library visuals (swap data in
+`lib/block-visuals.ts` and the `.fam-*` CSS only). Month-to-month Actual vs Plan is not in the PDF report yet.

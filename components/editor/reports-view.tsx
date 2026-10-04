@@ -1,15 +1,16 @@
 "use client";
 // Reports / Insights: a full-width view of the funnel's numbers. Every figure comes from lib/report-data.ts, which only
 // assembles lib/funnel-math.ts results for one scenario snapshot (the map as it is now, as mapped, or a saved scenario).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { typeOf } from "@/lib/catalog";
 import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
 import { compute, computeScenario, periodFactor, periodNumbers, type FunnelResult, type PeriodKey } from "@/lib/funnel-math";
 import { GOAL_KINDS, STEP_STATUSES, type FunnelSettings, type Goal, type StepStatus } from "@/lib/graph";
-import { reportData, statusReport, type GoalReport } from "@/lib/report-data";
+import { monthlyPlanVsActual, reportData, statusReport, type GoalReport } from "@/lib/report-data";
 import { nid, setInspTab, setOpt, setSection, setSettings, setTab, showToast, updateNode, useEditor, type ReportSection } from "@/lib/editor/store";
 import { useFocusBlock } from "./focus";
+import { ensureActuals } from "./assets";
 import { WidgetCard } from "./widget-node";
 import { NumInput } from "./fields";
 import { BarsChart, PairBars, TimeChart } from "./report-charts";
@@ -734,7 +735,7 @@ function Goals({ data }: SP) {
                 </select>
               </label>
             )}
-            <button type="button" className="btn icon danger self-end" aria-label={`Remove goal ${x.name || GOAL_KIND_LABEL[x.kind]}`} onClick={() => setSettings({ goals: goals.filter((g) => g.id !== x.id) })}>
+            <button type="button" className="btn icon danger self-end" aria-label={`Remove goal ${x.name || GOAL_KIND_LABEL[x.kind]}`} title={`Remove goal ${x.name || GOAL_KIND_LABEL[x.kind]}`} onClick={() => setSettings({ goals: goals.filter((g) => g.id !== x.id) })}>
               <Icon name="trash" size={16} />
             </button>
           </div>
@@ -844,12 +845,84 @@ function Mrr({ data }: SP) {
 }
 
 /* ---------------- month to month ---------------- */
-function Monthly({ data }: SP) {
+const monthLabel = (ym: string) => new Date(`${ym}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+
+/** Entered actuals next to the plan, month by month. Plan = the Actuals tab's planned numbers for the days entered. */
+function ActualVsPlan({ R }: Pick<SP, "R">) {
+  const { m, ms } = useMoney();
+  const actuals = useEditor((x) => x.actuals);
+  const nodes = useEditor((x) => x.nodes);
+  const edges = useEditor((x) => x.edges);
+  const shared = useEditor((x) => x.shared);
+  const ro = useEditor((x) => x.readOnly);
+  const [metric, setMetric] = useState<"rev" | "spend">("rev");
+  useEffect(() => {
+    if (!shared) ensureActuals();
+  }, [shared]);
+  const rows = useMemo(() => monthlyPlanVsActual({ nodes, edges }, R, (actuals ?? []) as never), [nodes, edges, R, actuals]);
+  if (shared) return null;
+  const rev = metric === "rev";
+  const data = rows.map((r) => ({ label: monthLabel(r.month), plan: rev ? r.planRev : r.planSpend, actual: rev ? r.actRev : r.actSpend }));
+  const v = (plan: number, act: number) => (plan ? <span className={rev === act >= plan ? "pos" : "neg"}>{signed(act / plan - 1, pct)}</span> : "–");
+  return (
+    <section aria-labelledby="fm-avp">
+      <div className="fm-avp-head">
+        <h3 id="fm-avp">Actual vs plan</h3>
+        <div className="seg" role="group" aria-label="Measure">
+          <button type="button" aria-pressed={rev} onClick={() => setMetric("rev")}>
+            Revenue
+          </button>
+          <button type="button" aria-pressed={!rev} onClick={() => setMetric("spend")}>
+            Ad spend
+          </button>
+        </div>
+      </div>
+      {actuals === null ? (
+        <p className="sub fm-avp-state" role="status">
+          Loading actuals…
+        </p>
+      ) : !rows.length ? (
+        <div className="fm-rempty">
+          <p>No actuals entered yet. Add real numbers per step and they appear here against the plan.</p>
+          {!ro && (
+            <button type="button" className="btn sm" onClick={() => setTab("actuals")}>
+              Enter actuals
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <TimeChart
+            title={`${rev ? "Revenue" : "Ad spend"}: actual vs plan`}
+            data={data}
+            x="label"
+            xLabel={(l) => String(l)}
+            series={[
+              { key: "actual", name: "Actual", color: "var(--chart-1)" },
+              { key: "plan", name: "Plan", color: "var(--muted)", dashed: true },
+            ]}
+            fmt={ms}
+            zero
+          />
+          <Table
+            caption="Actual vs plan by month"
+            head={["Month", "Days entered", "Plan revenue", "Actual revenue", "vs plan", "Plan ad spend", "Actual ad spend", "vs plan"]}
+            rows={rows.map((r) => [monthLabel(r.month), nf(r.days), m(r.planRev), m(r.actRev), v(r.planRev, r.actRev), m(r.planSpend), m(r.actSpend), v(r.planSpend, r.actSpend)])}
+          />
+          <p className="sub">Plan is the funnel’s monthly numbers scaled to the days you entered, the same as the Actuals tab. Ad spend over plan shows red.</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Monthly({ data, R }: SP) {
   const { m, ms } = useMoney();
   const rows = data.forecast.rows;
   const ch = (a: number, b: number | undefined) => (b == null || !b ? "–" : signed((a - b) / Math.abs(b), pct));
   return (
     <>
+      <ActualVsPlan R={R} />
       <TimeChart
         title="Revenue and profit per month"
         data={rows}

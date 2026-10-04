@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { builtinTemplate } from "../../lib/templates";
 import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
@@ -248,3 +249,91 @@ test.describe("V2 pages", () => {
     await expect(card).toContainText("£6,032");
   });
 });
+
+test.describe("V2 finishing pass", () => {
+  test("Month-to-month: actual vs plan chart, empty state, measure switch", async ({ page }) => {
+    const { id, graph, sb } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    const nav = page.getByRole("navigation", { name: "Report sections" });
+    await nav.getByRole("button", { name: "Month-to-month" }).click();
+    // no actuals yet: an empty state that points at the Actuals tool
+    await expect(page.getByRole("heading", { name: "Actual vs plan" })).toBeVisible();
+    await expect(page.locator(".fm-rmain")).toContainText("No actuals entered yet");
+    await expect(page.getByRole("button", { name: "Enter actuals" })).toBeVisible();
+
+    // enter two months of actuals through the API, as the Actuals tool would
+    const paid = graph.nodes.find((n) => n.name === "Paid membership")!;
+    const ins = await sb.from("funnel_actuals").insert([
+      { funnel_id: id, node_id: paid.id, period_start: "2026-01-01", period_end: "2026-01-31", revenue: 3000, spend: 400 },
+      { funnel_id: id, node_id: paid.id, period_start: "2026-02-01", period_end: "2026-02-28", revenue: 4500, spend: 380 },
+    ]);
+    expect(ins.error).toBeNull();
+    await page.reload();
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await page.getByRole("navigation", { name: "Report sections" }).getByRole("button", { name: "Month-to-month" }).click();
+    const fig = page.getByRole("figure", { name: /Revenue: actual vs plan/ });
+    await expect(fig).toBeVisible();
+    await expect(fig.getByText("Actual", { exact: true })).toBeVisible(); // legend: actual (solid) and plan (dashed)
+    await expect(fig.getByText("Plan", { exact: true })).toBeVisible();
+    const tbl = page.getByRole("table", { name: "Actual vs plan by month" });
+    await expect(tbl.getByRole("row", { name: /Jan 2026/ })).toContainText("£3,000");
+    await expect(tbl.getByRole("row", { name: /Feb 2026/ })).toContainText("£4,500");
+    await page.getByRole("group", { name: "Measure" }).getByRole("button", { name: "Ad spend" }).click();
+    await expect(page.getByRole("figure", { name: /Ad spend: actual vs plan/ })).toBeVisible();
+  });
+
+  test("shared view on a phone stacks widgets in one column; on desktop they stay on the map", async ({ browser }) => {
+    const { id, sb } = await createFunnel({ graph: graphWithWidget() });
+    const link = await sb.from("share_links").insert({ funnel_id: id }).select("token").single();
+    const phone = await browser.newContext({ storageState: { cookies: [], origins: [] }, viewport: { width: 390, height: 844 } });
+    const p = await phone.newPage();
+    await p.goto(`/s/${link.data!.token}`);
+    await expect(p.locator(".react-flow__node").first()).toBeVisible();
+    await expect(p.locator(".react-flow__node-widget")).toBeHidden(); // not a tiny chip on the map
+    await p.getByRole("button", { name: /^Widgets · 1/ }).click();
+    const card = p.locator(".fm-shared-wg .fm-widget");
+    await expect(card).toBeVisible();
+    await expect(card).toContainText("£6,032");
+    const box = (await card.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(box.width).toBeGreaterThan(390 - 60); // full width: one column
+    await phone.close();
+
+    const wide = await browser.newContext({ storageState: { cookies: [], origins: [] }, viewport: { width: 1440, height: 900 } });
+    const d = await wide.newPage();
+    await d.goto(`/s/${link.data!.token}`);
+    await expect(d.locator(".react-flow__node-widget")).toBeVisible();
+    await expect(d.locator(".fm-shared-wg")).toBeHidden();
+    await wide.close();
+  });
+
+  test("platform blocks carry their brand mark on the map and in the library; others keep their icon", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark")).toHaveCount(1);
+    await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
+    await page.getByPlaceholder(/^Search \d+ blocks/).fill("Facebook ads");
+    await expect(page.locator(".fm-pal .pi.brand svg.fm-bmark").first()).toBeVisible();
+  });
+
+  test("tooltips: icon-only buttons name themselves on hover; loading states announce themselves", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await expect(page.getByRole("button", { name: "Zoom in" })).toHaveAttribute("title", "Zoom in");
+    await node(page, "Quiz funnel").click();
+    const tb = page.getByRole("toolbar", { name: "Block tools" });
+    await tb.getByRole("button", { name: "More actions" }).hover();
+    await expect(page.locator(".fm-tip[data-tip='More actions']").first()).toBeVisible();
+    // the workspace-blocks panel shows its own state instead of a blank list
+    await page.getByRole("button", { name: "Workspace blocks" }).click();
+    await expect(page.locator(".fm-wsblocks")).toContainText(/Saved in this workspace/);
+    await expect(page.locator(".fm-wsblocks")).not.toContainText("Couldn’t load");
+  });
+});
+
+function graphWithWidget() {
+  const g = builtinTemplate("quiz").graph;
+  return { ...g, nodes: [...g.nodes, { id: "wg1", type: "widget", name: "Funnel widget", x: -300, y: -200, p: { scope: "funnel", display: "number", metrics: ["revenue", "profit"], wsize: "M" } }] } as typeof g;
+}

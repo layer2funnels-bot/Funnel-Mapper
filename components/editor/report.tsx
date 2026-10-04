@@ -387,7 +387,7 @@ function CostsTab() {
               Expense name
             </label>
             <input id={`ex-n-${e.id}`} className="input" value={e.name} placeholder="e.g. Funnel software" onChange={(ev) => upd(e.id, { name: ev.target.value })} />
-            <button type="button" className="btn icon danger shrink-0" aria-label={`Remove ${e.name || "expense"}`} onClick={() => setSettings({ expenses: list.filter((x) => x.id !== e.id) })}>
+            <button type="button" className="btn icon danger shrink-0" aria-label={`Remove ${e.name || "expense"}`} title={`Remove ${e.name || "expense"}`} onClick={() => setSettings({ expenses: list.filter((x) => x.id !== e.id) })}>
               <Icon name="trash" size={16} />
             </button>
           </div>
@@ -495,7 +495,7 @@ function ScenariosTab() {
             >
               <Icon name="copy" size={16} />
             </button>
-            <button type="button" className="btn icon danger shrink-0" aria-label={`Remove ${sc.name}`} onClick={() => setSettings({ scenarios: list.filter((x) => x.id !== sc.id) })}>
+            <button type="button" className="btn icon danger shrink-0" aria-label={`Remove ${sc.name}`} title={`Remove ${sc.name}`} onClick={() => setSettings({ scenarios: list.filter((x) => x.id !== sc.id) })}>
               <Icon name="trash" size={16} />
             </button>
           </div>

@@ -105,6 +105,7 @@ export interface EditorState {
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
+  assetsStatus: "idle" | "loading" | "ready" | "error";
   /** Phone: tap blocks to add them to the selection. */
   selectMode: boolean;
   /** Presentation: the steps of the stage being shown (others dim). */
@@ -194,6 +195,7 @@ export const useEditor = create<EditorState>(() => ({
   stageIds: null,
   stylePresets: [],
   workspaceBlocks: [],
+  assetsStatus: "idle",
   menu: null,
   typePicker: null,
   styleClip: null,
@@ -379,7 +381,7 @@ export function setSideTab(sideTab: EditorState["sideTab"]) {
   set({ sideTab });
   setOpt("hideSide", false);
 }
-export function setAssets(a: { stylePresets?: StylePreset[]; workspaceBlocks?: WorkspaceBlock[] }) {
+export function setAssets(a: { stylePresets?: StylePreset[]; workspaceBlocks?: WorkspaceBlock[]; assetsStatus?: EditorState["assetsStatus"] }) {
   set(a);
 }
 /** Place a saved group of blocks (workspace block) with fresh ids, its top-left at (x, y). One undo step; the copy is selected. */

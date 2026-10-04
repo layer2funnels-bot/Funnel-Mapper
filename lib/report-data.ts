@@ -9,6 +9,7 @@ import {
   leaks,
   num,
   periodNumbers,
+  planVsActual,
   project,
   sourceRows,
   stepRate,
@@ -16,6 +17,7 @@ import {
   targetPlan,
   withStepRate,
   type FunnelResult,
+  type ActualRow,
   type GoalPlan,
   type GraphLike,
   type Leak,
@@ -223,4 +225,42 @@ export function reportData(g: GraphLike, s: ReportSettings, R: FunnelResult): Re
     expenses: { lines, total: R.costs, oneTime: R.oneTime, items },
     goals: { items: (s.goals ?? []).map((x) => goalReport(g, s, R, x)), target, plan, required, blocks },
   };
+}
+
+/** Days one planned month stands for (the same scale as the Actuals tab). */
+export const DAYS_PER_PERIOD = 30.44;
+
+export interface MonthlyActualRow {
+  /** Calendar month, `YYYY-MM`. A period is counted in the month it starts. */
+  month: string;
+  days: number;
+  planRev: number;
+  actRev: number;
+  planSpend: number;
+  actSpend: number;
+}
+interface DatedActual extends ActualRow {
+  period_start: string;
+  period_end: string;
+}
+
+/**
+ * Actuals next to the plan, one row per calendar month that has any. Plan numbers come from planVsActual (the same
+ * function the Actuals tab uses) scaled by the days the month's entered periods cover, so the two views agree.
+ */
+export function monthlyPlanVsActual(g: GraphLike, R: FunnelResult, actuals: DatedActual[]): MonthlyActualRow[] {
+  const byMonth = new Map<string, DatedActual[]>();
+  for (const a of actuals) {
+    const k = a.period_start.slice(0, 7);
+    byMonth.set(k, [...(byMonth.get(k) ?? []), a]);
+  }
+  return [...byMonth.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([month, rows]) => {
+      const periods = new Map(rows.map((r) => [`${r.period_start}|${r.period_end}`, Math.max(1, Math.round((Date.parse(r.period_end) - Date.parse(r.period_start)) / 86400000) + 1)]));
+      const days = [...periods.values()].reduce((a, b) => a + b, 0);
+      const cmp = planVsActual(g, R, rows, days / DAYS_PER_PERIOD);
+      const sum = (f: (r: (typeof cmp)[number]) => number | null) => cmp.reduce((a, r) => a + (f(r) ?? 0), 0);
+      return { month, days, planRev: sum((r) => r.planRev), actRev: sum((r) => r.actRev), planSpend: sum((r) => r.planSpend), actSpend: sum((r) => r.actSpend) };
+    });
 }

@@ -166,6 +166,9 @@ Architecture: authoritative math -> baseline and live `FunnelResult` -> counts a
 - Touch targets under 40px on phone and tablet (scenario pill 26px, Fit 35px, New funnel / Preview 30px, segmented controls 32-36px, tabs 38px, table and caption links
   17-20px). Controls are 40-44px now; small inline links keep their look with a larger hit area. A test measures them at 390 and 768.
 - Funnels list on a phone: the Health pill was clipped; Month-to-month caption; ordering of the overflow menu (duplicate Present / Version history).
+- **Client page with hundreds of funnels** (found when two accessibility scans timed out on the demo client's accumulated test data): the page sent every funnel's whole
+  map to the browser and drew every card. It now shows the 24 most recently updated (plus up to 24 archived), loads maps only for those, says "Showing the 24 most
+  recently updated of N funnels. Show all N", and the tab count still reports the real total. `?all=1` shows everything.
 - No page scrolls sideways at any of the eight widths on twelve pages (test).
 - Every one of the 169 blocks is reachable by typing its name into Quick Add (test).
 

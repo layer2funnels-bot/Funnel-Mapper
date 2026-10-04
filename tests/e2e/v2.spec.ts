@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { blankGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
 import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
 
@@ -536,5 +537,21 @@ test.describe("V2 QA regressions", () => {
     await p.goto("/clients");
     await expect(p.getByRole("button", { name: "Card view" })).toHaveAttribute("aria-pressed", "true");
     await ctx.close();
+  });
+
+  test("a client with many funnels shows the newest ones and offers the rest", async ({ page }) => {
+    // the demo client has far more than a page of funnels once the suite has run; make sure there are at least 30 anyway
+    const { sb } = await createFunnel({ template: "quiz", name: "Portfolio paging 0" });
+    const have = (await sb.from("funnels").select("id", { count: "exact", head: true }).eq("client_id", DEMO_CLIENT)).count ?? 0;
+    for (let k = have; k < 30; k++) await createFunnel({ graph: blankGraph(), name: `Portfolio paging ${k + 1}` });
+    await page.goto(`/clients/${DEMO_CLIENT}`);
+    const cards = page.getByRole("list", { name: "Funnels" }).getByRole("listitem");
+    await expect(cards.first()).toBeVisible();
+    expect(await cards.count()).toBeLessThanOrEqual(48);
+    expect(await cards.count()).toBeGreaterThanOrEqual(24);
+    await expect(page.getByText(/Showing the \d+ most recently updated of \d+ funnels/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Show all \d+$/ })).toHaveAttribute("href", /all=1/);
+    // the newest funnel is on the first page
+    await expect(page.getByRole("link", { name: /Open Portfolio paging 0/ })).toBeVisible();
   });
 });

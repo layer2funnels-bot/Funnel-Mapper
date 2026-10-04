@@ -2,12 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { fmtDate, money, nf, pct } from "@/lib/format";
+import { DAYS_PER_PERIOD } from "@/lib/report-data";
 import { planVsActual, stepRows, type ActualRow } from "@/lib/funnel-math";
 import type { ActualRowDb } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { useEditor } from "@/lib/editor/store";
 
-const DAYS_PER_PERIOD = 30.44; // planned numbers are per month
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 function lastMonth() {
   const n = new Date();
@@ -137,7 +137,7 @@ export function Actuals() {
         </p>
       )}
       {loading ? (
-        <p className="sub">Loading…</p>
+        <p className="sub" role="status" aria-live="polite">Loading…</p>
       ) : (
         <>
           <div className="statbox">

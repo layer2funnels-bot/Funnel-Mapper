@@ -4,7 +4,8 @@ import { memo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
-import { offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { brandMarkOf } from "@/lib/brand-marks";
+import { BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, startRename, updateNode, useEditor } from "@/lib/editor/store";
@@ -151,7 +152,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
         <span className="fm-nicon">
-          <Icon name={(n.s?.icon as IconName) || T.icon} />
+          {brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}
         </span>
         <div className="fm-ntitle">
           {renaming ? <RenameInput id={n.id} value={n.name} /> : <span style={textCss(n.s)}>{n.name}</span>}

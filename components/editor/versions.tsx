@@ -35,7 +35,7 @@ export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
     <>
       <div className="mb-3 flex items-center">
         <h3 className="flex-1">Versions</h3>
-        <button type="button" className="btn icon ghost" aria-label="Close versions" onClick={() => setPanel("inspector")}>
+        <button type="button" className="btn icon ghost" aria-label="Close versions" title="Close versions" onClick={() => setPanel("inspector")}>
           <Icon name="close" />
         </button>
       </div>
@@ -75,7 +75,7 @@ export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
         </p>
       )}
       {list === null ? (
-        <p className="sub">Loading…</p>
+        <p className="sub" role="status" aria-live="polite">Loading…</p>
       ) : list.length === 0 ? (
         <p className="sub">No versions yet.</p>
       ) : (

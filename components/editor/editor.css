@@ -3221,14 +3221,14 @@ dialog.fm-typepick {
 }
 @media (max-width: 640px) {
   /* phone: widgets are S chips on the editor map */
-  .fm-widget {
+  .react-flow .fm-widget {
     width: 150px !important;
     min-height: 0 !important;
   }
-  .fm-widget .wm:nth-child(n + 2),
-  .fm-widget .wg-chart,
-  .fm-widget .wg-mrr,
-  .fm-widget .wm small {
+  .react-flow .fm-widget .wm:nth-child(n + 2),
+  .react-flow .fm-widget .wg-chart,
+  .react-flow .fm-widget .wg-mrr,
+  .react-flow .fm-widget .wm small {
     display: none;
   }
 }
@@ -3686,4 +3686,138 @@ dialog.fm-sharedlg {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+/* Month-to-month: actual vs plan */
+.fm-avp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+.fm-avp-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.fm-avp-state {
+  padding: 24px 0;
+}
+
+/* shared view on a phone: widgets leave the map and stack in one column */
+.fm-shared-wg {
+  display: none;
+}
+.fm-phone.fm-has-shared-wg .react-flow__node-widget {
+  display: none;
+}
+.fm-phone.fm-has-shared-wg .fm-shared-wg {
+  display: block;
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--kpi-h, 64px) + 10px + env(safe-area-inset-bottom));
+  z-index: 15;
+}
+.fm-shared-wg > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-shared-wg > button:hover {
+  border-color: var(--brand);
+}
+.fm-shared-wg > button[aria-expanded="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.fm-shared-wg .stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  max-height: min(60dvh, 520px);
+  overflow-y: auto;
+  margin-bottom: 8px;
+  padding: 2px;
+  overscroll-behavior: contain;
+}
+.fm-shared-wg .fm-widget {
+  cursor: default;
+}
+
+/* hover, press and disabled states for the V2 controls */
+.fm-quick li:not([aria-selected="true"]):hover {
+  background: color-mix(in srgb, var(--brand) 7%, transparent);
+}
+.fm-quick li.qh:hover,
+.fm-quick li.empty:hover {
+  background: transparent;
+  cursor: default;
+}
+.fm-quick-cats button:hover:not([aria-pressed="true"]) {
+  border-color: var(--brand);
+  color: var(--ink);
+}
+.fp-progress button:hover i {
+  background: var(--brand-light);
+}
+.fp-progress button:hover:not([aria-current="step"]) {
+  color: var(--ink);
+}
+@media (hover: hover) {
+  .fm-fab:hover {
+    background: var(--brand-hover);
+  }
+}
+.fm-fab:active {
+  background: var(--brand-press);
+  transform: scale(0.96);
+}
+.fm-ftb button:active:not(:disabled),
+.fm-ctx button:active:not(:disabled),
+.fm-rail button:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.fm-ftb button:disabled,
+.fm-ctx button:disabled,
+.fm-quick-cats button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fm-wsblocks .hint .link {
+  font-size: inherit;
+}
+.fm-wsblocks .hint[role="status"] {
+  animation: fm-pulse 1.4s ease-in-out infinite;
+}
+@keyframes fm-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+/* generic busy state: add aria-busy to any container */
+[aria-busy="true"] {
+  cursor: progress;
+}
+.fm-avp-head h3 {
+  font-weight: 700;
+  color: var(--ink);
+}
+.fm-avp-head .seg {
+  flex: none;
+}
+.fm-avp-head .seg button {
+  white-space: nowrap;
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
 }

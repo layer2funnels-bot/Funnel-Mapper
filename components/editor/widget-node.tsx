@@ -1,6 +1,6 @@
 "use client";
 // Widget: live numbers on the map (see lib/widget-data.ts). Reads engine results only. On a phone it shows as an S chip.
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { WIDGET_SIZES } from "@/lib/catalog";
 import { money, nf } from "@/lib/format";
@@ -100,5 +100,28 @@ export function WidgetCard({ id, selected = false, fluid = false }: { id: string
       {series.length > 1 && cfg.size !== "S" && <Spark values={series} label={chartMetric!.label} />}
       {cfg.display === "chart" && cfg.size !== "S" && !series.length && !invalid && <p className="wg-empty">Charts are available for revenue, profit, leads, customers and MRR.</p>}
     </div>
+  );
+}
+
+/** Shared view on a phone: the map's widgets as one full-width column (they leave the canvas, where they would be tiny chips). */
+export function SharedWidgets() {
+  const ids = useEditor((s) => s.nodes.filter((n) => n.type === "widget").map((n) => n.id).join(","));
+  const hide = useEditor((s) => s.settings.hideNumbers);
+  const [open, setOpen] = useState(false);
+  const list = ids ? ids.split(",") : [];
+  if (!list.length || hide) return null;
+  return (
+    <section className="fm-shared-wg" aria-label="Widgets">
+      {open && (
+        <div className="stack" id="fm-shared-wg-stack">
+          {list.map((id) => (
+            <WidgetCard key={id} id={id} fluid />
+          ))}
+        </div>
+      )}
+      <button type="button" aria-expanded={open} aria-controls="fm-shared-wg-stack" onClick={() => setOpen((v) => !v)}>
+        Widgets · {list.length}
+      </button>
+    </section>
   );
 }

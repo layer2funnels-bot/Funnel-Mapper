@@ -9,8 +9,9 @@ import { z } from "zod";
 const blockData = z.object({ nodes: z.array(nodeSchema), edges: z.array(edgeSchema) });
 
 export async function loadAssets() {
+  if (useEditor.getState().assetsStatus !== "ready") setAssets({ assetsStatus: "loading" });
   const { data, error } = await supabaseBrowser().from("workspace_assets").select("id, kind, name, data").order("created_at");
-  if (error || !data) return;
+  if (error || !data) return setAssets({ assetsStatus: "error" });
   const stylePresets: StylePreset[] = [],
     workspaceBlocks: WorkspaceBlock[] = [];
   for (const r of data) {
@@ -22,7 +23,7 @@ export async function loadAssets() {
       if (p.success) workspaceBlocks.push({ id: r.id, name: r.name, nodes: p.data.nodes as unknown as FunnelNode[], edges: p.data.edges as unknown as FunnelEdge[] });
     }
   }
-  setAssets({ stylePresets, workspaceBlocks });
+  setAssets({ stylePresets, workspaceBlocks, assetsStatus: "ready" });
 }
 
 export async function saveStylePreset(name: string, style: NodeStyle | undefined) {

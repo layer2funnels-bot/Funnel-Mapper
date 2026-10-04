@@ -333,11 +333,11 @@ export function ZoomControls() {
   const mini = useEditor((s) => s.opts.mini);
   return (
     <div className="fm-zoom">
-      <button type="button" className="btn icon" aria-label="Zoom out" onClick={() => rf.zoomOut({ duration: 150 })}>
+      <button type="button" className="btn icon" aria-label="Zoom out" title="Zoom out" onClick={() => rf.zoomOut({ duration: 150 })}>
         <Icon name="minus" />
       </button>
       <output aria-live="polite">{Math.round(k * 100)}%</output>
-      <button type="button" className="btn icon" aria-label="Zoom in" onClick={() => rf.zoomIn({ duration: 150 })}>
+      <button type="button" className="btn icon" aria-label="Zoom in" title="Zoom in" onClick={() => rf.zoomIn({ duration: 150 })}>
         <Icon name="plus" />
       </button>
       <button type="button" className="btn" onClick={() => rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 })}>

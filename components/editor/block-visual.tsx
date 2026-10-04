@@ -8,6 +8,7 @@ import { CATCOLOR, typeOf } from "@/lib/catalog";
 import type { StepStatus } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { offerSubtitle, priceTab } from "@/lib/editor/labels";
+import { brandMarkOf } from "@/lib/brand-marks";
 import { visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type WfShape, type Wireframe } from "@/lib/block-visuals";
 
 const PAINT: Record<WfPaint, { fill: string; stroke: string }> = {
@@ -67,6 +68,17 @@ export function SplitBar({ pct, test }: { pct: number; test: boolean }) {
   );
 }
 
+/** Platform mark for a block that stands for one platform (null for any other block). */
+export function BrandGlyph({ type, size = 18 }: { type: string; size?: number }) {
+  const d = brandMarkOf(type);
+  if (!d) return null;
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor" className="fm-bmark">
+      <path d={d} />
+    </svg>
+  );
+}
+
 /** Library / Quick Add tile for a block, in the shape of its family. */
 export function BlockTile({ type, icon, size = 16 }: { type: string; icon: IconName; size?: number }) {
   const v = visualOf(type),
@@ -74,7 +86,7 @@ export function BlockTile({ type, icon, size = 16 }: { type: string; icon: IconN
   const bg = v.brand ?? CATCOLOR[T?.color ?? T?.cat ?? "annot"];
   return (
     <span className={`pi fam-${v.family}${v.brand ? " brand" : ""}`} style={{ background: bg }}>
-      <Icon name={icon} size={size} />
+      {brandMarkOf(type) ? <BrandGlyph type={type} size={size} /> : <Icon name={icon} size={size} />}
     </span>
   );
 }

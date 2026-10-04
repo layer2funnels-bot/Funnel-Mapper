@@ -49,6 +49,7 @@ import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
 import { PhoneActionBar } from "./phone-bar";
+import { SharedWidgets } from "./widget-node";
 import { loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
@@ -128,6 +129,8 @@ function EditorInner(props: EditorProps) {
   const selNodesCount = useEditor((s) => s.selNodes.length);
   const selEdgeId = useEditor((s) => s.selEdge);
   const band = useBand();
+  const sharedView = useEditor((s) => s.shared);
+  const hasWidgets = useEditor((s) => s.nodes.some((n) => n.type === "widget"));
   const [sheetH, setSheetH] = useState(50);
   const sheetDrag = useRef<{ y: number; h: number } | null>(null);
   const shareRef = useRef<HTMLDialogElement>(null);
@@ -506,7 +509,7 @@ function EditorInner(props: EditorProps) {
 
   const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
   const canEdit = manage || !!share?.canEdit;
-  const cls = ["fm-editor", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", readOnly && "fm-readonly"].filter(Boolean).join(" ");
+  const cls = ["fm-editor", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", sharedView && band === "phone" && hasWidgets && !reports && "fm-has-shared-wg", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
   const fileMenu = (close: () => void) => (
             <>
@@ -773,7 +776,7 @@ function EditorInner(props: EditorProps) {
           <span className="dot" aria-hidden="true" />
           {saveLabel[saveStatus]}
         </span>
-        <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
+        <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Show numbers and details" title="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
           <Icon name="chart" />
         </button>
         <button
@@ -940,7 +943,7 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         {ready && !readOnly && !reports && (
-          <button type="button" className="fm-fab" aria-label="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
+          <button type="button" className="fm-fab" aria-label="Show building blocks" title="Show building blocks" aria-expanded={showSide} onClick={() => setShowSide((v) => !v)}>
             <Icon name="plus" size={24} />
           </button>
         )}
@@ -979,7 +982,7 @@ function EditorInner(props: EditorProps) {
           }}
         />
         <div className="fm-sheet-close">
-          <button type="button" className="btn icon ghost" aria-label="Close details" onClick={() => setShowInsp(false)}>
+          <button type="button" className="btn icon ghost" aria-label="Close details" title="Close details" onClick={() => setShowInsp(false)}>
             <Icon name="close" />
           </button>
         </div>
@@ -997,6 +1000,7 @@ function EditorInner(props: EditorProps) {
         )}
       </aside>
 
+      {sharedView && band === "phone" && !reports && !share?.hideNumbers && <SharedWidgets />}
       {!share?.hideNumbers && (band === "phone" && (selNodesCount > 0 || selEdgeId || selectMode) ? <PhoneActionBar /> : <KpiBar />)}
       {reports && <ReportsView onExportPdf={manage || share?.canEdit || mode === "share" ? () => doExport("pdf") : undefined} />}
 

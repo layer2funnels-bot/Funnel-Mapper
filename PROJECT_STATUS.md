@@ -348,7 +348,7 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 
 ## V2 final completion pass (checkpoint)
 
-See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. Unit 189/189, DB 52/52, E2E 99/99 (incl. 12 new `v2.spec.ts`), typecheck / lint / build clean.
+See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, E2E 103/103 (incl. 16 in `v2.spec.ts`), unit 194/194, typecheck / lint / build clean.
 New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
 
 ## I. Recommended order (history)

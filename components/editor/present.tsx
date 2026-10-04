@@ -134,10 +134,10 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         </>
       )}
       <div className="fp-actions">
-        <button type="button" className="btn" onClick={() => go(i - 1)} disabled={i < 0} aria-label="Previous stage">
+        <button type="button" className="btn" onClick={() => go(i - 1)} disabled={i < 0} aria-label="Previous stage" title="Previous stage">
           <Icon name="chevronLeft" />
         </button>
-        <button type="button" className="btn primary" onClick={() => go(i + 1)} disabled={done} aria-label="Next stage">
+        <button type="button" className="btn primary" onClick={() => go(i + 1)} disabled={done} aria-label="Next stage" title="Next stage">
           Next <Icon name="chevronRight" />
         </button>
         <span className="flex-1" />

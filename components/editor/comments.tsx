@@ -29,7 +29,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
     <>
       <div className="mb-3 flex items-center">
         <h3 className="flex-1">Client comments</h3>
-        <button type="button" className="btn icon ghost" aria-label="Close comments" onClick={() => setPanel("inspector")}>
+        <button type="button" className="btn icon ghost" aria-label="Close comments" title="Close comments" onClick={() => setPanel("inspector")}>
           <Icon name="close" />
         </button>
       </div>
@@ -38,7 +38,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
         <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} /> Show resolved
       </label>
       {list === null ? (
-        <p className="sub">Loading…</p>
+        <p className="sub" role="status" aria-live="polite">Loading…</p>
       ) : shown.length === 0 ? (
         <p className="sub">No comments{showResolved ? "" : " to resolve"}.</p>
       ) : (

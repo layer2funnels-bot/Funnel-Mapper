@@ -7,10 +7,11 @@ import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
 import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
+import { knobsOf, type SimBase } from "../simulate";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
-export type SidePanel = "inspector" | "versions" | "comments" | "notes";
+export type SidePanel = "inspector" | "versions" | "comments" | "notes" | "simulate";
 export type InspTab = "details" | "style" | "plan" | "analytics";
 export type EditorMode = "map" | "reports";
 export type ReportSection = "overview" | "data" | "sources" | "offers" | "expenses" | "scenarios" | "forecast" | "goals" | "mrr" | "monthly" | "reinvest" | "status";
@@ -106,6 +107,8 @@ export interface EditorState {
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
   assetsStatus: "idle" | "loading" | "ready" | "error";
+  /** Simulate: the map as it was when simulating started (null = not simulating). Everything shown as a change is live minus this. */
+  simBase: SimBase | null;
   /** Phone: tap blocks to add them to the selection. */
   selectMode: boolean;
   /** Presentation: the steps of the stage being shown (others dim). */
@@ -196,6 +199,7 @@ export const useEditor = create<EditorState>(() => ({
   stylePresets: [],
   workspaceBlocks: [],
   assetsStatus: "idle",
+  simBase: null,
   menu: null,
   typePicker: null,
   styleClip: null,
@@ -321,6 +325,8 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     opts: loadOpts(),
     dims: {},
     mode: "map",
+    simBase: null,
+    panel: "inspector",
   });
 }
 
@@ -380,6 +386,45 @@ export function addWidget(cfg: { scope: "funnel" | "frame" | "selection"; frameI
 export function setSideTab(sideTab: EditorState["sideTab"]) {
   set({ sideTab });
   setOpt("hideSide", false);
+}
+/* ---------------- simulate ---------------- */
+const takeBase = (): SimBase => {
+  const s = get();
+  return { R: s.R, nodes: s.nodes, edges: s.edges, settings: s.settings, at: Date.now() };
+};
+/** Start simulating: remember the map as it is now and show it as a Performance map, so every change reads against it. */
+export function startSim() {
+  const s = get();
+  if (s.readOnly || s.shared) return;
+  set({ simBase: takeBase(), panel: "simulate" });
+  setOpt("nums", true);
+  setOpt("thick", true);
+}
+/** Stop simulating and keep whatever the map says now. */
+export function stopSim() {
+  set((s) => ({ simBase: null, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+}
+/** Use the map as it is now as the new "before". */
+export function rebaseSim() {
+  if (get().simBase) set({ simBase: takeBase() });
+}
+const restoreKnobs = (n: FunnelNode, b: FunnelNode, only?: string) => {
+  const p = { ...n.p };
+  for (const k of [...knobsOf(n), ...knobsOf(b)]) {
+    if (only && k.key !== only) continue;
+    if (b.p[k.key] === undefined) delete p[k.key];
+    else p[k.key] = b.p[k.key];
+  }
+  return { ...n, p };
+};
+/** Put the assumptions back as they were: the four levers and every block assumption (rates, prices, spend). Layout and new blocks stay. One undo step. */
+export function revertSim(id?: string, key?: string) {
+  const s = get(),
+    b = s.simBase;
+  if (!b || s.readOnly) return;
+  const was = new Map(b.nodes.map((n) => [n.id, n]));
+  const nodes = s.nodes.map((n) => (was.has(n.id) && (!id || id === n.id) ? restoreKnobs(n, was.get(n.id)!, key) : n));
+  apply({ nodes, ...(id ? {} : { settings: { ...s.settings, whatif: b.settings.whatif } }) }, { discrete: true });
 }
 export function setAssets(a: { stylePresets?: StylePreset[]; workspaceBlocks?: WorkspaceBlock[]; assetsStatus?: EditorState["assetsStatus"] }) {
   set(a);
@@ -857,7 +902,7 @@ export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
 }
 export function setReadOnly(readOnly: boolean) {
   if (!readOnly && get().viewer) return;
-  set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved" });
+  set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved", ...(readOnly ? { simBase: null, panel: get().panel === "simulate" ? "inspector" : get().panel } : {}) });
 }
 export function setSaveStatus(saveStatus: SaveStatus) {
   if (get().readOnly && saveStatus !== "readonly") return;

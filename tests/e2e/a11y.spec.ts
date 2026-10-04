@@ -32,6 +32,21 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+for (const theme of ["light", "dark"] as const) {
+  test(`accessibility (${theme}): Simulate with changes on the map`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem("fm-theme", t), theme);
+    // a private copy so the change never touches the seeded demo funnel
+    const { createFunnel } = await import("./helpers");
+    const { id } = await createFunnel({ template: "quiz" });
+    await page.goto(`/funnels/${id}`);
+    await page.getByRole("button", { name: "Simulate" }).click();
+    await page.getByLabel("Conversion rates").fill("0.8");
+    await page.getByLabel("Traffic", { exact: true }).fill("1.3");
+    await expect(page.locator(".fm-simchip").first()).toBeVisible();
+    await scan(page, `Simulate (${theme})`);
+  });
+}
+
 test.describe("accessibility (signed out)", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
   test("login", async ({ page }) => {

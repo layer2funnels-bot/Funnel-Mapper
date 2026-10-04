@@ -9,9 +9,9 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Check | Result |
 |---|---|
 | Typecheck, ESLint, `next build` | clean |
-| Unit (Vitest) | 194/194 (was 143) |
+| Unit (Vitest) | 204/204 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 103/103 (includes 16 `v2.spec.ts` tests: the V2 interactions plus the 4 finishing-pass tests) |
+| E2E (Playwright, prod build) | 108 tests: 107 passed in the full run; the one failure ("admin creates a workspace from the left menu", a Clients-page timing flake unrelated to the editor) passed alone and in 3 re-runs. Includes 19 `v2.spec.ts` tests (3 for Simulate) and 2 axe scans of Simulate (light, dark) |
 
 ## Built in this run (reused systems named)
 
@@ -77,7 +77,31 @@ Share V2 (View / Comment / Edit, numbers, notes, expiry, per-link permission, li
   (`assetsStatus`); `role="status"` on the existing Loading lines.
 - No change to `lib/funnel-math.ts`, the database or RLS. No migration was added or applied.
 
+## Batch E: the visual Simulate experience
+Simulate is a mode on the funnel canvas (stage bar **Simulate** button; on a phone, the ⋯ menu; also "Simulate on the map" at the top of Plan > What-if).
+It turns the existing assumptions into something you can watch change:
+
+- **How it stays one system.** Levers are the existing `settings.whatif` (traffic, conversion, price, traffic cost) and block edits are the same params the
+  inspector edits, so the live `R`, the KPI strip, Reports (Current map with what-if), exports and the PDF all see them. `lib/simulate.ts` only subtracts one
+  `FunnelResult` from another (the baseline run taken when Simulate started vs the live run). No formula was added to the UI or to a second engine;
+  `tests/unit/simulate.test.ts` checks every delta against `compute()` and keeps the golden funnel as the baseline.
+- **On the map.** Under each block that changed: people in (or visits) up or down, people lost at that step (+/-), and revenue; the block gets a green or red
+  outline and pulses once; the conversion bar gets a tick where the rate was before; each connection keeps a dashed ghost of its old weight, is coloured
+  by direction, and its label shows the change (`1,190 +190`). Line weight uses one scale for before and after, so thicker or thinner is a real change.
+  Everything animates (off with reduced motion) and is also available as text (chip `aria-label`, panel lists).
+- **KPI strip.** Traffic, Leads, Customers, Revenue, Profit, ROAS (and Ad spend, CPA under "+more") show their change under the number; ad spend is neutral, a lower CPA is good.
+- **Panel.** Sticky Revenue / Profit / ROAS with changes; the other totals; the biggest leak and whether it moved; the four levers (with the % each is
+  moved); try any saved scenario; **Change one block** (select a block: conversion or buy rate, price, discount, refund, spend, clicks/CPC/CPM, cost per
+  person, Yes/No share, with -10% / +10% and a slider for percentages, and before -> now); **What moved** (click to jump to the block); **Your block
+  changes** with a per-change undo; **Revert all** (levers + every block assumption, one undo step; layout and new blocks stay), **Use as new start**,
+  **Save levers as scenario** (scenarios hold the four levers; block changes stay on the map and the panel says so), **Done** (keep the map as it is).
+- **Where it is not.** Not on share links or view-only editors (locking the map ends Simulate); a presentation starts without the overlay; PNG/SVG/PDF export
+  the numbers as simulated, without the chips.
+- **Responsive.** >=1280 the panel is the right inspector; 1024-1279 it floats; tablet and phone use the details sheet and the map is fitted into the part left
+  visible. Light and dark checked, axe scan passes with Simulate active in both themes.
+- **Behaviour to know.** Lever and block edits are real edits (autosaved, undoable), the same as What-if before. The top-left "What-if" pill shows when levers are off neutral.
+
 ## Remaining
 Light-theme and 1536 / 1280 / 430 / 414 viewport pass for the new components; migrations (workspace_assets and the earlier pending ones) must be applied to the
 demo / production databases by the owner; `CAPTURE_URL_TEMPLATE` for automatic page screenshots; final Figma 169 library visuals (swap data in
-`lib/block-visuals.ts` and the `.fam-*` CSS only). Month-to-month Actual vs Plan is not in the PDF report yet.
+`lib/block-visuals.ts` and the `.fam-*` CSS only). Month-to-month Actual vs Plan and the Simulate deltas are not in the PDF report yet.

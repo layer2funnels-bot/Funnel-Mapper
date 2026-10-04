@@ -3821,3 +3821,354 @@ dialog.fm-sharedlg {
   padding: 4px 12px;
   font-size: 13px;
 }
+
+/* ---------- Simulate (lib/simulate.ts): baseline vs now, drawn on the map ---------- */
+:root {
+  --sim-up: #34d399;
+  --sim-down: #f87171;
+  --sim-up-bg: rgba(16, 185, 129, 0.16);
+  --sim-down-bg: rgba(248, 113, 113, 0.16);
+}
+:root[data-theme="light"] {
+  --sim-up: #047857;
+  --sim-down: #b91c1c;
+  --sim-up-bg: #d1fae5;
+  --sim-down-bg: #fee2e2;
+}
+.fm-simbtn[aria-pressed="true"] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+.fm-simbtn[aria-pressed="true"]:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+.fm-node.sim-up {
+  box-shadow: 0 0 0 2px var(--sim-up);
+}
+.fm-node.sim-down {
+  box-shadow: 0 0 0 2px var(--sim-down);
+}
+.fm-node.sim-up,
+.fm-node.sim-down {
+  animation: fm-simpulse 0.7s ease-out;
+}
+@keyframes fm-simpulse {
+  from {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+.fm-simchip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fm-simin 0.35s ease-out;
+}
+.fm-simchip span {
+  padding: 1px 7px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  border: 1px solid transparent;
+}
+.fm-simchip .good {
+  background: var(--sim-up-bg);
+  color: var(--sim-up);
+  border-color: var(--sim-up);
+}
+.fm-simchip .bad {
+  background: var(--sim-down-bg);
+  color: var(--sim-down);
+  border-color: var(--sim-down);
+}
+@keyframes fm-simin {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.fm-conv {
+  position: relative;
+}
+.fm-conv b.base {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  opacity: 0.85;
+}
+.fm-edge {
+  transition: stroke-width 0.35s ease;
+}
+.fm-edge.sim-up {
+  stroke: var(--sim-up);
+}
+.fm-edge.sim-down {
+  stroke: var(--sim-down);
+}
+.fm-edge-ghost {
+  fill: none;
+  stroke: var(--muted);
+  stroke-opacity: 0.6;
+  stroke-dasharray: 2 5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.fm-elabel .sd {
+  font-weight: 800;
+}
+.fm-elabel .sd.up {
+  color: var(--sim-up);
+}
+.fm-elabel .sd.down {
+  color: var(--sim-down);
+}
+/* delta chips (KPI strip, Simulate panel) */
+.fm-dchip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.fm-dchip.good {
+  color: var(--sim-up);
+}
+.fm-dchip.bad {
+  color: var(--sim-down);
+}
+.fm-dchip.neutral {
+  color: var(--ink);
+}
+.fm-kpis.sim .fm-kpi {
+  display: grid;
+  align-content: center;
+}
+/* the panel */
+.fm-sim {
+  display: grid;
+  gap: 4px;
+}
+.fm-sim-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fm-sim-head h3 {
+  margin: 0 0 2px;
+  color: var(--brand-light);
+  font-size: 17px;
+}
+.fm-sim-head .sub {
+  margin: 0;
+  font-size: 12.5px;
+}
+.fm-sim-sec {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.fm-sim-sec h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.fm-sim-tot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+.fm-sim-tot > div {
+  min-width: 0;
+}
+.fm-sim-tot dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.fm-sim-tot dd {
+  margin: 0;
+  display: grid;
+}
+.fm-sim-tot b {
+  font-family: var(--font-display);
+  font-size: 16px;
+  white-space: nowrap;
+}
+.fm-sim-tot .big b {
+  font-size: 20px;
+}
+.fm-sim-leak {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.fm-lever {
+  margin-bottom: 12px;
+}
+.fm-lever .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 600;
+}
+.fm-lever output {
+  font-weight: 700;
+}
+.fm-lever output small {
+  font-size: 11px;
+}
+.fm-lever output small.up {
+  color: var(--sim-up);
+}
+.fm-lever output small.down {
+  color: var(--sim-down);
+}
+.fm-lever input[type="range"],
+.fm-knob input[type="range"] {
+  width: 100%;
+  accent-color: var(--brand);
+}
+.fm-lever .help {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.fm-sim-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-sim-selname {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.fm-knob {
+  margin-bottom: 12px;
+}
+.fm-knob label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.fm-knob .row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px;
+}
+.fm-knob .was {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.fm-sim-movers,
+.fm-sim-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.fm-sim-movers button {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+}
+.fm-sim-movers button:hover {
+  border-color: var(--line);
+  background: var(--panel2);
+}
+.fm-sim-movers .nm {
+  font-weight: 600;
+  font-size: 13px;
+}
+.fm-sim-movers .d {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+.fm-sim-movers .pos {
+  color: var(--sim-up);
+}
+.fm-sim-movers .neg {
+  color: var(--sim-down);
+}
+.fm-sim-changes li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.fm-sim-actions .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.fm-sim-actions .row.save .input {
+  flex: 1;
+  min-width: 120px;
+}
+.fm-sim-key {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.fm-sim-key > div {
+  display: grid;
+  min-width: 0;
+}
+.fm-sim-key span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.fm-sim-key b {
+  font-family: var(--font-display);
+  font-size: 16px;
+  white-space: nowrap;
+}
+@media (min-width: 1024px) {
+  .fm-sim-sticky {
+    position: sticky;
+    top: -16px;
+    z-index: 2;
+    margin: -16px -18px 0;
+    padding: 16px 18px 0;
+    background: var(--panel2);
+  }
+  .fm-sim-key {
+    background: var(--panel2);
+  }
+}

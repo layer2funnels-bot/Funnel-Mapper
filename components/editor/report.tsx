@@ -6,7 +6,7 @@ import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows,
 import { healthChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
 import type { Expense, Scenario } from "@/lib/graph";
-import { nid, setSection, setSettings, setTab, useEditor, type ReportTab } from "@/lib/editor/store";
+import { nid, setSection, setSettings, setTab, startSim, useEditor, type ReportTab } from "@/lib/editor/store";
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
@@ -287,6 +287,11 @@ function WhatIfTab() {
   return (
     <fieldset disabled={ro} className="m-0 border-0 p-0">
       <p className="sub">Test changes without editing your map.</p>
+      {!ro && (
+        <button type="button" className="btn sm mb-3" onClick={startSim} title="Watch people, losses, revenue and ROAS change on the map">
+          <Icon name="sliders" size={14} /> Simulate on the map
+        </button>
+      )}
       <Slider label="Traffic" help="Scales every traffic source, including spend." value={num(w.traffic) || 1} min={0.25} max={5} onChange={set("traffic")} />
       <Slider label="Conversion rates" help="Scales every page, action and offer conversion rate." value={num(w.conv) || 1} min={0.5} max={2} onChange={set("conv")} />
       <Slider label="Prices" help="Scales every offer price, setup fee and trial price." value={num(w.price) || 1} min={0.5} max={2} onChange={set("price")} />

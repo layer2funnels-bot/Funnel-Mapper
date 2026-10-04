@@ -44,12 +44,13 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, type ReportSection } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
 import { PhoneActionBar } from "./phone-bar";
 import { SharedWidgets } from "./widget-node";
+import { SimulatePanel } from "./simulate";
 import { loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
@@ -120,6 +121,10 @@ function EditorInner(props: EditorProps) {
   const [showSide, setShowSide] = useState(false);
   const [showInsp, setShowInsp] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  // a presentation shows the map as it is, without the Simulate overlay
+  useEffect(() => {
+    if (presenting) stopSim();
+  }, [presenting]);
   const [status, setStatus] = useState(funnel.status);
   const [commentCount, setCommentCount] = useState(props.unresolvedComments ?? 0);
   const helpRef = useRef<HTMLDialogElement>(null);
@@ -192,6 +197,14 @@ function EditorInner(props: EditorProps) {
 
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
+  const simOn = useEditor((s) => !!s.simBase);
+  const toggleSim = () => {
+    if (simOn) return stopSim();
+    startSim();
+    setMode("map");
+    setShowInsp(true);
+    togglePanel("insp", false);
+  };
   const togglePanel = (which: "side" | "insp", value?: boolean) => setOpt(which === "side" ? "hideSide" : "hideInsp", value ?? !collapsed[which]);
 
   useEffect(() => {
@@ -478,6 +491,31 @@ function EditorInner(props: EditorProps) {
           if (b > freeH - 12) dy = freeH - 12 - b;
           if (t + dy < 12) dy = 12 - t;
           if (dx || dy) rf.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }, { duration: 250 });
+        });
+      }),
+    [rf],
+  );
+
+  // Simulate on a narrower screen: the panel covers part of the map, so fit the whole funnel into the part that stays visible
+  useEffect(
+    () =>
+      useEditor.subscribe((st, prev) => {
+        if (!st.simBase || prev.simBase) return;
+        const w = window.innerWidth;
+        if (w >= 1280) return;
+        requestAnimationFrame(() => {
+          const stage = document.querySelector(".fm-stage")?.getBoundingClientRect();
+          const flow = st.nodes.filter((n) => !isAnnot(n.type));
+          if (!stage || !flow.length) return;
+          const l = Math.min(...flow.map((n) => n.x)),
+            r = Math.max(...flow.map((n) => n.x + widthOf(n))),
+            t = Math.min(...flow.map((n) => n.y)),
+            b = Math.max(...flow.map((n) => n.y + heightOf(n)));
+          const freeW = w >= 1024 ? stage.width - 340 : stage.width,
+            freeH = w >= 1024 ? stage.height : stage.height * 0.5 - 8;
+          const pad = 56;
+          const zoom = Math.max(0.1, Math.min(1, (freeW - pad) / (r - l), (freeH - pad - 40) / (b - t)));
+          rf.setViewport({ zoom, x: (freeW - (r - l) * zoom) / 2 - l * zoom, y: 52 + (freeH - 52 - (b - t) * zoom) / 2 - t * zoom }, { duration: 300 });
         });
       }),
     [rf],
@@ -857,6 +895,11 @@ function EditorInner(props: EditorProps) {
                       </>
                     )}
                   </div>
+                  {canEdit && !readOnly && hasNodes && (
+                    <button type="button" role="menuitem" className="fm-phone-only" onClick={() => (close(), toggleSim())}>
+                      {simOn ? "Stop simulating" : "Simulate…"}
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => (close(), setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
                     Client comments{commentCount > 0 ? ` (${commentCount})` : ""}
                   </button>
@@ -930,6 +973,11 @@ function EditorInner(props: EditorProps) {
             )}
             <ViewSwitch />
             <LayersMenu />
+            {!readOnly && !sharedView && hasNodes && (
+              <button type="button" className="btn fm-simbtn fm-hide-phone" aria-pressed={simOn} onClick={toggleSim} title="Simulate: change assumptions and watch the funnel update">
+                <Icon name="sliders" size={15} /> Simulate
+              </button>
+            )}
           </div>
         )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
@@ -986,7 +1034,9 @@ function EditorInner(props: EditorProps) {
             <Icon name="close" />
           </button>
         </div>
-        {panel === "notes" && (owner || notesShared) ? (
+        {panel === "simulate" && simOn ? (
+          <SimulatePanel />
+        ) : panel === "notes" && (owner || notesShared) ? (
           <CanvasNotes />
         ) : owner && panel === "versions" ? (
           <VersionsPanel onSaved={manage ? uploadThumbnail : undefined} />

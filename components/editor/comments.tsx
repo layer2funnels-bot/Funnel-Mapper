@@ -1,8 +1,8 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
-import { timeAgo } from "@/lib/format";
 import type { ShareCommentRow } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { selectNodes, setPanel, useEditor } from "@/lib/editor/store";
@@ -48,7 +48,7 @@ export function CommentsPanel({ onCount }: { onCount?: (n: number) => void }) {
             return (
               <li key={c.id} className={`mb-2 rounded-xl border border-line p-3 ${c.resolved ? "opacity-60" : ""}`}>
                 <div className="mb-1 flex items-center gap-2 text-xs text-muted">
-                  <b className="text-ink">{c.author_name || "Anonymous"}</b> · {timeAgo(c.created_at)}
+                  <b className="text-ink">{c.author_name || "Anonymous"}</b> · <TimeAgo iso={c.created_at} />
                 </div>
                 {node && (
                   <button

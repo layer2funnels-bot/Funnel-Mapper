@@ -1,7 +1,8 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
-import { fmtDate, timeAgo } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import type { VersionRow } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -87,7 +88,7 @@ export function VersionsPanel({ onSaved }: { onSaved?: () => void }) {
                 <div className="text-xs text-muted">
                   {v.auto ? "Automatic · " : ""}
                   <time dateTime={v.created_at} title={new Date(v.created_at).toLocaleString()}>
-                    {timeAgo(v.created_at)}
+                    <TimeAgo iso={v.created_at} />
                   </time>
                 </div>
               </div>

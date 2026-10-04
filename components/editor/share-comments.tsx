@@ -1,6 +1,6 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import { useState } from "react";
-import { timeAgo } from "@/lib/format";
 import { useEditor } from "@/lib/editor/store";
 import type { ShareCommentLite } from "./editor";
 
@@ -62,7 +62,7 @@ export function ShareComments({ token, initial }: { token: string; initial: Shar
         {list.map((c) => (
           <li key={c.id} className="mb-2 rounded-xl border border-line p-3 text-sm">
             <div className="mb-1 text-xs text-muted">
-              <b className="text-ink">{c.author_name || "Anonymous"}</b> · {timeAgo(c.created_at)}
+              <b className="text-ink">{c.author_name || "Anonymous"}</b> · <TimeAgo iso={c.created_at} />
               {c.node_id && <> · on “{nodes.find((n) => n.id === c.node_id)?.name ?? "a removed step"}”</>}
             </div>
             <p className="m-0 whitespace-pre-wrap">{c.body}</p>

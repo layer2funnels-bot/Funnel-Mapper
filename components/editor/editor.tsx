@@ -905,10 +905,10 @@ function EditorInner(props: EditorProps) {
                   <button type="button" role="menuitem" onClick={() => (close(), setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
                     Client comments{commentCount > 0 ? ` (${commentCount})` : ""}
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
+                  <button type="button" role="menuitem" className="fm-hide-phone" onClick={() => (close(), setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
                     Version history
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), setPresenting(true))} disabled={!hasNodes}>
+                  <button type="button" role="menuitem" className="fm-hide-phone" onClick={() => (close(), setPresenting(true))} disabled={!hasNodes}>
                     Present
                   </button>
                   {manage && (

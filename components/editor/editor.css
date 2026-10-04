@@ -2382,7 +2382,8 @@ button.link {
     padding: 10px 16px;
   }
   .fm-rnav h2,
-  .fm-rnav ul {
+  .fm-rnav ul,
+  .fm-rnav .fm-rgroup {
     display: none;
   }
   .fm-rnav-sel {

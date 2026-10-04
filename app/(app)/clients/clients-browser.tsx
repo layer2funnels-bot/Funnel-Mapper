@@ -1,9 +1,9 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
-import { timeAgo } from "@/lib/format";
 import { PRICING_LABEL, PRICING_MODELS, pricingModel, pricingShort, pricingSummary, pricingValue } from "@/lib/pricing";
 import { CLIENT_STATUSES, STATUS_LABEL, type ClientRow } from "@/lib/schemas";
 
@@ -11,15 +11,17 @@ export type ClientListItem = ClientRow & { funnels: number; liveFunnels: number 
 type Sort = "updated" | "name" | "value" | "created" | "funnels";
 
 function useViewPref() {
-  const [view, setView] = useState<"cards" | "table">(() => {
-    // V2: the table is the default; the choice is remembered per device
-    if (typeof window === "undefined") return "table";
+  // The server and the first browser render both use the table (a different first render is a hydration error); the saved choice,
+  // or cards on a phone where a wide table does not fit, is applied right after.
+  const [view, setView] = useState<"cards" | "table">("table");
+  useEffect(() => {
     try {
-      return (localStorage.getItem("fm-clients-view") as "cards" | "table") || "table";
-    } catch {
-      return "table";
-    }
-  });
+      const saved = localStorage.getItem("fm-clients-view");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the device's saved preference
+      if (saved === "cards" || saved === "table") setView(saved);
+      else if (window.matchMedia("(max-width: 767px)").matches) setView("cards");
+    } catch {}
+  }, []);
   const set = (v: "cards" | "table") => {
     setView(v);
     try {
@@ -173,7 +175,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
                   </div>
                 )}
                 <div className="mt-auto text-xs text-muted">
-                  {c.niche && <>{c.niche} · </>}Updated {timeAgo(c.updated_at)}
+                  {c.niche && <>{c.niche} · </>}Updated <TimeAgo iso={c.updated_at} />
                 </div>
               </Link>
             </li>
@@ -216,7 +218,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
                   <td className="r" title={pricingSummary(c, c.currency) || undefined}>
                     {pricingShort(c, c.currency)}
                   </td>
-                  <td className="r pr-4 text-muted">{timeAgo(c.updated_at)}</td>
+                  <td className="r pr-4 text-muted"><TimeAgo iso={c.updated_at} /></td>
                 </tr>
               ))}
             </tbody>

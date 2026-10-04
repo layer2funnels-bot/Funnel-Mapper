@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { builtinTemplate } from "../../lib/templates";
-import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
+import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -420,5 +420,48 @@ test.describe("V2 Simulate", () => {
     await page.getByRole("button", { name: "View", exact: true }).click();
     await page.getByLabel("View only (lock editing)").check();
     await expect(page.getByRole("button", { name: "Simulate" })).toHaveCount(0);
+  });
+});
+
+test.describe("V2 QA regressions", () => {
+  test("list pages hydrate without React errors and keep the saved light theme", async ({ page }) => {
+    await page.goto("/templates");
+    await page.evaluate(() => localStorage.setItem("fm-theme", "light"));
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message.slice(0, 120)));
+    // several loads each: the old "17 min ago" text could differ between server and browser and re-render the whole page
+    for (const url of ["/", "/funnels", "/clients", `/clients/${DEMO_CLIENT}`, "/funnels", `/clients/${DEMO_CLIENT}`, "/funnels"]) {
+      await page.goto(url);
+      await page.waitForTimeout(1200);
+      expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), `${url} keeps the light theme`).toBe("light");
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test("a share link shows the numbers views a client can use, but never the team's Actuals", async ({ browser }) => {
+    const { id, sb } = await createFunnel({ template: "quiz" });
+    const link = await sb.from("share_links").insert({ funnel_id: id }).select("token").single();
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const p = await ctx.newPage();
+    await p.goto(`/s/${link.data!.token}`);
+    await expect(p.locator(".react-flow__node").first()).toBeVisible();
+    await expect(p.getByRole("tab", { name: "Forecast" })).toBeVisible();
+    await expect(p.getByRole("tab", { name: "Actuals" })).toHaveCount(0);
+    await ctx.close();
+  });
+
+  test("phone overflow menu lists each action once and the clients list defaults to cards", async ({ browser }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 430, height: 932 } });
+    const p = await ctx.newPage();
+    await p.goto(`/funnels/${id}`);
+    await expect(p.locator(".fm-editor")).toBeVisible();
+    await p.getByRole("button", { name: "More" }).click();
+    for (const name of ["Present", "Version history", "Simulate…", "Tidy up"]) await expect(p.getByRole("menuitem", { name, exact: true }), name).toHaveCount(1);
+    await p.keyboard.press("Escape");
+    // a wide table does not fit a phone: cards unless the person chose otherwise
+    await p.goto("/clients");
+    await expect(p.getByRole("button", { name: "Card view" })).toHaveAttribute("aria-pressed", "true");
+    await ctx.close();
   });
 });

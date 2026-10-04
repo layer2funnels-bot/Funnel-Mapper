@@ -40,11 +40,14 @@ const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
 
 export function Report() {
   const tab = useEditor((s) => s.tab);
+  // Planned vs actual numbers belong to the team: a share link never shows (or fetches) them
+  const shared = useEditor((s) => s.shared);
+  const groups = shared ? GROUPS.map((g) => ({ ...g, tabs: g.tabs.filter(([k]) => k !== "actuals") })).filter((g) => g.tabs.length) : GROUPS;
   return (
     <>
       <h3 className="fm-scope">Funnel</h3>
       <div className="fm-groups" role="tablist" aria-label="Funnel tools">
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <div className="fm-group" key={g.name}>
             <span className="gname" aria-hidden="true">
               {g.name}
@@ -67,7 +70,7 @@ export function Report() {
         {tab === "costs" && <CostsTab />}
         {tab === "scenarios" && <ScenariosTab />}
         {tab === "forecast" && <ForecastTab />}
-        {tab === "actuals" && <Actuals />}
+        {tab === "actuals" && !shared && <Actuals />}
       </div>
     </>
   );

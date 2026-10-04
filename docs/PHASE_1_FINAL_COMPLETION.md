@@ -101,7 +101,22 @@ It turns the existing assumptions into something you can watch change:
   visible. Light and dark checked, axe scan passes with Simulate active in both themes.
 - **Behaviour to know.** Lever and block edits are real edits (autosaved, undoable), the same as What-if before. The top-left "What-if" pill shows when levers are off neutral.
 
+## Final QA sweep (Batches F to J)
+A screenshot sweep of Home, Clients, Client, Funnels, Templates, Settings, the editor, Reports (Overview, Month-to-month), the Share dialog and the Shared view at
+1536, 1280, 430 and 414, dark and light (88 images, reviewed as contact sheets), plus presentation at 1280 and 430. Defects found and fixed:
+
+- **Hydration error on Funnels and Client pages (real bug).** "17 min ago" text was computed on the server and again in the browser; across a minute boundary
+  React threw #418 and re-rendered the whole page, which also dropped the saved light theme (the page flipped to dark). `components/time-ago.tsx`
+  (`suppressHydrationWarning`) now renders every relative time; the Clients view preference is read after mount instead of in the first render.
+  Regression test: seven page loads, no React errors, light theme kept.
+- **Share links no longer show the Actuals tab** (the team's real numbers are not fetched for a link, and the tab was an empty stub).
+- **Phone:** Funnels list shows Funnel (client and status under the name), Revenue and a compact Health; Clients defaults to cards; Reports section picker no longer
+  prints three empty group headings; the overflow menu no longer lists Present and Version history twice; helper text in the Share dialog uses the small help size.
+- **Map zoom:** the minimum zoom is 0.08 (was 0.2) so Fit can show a wide funnel on a phone.
+- **PDF:** a new "Actual vs plan by month" page (two charts and a table) printed from the same `monthlyPlanVsActual` rows as Reports; left out without actuals or when numbers are hidden.
+- Not changed: Source cards repeat "visits · free" in the stats row in Performance view (the family anatomy always keeps that row).
+
 ## Remaining
 Light-theme and 1536 / 1280 / 430 / 414 viewport pass for the new components; migrations (workspace_assets and the earlier pending ones) must be applied to the
 demo / production databases by the owner; `CAPTURE_URL_TEMPLATE` for automatic page screenshots; final Figma 169 library visuals (swap data in
-`lib/block-visuals.ts` and the `.fam-*` CSS only). Month-to-month Actual vs Plan and the Simulate deltas are not in the PDF report yet.
+`lib/block-visuals.ts` and the `.fam-*` CSS only). The Simulate deltas are not in the PDF (the PDF is a client report of one snapshot).

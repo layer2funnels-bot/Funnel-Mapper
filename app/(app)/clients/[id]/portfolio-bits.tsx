@@ -1,4 +1,5 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { GraphThumb } from "@/components/graph-thumb";
@@ -6,7 +7,7 @@ import { Icon } from "@/components/icon";
 import { LogoUpload } from "@/components/logo-upload";
 import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
-import { money, ratio, timeAgo } from "@/lib/format";
+import { money, ratio } from "@/lib/format";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { archiveClientAction, deleteClientAction, deleteFunnelAction, duplicateFunnelAction, setFunnelStatusAction, updateClientFields } from "../../actions";
 
@@ -145,7 +146,7 @@ function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string;
           </div>
         </dl>
         <div className="mt-auto flex flex-wrap items-center gap-2">
-          <span className="mr-auto text-xs text-muted">Updated {timeAgo(f.updated_at)}</span>
+          <span className="mr-auto text-xs text-muted">Updated <TimeAgo iso={f.updated_at} /></span>
           <Link href={`/funnels/${f.id}?view=reports`} className="btn sm" aria-label={`Reports for ${f.name}`} title="Reports">
             <Icon name="chart" size={16} />
             <span className="sr-only md:not-sr-only">Reports</span>

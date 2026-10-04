@@ -173,7 +173,7 @@ export function Canvas() {
       const box = (document.querySelector(".fm-stage") as HTMLElement | null)?.getBoundingClientRect();
       if (!box) return;
       const at = rf.screenToFlowPosition({ x: pt.clientX, y: pt.clientY });
-      openQuickAdd({ sx: Math.max(8, Math.min(box.width - 308, pt.clientX - box.left + 14)), sy: Math.max(8, Math.min(box.height - 400, pt.clientY - box.top - 20)), fx: at.x, fy: at.y, from: { id: state.fromNode.id, port } });
+      openQuickAdd({ sx: pt.clientX - box.left, sy: pt.clientY - box.top, fx: at.x, fy: at.y, from: { id: state.fromNode.id, port } });
     },
     [rf],
   );

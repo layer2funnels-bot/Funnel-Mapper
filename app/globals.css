@@ -253,7 +253,8 @@ button {
     font-size: 13px;
     font-weight: 700;
   }
-  .field .help {
+  .field .help,
+  p.help {
     font-size: 12px;
     color: var(--muted);
     line-height: 16px;
@@ -616,7 +617,8 @@ button {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.fm-c-client2 {
+.fm-c-client2,
+.fm-c-st2 {
   display: none;
 }
 @media (max-width: 1439px) {
@@ -633,6 +635,28 @@ button {
   }
   .fm-funnels .fm-c-client2 {
     display: block;
+  }
+}
+@media (max-width: 639px) {
+  /* a phone shows Funnel (with client and status under the name), Revenue and Health */
+  .fm-funnels .fm-c-status {
+    display: none;
+  }
+  /* icon + count only; the words stay available to screen readers */
+  .fm-funnels .fm-hp-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .fm-funnels .fm-health-pill {
+    position: relative;
+  }
+  .fm-funnels .fm-c-st2 {
+    display: inline;
+    text-transform: capitalize;
   }
 }
 

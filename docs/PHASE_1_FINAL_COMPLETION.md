@@ -9,9 +9,9 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Check | Result |
 |---|---|
 | Typecheck, ESLint, `next build` | clean |
-| Unit (Vitest) | 194/194 (was 143) |
+| Unit (Vitest) | 204/204 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 103/103 (includes 16 `v2.spec.ts` tests: the V2 interactions plus the 4 finishing-pass tests) |
+| E2E (Playwright, prod build) | 112/112 (includes 23 `v2.spec.ts` tests: 3 Simulate, 5 QA regressions; 2 axe scans of Simulate; the PDF Actual-vs-Plan page in `exports.spec.ts`) |
 
 ## Built in this run (reused systems named)
 
@@ -77,7 +77,46 @@ Share V2 (View / Comment / Edit, numbers, notes, expiry, per-link permission, li
   (`assetsStatus`); `role="status"` on the existing Loading lines.
 - No change to `lib/funnel-math.ts`, the database or RLS. No migration was added or applied.
 
+## Batch E: the visual Simulate experience
+Simulate is a mode on the funnel canvas (stage bar **Simulate** button; on a phone, the ⋯ menu; also "Simulate on the map" at the top of Plan > What-if).
+It turns the existing assumptions into something you can watch change:
+
+- **How it stays one system.** Levers are the existing `settings.whatif` (traffic, conversion, price, traffic cost) and block edits are the same params the
+  inspector edits, so the live `R`, the KPI strip, Reports (Current map with what-if), exports and the PDF all see them. `lib/simulate.ts` only subtracts one
+  `FunnelResult` from another (the baseline run taken when Simulate started vs the live run). No formula was added to the UI or to a second engine;
+  `tests/unit/simulate.test.ts` checks every delta against `compute()` and keeps the golden funnel as the baseline.
+- **On the map.** Under each block that changed: people in (or visits) up or down, people lost at that step (+/-), and revenue; the block gets a green or red
+  outline and pulses once; the conversion bar gets a tick where the rate was before; each connection keeps a dashed ghost of its old weight, is coloured
+  by direction, and its label shows the change (`1,190 +190`). Line weight uses one scale for before and after, so thicker or thinner is a real change.
+  Everything animates (off with reduced motion) and is also available as text (chip `aria-label`, panel lists).
+- **KPI strip.** Traffic, Leads, Customers, Revenue, Profit, ROAS (and Ad spend, CPA under "+more") show their change under the number; ad spend is neutral, a lower CPA is good.
+- **Panel.** Sticky Revenue / Profit / ROAS with changes; the other totals; the biggest leak and whether it moved; the four levers (with the % each is
+  moved); try any saved scenario; **Change one block** (select a block: conversion or buy rate, price, discount, refund, spend, clicks/CPC/CPM, cost per
+  person, Yes/No share, with -10% / +10% and a slider for percentages, and before -> now); **What moved** (click to jump to the block); **Your block
+  changes** with a per-change undo; **Revert all** (levers + every block assumption, one undo step; layout and new blocks stay), **Use as new start**,
+  **Save levers as scenario** (scenarios hold the four levers; block changes stay on the map and the panel says so), **Done** (keep the map as it is).
+- **Where it is not.** Not on share links or view-only editors (locking the map ends Simulate); a presentation starts without the overlay; PNG/SVG/PDF export
+  the numbers as simulated, without the chips.
+- **Responsive.** >=1280 the panel is the right inspector; 1024-1279 it floats; tablet and phone use the details sheet and the map is fitted into the part left
+  visible. Light and dark checked, axe scan passes with Simulate active in both themes.
+- **Behaviour to know.** Lever and block edits are real edits (autosaved, undoable), the same as What-if before. The top-left "What-if" pill shows when levers are off neutral.
+
+## Final QA sweep (Batches F to J)
+A screenshot sweep of Home, Clients, Client, Funnels, Templates, Settings, the editor, Reports (Overview, Month-to-month), the Share dialog and the Shared view at
+1536, 1280, 430 and 414, dark and light (88 images, reviewed as contact sheets), plus presentation at 1280 and 430. Defects found and fixed:
+
+- **Hydration error on Funnels and Client pages (real bug).** "17 min ago" text was computed on the server and again in the browser; across a minute boundary
+  React threw #418 and re-rendered the whole page, which also dropped the saved light theme (the page flipped to dark). `components/time-ago.tsx`
+  (`suppressHydrationWarning`) now renders every relative time; the Clients view preference is read after mount instead of in the first render.
+  Regression test: seven page loads, no React errors, light theme kept.
+- **Share links no longer show the Actuals tab** (the team's real numbers are not fetched for a link, and the tab was an empty stub).
+- **Phone:** Funnels list shows Funnel (client and status under the name), Revenue and a compact Health; Clients defaults to cards; Reports section picker no longer
+  prints three empty group headings; the overflow menu no longer lists Present and Version history twice; helper text in the Share dialog uses the small help size.
+- **Map zoom:** the minimum zoom is 0.08 (was 0.2) so Fit can show a wide funnel on a phone.
+- **PDF:** a new "Actual vs plan by month" page (two charts and a table) printed from the same `monthlyPlanVsActual` rows as Reports; left out without actuals or when numbers are hidden.
+- Not changed: Source cards repeat "visits · free" in the stats row in Performance view (the family anatomy always keeps that row).
+
 ## Remaining
 Light-theme and 1536 / 1280 / 430 / 414 viewport pass for the new components; migrations (workspace_assets and the earlier pending ones) must be applied to the
 demo / production databases by the owner; `CAPTURE_URL_TEMPLATE` for automatic page screenshots; final Figma 169 library visuals (swap data in
-`lib/block-visuals.ts` and the `.fam-*` CSS only). Month-to-month Actual vs Plan is not in the PDF report yet.
+`lib/block-visuals.ts` and the `.fam-*` CSS only). The Simulate deltas are not in the PDF (the PDF is a client report of one snapshot).

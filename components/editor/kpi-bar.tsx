@@ -6,6 +6,8 @@ import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio } from "@/lib/format";
 import { healthChecks } from "@/lib/health";
 import { setTab, clearSelection, useEditor } from "@/lib/editor/store";
+import { totalsDelta } from "@/lib/simulate";
+import { DeltaChip } from "./simulate";
 
 /** Popover above the strip; closes on outside click and Escape. */
 function Pop({ label, button, children, wide }: { label: string; button: (open: boolean) => React.ReactNode; children: (close: () => void) => React.ReactNode; wide?: boolean }) {
@@ -47,6 +49,11 @@ export function KpiBar() {
   const warnIds = useEditor((s) => s.warnIds);
   const shared = useEditor((s) => s.shared);
   const focus = useFocusBlock();
+  const simBase = useEditor((s) => s.simBase);
+  const sim = simBase ? Object.fromEntries(totalsDelta(R, simBase.R).map((t) => [t.key, t])) : null;
+  // KPI label -> the simulate total it is compared with
+  const SIMKEY: Record<string, "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa"> = { Traffic: "traffic", Leads: "leads", Customers: "cust", "Revenue (first pay)": "rev", "Revenue (lifetime)": "rev", Profit: "profit", ROAS: "roas", "Ad spend": "spend", CPA: "cpa" };
+  const chip = (label: string) => (sim && SIMKEY[label] ? <DeltaChip t={sim[SIMKEY[label]]} cur={cur} compact /> : null);
   // checks are for the team, not for clients viewing a share link
   const checks = shared ? [] : healthChecks({ nodes, edges });
   const hasTraffic = nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label");
@@ -85,7 +92,7 @@ export function KpiBar() {
   const rest = rule === "all" ? [] : all.filter(([k]) => !rule.includes(k));
   const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
-    <footer className="fm-kpis" aria-label="Funnel numbers" tabIndex={0}>
+    <footer className={`fm-kpis${sim ? " sim" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
         <Pop
           label="Funnel checks"
@@ -154,6 +161,7 @@ export function KpiBar() {
         <div className="fm-kpi" key={a}>
           <div>{a}</div>
           <b>{b}</b>
+          {chip(a)}
         </div>
       ))}
       {rest.length > 0 && (
@@ -171,7 +179,9 @@ export function KpiBar() {
               {rest.map(([a, b]) => (
                 <div key={a}>
                   <dt>{a}</dt>
-                  <dd>{b}</dd>
+                  <dd>
+                    {b} {chip(a)}
+                  </dd>
                 </div>
               ))}
             </dl>

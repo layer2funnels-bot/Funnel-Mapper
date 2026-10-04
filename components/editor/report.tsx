@@ -6,7 +6,7 @@ import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows,
 import { healthChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
 import type { Expense, Scenario } from "@/lib/graph";
-import { nid, setSection, setSettings, setTab, useEditor, type ReportTab } from "@/lib/editor/store";
+import { nid, setSection, setSettings, setTab, startSim, useEditor, type ReportTab } from "@/lib/editor/store";
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
@@ -40,11 +40,14 @@ const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
 
 export function Report() {
   const tab = useEditor((s) => s.tab);
+  // Planned vs actual numbers belong to the team: a share link never shows (or fetches) them
+  const shared = useEditor((s) => s.shared);
+  const groups = shared ? GROUPS.map((g) => ({ ...g, tabs: g.tabs.filter(([k]) => k !== "actuals") })).filter((g) => g.tabs.length) : GROUPS;
   return (
     <>
       <h3 className="fm-scope">Funnel</h3>
       <div className="fm-groups" role="tablist" aria-label="Funnel tools">
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <div className="fm-group" key={g.name}>
             <span className="gname" aria-hidden="true">
               {g.name}
@@ -67,7 +70,7 @@ export function Report() {
         {tab === "costs" && <CostsTab />}
         {tab === "scenarios" && <ScenariosTab />}
         {tab === "forecast" && <ForecastTab />}
-        {tab === "actuals" && <Actuals />}
+        {tab === "actuals" && !shared && <Actuals />}
       </div>
     </>
   );
@@ -287,6 +290,11 @@ function WhatIfTab() {
   return (
     <fieldset disabled={ro} className="m-0 border-0 p-0">
       <p className="sub">Test changes without editing your map.</p>
+      {!ro && (
+        <button type="button" className="btn sm mb-3" onClick={startSim} title="Watch people, losses, revenue and ROAS change on the map">
+          <Icon name="sliders" size={14} /> Simulate on the map
+        </button>
+      )}
       <Slider label="Traffic" help="Scales every traffic source, including spend." value={num(w.traffic) || 1} min={0.25} max={5} onChange={set("traffic")} />
       <Slider label="Conversion rates" help="Scales every page, action and offer conversion rate." value={num(w.conv) || 1} min={0.5} max={2} onChange={set("conv")} />
       <Slider label="Prices" help="Scales every offer price, setup fee and trial price." value={num(w.price) || 1} min={0.5} max={2} onChange={set("price")} />

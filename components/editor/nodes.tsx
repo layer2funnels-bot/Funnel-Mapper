@@ -5,6 +5,8 @@ import { Icon } from "@/components/icon";
 import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
 import { brandMarkOf } from "@/lib/brand-marks";
+import { stepDelta } from "@/lib/simulate";
+import { SimChip } from "./simulate";
 import { BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
@@ -122,6 +124,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const outOfStage = useEditor((s) => !!s.stageIds && !s.stageIds.includes(id));
   const period = useEditor((s) => s.opts.period);
   const shared = useEditor((s) => s.shared);
+  const simBase = useEditor((s) => s.simBase);
   if (!n) return null;
   const T = typeOf(n.type);
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
@@ -133,10 +136,13 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const stats = nodeStats(n, R, cur, k);
   const pl = perf ? perfLine(n, R, cur, k) : null;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
+  // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
+  const sd = simBase && perf && !spot && !outOfStage && !shared ? stepDelta(n, R, simBase.R) : null;
+  const tone = sd?.changed ? (sd.dRev ? (sd.dRev > 0 ? "up" : "down") : sd.dOut ? (sd.dOut > 0 ? "up" : "down") : null) : null;
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
-  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
+  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", tone && `sim-${tone}`, n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
   const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
@@ -169,6 +175,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       {pl && pl.ratio != null && (
         <div className="fm-conv" aria-hidden="true">
           <i style={{ width: `${pl.ratio * 100}%` }} />
+          {sd?.changed && sd.was?.ratio != null && <b className="base" style={{ left: `${sd.was.ratio * 100}%` }} />}
         </div>
       )}
       {V.family === "goal" && <GoalBar n={n} />}
@@ -189,6 +196,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           </span>
         )}
       </div>
+      {sd && <SimChip d={sd} k={k} cur={cur} source={T.cat === "traffic"} />}
       {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
       {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
       {labels && (

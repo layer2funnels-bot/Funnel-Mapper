@@ -3,6 +3,7 @@ import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo } from "react";
 import { money, nf } from "@/lib/format";
 import { num, periodFactor } from "@/lib/funnel-math";
+import { edgeDelta } from "@/lib/simulate";
 import { edgeConversion, edgePath, edgeRevenue, edgeTag } from "@/lib/editor/labels";
 import { selectEdge, useEditor } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
@@ -13,14 +14,19 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const flow0 = useEditor((s) => s.R.flows[id] ?? 0);
   const k = useEditor((s) => periodFactor(s.opts.period));
   const flow = flow0 * k;
-  const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows)));
+  const simBase = useEditor((s) => s.simBase);
+  // while simulating, line weight is on one scale for "now" and "before", so a thicker or thinner line is a real change
+  const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows), ...(s.simBase ? Object.values(s.simBase.R.flows) : [])));
   const thick = useEditor((s) => s.opts.thick);
   const cur = useEditor((s) => s.settings.currency);
   const R = useEditor((s) => s.R);
   const port = data?.port ?? "main";
   const look = edgeLook(data?.s);
   const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY);
-  const w = look.width ?? (thick ? 2 + 6 * Math.sqrt(flow0 / maxF) : 2);
+  const wOf = (f: number) => look.width ?? (thick ? 2 + 6 * Math.sqrt(f / maxF) : 2);
+  const w = wOf(flow0);
+  const ed = simBase && thick ? edgeDelta(id, R, simBase.R) : null;
+  const moved = ed && ed.was != null && ed.delta !== 0 ? (ed.delta > 0 ? "up" : "down") : null;
   const tag = edgeTag(data?.fromType, port);
   const share = num(data?.share ?? 100);
   const marker = look.arrow !== "none" ? `fm-arrow-${id}` : null;
@@ -34,8 +40,9 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
           </marker>
         </defs>
       )}
+      {moved && ed && <path className="fm-edge-ghost" d={d} style={{ strokeWidth: wOf(ed.was!) + 3 }} aria-hidden="true" />}
       <path
-        className={`fm-edge${port === "alt" ? " alt" : ""}${selected ? " sel" : ""}${look.kind !== "flow" ? ` ${look.kind}` : ""}`}
+        className={`fm-edge${port === "alt" ? " alt" : ""}${selected ? " sel" : ""}${look.kind !== "flow" ? ` ${look.kind}` : ""}${moved ? ` sim-${moved}` : ""}`}
         d={d}
         style={style}
         markerEnd={marker ? `url(#${marker})` : undefined}
@@ -60,6 +67,13 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
             <span className="n">
               {nf(flow)}
               {share !== 100 ? ` · ${nf(share)}%` : ""}
+              {moved && ed && (
+                <span className={`sd ${moved}`}>
+                  {" "}
+                  {ed.delta > 0 ? "+" : "−"}
+                  {nf(Math.abs(ed.delta) * k)}
+                </span>
+              )}
             </span>
           )}
           {look.kind !== "nodata" && look.showPct && data?.from && edgeConversion(data.from, flow0, R) != null && <span className="n pct"> · {nf(edgeConversion(data.from, flow0, R)! * 100, 1)}% convert</span>}

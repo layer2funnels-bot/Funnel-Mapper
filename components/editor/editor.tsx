@@ -9,7 +9,7 @@ import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelSettings } from "@/lib/graph";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
-import { reportData } from "@/lib/report-data";
+import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { elkLayout, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -44,13 +44,14 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, type ReportSection } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
 import { PhoneActionBar } from "./phone-bar";
 import { SharedWidgets } from "./widget-node";
-import { loadAssets } from "./assets";
+import { SimulatePanel } from "./simulate";
+import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
@@ -120,6 +121,10 @@ function EditorInner(props: EditorProps) {
   const [showSide, setShowSide] = useState(false);
   const [showInsp, setShowInsp] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  // a presentation shows the map as it is, without the Simulate overlay
+  useEffect(() => {
+    if (presenting) stopSim();
+  }, [presenting]);
   const [status, setStatus] = useState(funnel.status);
   const [commentCount, setCommentCount] = useState(props.unresolvedComments ?? 0);
   const helpRef = useRef<HTMLDialogElement>(null);
@@ -192,6 +197,14 @@ function EditorInner(props: EditorProps) {
 
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
+  const simOn = useEditor((s) => !!s.simBase);
+  const toggleSim = () => {
+    if (simOn) return stopSim();
+    startSim();
+    setMode("map");
+    setShowInsp(true);
+    togglePanel("insp", false);
+  };
   const togglePanel = (which: "side" | "insp", value?: boolean) => setOpt(which === "side" ? "hideSide" : "hideInsp", value ?? !collapsed[which]);
 
   useEffect(() => {
@@ -277,7 +290,9 @@ function EditorInner(props: EditorProps) {
         if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }));
         if (kind === "pdf") {
           showToast("Building PDF…");
-          const blob = await pdfReport(g, s.R, { funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
+          if (!s.shared) await ensureActuals();
+          const actualVsPlan = s.shared ? [] : monthlyPlanVsActual(g, s.R, (useEditor.getState().actuals ?? []) as never);
+          const blob = await pdfReport(g, s.R, { actualVsPlan, funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
           download(fileName(s.name, "pdf"), blob);
         }
       } catch (e) {
@@ -478,6 +493,31 @@ function EditorInner(props: EditorProps) {
           if (b > freeH - 12) dy = freeH - 12 - b;
           if (t + dy < 12) dy = 12 - t;
           if (dx || dy) rf.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }, { duration: 250 });
+        });
+      }),
+    [rf],
+  );
+
+  // Simulate on a narrower screen: the panel covers part of the map, so fit the whole funnel into the part that stays visible
+  useEffect(
+    () =>
+      useEditor.subscribe((st, prev) => {
+        if (!st.simBase || prev.simBase) return;
+        const w = window.innerWidth;
+        if (w >= 1280) return;
+        requestAnimationFrame(() => {
+          const stage = document.querySelector(".fm-stage")?.getBoundingClientRect();
+          const flow = st.nodes.filter((n) => !isAnnot(n.type));
+          if (!stage || !flow.length) return;
+          const l = Math.min(...flow.map((n) => n.x)),
+            r = Math.max(...flow.map((n) => n.x + widthOf(n))),
+            t = Math.min(...flow.map((n) => n.y)),
+            b = Math.max(...flow.map((n) => n.y + heightOf(n)));
+          const freeW = w >= 1024 ? stage.width - 340 : stage.width,
+            freeH = w >= 1024 ? stage.height : stage.height * 0.5 - 8;
+          const pad = 56;
+          const zoom = Math.max(0.1, Math.min(1, (freeW - pad) / (r - l), (freeH - pad - 40) / (b - t)));
+          rf.setViewport({ zoom, x: (freeW - (r - l) * zoom) / 2 - l * zoom, y: 52 + (freeH - 52 - (b - t) * zoom) / 2 - t * zoom }, { duration: 300 });
         });
       }),
     [rf],
@@ -857,13 +897,18 @@ function EditorInner(props: EditorProps) {
                       </>
                     )}
                   </div>
+                  {canEdit && !readOnly && hasNodes && (
+                    <button type="button" role="menuitem" className="fm-phone-only" onClick={() => (close(), toggleSim())}>
+                      {simOn ? "Stop simulating" : "Simulate…"}
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => (close(), setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
                     Client comments{commentCount > 0 ? ` (${commentCount})` : ""}
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
+                  <button type="button" role="menuitem" className="fm-hide-phone" onClick={() => (close(), setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
                     Version history
                   </button>
-                  <button type="button" role="menuitem" onClick={() => (close(), setPresenting(true))} disabled={!hasNodes}>
+                  <button type="button" role="menuitem" className="fm-hide-phone" onClick={() => (close(), setPresenting(true))} disabled={!hasNodes}>
                     Present
                   </button>
                   {manage && (
@@ -930,6 +975,11 @@ function EditorInner(props: EditorProps) {
             )}
             <ViewSwitch />
             <LayersMenu />
+            {!readOnly && !sharedView && hasNodes && (
+              <button type="button" className="btn fm-simbtn fm-hide-phone" aria-pressed={simOn} onClick={toggleSim} title="Simulate: change assumptions and watch the funnel update">
+                <Icon name="sliders" size={15} /> Simulate
+              </button>
+            )}
           </div>
         )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
@@ -986,7 +1036,9 @@ function EditorInner(props: EditorProps) {
             <Icon name="close" />
           </button>
         </div>
-        {panel === "notes" && (owner || notesShared) ? (
+        {panel === "simulate" && simOn ? (
+          <SimulatePanel />
+        ) : panel === "notes" && (owner || notesShared) ? (
           <CanvasNotes />
         ) : owner && panel === "versions" ? (
           <VersionsPanel onSaved={manage ? uploadThumbnail : undefined} />

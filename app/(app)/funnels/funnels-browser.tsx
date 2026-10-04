@@ -1,9 +1,10 @@
 "use client";
+import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
-import { isNeg, money, ratio, timeAgo } from "@/lib/format";
+import { isNeg, money, ratio } from "@/lib/format";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 
 export interface FunnelListItem {
@@ -78,7 +79,7 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
               <tr>
                 <th className="pl-4">Funnel</th>
                 <th className="fm-c-client">Client</th>
-                <th>Status</th>
+                <th className="fm-c-status">Status</th>
                 <th className="fm-c-scen">Scenario</th>
                 <th className="r">Revenue</th>
                 <th className="r fm-c-profit">Profit</th>
@@ -94,14 +95,16 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
                     <Link href={`/funnels/${f.id}`} className="block max-w-[260px] truncate font-bold text-ink hover:text-brand" title={f.name}>
                       {f.name}
                     </Link>
-                    <span className="fm-c-client2 block max-w-[260px] truncate text-xs text-muted">{f.client}</span>
+                    <span className="fm-c-client2 max-w-[260px] truncate text-xs text-muted">
+                      {f.client}<span className="fm-c-st2"> · {f.status}</span>
+                    </span>
                   </td>
                   <td className="fm-c-client">
                     <Link href={`/clients/${f.clientId}`} className="block max-w-[180px] truncate text-muted hover:text-brand" title={f.client}>
                       {f.client}
                     </Link>
                   </td>
-                  <td>
+                  <td className="fm-c-status">
                     <StatusPill status={f.status} />
                   </td>
                   <td className="fm-c-scen text-muted">{f.scenario}</td>
@@ -111,15 +114,15 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
                   <td>
                     {f.checks > 0 ? (
                       <Link href={`/funnels/${f.id}`} className="fm-health-pill warn" title="Open the funnel to see the checks">
-                        <Icon name="alert" size={13} /> {f.checks} {f.checks === 1 ? "check" : "checks"}
+                        <Icon name="alert" size={13} /> {f.checks}<span className="fm-hp-label"> {f.checks === 1 ? "check" : "checks"}</span>
                       </Link>
                     ) : (
                       <span className="fm-health-pill ok">
-                        <Icon name="check" size={13} /> Healthy
+                        <Icon name="check" size={13} aria-hidden="true" /> <span className="fm-hp-label">Healthy</span>
                       </span>
                     )}
                   </td>
-                  <td className="r pr-4 fm-c-upd text-muted">{timeAgo(f.updated)}</td>
+                  <td className="r pr-4 fm-c-upd text-muted"><TimeAgo iso={f.updated} /></td>
                 </tr>
               ))}
             </tbody>

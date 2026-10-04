@@ -303,7 +303,7 @@ export function Canvas() {
         setDragging(false);
         setView({ x: Math.round(vp.x), y: Math.round(vp.y), k: Math.round(vp.zoom * 1000) / 1000 });
       }}
-      minZoom={0.2}
+      minZoom={0.08} // Fit has to be able to show a wide funnel on a phone
       maxZoom={2.5}
       snapToGrid={opts.snap}
       snapGrid={[11, 11]}

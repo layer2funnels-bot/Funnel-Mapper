@@ -4,7 +4,7 @@ import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
 import { stepRows, type FunnelResult } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
-import { reportData, type ReportSettings } from "@/lib/report-data";
+import { reportData, type MonthlyActualRow, type ReportSettings } from "@/lib/report-data";
 import { typeOf } from "@/lib/catalog";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
@@ -197,6 +197,8 @@ export interface PdfInfo {
   settings: ReportSettings;
   /** Map drawing options (measured sizes, line thickness). */
   map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick" | "keyLeak" | "goals">;
+  /** Entered actuals next to the plan by month (lib/report-data.ts monthlyPlanVsActual); the page is left out when empty. */
+  actualVsPlan?: MonthlyActualRow[];
 }
 
 type RGB = [number, number, number];
@@ -566,6 +568,34 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
 
     if (F.rows.length) sections.push(forecastSection());
 
+    // --- actual vs plan by month (the editor's Month-to-month chart; same monthlyPlanVsActual rows)
+    const AV = nums ? (info.actualVsPlan ?? []).slice(-12) : [];
+    if (AV.length) {
+      const mon = (ym: string) => new Date(`${ym}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" });
+      const vs = (plan: number, act: number, spend = false): Cell => (plan ? { t: `${act >= plan ? "+" : ""}${nf((act / plan - 1) * 100, 1)}%`, c: (spend ? act <= plan : act >= plan) ? C.good : C.bad } : "–");
+      sections.push({
+        title: "Actual vs plan by month",
+        full: true,
+        h: TITLE + 54 + 4 + tableH(AV.length) + 6,
+        draw: (x, y, w) => {
+          const cw = (w - 8) / 2;
+          const xl = { labels: AV.map((r) => mon(r.month)), axis: "Month" };
+          lineChart(x, y, cw, 50, "Revenue", [{ name: "Actual", c: C.emerald, v: AV.map((r) => r.actRev) }, { name: "Plan", c: C.muted, v: AV.map((r) => r.planRev), dash: true }], xl);
+          lineChart(x + cw + 8, y, cw, 50, "Ad spend", [{ name: "Actual", c: C.emerald, v: AV.map((r) => r.actSpend) }, { name: "Plan", c: C.muted, v: AV.map((r) => r.planSpend), dash: true }], xl);
+          const th = table(
+            x,
+            y + 54,
+            w,
+            [{ h: "Month", w: 1, a: "left" }, { h: "Days", w: 0.6 }, { h: "Plan revenue", w: 1.2 }, { h: "Actual revenue", w: 1.2 }, { h: "vs plan", w: 0.9 }, { h: "Plan ad spend", w: 1.2 }, { h: "Actual ad spend", w: 1.2 }, { h: "vs plan", w: 0.9 }],
+            AV.map((r): Cell[] => [mon(r.month), nf(r.days), m(r.planRev), m(r.actRev), vs(r.planRev, r.actRev), m(r.planSpend), m(r.actSpend), vs(r.planSpend, r.actSpend, true)]),
+          );
+          font(7.5);
+          ink(C.muted);
+          doc.text(fit("Plan is the funnel's monthly numbers scaled to the days entered. Ad spend above plan shows red.", w), x + 1, y + 54 + th + 4);
+        },
+      });
+    }
+
     // --- traffic sources
     if (D.sources.length)
       tableSection(
@@ -737,7 +767,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     if (overflow > 0) tableSection("Funnel data", stepCols, steps.map(stepCells), { full: true });
 
     /* line chart: series over months, nice y ticks, legend */
-    function lineChart(x: number, y: number, w: number, h: number, title: string, series: { name: string; c: RGB; v: number[]; dash?: boolean; area?: boolean }[]) {
+    function lineChart(x: number, y: number, w: number, h: number, title: string, series: { name: string; c: RGB; v: number[]; dash?: boolean; area?: boolean }[], xl?: { labels: string[]; axis: string }) {
       font(8, true);
       ink(C.ink);
       doc.text(title, x, y + 3);
@@ -782,8 +812,8 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
         doc.text(Math.abs(v) < step / 1e6 ? ms(0).replace(/\.00$/, "") : ms(v), px - 1.5, Y(v) + 1, { align: "right" });
       }
       const every = Math.max(1, Math.ceil(n / 12));
-      for (let i = 0; i < n; i++) if (i % every === 0 || i === n - 1) doc.text(String(i + 1), X(i), py + ph + 4, { align: "center" });
-      doc.text("Month", px + pw, py + ph + 7.5, { align: "right" });
+      for (let i = 0; i < n; i++) if (i % every === 0 || i === n - 1) doc.text(xl?.labels[i] ?? String(i + 1), X(i), py + ph + 4, { align: "center" });
+      doc.text(xl?.axis ?? "Month", px + pw, py + ph + 7.5, { align: "right" });
       series.forEach((s) => {
         const pts = s.v.map((v, i) => [X(i), Y(Number.isFinite(v) ? v : 0)] as [number, number]);
         if (!pts.length) return;

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { builtinTemplate } from "../../lib/templates";
-import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
+import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -337,3 +337,131 @@ function graphWithWidget() {
   const g = builtinTemplate("quiz").graph;
   return { ...g, nodes: [...g.nodes, { id: "wg1", type: "widget", name: "Funnel widget", x: -300, y: -200, p: { scope: "funnel", display: "number", metrics: ["revenue", "profit"], wsize: "M" } }] } as typeof g;
 }
+
+test.describe("V2 Simulate", () => {
+  test("change a lever and the map answers: people, losses, revenue, profit and ROAS move, and Revert puts them back", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    const kpis = page.getByRole("contentinfo", { name: "Funnel numbers" });
+    await expect(kpis).toContainText("£6,032");
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const panel = page.getByLabel("Simulate", { exact: true });
+    await expect(panel).toBeVisible();
+    // nothing has changed yet: no chips, no ghost lines
+    await expect(panel).toContainText("No change");
+    await expect(page.locator(".fm-simchip")).toHaveCount(0);
+    await expect(page.locator(".fm-edge-ghost")).toHaveCount(0);
+
+    // 20% fewer conversions
+    await panel.getByLabel("Conversion rates").fill("0.8");
+    // headline numbers moved against the baseline (the KPI strip and the panel agree, both from the engine)
+    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis.locator(".fm-dchip.bad").first()).toBeVisible();
+    const key = panel.getByRole("group", { name: "Revenue, profit and ROAS" });
+    await expect(key.locator(".fm-dchip.bad")).toHaveCount(3); // revenue, profit and ROAS all fell
+    // the map shows where: more people lost at steps, thinner lines with a ghost of the old weight, a lower conversion bar tick
+    await expect(page.locator(".fm-simchip").first()).toBeVisible();
+    await expect(page.locator(".fm-simchip", { hasText: "lost" }).first()).toBeVisible();
+    await expect(page.locator(".fm-edge-ghost").first()).toBeAttached();
+    await expect(page.locator(".fm-conv b.base").first()).toBeAttached();
+    await expect(panel.getByRole("heading", { name: "What moved" })).toBeVisible();
+
+    // traffic raises people but ad spend is neutral
+    await panel.getByLabel("Traffic", { exact: true }).fill("1.5");
+    await expect(panel.locator(".fm-sim-tot").getByText("Ad spend")).toBeVisible();
+
+    // revert puts every lever back and the chips go away
+    await panel.getByRole("button", { name: "Revert all" }).click();
+    await expect(kpis).toContainText("£6,032");
+    await expect(page.locator(".fm-simchip")).toHaveCount(0);
+    await expect(panel).toContainText("No change");
+  });
+
+  test("change one block: its own rate flows through the map; the change is listed and can be undone one by one", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const panel = page.getByLabel("Simulate", { exact: true });
+    await node(page, "Quiz funnel").click();
+    await expect(panel.getByRole("region", { name: "One block" })).toContainText("Quiz funnel");
+    const rate = panel.getByLabel("Conversion rate (%)");
+    const before = Number(await rate.inputValue());
+    await panel.getByRole("button", { name: "Lower Conversion rate by 10%" }).click();
+    await expect.poll(async () => Number(await rate.inputValue())).toBeCloseTo(before * 0.9, 1);
+    await expect(panel.getByRole("region", { name: "Your changes" })).toContainText("Quiz funnel · Conversion rate");
+    // fewer people reach the next step and the quiz loses more
+    await expect(node(page, "Quiz funnel").locator(".fm-simchip")).toContainText("lost");
+    await expect(node(page, "7-day free trial").locator(".fm-simchip")).toContainText("in");
+    // undo only that change
+    await panel.getByRole("button", { name: /^Undo the change to Quiz funnel/ }).click();
+    await expect.poll(async () => Number(await rate.inputValue())).toBeCloseTo(before, 1);
+    await expect(page.locator(".fm-simchip")).toHaveCount(0);
+  });
+
+  test("save the levers as a scenario, try a scenario, and Done keeps the map; a viewer can't simulate", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Simulate" }).click();
+    const panel = page.getByLabel("Simulate", { exact: true });
+    await panel.getByLabel("Prices").fill("1.1");
+    await panel.getByLabel("Scenario name").fill("Price rise");
+    await panel.getByRole("button", { name: "Save levers as scenario" }).click();
+    await expect(panel.getByRole("group", { name: "Start from a scenario" }).getByRole("button", { name: "Price rise" })).toBeVisible();
+    await panel.getByRole("button", { name: "Revert all" }).click();
+    await expect(panel).toContainText("No change");
+    await panel.getByRole("group", { name: "Start from a scenario" }).getByRole("button", { name: "Price rise" }).click();
+    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" }).locator(".fm-dchip.good").first()).toBeVisible();
+    // Done closes Simulate and keeps the map as it is
+    await panel.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByLabel("Simulate", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".fm-simchip")).toHaveCount(0);
+    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText("£6,032");
+    // view-only editors don't get Simulate
+    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("View only (lock editing)").check();
+    await expect(page.getByRole("button", { name: "Simulate" })).toHaveCount(0);
+  });
+});
+
+test.describe("V2 QA regressions", () => {
+  test("list pages hydrate without React errors and keep the saved light theme", async ({ page }) => {
+    await page.goto("/templates");
+    await page.evaluate(() => localStorage.setItem("fm-theme", "light"));
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message.slice(0, 120)));
+    // several loads each: the old "17 min ago" text could differ between server and browser and re-render the whole page
+    for (const url of ["/", "/funnels", "/clients", `/clients/${DEMO_CLIENT}`, "/funnels", `/clients/${DEMO_CLIENT}`, "/funnels"]) {
+      await page.goto(url);
+      await page.waitForTimeout(1200);
+      expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), `${url} keeps the light theme`).toBe("light");
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test("a share link shows the numbers views a client can use, but never the team's Actuals", async ({ browser }) => {
+    const { id, sb } = await createFunnel({ template: "quiz" });
+    const link = await sb.from("share_links").insert({ funnel_id: id }).select("token").single();
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const p = await ctx.newPage();
+    await p.goto(`/s/${link.data!.token}`);
+    await expect(p.locator(".react-flow__node").first()).toBeVisible();
+    await expect(p.getByRole("tab", { name: "Forecast" })).toBeVisible();
+    await expect(p.getByRole("tab", { name: "Actuals" })).toHaveCount(0);
+    await ctx.close();
+  });
+
+  test("phone overflow menu lists each action once and the clients list defaults to cards", async ({ browser }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    const ctx = await browser.newContext({ storageState: "tests/e2e/.auth/demo.json", viewport: { width: 430, height: 932 } });
+    const p = await ctx.newPage();
+    await p.goto(`/funnels/${id}`);
+    await expect(p.locator(".fm-editor")).toBeVisible();
+    await p.getByRole("button", { name: "More" }).click();
+    for (const name of ["Present", "Version history", "Simulate…", "Tidy up"]) await expect(p.getByRole("menuitem", { name, exact: true }), name).toHaveCount(1);
+    await p.keyboard.press("Escape");
+    // a wide table does not fit a phone: cards unless the person chose otherwise
+    await p.goto("/clients");
+    await expect(p.getByRole("button", { name: "Card view" })).toHaveAttribute("aria-pressed", "true");
+    await ctx.close();
+  });
+});

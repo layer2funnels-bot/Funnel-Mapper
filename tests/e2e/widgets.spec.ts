@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { builtinTemplate } from "../../lib/templates";
 import { centre, createFunnel, drag, nodes, openEditor, waitSaved } from "./helpers";
 
@@ -102,4 +103,23 @@ test.describe("Widgets", () => {
     expect((await card.boundingBox())!.width).toBeGreaterThan(390 - 60);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
+});
+
+test("exports draw widgets like the canvas: numbers, MRR detail and the 12-month chart", async ({ page }) => {
+  const g = builtinTemplate("quiz").graph;
+  const nodesWithWidgets = [
+    ...g.nodes,
+    W("wa", 0, -330, { scope: "funnel", display: "number", metrics: ["mrr", "customers"], wsize: "M" }),
+    W("wb", 300, -330, { scope: "funnel", display: "chart", metrics: ["revenue"], wsize: "L" }),
+  ];
+  const { id } = await createFunnel({ graph: { ...g, nodes: nodesWithWidgets } as typeof g });
+  await openEditor(page, id);
+  await page.getByRole("button", { name: "File" }).click();
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Map image (.svg)" }).click()]);
+  const svg = readFileSync((await dl.path())!).toString();
+  expect(svg).toContain(">Revenue<");
+  expect(svg).toContain(">£6,032<");
+  expect(svg).toMatch(/Month 12 £[\d,]+ · [\d.]+ subscribers/);
+  // the Chart widget's line: a closed filled area plus a stroked path in the brand colour
+  expect(svg).toMatch(/<path d="M[^"]+Z" fill="#[0-9A-Fa-f]{6}" fill-opacity="\.14"\/><path d="M[^"]+" fill="none" stroke="#[0-9A-Fa-f]{6}" stroke-width="2"/);
 });

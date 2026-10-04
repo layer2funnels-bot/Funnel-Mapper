@@ -7,9 +7,10 @@ import { BrandMark, Icon } from "@/components/icon";
 import { Menu } from "@/components/menu";
 import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
-import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelSettings } from "@/lib/graph";
+import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelNode, type FunnelSettings } from "@/lib/graph";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
 import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
+import { chartSeries, mrrDetail, type WidgetMetric } from "@/lib/widget-data";
 import { elkLayout, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -292,7 +293,9 @@ function EditorInner(props: EditorProps) {
       try {
         if (kind === "json") download(fileName(s.name, "json"), JSON.stringify(exportFunnelFile({ ...editorSnapshot(), description: funnel.description }), null, 1), "application/json");
         if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R, s.settings.scenarios.length ? reportData(g, s.settings, s.R).scenarios : []), "text/csv");
-        const map = { heightOf, widthOf, thick: s.opts.thick, keyLeak: s.keyLeak, goals: s.settings.goals };
+        const graphNow = { nodes: s.nodes, edges: s.edges };
+        const widgetData = { series: (m: WidgetMetric, v: number) => chartSeries(m, graphNow, s.settings, s.R, v), mrr: (members: FunnelNode[] | null) => mrrDetail(graphNow, s.settings, s.R, members) };
+        const map = { heightOf, widthOf, thick: s.opts.thick, keyLeak: s.keyLeak, goals: s.settings.goals, widgetData };
         const img = { ...map, palette: paletteFor(s.opts.bg) };
         // the map image shows what's on screen: hidden layers (notes, checklists) stay out of it
         const shown = { nodes: s.nodes.filter((n) => (s.opts.notes || n.type !== "note") && (s.opts.checks || n.type !== "checklist")), edges: s.edges };

@@ -109,7 +109,7 @@ for (const theme of ["dark", "light"] as const) {
       await scan(page, `presentation stage (${theme})`);
     });
 
-    test("shared view (with comments) and a revoked link", async ({ page, browser }) => {
+    test("shared view (with comments) and a revoked link", async ({ browser }) => {
       const { id, sb } = await createFunnel({ graph: { ...g, nodes: [...g.nodes, ...WIDGETS] } as typeof g });
       const live = await sb.from("share_links").insert({ funnel_id: id, allow_comments: true }).select("token").single();
       const gone = await sb.from("share_links").insert({ funnel_id: id, expires_at: new Date(Date.now() - 86400000).toISOString() }).select("token").single();

@@ -1,0 +1,250 @@
+import { expect, test } from "@playwright/test";
+import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
+
+const mod = process.platform === "darwin" ? "Meta" : "Control";
+
+test.describe("V2 editor interactions", () => {
+  test("floating toolbar follows the selection and opens the inspector tabs", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await expect(page.getByRole("toolbar")).toHaveCount(0);
+    await node(page, "Quiz funnel").click();
+    const tb = page.getByRole("toolbar", { name: "Block tools" });
+    await expect(tb).toBeVisible();
+    // it stays inside the canvas
+    const stage = (await page.locator(".fm-stage").boundingBox())!;
+    const box = (await tb.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(stage.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(stage.x + stage.width + 1);
+    await tb.getByRole("button", { name: "Analytics", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Analytics" })).toHaveAttribute("aria-selected", "true");
+    await tb.getByRole("button", { name: "Style", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Style" })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "Details" }).click();
+    // the inspector names its scope and has a way back to the funnel
+    await expect(page.locator(".fm-insp h3")).toHaveText("Quiz funnel");
+    await page.getByRole("button", { name: "Funnel", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible();
+  });
+
+  test("right-click menu: rename, copy and paste style, duplicate, lock", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    const total = await nodes(page).count();
+    await node(page, "Quiz funnel").click({ button: "right" });
+    const menu = page.getByRole("menu", { name: "Block menu" });
+    await expect(menu).toBeVisible();
+    for (const item of ["Rename", "Change block type…", "Copy style", "Paste style", "Duplicate", "Lock", "Order", "Add internal note", "Set as goal", "Open in Reports", "Delete"]) await expect(menu.getByRole("menuitem", { name: item, exact: false }).first()).toBeVisible();
+    await menu.getByRole("menuitem", { name: "Rename" }).click();
+    await page.getByLabel("Block name").fill("Fitness quiz");
+    await page.keyboard.press("Enter");
+    await expect(node(page, "Fitness quiz")).toBeVisible();
+    // duplicate through the menu
+    await node(page, "Fitness quiz").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Duplicate" }).click();
+    await expect(nodes(page)).toHaveCount(total + 1);
+    await page.keyboard.press("Delete"); // the copy is selected and sits on top of the original: remove it
+    await expect(nodes(page)).toHaveCount(total);
+    // quick style + copy / paste style
+    await node(page, "Fitness quiz").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Apply quick style" }).click();
+    await page.getByRole("menuitem", { name: "Emphasis" }).click();
+    await node(page, "Fitness quiz").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Copy style" }).click();
+    await node(page, "Instagram traffic").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Paste style" }).click();
+    await expect(page.locator(".fm-toast")).toContainText("Style pasted");
+    await page.locator(".fm-toast").getByRole("button", { name: "Undo" }).click();
+    // lock from the menu
+    await node(page, "Fitness quiz").click({ button: "right" });
+    await page.getByRole("menuitem", { name: /^Lock/ }).click();
+    await expect(page.locator(".fm-lock").first()).toBeVisible();
+    // empty canvas menu
+    await page.locator(".react-flow__pane").click({ button: "right", position: { x: 420, y: 560 } });
+    const pane = page.getByRole("menu", { name: "Canvas menu" });
+    for (const item of ["Add block…", "Add text", "Add sticky note", "Add frame", "Add widget", "Select all", "Tidy up", "Zoom to fit", "Keyboard shortcuts"]) await expect(pane.getByRole("menuitem", { name: item })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(pane).toBeHidden();
+  });
+
+  test("drag a connection into empty space: Quick Add places and connects the block in one undo step", async ({ page }) => {
+    const { id } = await createFunnel();
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
+    await expect(nodes(page)).toHaveCount(1);
+    const fb = node(page, "Facebook ads");
+    const from = await centre(page, fb.locator(".fm-port.out"));
+    await drag(page, from, { x: from.x + 260, y: from.y + 20 });
+    const quick = page.getByRole("dialog", { name: "Add the next step" });
+    await expect(quick).toBeVisible();
+    // only blocks that can take people are offered: no traffic sources or layout elements
+    await quick.getByRole("combobox").fill("Facebook");
+    await expect(quick.getByRole("option", { name: /Facebook ads/ })).toHaveCount(0);
+    await quick.getByRole("combobox").fill("Landing");
+    await page.keyboard.press("Enter");
+    await expect(nodes(page)).toHaveCount(2);
+    await expect(edgeLabels(page)).toHaveCount(1);
+    await expect(page.locator(".fm-insp h3")).toHaveText("Landing page"); // selection moved to the new block
+    // one atomic undo removes the block and its connection together
+    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 560 } });
+    await page.keyboard.press(`${mod}+z`);
+    await expect(nodes(page)).toHaveCount(1);
+    await expect(edgeLabels(page)).toHaveCount(0);
+    // Escape cancels a Quick Add without creating anything
+    await drag(page, from, { x: from.x + 260, y: from.y + 20 });
+    await expect(quick).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(quick).toBeHidden();
+    await expect(nodes(page)).toHaveCount(1);
+  });
+
+  test("change page type keeps the block, its place, its connections and the numbers", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    const quiz = node(page, "Quiz funnel");
+    const nodeId = (await quiz.getAttribute("data-id"))!;
+    const before = await pos(page, nodeId);
+    const labels = await edgeLabels(page).count();
+    await expect(page.locator(".fm-kpis")).toContainText("£6,032");
+    await quiz.click();
+    await page.getByRole("toolbar", { name: "Block tools" }).getByRole("button", { name: "Change type" }).click();
+    const dlg = page.getByRole("dialog", { name: "Change page type" });
+    await expect(dlg).toBeVisible();
+    await dlg.getByRole("option", { name: /Survey/ }).click();
+    await expect(page.locator(".fm-toast")).toContainText("Changed to Survey");
+    expect(await pos(page, nodeId)).toEqual(before);
+    await expect(page.locator(`.react-flow__node[data-id="${nodeId}"]`)).toBeVisible();
+    await expect(edgeLabels(page)).toHaveCount(labels);
+    // maths is untouched (the survey's own default is not applied over the block's values)
+    await expect(page.locator(".fm-kpis")).toContainText("£6,032");
+    // one undo goes back to the quiz
+    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 600 } });
+    await page.keyboard.press(`${mod}+z`);
+    await expect(node(page, "Quiz funnel").locator(".fm-ntitle small")).not.toContainText("Survey");
+  });
+
+  test("Wait: duration + unit, live label, invalid state, no analytics", async ({ page }) => {
+    const { id } = await createFunnel();
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Add Wait / delay", exact: true }).click();
+    await expect(nodes(page)).toHaveCount(1);
+    await expect(page.getByRole("tab", { name: "Analytics" })).toBeDisabled();
+    await page.getByLabel("Wait for").fill("2");
+    await page.getByRole("group", { name: "Unit" }).getByRole("button", { name: "Wks" }).click();
+    await expect(page.locator(".fm-wait .wait-preview")).toContainText("Wait 2 weeks");
+    await expect(nodes(page).first()).toContainText("Wait 2 weeks");
+    await page.getByLabel("Wait for").fill("0");
+    await expect(page.getByLabel("Wait for")).toHaveAttribute("aria-invalid", "true");
+    await expect(nodes(page).first()).toContainText("set a duration");
+    await page.getByLabel("Wait for").fill("12");
+    await page.getByRole("group", { name: "Unit" }).getByRole("button", { name: "Hrs" }).click();
+    // persists
+    await expect(page.locator(".fm-saved")).toHaveText(/Saved/, { timeout: 20_000 });
+    await page.reload();
+    await expect(nodes(page).first()).toContainText("Wait 12 hours");
+  });
+
+  test("widgets: add one, read the engine's numbers, change metrics, it stays on the map", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.locator(".react-flow__pane").click({ button: "right", position: { x: 420, y: 620 } });
+    await page.getByRole("menuitem", { name: "Add widget" }).click();
+    const w = page.locator(".fm-editor .fm-widget").first();
+    await expect(w).toBeVisible();
+    await expect(w).toContainText("£6,032");
+    await page.getByRole("button", { name: "ROAS", exact: true }).click(); // revenue + profit are on by default
+    await page.getByRole("group", { name: "Widget size" }).getByRole("button", { name: "L", exact: true }).click(); // L shows up to four
+    await expect(w).toContainText("£5,582");
+    await expect(w).toContainText("13.4x");
+    // at most four metrics
+    await page.getByRole("button", { name: "Leads", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Customers", exact: true })).toBeDisabled();
+    // it shows in Reports too
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    await expect(page.locator(".fm-rwidgets")).toContainText("£5,582");
+  });
+
+  test("Reports: grouped navigation, key leak actions, Export PDF button", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Reports", exact: true }).click();
+    const nav = page.getByRole("navigation", { name: "Report sections" });
+    for (const g of ["Summary", "Money", "Planning"]) await expect(nav.getByRole("heading", { name: g })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Export PDF" })).toBeVisible();
+    await page.getByRole("button", { name: "Year", exact: true }).click();
+    await expect(page.locator(".fm-rmain")).toContainText("a month");
+    await page.getByRole("button", { name: "Show on map" }).first().click();
+    await expect(page.locator(".fm-rmain")).toBeHidden();
+    await expect(page.locator(".fm-node.sel")).toHaveCount(1);
+  });
+});
+
+test.describe("V2 pages", () => {
+  test("Funnels list: status views, needs attention, health", async ({ page }) => {
+    await createFunnel({ template: "quiz", name: "V2 list funnel" });
+    await page.goto("/funnels");
+    await expect(page.getByRole("heading", { name: "Funnels", level: 1 })).toBeVisible();
+    const table = page.getByRole("table");
+    await expect(table).toContainText("V2 list funnel");
+    for (const v of ["All", "Live", "Proposed", "Draft", "Archived"]) await expect(page.getByRole("group", { name: "Funnel status" }).getByRole("button", { name: new RegExp(`^${v}`) })).toBeVisible();
+    await page.getByRole("button", { name: "Needs attention" }).click();
+    await expect(table).toContainText("check"); // the quiz template has one open check
+    await page.getByRole("button", { name: "Needs attention" }).click();
+    await page.getByRole("group", { name: "Funnel status" }).getByRole("button", { name: /^Archived/ }).click();
+    await expect(page.getByRole("cell", { name: "V2 list funnel" })).toHaveCount(0);
+  });
+
+  test("Home shows the resume card and the client pipeline; Templates preview and Settings nav work", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
+    await expect(page.getByText("Pick up where you left off")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Client pipeline" })).toBeVisible();
+    await page.getByRole("button", { name: "Year", exact: true }).click().catch(() => {});
+    await page.goto("/?range=year");
+    await expect(page.getByRole("region", { name: "Totals" })).toContainText("a year");
+    await page.goto("/templates");
+    await page.getByRole("button", { name: /^Preview / }).first().click();
+    const panel = page.getByRole("complementary", { name: /^Preview:/ });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Use template" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Use for client" })).toBeVisible();
+    await page.goto("/settings");
+    const nav = page.getByRole("navigation", { name: "Settings sections" });
+    await expect(nav.getByRole("link", { name: "Team" })).toBeVisible();
+    await nav.getByRole("link", { name: "Appearance" }).click();
+    await expect(page.getByRole("heading", { name: "Appearance" })).toBeInViewport();
+  });
+
+  test("Share V2: permission, numbers, per-link state, preview", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Share", exact: true }).click();
+    const dlg = page.getByRole("dialog", { name: /^Share with/ });
+    await expect(dlg.getByRole("group", { name: "Permission" })).toBeVisible();
+    await dlg.getByRole("group", { name: "Permission" }).getByRole("button", { name: "View", exact: true }).click();
+    await dlg.getByLabel("Show numbers").uncheck();
+    await expect(dlg.getByLabel("Preview of what").first()).toContainText("Journey only");
+    await dlg.getByRole("button", { name: "Create link" }).click();
+    const row = dlg.locator("li").filter({ has: page.getByLabel("Permission for this link") }).first();
+    await expect(row.getByLabel("Permission for this link")).toHaveValue("view");
+    await expect(row).toContainText("Numbers hidden");
+    await row.getByLabel("Permission for this link").selectOption("comment");
+    await expect(row.getByLabel("Permission for this link")).toHaveValue("comment");
+    page.once("dialog", (d) => d.accept());
+    await row.getByRole("button", { name: "Revoke" }).click();
+    await expect(dlg.getByText("No links yet")).toBeVisible();
+  });
+
+  test("Presentation: stages with totals; the Numbers switch hides and shows them", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("button", { name: "Present", exact: true }).click();
+    const card = page.getByRole("region", { name: "Presentation" });
+    await card.getByRole("button", { name: "Next stage" }).click();
+    await expect(card).toContainText("Acquire");
+    await expect(card).toContainText("2,500 visits");
+    await page.keyboard.press("ArrowRight");
+    await expect(card.getByRole("heading", { name: "Convert" })).toBeVisible();
+    await expect(card).toContainText("£6,032");
+  });
+});

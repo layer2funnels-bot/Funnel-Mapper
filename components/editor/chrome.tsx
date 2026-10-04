@@ -11,7 +11,7 @@ export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
   const list = useEditor((s) => s.settings.scenarios);
   const label = scenarioLabel({ whatif: w, scenarios: list });
   return (
-    <button type="button" className="fm-scen fm-hide-sm" onClick={onOpen} aria-label={`Scenario: ${label}`} title="Choose a scenario">
+    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}`} title="Choose a scenario">
       <i aria-hidden="true" />
       {label}
     </button>

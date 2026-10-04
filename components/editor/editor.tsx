@@ -835,7 +835,7 @@ function EditorInner(props: EditorProps) {
             <Menu label="More" align="right" className="btn icon" buttonContent={<Icon name="more" />}>
               {(close) => (
                 <>
-                  <div className="fm-phone-only">
+                  <div className="fm-undo-over">
                     {canEdit && (
                       <>
                         <button type="button" role="menuitem" onClick={() => (close(), undo())} disabled={readOnly || !canUndo}>

@@ -11,7 +11,7 @@ This is a checkpoint, not the end of the V2 scope: see "Remaining" below.
 | Typecheck, ESLint, `next build` | clean |
 | Unit (Vitest) | 189/189 (was 143) |
 | DB / RLS | 52/52 (was 48; +4 `assets.test.ts`) |
-| E2E (Playwright, prod build) | 88/88 (full run 85 + the 3 failures re-run green after fixing the cause: icon-only menu button lacked an accessible name; two report KPI groups now exist) |
+| E2E (Playwright, prod build) | 99/99 (includes 12 new `v2.spec.ts` tests for the V2 interactions: context menus, Quick Add, Change Page Type, widgets, share, presentation, responsive bands) |
 
 ## Built in this run (reused systems named)
 

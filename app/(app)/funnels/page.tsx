@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { NewFunnelButton } from "@/components/new-funnel-dialog";
 import { PageHeader } from "@/components/page-header";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
-import { templateOptions } from "@/lib/queries";
 import { scenarioLabel } from "@/lib/scenario-label";
 import { requireUser } from "@/lib/supabase/server";
 import { FunnelsBrowser, type FunnelListItem } from "./funnels-browser";
@@ -12,12 +10,11 @@ import { FunnelsBrowser, type FunnelListItem } from "./funnels-browser";
 export const metadata: Metadata = { title: "Funnels" };
 
 export default async function FunnelsPage({ searchParams }: PageProps<"/funnels">) {
-  const { sb, isTeam, canEdit, workspace } = await requireUser();
+  const { sb, workspace } = await requireUser();
   const sp = await searchParams;
-  const [{ data: funnels }, { data: clients }, tpls] = await Promise.all([
+  const [{ data: funnels }, { data: clients }] = await Promise.all([
     sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").order("updated_at", { ascending: false }),
     sb.from("clients").select("id, name, currency, archived_at").order("name"),
-    templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
   ]);
   const byClient = Object.fromEntries((clients ?? []).map((c) => [c.id, c]));
   const items: FunnelListItem[] = (funnels ?? [])
@@ -43,9 +40,7 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   return (
     <>
-      <PageHeader title="Funnels" sub="Every funnel in the workspace, with its numbers and health.">
-        {canEdit && <NewFunnelButton clients={(clients ?? []).filter((c) => !c.archived_at).map((c) => ({ id: c.id, name: c.name }))} templates={tpls} className="btn primary" />}
-      </PageHeader>
+      <PageHeader title="Funnels" sub="Every funnel in the workspace, with its numbers and health." />
       <FunnelsBrowser items={items} initialStatus={first(sp.status)} initialClient={first(sp.client)} initialAttention={first(sp.attention) === "1"} />
     </>
   );

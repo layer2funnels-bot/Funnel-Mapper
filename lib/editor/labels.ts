@@ -76,7 +76,8 @@ export interface PerfLine {
 export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1): PerfLine | null {
   const T = typeOf(n.type),
     r0 = R.N[n.id];
-  if (!r0 || !T) return null;
+  // a Wait has nothing to measure: its card keeps "Wait 2 days" as its second line
+  if (!r0 || !T || n.type === "wait") return null;
   const inflow = r0.inflow * k,
     out = r0.out * k;
   if (T.cat === "traffic") return { headline: nf(out), caption: r0.spend ? `visits · ${money(r0.spend * k, cur)}` : "visits · free", ratio: null };

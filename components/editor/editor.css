@@ -3661,3 +3661,29 @@ dialog.fm-sharedlg {
   font-style: normal;
   font-weight: 500;
 }
+/* tablet and phone: undo / redo live in the overflow menu, the legend steps aside */
+.fm-undo-over {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .fm-undo-over {
+    display: block;
+  }
+  .fm-edit-tools > .btn.icon {
+    display: none;
+  }
+  .fm-legend {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .fm-scen {
+    flex: none;
+    max-width: 96px;
+    padding-inline: 8px;
+  }
+  .fm-scen {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

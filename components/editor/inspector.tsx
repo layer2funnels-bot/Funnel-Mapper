@@ -406,7 +406,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
   const inn = T.cat === "traffic" ? r.out : r.inflow;
   const setGoal = (v: number) => {
     const rest = settings.goals.filter((g) => g !== goal);
-    setSettings({ goals: v > 0 ? [...rest, { id: goal?.id ?? nid(), name: goal?.name || `${n.name} conversion`, kind: "conversion", value: v, nodeId: n.id }] : rest });
+    setSettings({ goals: v > 0 ? [...rest, { id: goal?.id ?? nid(), name: goal?.name || `${n.name} conversion`, kind: "conversion", value: v, period: "month", nodeId: n.id }] : rest });
   };
   return (
     <>

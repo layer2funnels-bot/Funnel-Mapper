@@ -164,13 +164,16 @@ export const projectionSchema = z.object({
   growth: finite.default(0),
 });
 
-export const GOAL_KINDS = ["revenue", "profit", "customers", "leads", "step", "conversion"] as const;
+export const GOAL_KINDS = ["revenue", "profit", "traffic", "customers", "leads", "step", "conversion"] as const;
+export const GOAL_PERIODS = ["day", "week", "month", "year"] as const;
 export const goalSchema = z.object({
   id: z.string(),
   name: z.string().default(""),
-  /** Monthly revenue / profit / customers / leads, people completing a step, or a step's conversion rate (%). */
+  /** Target revenue / profit / traffic / customers / leads / step completions in the selected period, or a step's conversion rate (%). */
   kind: z.enum(GOAL_KINDS).default("revenue"),
   value: finite.default(0),
+  /** Existing goals default to monthly, preserving their saved target meaning. */
+  period: z.enum(GOAL_PERIODS).default("month"),
   /** The funnel step the goal belongs to (required for step and conversion goals). */
   nodeId: z.string().optional(),
 });

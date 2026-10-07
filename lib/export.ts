@@ -1,707 +1,439 @@
-// Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
-import { brandMarkOf } from "./brand-marks";
-import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
-import { money, nf } from "./format";
-import { num, stepRows, type FunnelResult } from "./funnel-math";
-import type { FunnelEdge, FunnelNode, Goal } from "./graph";
-import { ICONS, type IconName } from "./icons";
-import { edgeConversion, edgePath, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
-import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type Wireframe } from "./block-visuals";
-import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
-import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
-import { goalCurrent } from "./report-data";
-import { formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×»á:-jZ.¶›­–)Ş³RòòW&RW‡÷'BvVæW&F÷'3¢55b7FW&W÷'BæB5drÖ‡F†RäræBF†RDbÖ&R&7FW&—6VBg&öÒF†R5dr’àĞ¦–×÷'B²'&æDÖ&´öbÒg&öÒ"âö'&æBÖÖ&·2#°Ğ¦–×÷'B²&6TöbÂ4DD$²Â4D„U‚Âä‚Ât”DtUEõ4•¤U2Â&Æö6´‚Â—4ææ÷BÂæöFUrÂG—TöbÂG—R6öÆ÷$¶W’Òg&öÒ"âö6FÆör#°Ğ¦–×÷'B²ÖöæW’ÂæbÒg&öÒ"âöf÷&ÖB#°Ğ¦–×÷'B²çVÒÂW&–öDf7F÷"Â7FW&÷w2ÂG—RgVææVÅ&W7VÇBÒg&öÒ"âögVææVÂÖÖF‚#°Ğ¦–×÷'BG—R²gVææVÄVFvRÂgVææVÄæöFRÂvöÂÒg&öÒ"âöw&‚#°Ğ¦–×÷'B²”4ôå2ÂG—R–6öäæÖRÒg&öÒ"âö–6öç2#°Ğ¦–×÷'B²VFvT6öçfW'6–öâÂVFvUF‚ÂVFvU&WfVçVRÂVFvUFrÂæöFU7FG2ÂöffW%7V'F—FÆRÂW&dÆ–æRÂ&–6UF"Â7V$Æ&VÂÒg&öÒ"âöVF—F÷"öÆ&VÇ2#°Ğ¦–×÷'B²4$BÂdÔ”Ä”U2ÂdÔ”Å•ôtTôÒÂ†57Æ—D&"Âf—7VÄöbÂteõ4•¤RÂt•$Te$ÔU2ÂG—Rve–çBÂG—Rv—&Vg&ÖRÒg&öÒ"âö&Æö6²×f—7VÇ2#°Ğ¦–×÷'B²D4‚ÂdôåEôdÔ”Ä”U2ÂVFvTÆöö²Â6†TvVöÒÒg&öÒ"â÷7G–ÆR#°Ğ¦–×÷'B²†÷7DöbÂ—5f–FVõW&ÂÂ&–6…FõÆ–âÒg&öÒ"â÷&–6‚×FW‡B#°Ğ¦–×÷'B²vöÄ7W'&VçBÒg&öÒ"â÷&W÷'BÖFF#°Ğ¦–×÷'B²f÷&ÖDÖWG&–5fÇVRÂv–FvWD6öæf–rÂv–FvWDÖVÖ&W'2Âv–FvWEfÇVW2ÂG—Rv–FvWDÖWG&–2Òg&öÒ"â÷v–FvWBÖFF#°Ğ Ğ¦6öç7BW62Ò‡3¢Væ¶æ÷vâ’Óâ7G&–ær‡2óò""’ç&WÆ6R‚õ²cÃâ"uÒörÂ†2’Óâ‡²"b#¢"f×²"Â#Â#¢"fÇC²"Â#â#¢"fwC²"Âr"s¢"gV÷C²"Â"r#¢"b33“²"Ò•¶5Ò“°Ğ¦6öç7B77gÒ‡c¢Væ¶æ÷vâ’Óâ"Gµ7G&–ær‡b’ç&WÆ6R‚ò"örÂr""r—Ò&°Ğ Ğ¦W‡÷'B6öç7Bf–ÆTæÖRÒ†æÖS¢7G&–ærÂW‡C¢7G&–ær’ÓàĞ¢†æÖRÇÂ&gVææVÂ"Ğ¢ç&WÆ6R‚õµåÇuÂÒÒ²örÂ""Ğ¢çG&–Ò‚Ğ¢ç&WÆ6R‚õÇ2²örÂ"Ò"Ğ¢çFôÆ÷vW$66R‚’²âG¶W‡GÖ°Ğ Ğ¢ò¢ Ğ¢¢7FW&W÷'B55c¢WfW'’7FWÂF†RgVææVÂF÷FÇ2ÂF†Vâ†÷F–öæÂ’66Væ&–ò6ö×&—6öâv—F‚öæR6öÇVÖâW Ğ¢¢66Væ&–òâ66Væ&–÷6&R&W7VÇG2g&öÒ6ö×WFRò6ö×WFU66Væ&–ò†Æ–"÷&W÷'BÖFFçG266Væ&–÷6’àĞ¢¢ğĞ¦W‡÷'BgVæ7F–öâ7FW477b†s¢²æöFW3¢gVææVÄæöFUµÓ²VFvW3¢gVææVÄVFvUµÒÒÂ#¢gVææVÅ&W7VÇBÂ66Væ&–÷3¢²æÖS¢7G&–æs²#¢gVææVÅ&W7VÇBÕµÒÒµÒ“¢7G&–ær°Ğ¢6öç7B&÷w3¢Væ¶æ÷våµÕµÒÒµ²%7FW"Â%G—R"Â$–â"Â$÷WB"Â$æ÷B6öçfW'F–ær"Â$6öçfW'6–öâR"Â%&WfVçVR"Â$6÷7B%ÕÓ°Ğ¢7FW&÷w2†rÂ"’æf÷$V6‚‚‡"’Óâ&÷w2çW6‚…·"ææÖRÂ"æÆ&VÂÂ"æ–æâçFôf—†VBƒ’Â"æ÷WBçFôf—†VBƒ’Â"ææöâçFôf—†VBƒ’Â"æ–æâò‚‡"æ÷WBò"æ–æâ’¢’çFôf—†VBƒ’¢""Â"ç&WbçFôf—†VBƒ"’Â"æ6÷7BçFôf—†VBƒ"•Ò’“°Ğ¢&÷w2çW6‚…µÒ“°Ğ¢€Ğ¢°Ğ¢²%G&ff–2"Â"çG&ff–5ÒÀĞ¢²$B7VæB"Â"ç7VæEÒÀĞ¢²$ÆVG2"Â"æÆVG5ÒÀĞ¢²$7W7FöÖW'2"Â"æ7W7EÒÀĞ¢²%&WfVçVR"Â"ç&WeÒÀĞ¢²%&öf—B"Â"ç&öf—EÒÀĞ¢²%$ô’"Â"ç&ö•ÒÀĞ¢²$õb"Â"æ÷eÒÀĞ¢²$5"Â"æ7ÒÀĞ¢²$5Â"Â"æ7ÅÒÀĞ¢²$52"Â"æ75ÒÀĞ¢²%$ô2"Â"ç&ö5ÒÀĞ¢²$'&V²ÖWfVâ$ô2"Â"æ&W&ö5ÒÀĞ¢²$'&V²ÖWfVâ5"Â"æ&V7ÒÀĞ¢²$U2"Â"æW5ÒÀĞ¢²$6öçfW'6–öâ&FR"Â"æ6öçeÒÀĞ¢²$Õ%""Â"æ×'%ÒÀĞ¢²$ÅEbW"7W7FöÖW""Â"æÇGf5ÒÀĞ¢Ò2·7G&–ærÂçVÖ&W%ÕµĞĞ¢’æf÷$V6‚‚…¶Â%Ò’Óâ&÷w2çW6‚…¶ÂçVÖ&W"æ—4f–æ—FR†"’ò"çFôf—†VBƒ"’¢"%Ò’“°Ğ¢–b‡66Væ&–÷2æÆVæwF‚’°Ğ¢&÷w2çW6‚…µÒ“°Ğ¢&÷w2çW6‚…²%66Væ&–ò6ö×&—6öâ"Âââç66Væ&–÷2æÖ‚‡‚’Óâ‚ææÖR•Ò“°Ğ¢6öç7BbÒ‡c¢çVÖ&W"’Óâ„çVÖ&W"æ—4f–æ—FR‡b’òbçFôf—†VBƒ"’¢""“°Ğ¢€Ğ¢°Ğ¢²%G&ff–2"Â‡"’Óâ"çG&ff–5ÒÀĞ¢²$ÆVG2"Â‡"’Óâ"æÆVG5ÒÀĞ¢²$7W7FöÖW'2"Â‡"’Óâ"æ7W7EÒÀĞ¢²%&WfVçVR"Â‡"’Óâ"ç&WeÒÀĞ¢²$B7VæB"Â‡"’Óâ"ç7VæEÒÀĞ¢²%&öf—B"Â‡"’Óâ"ç&öf—EÒÀĞ¢²%$ô2"Â‡"’Óâ"ç&ö5ÒÀĞ¢²%$ô’"Â‡"’Óâ"ç&ö•ÒÀĞ¢²$5"Â‡"’Óâ"æ7ÒÀĞ¢²$5Â"Â‡"’Óâ"æ7ÅÒÀĞ¢²$õb"Â‡"’Óâ"æ÷eÒÀĞ¢²$ÅEbW"7W7FöÖW""Â‡"’Óâ"æÇGf5ÒÀĞ¢²$Õ%""Â‡"’Óâ"æ×'%ÒÀĞ¢Ò2·7G&–ærÂ‡#¢gVææVÅ&W7VÇB’ÓâçVÖ&W%ÕµĞĞ¢’æf÷$V6‚‚…¶Æ&VÂÂvWEÒ’Óâ&÷w2çW6‚…¶Æ&VÂÂââç66Væ&–÷2æÖ‚‡‚’Óâb†vWB‡‚å"’’•Ò’“°Ğ¢ĞĞ¢&WGW&â&÷w2æÖ‚‡"’Óâ"æÖ†77g’æ¦ö–â‚"Â"’’æ¦ö–â‚%Æâ"“°Ğ§ĞĞ Ğ¢ò¢¢FFVB7GVÇ2W‡÷'BâV6‚&÷r¶VW2—G2÷&–v–æÂvw&VvF–öâW&–öB6ò'F–ÂW&–öG2&RæWfW"–×Æ–VBâ¢ğĞ¦W‡÷'BgVæ7F–öâ7GVÇ477b‡&÷w3¢²W&–öE÷7F'C¢7G&–æs²W&–öEöVæC¢7G&–æs²æöFUö–C¢7G&–æs²f—6—F÷'3¢çVÖ&W"ÂçVÆÃ²6öçfW'6–öç3¢çVÖ&W"ÂçVÆÃ²&WfVçVS¢çVÖ&W"ÂçVÆÃ²7VæC¢çVÖ&W"ÂçVÆÂÕµÒÂæÖW3¢&V6÷&CÇ7G&–ærÂ7G&–æsâÒ·Ò“¢7G&–ær°Ğ¢6öç7BfÇVW3¢Væ¶æ÷våµÕµÒÒµ²%W&–öB7F'B"Â%W&–öBVæB"Â%7FW"Â%f—6—F÷'2"Â$6öçfW'6–öç2"Â%&WfVçVR"Â%7VæB%ÕÓ°Ğ¢f÷"†6öç7B&÷röb&÷w2’fÇVW2çW6‚…·&÷rçW&–öE÷7F'BÂ&÷rçW&–öEöVæBÂæÖW5·&÷rææöFUö–EÒóò&÷rææöFUö–BÂ&÷rçf—6—F÷'2Â&÷ræ6öçfW'6–öç2Â&÷rç&WfVçVRÂ&÷rç7VæEÒ“°Ğ¢&WGW&âfÇVW2æÖ‚‡"’Óâ"æÖ†77g’æ¦ö–â‚"Â"’’æ¦ö–â‚%Æâ"“°Ğ§ĞĞ Ğ Ğ¢ò¢ÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÖ–ÖvR…5ds²äræBF†RDbÖ&R&7FW&—6VBg&öÒ—B’ÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒ¢ğĞ Ğ¦W‡÷'B–çFW&f6R7fuÆWGFR°Ğ¢&s¢7G&–æs°Ğ¢æVÃ¢7G&–æs°Ğ¢æVÃ#¢7G&–æs°Ğ¢Æ–æS¢7G&–æs°Ğ¢–æ³¢7G&–æs°Ğ¢×WFVC¢7G&–æs°Ğ¢VFvS¢7G&–æs°Ğ¢ÇC¢7G&–æs°Ğ¢vööC¢7G&–æs°Ğ¢'&æC¢7G&–æs°Ğ¢6D–æ³¢7G&–æs°Ğ¢6C¢&V6÷&CÄ6öÆ÷$¶W’Â7G&–æsã°Ğ§ĞĞ¢ò¢¢Æ–v‡BF†VÖRFö¶Vç2†övÆö&Ç2æ772¶FF×F†VÖSÒ&Æ–v‡B%Ò“¢6Æ–VçBW‡÷'G2&R&–çFVBöâv†—FRâ¢ğĞ¦W‡÷'B6öç7BÄ”t…EõÄUEDS¢7fuÆWGFRÒ²&s¢"4c„dd2"ÂæVÃ¢"4dddddb"ÂæVÃ#¢"4ccTc’"ÂÆ–æS¢"4D$S$T"Â–æ³¢"3cs$"Â×WFVC¢"3CsSSc’"ÂVFvS¢"3“D4#‚"ÂÇC¢"43#C2"ÂvööC¢"3Sƒ4B"Â'&æC¢"3CsƒSr"Â6D–æ³¢"4dddddb"Â6C¢4D„U‚Ó°Ğ Ğ¢ò¢¢F&²F†VÖRFö¶Vç2‡F†RÆö6¶VBF&²Öf—'7BÆWGFR“¢f÷"6Æ–FW2æBF&²Fö7VÖVçG2â¢ğĞ¦W‡÷'B6öç7BD$µõÄUEDS¢7fuÆWGFRÒ²&s¢"3###"ÂæVÃ¢"3ƒ#r"ÂæVÃ#¢"3S#“4""ÂÆ–æS¢"333CSR"Â–æ³¢"4S$S„c"Â×WFVC¢"3“D4#‚"ÂVFvS¢"3cCsC„""ÂÇC¢"4d#“#42"ÂvööC¢"3#$3STR"Â'&æC¢"33DC3“’"Â6D–æ³¢"3###"Â6C¢4DD$²Ó°Ğ¦W‡÷'BG—R–ÖvT&6¶w&÷VæBÒ&Æ–v‡B"Â&F&²"Â'G&ç7&VçB#°Ğ¢ò¢¢ÆWGFRf÷"Ö–ÖvR&6¶w&÷VæB‚'G&ç7&VçB"ÒÆ–v‡BVÆVÖVçG2öâæò&6¶w&÷VæB’â¢ğĞ¦W‡÷'B6öç7BÆWGFTf÷"Ò†&s¢–ÖvT&6¶w&÷VæB“¢7fuÆWGFRÓâ†&rÓÓÒ&F&²"òD$µõÄUEDR¢&rÓÓÒ'G&ç7&VçB"ò²ââäÄ”t…EõÄUEDRÂ&s¢&æöæR"Ò¢Ä”t…EõÄUEDR“°Ğ Ğ¢ò¢¢FW‡Bv–GF‚–â‚âF†R'&÷w6W"76W26çf2Ö&6VBÖV7W&Rv—F‚F†R&VÂföçG3²F†—2fÆÆ&6²&÷†–ÖFW2â¢ğĞ¦W‡÷'BG—RÖV7W&RÒ‡FW‡C¢7G&–ærÂ6—¦S¢çVÖ&W"ÂvV–v‡C¢çVÖ&W"ÂfÖ–Ç“¢7G&–ær’ÓâçVÖ&W#°Ğ¦6öç7B&÷„ÖV7W&S¢ÖV7W&RÒ‡BÂ6—¦RÂvV–v‡B’ÓâBæÆVæwF‚¢6—¦R¢‡vV–v‡BãÒsòãS‚¢ãSB“°Ğ Ğ¦W‡÷'B–çFW&f6RÖ7ft÷F–öç2°Ğ¢7W'&Væ7“¢7G&–æs°Ğ¢çV×3¢&ööÆVã°Ğ¢ÆWGFSó¢7fuÆWGFS°Ğ¢ò¢¢&VæFW&VB†V–v‡B÷v–GF‚öbâVÆVÖVçB‡F†RVF—F÷"76W2—G2ÖV7W&VB6—¦W2’â¢ğĞ¢†V–v‡Döcó¢†ã¢gVææVÄæöFR’ÓâçVÖ&W#°Ğ¢v–GF„öcó¢†ã¢gVææVÄæöFR’ÓâçVÖ&W#°Ğ¢ò¢¢Æ–æRF†–6¶æW72föÆÆ÷w2G&ff–2…f–WrÖVçR÷F–öâ’â¢ğĞ¢F†–6³ó¢&ööÆVã°Ğ¢ò¢¢föçBfÖ–Æ–W2W6VBöâF†R6çf2ÂÇW2föçBÖf6R552FòVÖ&VB‡6òärõDbFöâwBfÆÂ&6²Fò&–Â’â¢ğĞ¢föçG3ó¢²6ç3¢7G&–æs²F—7Æ“¢7G&–æs²773ó¢7G&–ærÓ°Ğ¢ÖV7W&Só¢ÖV7W&S°Ğ¢ò¢¢¶W’ÖÆV²&Æö6²…W&f÷&Öæ6RÖ&FvR’â¢ğĞ¢¶W”ÆV³ó¢7G&–ærÂçVÆÃ°Ğ¢ò¢¢gVææVÂvöÇ3¢vöÂ&Æö6·2G&rF†V—"&öw&W72&"â¢ğĞ¢vöÇ3ó¢vöÅµÓ°Ğ¢ò¢¢vR67&VVç6†÷G22FFU$Ç2Â'’æöFR–B†G&vâ–ç7FVBöbF†R6VÖçF–2v—&Vg&ÖR’â¢ğĞ¢6†÷G3ó¢&V6÷&CÇ7G&–ærÂ7G&–æsã°Ğ¢ò¢¢Væv–æRÖ&6¶VBW‡G&2f÷"v–FvWG2‡F†R"ÖÖöçF‚6W&–W2f÷"6†'Bv–FvWG2ÂÕ%"FWF–Â“²F†RVF—F÷"76W2F†VÒÂæ÷F†–ær—26Æ7VÆFVB†W&Râ¢ğĞ¢v–FvWDFFó¢°Ğ¢6W&–W3¢†ÖWG&–3¢v–FvWDÖWG&–2ÂfÇVS¢çVÖ&W"’ÓâçVÖ&W%µÓ°Ğ¢×'#¢†ÖVÖ&W'3¢gVææVÄæöFUµÒÂçVÆÂ’Óâ²ÖöçFƒ#¢çVÖ&W#²7V'67&–&W'3¢çVÖ&W"Ó°Ğ¢Ó°Ğ§ĞĞ Ğ¦6öç7BDTdTÅEôdôåE2Ò²6ç3¢"tDÒ6ç2rÂ&–ÂÂ6ç2×6W&–b"ÂF—7Æ“¢"t'&–6öÆvRw&÷FW7VRrÂtDÒ6ç2rÂ&–ÂÂ6ç2×6W&–b"Ó°Ğ¦6öç7B$õ$DU%ôD4‚Ò²6öÆ–C¢VæFVf–æVBÂF6†VC¢#bB"ÂF÷GFVC¢#ãR2"Ò26öç7C°Ğ¦6öç7Bã"Ò‡c¢çVÖ&W"’ÓâÖF‚ç&÷VæB‡b¢’ò°Ğ Ğ¢ò¢¢vRv—&Vg&ÖR†Æ–"ö&Æö6²×f—7VÇ2çG2FF’25drB‡‚Â’“²–çFÖ2F†Rv—&Vg&ÖR–çG2Fò6öÆ÷W'2â¢ğĞ¦W‡÷'BgVæ7F–öâv—&Vg&ÖU7fr†¶–æC¢v—&Vg&ÖRÂƒ¢çVÖ&W"Â“¢çVÖ&W"Â–çC¢&V6÷&CÅve–çBÂ7G&–æsâ“¢7G&–ær°Ğ¢6öç7Bf–ÆÂÒ†³¢ve–çB’Óâ†²ÓÓÒ&ò"ÇÂ²ÓÓÒ&ò"ò&æöæR"¢–çE¶µÒ“°Ğ¢6öç7B7G&ö¶RÒ†³¢ve–çB’Óâ†²ÓÓÒ&ò"ÇÂ²ÓÓÒ&ò"ò7G&ö¶SÒ"G·–çE¶µ×Ò"7G&ö¶R×v–GFƒÒ#&¢""“°Ğ¢6öç7B&öG’Òt•$Te$ÔU5¶¶–æEĞĞ¢æÖ‚‡6‚’Óâ°Ğ¢–b‡6…³ÒÓÓÒ'""’&WGW&âÇ&V7BƒÒ"G·6…³×Ò"“Ò"G·6…³%×Ò"v–GFƒÒ"G·6…³5×Ò"†V–v‡CÒ"G·6…³E×Ò"'ƒÒ"G·6…³U×Ò"f–ÆÃÒ"G¶f–ÆÂ‡6…³eÒ—Ò"G·7G&ö¶R‡6…³eÒ—Òóæ°Ğ¢–b‡6…³ÒÓÓÒ&2"’&WGW&âÆ6—&6ÆR7ƒÒ"G·6…³×Ò"7“Ò"G·6…³%×Ò"#Ò"G·6…³5×Ò"f–ÆÃÒ"G¶f–ÆÂ‡6…³EÒ—Ò"G·7G&ö¶R‡6…³EÒ—Òóæ°Ğ¢&WGW&âÇF‚CÒ"G·6…³×Ò"f–ÆÃÒ&æöæR"7G&ö¶SÒ"G·–çE·6…³%Õ×Ò"7G&ö¶R×v–GFƒÒ#ãR"7G&ö¶RÖÆ–æV6Ò'&÷VæB"7G&ö¶RÖÆ–æV¦ö–ãÒ'&÷VæB"óæ°Ğ¢ÒĞ¢æ¦ö–â‚""“°Ğ¢&WGW&âÆrG&ç6f÷&ÓÒ'G&ç6ÆFR‚G¶ã"‡‚—ÒÂG¶ã"‡’—Ò’#âG¶&öG—ÓÂösæ°Ğ§ĞĞ Ğ¢ò¢¢w&VVG’v÷&Bw&†W‡Æ–6—BæWvÆ–æW2¶WB“²v÷&G2ÆöævW"F†âF†RÆ–æR&R'&ö¶Vâ'’6†&7FW"â¢ğĞ¦W‡÷'BgVæ7F–öâw&FW‡B‡FW‡C¢7G&–ærÂÖ…s¢çVÖ&W"Â6—¦S¢çVÖ&W"ÂvV–v‡C¢çVÖ&W"ÂfÖ–Ç“¢7G&–ærÂÖV7W&S¢ÖV7W&RÒ&÷„ÖV7W&R“¢7G&–æuµÒ°Ğ¢6öç7B÷WC¢7G&–æuµÒÒµÓ°Ğ¢6öç7Bf—G2Ò‡C¢7G&–ær’ÓâÖV7W&R‡BÂ6—¦RÂvV–v‡BÂfÖ–Ç’’ÃÒÖ…r²ãS°Ğ¢f÷"†6öç7B&öbFW‡Bç7Æ—B‚%Æâ"’’°Ğ¢ÆWBÆ–æRÒ"#°Ğ¢f÷"†6öç7Bv÷&Böb&ç7Æ—B‚òƒóÃÕÇ2’ò’’°Ğ¢–b†f—G2†Æ–æR²v÷&BçG&–ÔVæB‚’’ÇÂÆ–æR’°Ğ¢–b‚f—G2‡v÷&BçG&–ÔVæB‚’’bbÆ–æR’°Ğ¢òò6–ævÆR÷fW"ÖÆöærv÷&C¢'&V²—@Ğ¢ÆWBrÒv÷&C°Ğ¢v†–ÆR‡rbbf—G2‡rçG&–ÔVæB‚’’’°Ğ¢ÆWB²ÒræÆVæwF‚Ò°Ğ¢v†–ÆR†²âbbf—G2‡rç6Æ–6RƒÂ²’’’²ÒÓ°Ğ¢÷WBçW6‚‡rç6Æ–6RƒÂ²’“°Ğ¢rÒrç6Æ–6R†²“°Ğ¢ĞĞ¢Æ–æRÒs°Ğ¢ÒVÇ6RÆ–æR³Òv÷&C°Ğ¢ÒVÇ6R°Ğ¢÷WBçW6‚†Æ–æRçG&–ÔVæB‚’“°Ğ¢Æ–æRÒv÷&C°Ğ¢ĞĞ¢ĞĞ¢÷WBçW6‚†Æ–æRçG&–ÔVæB‚’“°Ğ¢ĞĞ¢&WGW&â÷WC°Ğ§ĞĞ Ğ¢ò¢¢7WB6–ævÆRÆ–æRFòf—BÂv—F‚âVÆÆ—6—2„552FW‡BÖ÷fW&fÆ÷r’â¢ğĞ¦gVæ7F–öâVÆÆ—6—2‡C¢7G&–ærÂÖ…s¢çVÖ&W"Â6—¦S¢çVÖ&W"ÂvV–v‡C¢çVÖ&W"ÂfÖ–Ç“¢7G&–ærÂÖV7W&S¢ÖV7W&R’°Ğ¢–b†ÖV7W&R‡BÂ6—¦RÂvV–v‡BÂfÖ–Ç’’ÃÒÖ…r’&WGW&âC°Ğ¢ÆWB²ÒBæÆVæwFƒ°Ğ¢v†–ÆR†²âbbÖV7W&R‡Bç6Æ–6RƒÂ²’².(
+b"Â6—¦RÂvV–v‡BÂfÖ–Ç’’âÖ…r’²ÒÓ°Ğ¢&WGW&âBç6Æ–6RƒÂ²’çG&–ÔVæB‚’².(
+b#°Ğ§ĞĞ Ğ¦–çFW&f6RFW‡DÆöö²°Ğ¢6—¦S¢çVÖ&W#°Ğ¢ò¢¢Æ–æR†V–v‡B–â‚¢ğĞ¢Æƒ¢çVÖ&W#°Ğ¢vV–v‡C¢çVÖ&W#°Ğ¢fÖ–Ç“¢7G&–æs°Ğ¢6öÆ÷#¢7G&–æs°Ğ¢Æ–vã¢&ÆVgB"Â&6VçFW""Â'&–v‡B#°Ğ¢—FÆ–3ó¢&ööÆVã°Ğ¢FV6óó¢7G&–æs°Ğ¢Ç3ó¢çVÖ&W#°Ğ§ĞĞ¢ò¢¢&6VÆ–æR–ç6–FR552Æ–æR&÷‚†66VçB(˜‚ã“–VÒÂFW66VçB(˜‚ã3VÒf÷"F†RföçG2’â¢ğĞ¦6öç7B&6VÆ–æRÒ‡F÷¢çVÖ&W"ÂC¢FW‡DÆöö²’ÓâF÷²‡BæÆ‚Òã2¢Bç6—¦R’ò"²ã“’¢Bç6—¦S°Ğ Ğ¦gVæ7F–öâFW‡DGG'2‡C¢FW‡DÆöö²’°Ğ¢&WGW&âföçB×6—¦SÒ"G·Bç6—¦WÒ"föçB×vV–v‡CÒ"G·BçvV–v‡GÒ"föçBÖfÖ–Ç“Ò"G¶W62‡BæfÖ–Ç’—Ò"f–ÆÃÒ"G¶W62‡Bæ6öÆ÷"—Ò"G·Bæ—FÆ–2òrföçB×7G–ÆSÒ&—FÆ–2"r¢"'ÒG·BæFV6òòFW‡BÖFV6÷&F–öãÒ"G·BæFV6÷Ò&¢"'ÒG·BæÇ2òÆWGFW"×76–æsÒ"G·BæÇ7Ò&¢"'Ö°Ğ§ĞĞ¢ò¢¢Æ–æW2öbFW‡B–â&÷‚·‚Â‚·uÒÂf—'7BÆ–æR&÷‚BF÷â¢ğĞ¦gVæ7F–öâFW‡D&Æö6²†Æ–æW3¢7G&–æuµÒÂƒ¢çVÖ&W"Âs¢çVÖ&W"ÂF÷¢çVÖ&W"ÂC¢FW‡DÆöö²’°Ğ¢6öç7B‚ÒBæÆ–vâÓÓÒ&6VçFW""ò‚²rò"¢BæÆ–vâÓÓÒ'&–v‡B"ò‚²r¢ƒ°Ğ¢6öç7Bæ6†÷"ÒBæÆ–vâÓÓÒ&6VçFW""ò&Ö–FFÆR"¢BæÆ–vâÓÓÒ'&–v‡B"ò&VæB"¢'7F'B#°Ğ¢&WGW&âÆ–æW2æÖ‚†ÂÂ’’ÓâÇFW‡BƒÒ"G¶ã"†‚—Ò"“Ò"G¶ã"†&6VÆ–æR‡F÷²’¢BæÆ‚ÂB’—Ò"FW‡BÖæ6†÷#Ò"G¶æ6†÷'Ò"G·FW‡DGG'2‡B—Ò†ÖÃ§76SÒ'&W6W'fR#âG¶W62†Â—ÓÂ÷FW‡Cæ’æ¦ö–â‚""“°Ğ§ĞĞ Ğ¢ò¢¢Væ–öâöbWfW'—F†–ærG&vã¢VÆVÖVçB&÷†W2Âg&ÖRF—FÆW2Â6öææV7F–öâF‡2æBÆ&VÇ2â¢ğĞ¦W‡÷'BgVæ7F–öâÖ&÷VæG2†&÷†W3¢¶çVÖ&W"ÂçVÖ&W"ÂçVÖ&W"ÂçVÖ&W%ÕµÒÂF‡3¢7G&–æuµÒ“¢¶çVÖ&W"ÂçVÖ&W"ÂçVÖ&W"ÂçVÖ&W%Ò°Ğ¢ÆWBƒÒ–æf–æ—G’ÀĞ¢“Ò–æf–æ—G’ÀĞ¢ƒÒÔ–æf–æ—G’ÀĞ¢“ÒÔ–æf–æ—G“°Ğ¢6öç7BFBÒ‡ƒ¢çVÖ&W"Â“¢çVÖ&W"’Óâ°Ğ¢ƒÒÖF‚æÖ–â‡ƒÂ‚“°Ğ¢“ÒÖF‚æÖ–â‡“Â’“°Ğ¢ƒÒÖF‚æÖ‚‡ƒÂ‚“°Ğ¢“ÒÖF‚æÖ‚‡“Â’“°Ğ¢Ó°Ğ¢&÷†W2æf÷$V6‚‚…·‚Â’ÂrÂ…Ò’Óâ°Ğ¢FB‡‚Â’“°Ğ¢FB‡‚²rÂ’²‚“°Ğ¢Ò“°Ğ¢F‡2æf÷$V6‚‚†B’Óâ°Ğ¢6öç7BbÒ†BæÖF6‚‚òÓõÆB¥ÂãõÆB²ƒó¦RÓõÆB²“òör’óòµÒ’æÖ„çVÖ&W"“°Ğ¢–b‚ô2òçFW7B†B’bbbæÆVæwF‚ÓÓÒ‚’°Ğ¢òò7V&–2&W¦–W#¢6×ÆRF†R7W'fR†6öçG&öÂö–çG2÷fW'6†ö÷B—BĞ¢f÷"†ÆWB’Ò²’ÃÒc²’²²’°Ğ¢6öç7BBÒ’òbÀĞ¢RÒÒC°Ğ¢FB‡R¢R¢R¢e³Ò²2¢R¢R¢B¢e³%Ò²2¢R¢B¢B¢e³EÒ²B¢B¢B¢e³eÒÂR¢R¢R¢e³Ò²2¢R¢R¢B¢e³5Ò²2¢R¢B¢B¢e³UÒ²B¢B¢B¢e³uÒ“°Ğ¢ĞĞ¢ÒVÇ6Rf÷"†ÆWB’Ò²’²ÂbæÆVæwFƒ²’³Ò"’FB‡e¶•ÒÂe¶’²Ò“°Ğ¢Ò“°Ğ¢&WGW&âçVÖ&W"æ—4f–æ—FR‡ƒ’ò·ƒÂ“ÂƒÂ“Ò¢³ÂÂCÂ3Ó°Ğ§ĞĞ Ğ¢ò¢¢ÆVv7’†VÇW#¢VÆVÖVçB&÷†W2öæÇ’â¢ğĞ¦W‡÷'BgVæ7F–öâ&÷VæG2†æöFW3¢gVææVÄæöFUµÒÂ†V–v‡Döc¢†ã¢gVææVÄæöFR’ÓâçVÖ&W"Ò†â’Óâ†—4ææ÷B†âçG—R’òä‚¢&Æö6´‚†âçG—R’’’°Ğ¢&WGW&âÖ&÷VæG2€Ğ¢æöFW2æÖ‚†â’Óâ¶âç‚Ââç’ÂâçróòæöFUr†âçG—R’Ââæ‚óò†V–v‡Döb†â•Ò’ÀĞ¢µÒÀĞ¢“°Ğ§ĞĞ Ğ¢ò¢ Ğ¢¢fV7F÷"ÖöbF†RgVææVÂÂG&vâFòÖF6‚F†R6çf3¢VÆVÖVçB7G–ÆW2†f–ÆÂÂ&÷&FW"Â&F—W2Â÷6—G’ÂföçG2ÂFW‡@Ğ¢¢7G–Æ–ær’Âw&VBFW‡BÂ6†W2Â–ÖvW2Â6†V6¶Æ—7G2Âg&ÖW2Â6öææV7F–öâ7G–ÆW2‡F‚ÂF6‚Â6öÆ÷W"Âv–GF‚Â'&÷w2ÀĞ¢¢6¶—òæòÖFFÂÆ&VÇ2’æBÆ–W"÷&FW"âçV×6Ò6†÷rG&ff–26÷VçG2æB&Æö6²7FG2àĞ¢¢ğĞ¦W‡÷'BgVæ7F–öâÖ7fr†s¢²æöFW3¢gVææVÄæöFUµÓ²VFvW3¢gVææVÄVFvUµÒÒÂ#¢gVææVÅ&W7VÇBÂ÷G3¢Ö7ft÷F–öç2“¢7G&–ær°Ğ¢6öç7BÒ÷G2çÆWGFRóòÄ”t…EõÄUEDS°Ğ¢6öç7BƒÒ÷G2æ†V–v‡Döbóò‚†ã¢gVææVÄæöFR’Óâ†âçG—RÓÓÒ&Æ&VÂ"òC¢—4ææ÷B†âçG—R’òä‚¢&Æö6´‚†âçG—R’’“°Ğ¢6öç7BsÒ÷G2çv–GF„öbóò‚†ã¢gVææVÄæöFR’Óââçróò†âçG—RÓÓÒ&Æ&VÂ"ò3¢æöFUr†âçG—R’’“°Ğ¢6öç7BbÒ²ââäDTdTÅEôdôåE2Âââæ÷G2æföçG2Ó°Ğ¢6öç7BÖV7W&RÒ÷G2æÖV7W&Róò&÷„ÖV7W&S°Ğ¢6öç7BfÒÒ‡3¢gVææVÄæöFU²'2%ÒÂfÆÆ&6³¢7G&–ær’Óâ‡3òæföçBÓÓÒ'6ç2"òbç6ç2¢3òæföçBÓÓÒ&F—7Æ’"òbæF—7Æ’¢3òæföçBòdôåEôdÔ”Ä”U5·2æföçEÒæ772¢fÆÆ&6²“°Ğ¢ò¢¢&VÆ¢F†R552Æ–æR†V–v‡B—2&VÆF—fRƒãRòæ÷&ÖÂ’&F†W"F†âf—†VB‚fÇVRâ¢ğĞ¢6öç7BÆöö²Ò‡3¢gVææVÄæöFU²'2%ÒÂC¢'F–ÃÅFW‡DÆöö³âb²6—¦S¢çVÖ&W#²Æƒ¢çVÖ&W#²&VÃó¢&ööÆVâÒ“¢FW‡DÆöö²Óâ°Ğ¢6öç7B6—¦RÒ3òæföçE6—¦RóòBç6—¦S°Ğ¢&WGW&â°Ğ¢6—¦RÀĞ¢Æƒ¢3òæÆ‚ò6—¦R¢2æÆ‚¢Bç&VÂòBæÆ‚¢‡6—¦RòBç6—¦R’¢BæÆ‚ÀĞ¢vV–v‡C¢3òçvV–v‡BóòBçvV–v‡BóòCÀĞ¢fÖ–Ç“¢fÒ‡2ÂBæfÖ–Ç’óòbç6ç2’ÀĞ¢6öÆ÷#¢3òæ6öÆ÷"óòBæ6öÆ÷"óòæ–æ²ÀĞ¢Æ–vã¢3òæÆ–vâóòBæÆ–vâóò&ÆVgB"ÀĞ¢—FÆ–3¢3òæ—FÆ–2ÀĞ¢FV6ó¢·3òçVæFW&Æ–æRbb'VæFW&Æ–æR"Â3òç7G&–¶Rbb&Æ–æR×F‡&÷Vv‚%Òæf–ÇFW"„&ööÆVâ’æ¦ö–â‚""’ÇÂBæFV6òÀĞ¢Ç3¢3òæÇ2ÀĞ¢Ó°Ğ¢Ó°Ğ¢6öç7B&÷‚Ò‡ƒ¢çVÖ&W"Â“¢çVÖ&W"Âs¢çVÖ&W"Âƒ¢çVÖ&W"Â3¢gVææVÄæöFU²'2%ÒÂC¢²f–ÆÃ¢7G&–æs²7G&ö¶S¢7G&–æs²7s¢çVÖ&W#²#¢çVÖ&W#²F6ƒó¢7G&–ærÒ’Óâ°Ğ¢6öç7B7rÒ3òæ&÷&FW%róòBç7s°Ğ¢6öç7BF6‚Ò3òæ&÷&FW%7G–ÆRò$õ$DU%ôD4…·2æ&÷&FW%7G–ÆUÒ¢BæF6ƒ°Ğ¢òò552&÷&FW'26—B–ç6–FRF†R&÷ƒ²5dr7G&ö¶W2&R6VçG&VBöâF†RF€Ğ¢&WGW&âÇ&V7BƒÒ"G¶ã"‡‚²7rò"—Ò"“Ò"G¶ã"‡’²7rò"—Ò"v–GFƒÒ"G¶ã"„ÖF‚æÖ‚ƒÂrÒ7r’—Ò"†V–v‡CÒ"G¶ã"„ÖF‚æÖ‚ƒÂ‚Ò7r’—Ò"'ƒÒ"G´ÖF‚æÖ‚ƒÂ‡3òç&F—W2óòBç"’Ò7rò"—Ò"f–ÆÃÒ"G¶W62‡3òæf–ÆÂóòBæf–ÆÂ—Ò"G·7rò7G&ö¶SÒ"G¶W62‡3òæ&÷&FW"óòBç7G&ö¶R—Ò"7G&ö¶R×v–GFƒÒ"G·7wÒ&¢"'ÒG¶F6‚ò7G&ö¶RÖF6†'&“Ò"G¶F6‡Ò&¢"'Òóæ°Ğ¢Ó°Ğ¢6öç7Bw&÷WÒ‡3¢gVææVÄæöFU²'2%ÒÂ&öG“¢7G&–ær’Óâ‡3òæ÷6—G’ÒçVÆÂbb2æ÷6—G’ÂòÆr÷6—G“Ò"G´ÖF‚æÖ‚ƒãÂ2æ÷6—G’—Ò#âG¶&öG—ÓÂösæ¢&öG’“°Ğ Ğ¢6öç7B"Òö&¦V7Bæg&öÔVçG&–W2†rææöFW2æÖ‚†â’Óâ¶âæ–BÂåÒ’“°Ğ¢6öç7B&÷†W3¢¶çVÖ&W"ÂçVÖ&W"ÂçVÖ&W"ÂçVÖ&W%ÕµÒÒµÓ°Ğ¢6öç7BF‡3¢7G&–æuµÒÒµÓ°Ğ¢ÆWBFVg2Ò"#°Ğ Ğ¢ò¢g&ÖW3¢Çv—2&V†–æBWfW'—F†–ær†2öâF†R6çf2’¢ğĞ¢ÆWBg&ÖW2Ò"#°Ğ¢rææöFW0Ğ¢æf–ÇFW"‚†b’ÓâbçG—RÓÓÒ&g&ÖR"Ğ¢æf÷$V6‚‚†b’Óâ°Ğ¢6öç7B2Ò7G&–ær†bçæ6öÆ÷"óò"3#“ƒ"“°Ğ¢6öç7BrÒbçróòCÀĞ¢‚Òbæ‚óò3°Ğ¢6öç7BBÒÆöö²†bç2Â²6—¦S¢2ÂÆƒ¢rÂvV–v‡C¢sÂ&VÃ¢G'VRÒ“°Ğ¢6öç7BGrÒÖV7W&R†bææÖRÂBç6—¦RÂBçvV–v‡BÂBæfÖ–Ç’’²#²3°Ğ¢6öç7BF‚ÒBæÆ‚²B²3°Ğ¢g&ÖW2³Òw&÷W€Ğ¢bç2ÀĞ¢&÷‚†bç‚Âbç’ÂrÂ‚Âbç2Â²f–ÆÃ¢2Â7G&ö¶S¢2Â7s¢"Â#¢‚ÂF6ƒ¢#‚b"Ò’ç&WÆ6R‚öf–ÆÃÒ"…µâ%Ò²’"òÂbç3òæf–ÆÂòvf–ÆÃÒ"C"r¢vf–ÆÃÒ"C"f–ÆÂÖ÷6—G“Ò"ãr"r’°Ğ¢Ç&V7BƒÒ"G¶bç‚²BãsWÒ"“Ò"G¶bç’Ò2ã#WÒ"v–GFƒÒ"G¶ã"‡GrÒãR—Ò"†V–v‡CÒ"G¶ã"‡F‚ÒãR—Ò"'ƒÒ#‚"f–ÆÃÒ"GµçæVÇÒ"7G&ö¶SÒ"G¶W62†bç3òæ&÷&FW"óò2—Ò"7G&ö¶R×v–GFƒÒ#ãR"óæ°Ğ¢FW‡D&Æö6²…¶bææÖUÒÂbç‚²B²ãRÂGrÒ#2Âbç’ÒB²2ãRÂ²ââçBÂÆ–vã¢&ÆVgB"Ò’ÀĞ¢“°Ğ¢&÷†W2çW6‚…¶bç‚Âbç’ÒBÂÖF‚æÖ‚‡rÂGr²B’Â‚²EÒ“°Ğ¢Ò“°Ğ Ğ¢ò¢6öææV7F–öç2…&V7BfÆ÷rG&w2F†VÒVæFW"F†RVÆVÖVçG2’¢ğĞ¢6öç7BÖ„bÒÖF‚æÖ‚ƒÂââäö&¦V7BçfÇVW2…"æfÆ÷w2’“°Ğ¢6öç7B÷'E…’Ò†ã¢gVææVÄæöFRÂ÷'C¢&–â"Â&÷WB"Â&ÇB"“¢¶çVÖ&W"ÂçVÖ&W%ÒÓâ°Ğ¢òò†æFÆR6VçG&W26—B—‚÷WG6–FRF†R&Æö6²VFvR†VF—F÷"æ772æfÒ×÷'B’Â&V7BfÆ÷ræ6†÷'2öâF†R÷WFW"6–FPĞ¢6öç7BrÒæöFUr†âçG—R’ÀĞ¢‚Ò&Æö6´‚†âçG—R“°Ğ¢–b‡÷'BÓÓÒ&–â"’&WGW&â¶âç‚Ò’Ââç’²‚ò%Ó°Ğ¢–b‡÷'BÓÓÒ&ÇB"’&WGW&â¶âç‚²rò"Ââç’²‚²•Ó°Ğ¢&WGW&â¶âç‚²r²’Ââç’²‚ò%Ó°Ğ¢Ó°Ğ¢ÆWBVFvW2Ò""ÀĞ¢Æ&VÇ2Ò"#°Ğ¢ræVFvW2æf÷$V6‚‚†RÂ’’Óâ°Ğ¢6öç7BÒ%¶Ræg&öÕÒÀĞ¢"Ò%¶RçFõÓ°Ğ¢–b‚ÇÂ"’&WGW&ã°Ğ¢6öç7B÷'BÒRç÷'BÓÓÒ&ÇB"ò&ÇB"¢&Ö–â#°Ğ¢6öç7B·7‚Â7•ÒÒ÷'E…’†Â÷'BÓÓÒ&ÇB"ò&ÇB"¢&÷WB"’ÀĞ¢·G‚ÂG•ÒÒ÷'E…’†"Â&–â"“°Ğ¢6öç7BÂÒVFvTÆöö²†Rç2“°Ğ¢6öç7B¶BÂ×‚Â×•ÒÒVFvUF‚„ÂÂ÷'BÂ7‚Â7’ÂG‚ÂG’“°Ğ¢6öç7BfÆ÷rÒ"æfÆ÷w5¶Ræ–EÒÇÂ°Ğ¢6öç7BrÒÂçv–GF‚óò†÷G2çF†–6²ò"²b¢ÖF‚ç7'B†fÆ÷ròÖ„b’¢"“°Ğ¢6öç7B6öÆ÷"ÒÂæ6öÆ÷"óò„Âæ¶–æBÓÓÒ&æöFF"òæ×WFVB¢÷'BÓÓÒ&ÇB"òæÇB¢æVFvR“°Ğ¢6öç7BF6‚ÒÂæF6‚òD4…´ÂæF6…Ò¢÷'BÓÓÒ&ÇB"ò#rb"¢VæFVf–æVC°Ğ¢6öç7B÷ÒÂæ¶–æBÓÓÒ&æöFF"òãr¢÷'BÓÓÒ&ÇB"òã’¢°Ğ¢ÆWBÖ&¶W"Ò"#°Ğ¢–b„Âæ'&÷rÓÒ&æöæR"’°Ğ¢6öç7B×2ÒÂæ'&÷u6—¦R²r¢ãS°Ğ¢FVg2³ÒÆÖ&¶W"–CÒ&fÒÖG¶—Ò"f–Wt&÷ƒÒ#"&VeƒÒ#‚"&Ve“Ò#R"Ö&¶W%Væ—G3Ò'W6W%76TöåW6R"Ö&¶W%v–GFƒÒ"G¶ã"†×2—Ò"Ö&¶W$†V–v‡CÒ"G¶ã"†×2—Ò"÷&–VçCÒ&WFò×7F'B×&WfW'6R#ãÇF‚CÒ-¶ï‹h‘éì¶»§q«^tÈÈHMˆˆš[H››Û™Hˆİ›ÚÙOHˆÙ™™ˆˆİ›ÚÙK]ÚYHŒˆˆİ›ÚÙK[[™XØ\Hœ›İ[™ˆİ›ÚÙK[[™Z›Ú[Hœ›İ[™‹Ï˜Bˆˆ™XİH‰ÛŒŠ^
+ÈJ_HˆOH‰ÛŒŠH
+È‹J_HˆÚYHŒMˆZYÚHŒMˆHŒÈˆš[H‰Ôœ[™[Hˆİ›ÚÙOH‰Ô›]]YH‹Ï˜ÃBˆ[›™\ˆ
+ÏH^›ØÚÊ[™\Ë^
+ÈŒ‹ËKÈ‹‹š][YÛˆ›Y‹ÛÛÜˆ™Û™HÈ›]]Yˆ]˜ÛÛÜ‹XÛÎˆ™Û™HÈ›[™K]›İYÚˆˆ]™XÛÈJNÃBˆH
+ÏH[™\Ë›[™İ
+ˆ]›
+È
+È][\Ë›[™İHHÈÈˆ
+NÃBˆJNÃBˆÛÛœİHX]›X^
+
+ŠKH
+ÈHH‹JNÃBˆ›ÙH
+ÏHÜ›İ\
+Ë›Ş
+‹‹KËËÈš[ˆœ[™[İ›ÚÙNˆ›[™KİÎˆKKˆMJH
+È[›™\ŠNÃBˆ›Ş\Ëœ\Ú
+Û‹‹KËJNÃBˆ™]\›ÃBˆCBˆYˆ
+‹\HOOH››İHŠHÃBˆÛÛœİÈH‹ÈÏÈŒLÃBˆÛÛœİH
+ÏËœYÏÈLŠH
+ÈKKBˆHH
+ÏËœYÏÈL
+H
+ÈKNÃBˆÛÛœİHÛÚÊËÈÚ^™NˆLËˆNÙZYÚˆÛÛÜˆˆÍŒŒˆˆJNÃBˆÛÛœİ[™\ÈHÜ˜\^
+šXÚÔZ[Šİš[™Ê‹œ^ÏÈˆŠJKÈH
+ˆ‹œÚ^™KÙZYÚ™˜[Z[KYX\İ\™JNÃBˆÛÛœİHX]›X^
+M‹
+ŠK[™\Ë›[™İ
+ˆ›
+ÈH
+ˆŠNÃBˆ›ÙH
+ÏHÜ›İ\
+Ë›Ş
+‹‹KËËÈš[ˆˆÑ‘MH‹İ›ÚÙNˆˆÑÑÍ‹İÎˆKKˆMJH
+È^›ØÚÊ[™\Ë‹
+ÈÈH
+ˆ‹‹H
+ÈK
+JNÃBˆ›Ş\Ëœ\Ú
+Û‹‹KËJNÃBˆ™]\›ÃBˆCBˆYˆ
+‹\HOOH›[šÈŠHÃBˆÛÛœİ\›Hİš[™Ê‹œ\›ÏÈˆŠNÃBˆYˆ
+]\›
+H™]\›ÈËÈ[ˆ[\H[šÈØ\™\ÈY]Ü‹[Û›CBˆÛÛœİÈHÌ
+ŠKBˆHX]›X^
+Œ
+ŠJNÃBˆÛÛœİšY[ÈH\ÕšY[Õ\›
+\›
+NÃBˆÛÛœİHÛÚÊËÈÚ^™NˆLËKˆNÙZYÚˆÌJNÃBˆÛÛœİ]HH[\Ú\Êİš[™Ê‹œ]HÏÈˆŠHÜİÙŠ\›
+KÈHÍ‹œÚ^™KÙZYÚ™˜[Z[KYX\İ\™JNÃBˆ]ÈH›Ş
+‹‹KËËÈš[ˆœ[™[İ›ÚÙNˆ›[™KİÎˆKKˆMJNÃBˆÈ
+ÏH™XİH‰ÛŒŠ‹
+ÈLŠ_HˆOH‰ÛŒŠ‹H
+È
+H
+HÈŠ_HˆÚYHˆZYÚHˆHHˆš[H‰İšY[ÈÈˆÑ‘QL‘Lˆˆˆœ[™[ŸH‹Ï˜ÃBˆÈ
+ÏHšY[ÃBˆÈ]H“IÛŒŠ‹
+È
+_H	ÛŒŠ‹H
+ÈÈˆHÊ_HLÈLLŞˆˆš[HˆÑÌŒˆ‹Ï˜BˆˆÈ˜[œÙ›Ü›OH˜[œÛ]J	ÛŒŠ‹
+ÈŒÊ_K	ÛŒŠ‹H
+ÈÈˆHJ_JHØØ[JÍJHˆš[H››Û™Hˆİ›ÚÙOH‰Ô›]]YHˆİ›ÚÙK]ÚYHŒˆˆİ›ÚÙK[[™XØ\Hœ›İ[™ˆİ›ÚÙK[[™Z›Ú[Hœ›İ[™‰ÒPÓÓ”Ë›[šßOÙÏ˜ÃBˆÈ
+ÏH^›ØÚÊİ]WK‹
+ÈŒ‹ÈHÍ‹H
+ÈÈˆHNÈ‹‹[YÛˆ›YˆJNÃBˆÈ
+ÏH^H‰ÛŒŠ‹
+ÈŒŠ_HˆOH‰ÛŒŠ‹H
+ÈÈˆ
+ÈM
+_Hˆ›Û\Ú^™OHŒLˆˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô˜œ˜[™H‰Ù\ØÊÜİÙŠ\›
+J_Oİ^˜ÃBˆ›ÙH
+ÏHÜ›İ\
+ËÊNÃBˆ›Ş\Ëœ\Ú
+Û‹‹KËJNÃBˆ™]\›ÃBˆCBˆYˆ
+‹\HOOH›X™[ŠHÃBˆÛÛœİÈHÌ
+ŠNÃBˆÛÛœİH
+ÏËœYÏÈ
+H
+ÈKBˆHH
+ÏËœYÏÈ
+H
+ÈNÃBˆÛÛœİÚ^™HHÏË™›ÛÚ^™HÏÈ
+[X™\Š‹œœÚ^™JH
+NÃBˆÛÛœİHÛÚÊËÈÚ^™KˆÚ^™H
+ˆKŒMKÙZYÚˆ˜[Z[Nˆ‹™\Ü^K™[ˆYHJNÃBˆÛÛœİ[™\ÈHÜ˜\^
+İš[™Ê‹œ^ÏÈˆŠKÈH
+ˆ‹œÚ^™KÙZYÚ™˜[Z[KYX\İ\™JNÃBˆÛÛœİHX]›X^
+
+ŠK[™\Ë›[™İ
+ˆ›
+ÈH
+ˆŠNÃBˆÛÛœİœ˜[YHHÏË™š[ÏË˜›Ü™\ˆÏË˜›Ü™\•ÈÈ›Ş
+‹‹KËËÈš[ˆ››Û™H‹İ›ÚÙNˆ››Û™H‹İÎˆˆJHˆˆÃBˆ›ÙH
+ÏHÜ›İ\
+Ëœ˜[YH
+È^›ØÚÊ[™\Ë‹
+ÈÈH
+ˆ‹‹H
+ÈK
+JNÃBˆ›Ş\Ëœ\Ú
+Û‹‹KËJNÃBˆ™]\›ÃBˆCBˆYˆ
+‹\HOOHÚYÙ]ŠHÃBˆËÈÚYÙ]È\™H˜]ÛˆÚ]H[‰ÜÈ[X™\œÈ
+XİX[È\™H›İ\Ùˆ[ˆ[XYÙJCBˆYˆ
+[ÜË›[\ÊH™]\›ÃBˆÛÛœİÙ™ÈHÚYÙ]ÛÛ™šYÊ‹œ
+NÃBˆÛÛœİ[\ÈHÒQÑUÔÒV‘TÖØÙ™ËœÚ^™WNÃBˆÛÛœİ˜[ÈHÚYÙ]˜[Y\ÊÙ™ËË››Ù\Ë‹ÜË™ÛØ[ÈÏÈ×JNÃBˆÛÛœİÈY[X™\œË[˜[YHHÚYÙ]Y[X™\œÊÙ™ËË››Ù\ÊNÃBˆÛÛœİÚİÛˆH
+Ù™ËœÚ^™HOOH”ÈˆÈ˜[ËœÛXÙJJHˆÙ™ËœÚ^™HOOH“HˆÈ˜[ËœÛXÙJŠHˆ˜[ÊNÃBˆÛÛœİ›İÜÈHX]˜ÙZ[
+ÚİÛ‹›[™İÈ
+Ù™ËœÚ^™HOOH”ÈˆÈHˆŠJNÃBˆËÈHØ[YH^˜\È\ÈHØ\™ÛˆHØ[˜\ÎˆT”ˆ]Z[[™›ÜˆHÚ\\Ü^KHL‹[[Û[™CBˆÛÛœİ\œ•ˆHÚİÛ‹™š[™
 
-const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
+ŠHOˆ‹›Y]šXÈOOH›\œˆŠNÃBˆÛÛœİ\œ“[™HH\œ•ˆ	‰ˆÙ™ËœÚ^™HOOH”Èˆ	‰ˆÜËÚYÙ]]HÈÜËÚYÙ]]K›\œŠY[X™\œÊHˆ[ÃBˆÛÛœİÚ\ˆHÙ™Ë™\Ü^HOOH˜Ú\ˆ	‰ˆÙ™ËœÚ^™HOOH”ÈˆÈÚİÛ‹™š[™
 
-export const fileName = (name: string, ext: string) =>
-  (name || "funnel")
-    .replace(/[^\w\- ]+/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .toLowerCase() + `.${ext}`;
+ŠHOˆÈœ™]™[YH‹œ›Ùš]‹›XYÈ‹˜İ\İÛY\œÈ‹›\œˆ—Kš[˜ÛY\Ê‹›Y]šXÊJHˆ[™Yš[™YÃBˆÛÛœİÙ\šY\ÈHÚ\ˆ	‰ˆÜËÚYÙ]]HÈÜËÚYÙ]]KœÙ\šY\ÊÚ\‹›Y]šXËÚ\‹˜[YJHˆ×NÃBˆÛÛœİHX]›X^
+[\ËšÌ
+È›İÜÈ
+ˆ
+È
+\œ“[™HÈNˆ
+H
+È
+Ù\šY\Ë›[™İˆHÈˆˆ
+JNÃBˆÛÛœİÈH[\ËÎÃBˆÛÛœİØÛÜHHÙ™ËœØÛÜHOOH™[›™[ˆÈ•ÒÓH•S“‘SˆˆÙ™ËœØÛÜHOOH™œ˜[YHˆÈ
+Ë››Ù\Ë™š[™
 
-/**
- * Step report CSV: every step, the funnel totals, then (optional) a scenario comparison with one column per
- * scenario. `scenarios` are results from compute / computeScenario (lib/report-data.ts `scenarios`).
- */
-export function stepsCsv(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, scenarios: { name: string; R: FunnelResult }[] = []): string {
-  const rows: unknown[][] = [["Step", "Type", "In", "Out", "Not converting", "Conversion %", "Revenue", "Cost"]];
-  stepRows(g, R).forEach((r) => rows.push([r.name, r.label, r.inn.toFixed(1), r.out.toFixed(1), r.non.toFixed(1), r.inn ? ((r.out / r.inn) * 100).toFixed(1) : "", r.rev.toFixed(2), r.cost.toFixed(2)]));
-  rows.push([]);
-  (
-    [
-      ["Traffic", R.traffic],
-      ["Ad spend", R.spend],
-      ["Leads", R.leads],
-      ["Customers", R.cust],
-      ["Revenue", R.rev],
-      ["Profit", R.profit],
-      ["ROI", R.roi],
-      ["AOV", R.aov],
-      ["CPA", R.cpa],
-      ["CPL", R.cpl],
-      ["CPC", R.cpc],
-      ["ROAS", R.roas],
-      ["Break-even ROAS", R.beroas],
-      ["Break-even CPA", R.becpa],
-      ["EPC", R.epc],
-      ["Conversion rate", R.conv],
-      ["MRR", R.mrr],
-      ["LTV per customer", R.ltvc],
-    ] as [string, number][]
-  ).forEach(([a, b]) => rows.push([a, Number.isFinite(b) ? b.toFixed(2) : ""]));
-  if (scenarios.length) {
-    rows.push([]);
-    rows.push(["Scenario comparison", ...scenarios.map((x) => x.name)]);
-    const f = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : "");
-    (
-      [
-        ["Traffic", (r) => r.traffic],
-        ["Leads", (r) => r.leads],
-        ["Customers", (r) => r.cust],
-        ["Revenue", (r) => r.rev],
-        ["Ad spend", (r) => r.spend],
-        ["Profit", (r) => r.profit],
-        ["ROAS", (r) => r.roas],
-        ["ROI", (r) => r.roi],
-        ["CPA", (r) => r.cpa],
-        ["CPL", (r) => r.cpl],
-        ["AOV", (r) => r.aov],
-        ["LTV per customer", (r) => r.ltvc],
-        ["MRR", (r) => r.mrr],
-      ] as [string, (r: FunnelResult) => number][]
-    ).forEach(([label, get]) => rows.push([label, ...scenarios.map((x) => f(get(x.R)))]));
-  }
-  return rows.map((r) => r.map(csvq).join(",")).join("\n");
-}
+
+HOˆšYOOHÙ™Ë™œ˜[YRY
+OË›˜[YHÏÈ‘”SQHŠKÕ\\Ø\ÙJ
+Hˆ	ÛY[X™\œÏË›[™İÏÈHÑSPÕQÕTØÃBˆ]ÈH›Ş
+‹‹KËËÈš[ˆœ[™[İ›ÚÙNˆ[˜[YÈ˜[ˆ›[™KİÎˆKˆLˆJNÃBˆÈ
+ÏH^H‰ÛŒŠ‹
+ÈLŠ_HˆOH‰ÛŒŠ‹H
+ÈŒ
+_Hˆ›Û\Ú^™OHŒLHˆ›Û]ÙZYÚHÌˆ]\‹\ÜXÚ[™ÏH‹Èˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô›]]YH‰Ù\ØÊ[\Ú\ÊØÛÜKÈHLKÌ‹œØ[œËYX\İ\™JJ_Oİ^˜ÃBˆÚİÛ‹™›Ü‘XXÚ
 
+‹JHOˆÃBˆÛÛœİÛÛHÙ™ËœÚ^™HOOH”ÈˆÈˆH	H‹Bˆ›İÈHÙ™ËœÚ^™HOOH”ÈˆÈHˆX]™›ÛÜŠHÈŠNÃBˆÛÛœİİÈHÙ™ËœÚ^™HOOH”ÈˆÈÈHˆ
+ÈHHM
+HÈÃBˆÛÛœİH‹
+ÈLˆ
+ÈÛÛ
+ˆ
+İÈ
+ÈM
+KBˆHH‹H
+È
+È›İÈ
+ˆÃBˆÈ
+ÏH^H‰ÛŒŠ
+_HˆOH‰ÛŒŠH
+ÈL
+_Hˆ›Û\Ú^™OHŒLKHˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô›]]YH‰Ù\ØÊ‹›X™[
+_Oİ^˜ÃBˆÈ
+ÏH^H‰ÛŒŠ
+_HˆOH‰ÛŒŠH
+ÈÌŠ_Hˆ›Û\Ú^™OH‰ØÙ™ËœÚ^™HOOH“ˆÈŒˆˆŒHˆ›Û]ÙZYÚHÌˆ›ÛY˜[Z[OH‰Ù\ØÊ‹™\Ü^J_Hˆš[H‰Ôš[šßH‰Ù\ØÊ[\Ú\Ê›Ü›X]Y]šXÕ˜[YJ‹ÜË˜İ\œ™[˜ŞJKİËŒÌ‹™\Ü^KYX\İ\™JJ_Oİ^˜ÃBˆJNÃBˆÛÛœİ™[İÈH‹H
+È
+È›İÜÈ
+ˆÃBˆYˆ
+\œ“[™JHÈ
+ÏH^H‰ÛŒŠ‹
+ÈLŠ_HˆOH‰ÛŒŠ™[İÈ
+È
+_Hˆ›Û\Ú^™OHŒLHˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô›]]YH‰Ù\ØÊ[ÛLˆ	Ó[X™\‹š\Ñš[š]J\œ“[™K›[ÛLŠHÈ[Û™^J\œ“[™K›[ÛL‹ÜË˜İ\œ™[˜ŞJHˆ›‹ØHŸH0­È	Û™Š\œ“[™KœİXœØÜšX™\œËJ_HİXœØÜšX™\œØ
+_Oİ^˜ÃBˆYˆ
+Ù\šY\Ë›[™İˆJHÃBˆÛÛœİH‹
+ÈL‹BˆHH‹
+ÈÈHL‹BˆLHH‹H
+ÈHLBˆLHLHHÃBˆÛÛœİÈHX]›Z[Š‹‹œÙ\šY\ÊKBˆHHX]›X^
+‹‹œÙ\šY\ËÈ
+ÈYKNJNÃBˆÛÛœİÈHÙ\šY\Ë›X\
 
-/* ---------------- map image (SVG; PNG and the PDF map are rasterised from it) ---------------- */
+‹JHOˆŞ
+È
+HÈ
+Ù\šY\Ë›[™İHJJH
+ˆ
+HH
+KLHHÈH
 
-export interface SvgPalette {
-  bg: string;
-  panel: string;
-  panel2: string;
-  line: string;
-  ink: string;
-  muted: string;
-  edge: string;
-  alt: string;
-  good: string;
-  brand: string;
-  catInk: string;
-  cat: Record<ColorKey, string>;
-}
-/** Light theme tokens (app/globals.css [data-theme="light"]): client exports are printed on white. */
-export const LIGHT_PALETTE: SvgPalette = { bg: "#F8FAFC", panel: "#FFFFFF", panel2: "#F1F5F9", line: "#DBE2EA", ink: "#0F172A", muted: "#475569", edge: "#94A3B8", alt: "#C2410C", good: "#15803D", brand: "#047857", catInk: "#FFFFFF", cat: CATHEX };
+ˆHÊHÈ
+HHÊJH
+ˆ
+LHHLHŠWH\ÈÛÛœİ
+NÃBˆÛÛœİHË›X\
 
-/** Dark theme tokens (the locked dark-first palette): for slides and dark documents. */
-export const DARK_PALETTE: SvgPalette = { bg: "#0B1220", panel: "#111827", panel2: "#1E293B", line: "#334155", ink: "#E2E8F0", muted: "#94A3B8", edge: "#64748B", alt: "#FB923C", good: "#22C55E", brand: "#34D399", catInk: "#0B1220", cat: CATDARK };
-export type ImageBackground = "light" | "dark" | "transparent";
-/** Palette for a map image background ("transparent" = light elements on no background). */
-export const paletteFor = (bg: ImageBackground): SvgPalette => (bg === "dark" ? DARK_PALETTE : bg === "transparent" ? { ...LIGHT_PALETTE, bg: "none" } : LIGHT_PALETTE);
+ŞWKJHOˆ	ÚHÈ“ˆˆ“HŸIÛŒŠ
+_H	ÛŒŠJ_X
+Kš›Ú[ŠˆŠNÃBˆÈ
+ÏH]H‰ÙS	ÛŒŠJ_H	ÛŒŠLJ_S	ÛŒŠ
+_H	ÛŒŠLJ_Vˆˆš[H‰Ô˜œ˜[™Hˆš[[ÜXÚ]OH‹ŒM‹Ï]H‰ÙHˆš[H››Û™Hˆİ›ÚÙOH‰Ô˜œ˜[™Hˆİ›ÚÙK]ÚYHŒˆˆİ›ÚÙK[[™Z›Ú[Hœ›İ[™ˆİ›ÚÙK[[™XØ\Hœ›İ[™‹Ï˜ÃBˆCBˆ›ÙH
+ÏHÜ›İ\
+ËÊNÃBˆ›Ş\Ëœ\Ú
+Û‹‹KËJNÃBˆ™]\›ÃBˆCBˆYˆ
+U\Ğ[››İ
+‹\JJH™]\›ÃBƒBˆÊˆ›İÈ›ØÚÎˆHØ[YH˜[Z[H[˜]Û^H\ÈHØ[˜\ÈØ\™
+X‹Ø›ØÚË]š\İX[ËÈSRSWÑÑSÓHÈĞT‘
+H
+‹ÃBˆÛÛœİÈH›ÙUÊ‹\JKBˆH›ØÚÒ
+‹\JKBˆÈH˜Ø]Õ˜ÛÛÜˆÏÈ˜Ø]NÃBˆÛÛœİˆHš\İX[ÙŠ‹\JKBˆÈHSRSWÑÑSÓVÕ‹™˜[Z[WKBˆŒˆHSRSQTÖÕ‹™˜[Z[WNÃBˆÛÛœİ\™ˆHH[ÜË›[\È	‰ˆH[ÜËXÚÎÃBˆËÈØ\™İ][™HÚ]\‹XÛÜ›™\ˆ˜YZH
+Hİ\İÛH˜Y]\È[ˆHİ[HXˆÚ[œÊCBˆÛÛœİÜ‹˜œ‹˜›HHÏËœ˜Y]\ÈOH[ÈÜËœ˜Y]\ËËœ˜Y]\ËËœ˜Y]\ËËœ˜Y]\×HˆËœ˜YZNÃBˆÛÛœİÈHÏË˜›Ü™\•ÈÏÈĞT‘˜›Ü™\ÃBˆÛÛœİØ\™]H
+[œÙ]ˆ[X™\ŠHOˆÃBˆÛÛœİH‹
+È[œÙ]BˆHH‹H
+È[œÙ]BˆH‹
+ÈÈH[œÙ]BˆHH‹H
+ÈH[œÙ]ÃBˆÛÛœİˆH
+ˆ[X™\ŠHOˆX]›X^
+X]›Z[ŠˆH[œÙ]
+Hˆ
+ˆ[œÙ]
+HÈ‹
+ÈHˆ
+ˆ[œÙ]
+HÈŠJNÃBˆÛÛœİØLKL‹LËMHHÜŠ
+KŠŠKŠ˜œŠKŠ˜›
+WNÃBˆ™]\›ˆIÛŒŠ
+ÈLJ_H	ÛŒŠJ_R	ÛŒŠHLŠ_PIÛŒŠLŠ_H	ÛŒŠLŠ_HH	ÛŒŠ
+_H	ÛŒŠH
+ÈLŠ_U‰ÛŒŠHHLÊ_PIÛŒŠLÊ_H	ÛŒŠLÊ_HH	ÛŒŠHLÊ_H	ÛŒŠJ_R	ÛŒŠ
+ÈM
+_PIÛŒŠM
+_H	ÛŒŠM
+_HH	ÛŒŠ
+_H	ÛŒŠHHM
+_U‰ÛŒŠH
+ÈLJ_PIÛŒŠLJ_H	ÛŒŠLJ_HH	ÛŒŠ
+ÈLJ_H	ÛŒŠJ_V˜ÃBˆNÃBˆÛÛœİ\ÚHÏË˜›Ü™\”İ[HÈ“Ô‘T—ÑTÒÜË˜›Ü™\”İ[WHˆ[™Yš[™YÃBˆÛÛœİXZÈH\™ˆ	‰ˆÜËšÙ^SXZÈOOH‹šYÃBˆ]ÈH]H‰ØØ\™]
+ÈÈŠ_Hˆš[H‰Ù\ØÊÏË™š[ÏÈœ[™[
+_Hˆİ›ÚÙOH‰Ù\ØÊÏË˜›Ü™\ˆÏÈ
+XZÈÈ˜[ˆ›[™JJ_Hˆİ›ÚÙK]ÚYH‰ØßH‰Ù\ÚÈİ›ÚÙKY\Ú\œ˜^OH‰Ù\ÚH˜ˆˆŸKÏ˜ÃBˆYˆ
+Ëš]Ú
+HÃBˆYœÈ
+ÏH]\›ˆYH™›KZ]ÚˆÚYHŒŒˆZYÚHŒŒˆ]\›•[š]ÏH\Ù\”ÜXÙSÛ•\ÙHˆ]\›•˜[œÙ›Ü›OHœ›İ]JLÍJH™XİÚYHŒLˆZYÚHŒŒˆš[H‰Ô›]]YHˆš[[ÜXÚ]OH‹ŒH‹ÏÜ]\›˜ÃBˆÈ
+ÏH]H‰ØØ\™]
+Ê_Hˆš[H\›
+Ù›KZ]Ú
+H‹Ï˜ÃBˆCBˆYˆ
+Œ‹œİš\
+HÈ
+ÏH™XİH‰ÛŒŠ‹
+ÈLŠ_HˆOH‰ÛŒŠ‹HHJ_HˆÚYH‰İÈHHˆZYÚHŒÈˆHŒKHˆš[H‰ØßH‹Ï˜ÃBˆÛÛœİÜYY—HHËœYÃBˆÛÛœİ[›™\“H‹
+ÈÈ
+ÈYBˆ[›™\”ˆH‹
+ÈÈHÈHY‹Bˆ[›™\•ÈH[›™\”ˆH[›™\“ÃBˆËÈİXÚÎˆXYÜİš\KØ˜\—Kİ]ÎÈœ™YHÜXÙH\ÈÜ™XY™]ÙY[ˆ[H
+›^ÜXÙKX™]ÙY[ŠCBˆÛÛœİ\ÎˆÈÎˆİš[™ÎÈˆ[X™\ˆV×HHŞÈÎˆšXY‹ˆĞT‘šXYWNÃBˆYˆ
+Œ‹œİš\	‰ˆ‹Ú\™Yœ˜[YJH\Ëœ\Ú
+ÈÎˆœİš\‹ˆĞT‘œİš\JNÃBˆYˆ
+\ÔÜ]˜\Š‹\JJH\Ëœ\Ú
+ÈÎˆœÜ]‹ˆĞT‘˜˜\ˆJNÃBˆÛÛœİH\™ˆÈ\™“[™J‹‹ÜË˜İ\œ™[˜ŞJHˆ[ÃBˆYˆ
+	‰ˆœ˜][ÈOH[
+H\Ëœ\Ú
+ÈÎˆ˜ÛÛˆ‹ˆĞT‘˜˜\ˆJNÃBˆÛÛœİÛØ[H‹™˜[Z[HOOH™ÛØ[ˆÈ
+ÜË™ÛØ[ÈÏÈ×JK™š[™
 
-/** Text width in px. The browser passes a canvas-based measure with the real fonts; this fallback approximates. */
-export type Measure = (text: string, size: number, weight: number, family: string) => number;
-const approxMeasure: Measure = (t, size, weight) => t.length * size * (weight >= 700 ? 0.58 : 0.54);
+ÊHOˆË››ÙRYOOH‹šY	‰ˆË˜[YHˆ
+Hˆ[™Yš[™YÃBˆYˆ
+ÛØ[
+H\Ëœ\Ú
+ÈÎˆ™ÛØ[‹ˆĞT‘™ÛØ[˜\ˆJNÃBˆÛÛœİİ]ÒHĞT‘œİ]È
+È
+Ë™\ÚYİ]ÈÈĞT‘™\ÚYİ]Èˆ
+NÃBˆ\Ëœ\Ú
+ÈÎˆœİ]È‹ˆİ]ÒJNÃBˆÛÛœİ[›™\ˆHHˆ
+ˆÈHˆ
+ˆĞT‘œYNÃBˆÛÛœİØ\H\Ë›[™İˆHÈ
+[›™\ˆH\Ëœ™YXÙJ
+KJHOˆH
+ÈKš
+JHÈ
+\Ë›[™İHJHˆÃBˆÛÛœİÜˆ™XÛÜ™İš[™Ë[X™\ˆHßNÃBˆ]^HH‹H
+ÈÈ
+ÈĞT‘œYNÃBˆ\Ë™›Ü‘XXÚ
 
-export interface MapSvgOptions {
-  currency: string;
-  nums: boolean;
-  palette?: SvgPalette;
-  /** Rendered height/width of an element (the editor passes its measured sizes). */
-  heightOf?: (n: FunnelNode) => number;
-  widthOf?: (n: FunnelNode) => number;
-  /** Line thickness follows traffic (View menu option). */
-  thick?: boolean;
-  /** Font families used on the canvas, plus @font-face CSS to embed (so PNG/PDF don't fall back to Arial). */
-  fonts?: { sans: string; display: string; css?: string };
-  measure?: Measure;
-  /** Key-leak block (Performance map badge). */
-  keyLeak?: string | null;
-  /** Funnel goals: goal blocks draw their progress bar. */
-  goals?: Goal[];
-  /** Page screenshots as data URLs, by node id (drawn instead of the semantic wireframe). */
-  shots?: Record<string, string>;
-  /** Engine-backed extras for widgets (the 12-month series for Chart widgets, MRR detail); the editor passes them, nothing is calculated here. */
-  widgetData?: {
-    series: (metric: WidgetMetric, value: number) => number[];
-    mrr: (members: FunnelNode[] | null) => { month12: number; subscribers: number };
-  };
-}
-
-const DEFAULT_FONTS = { sans: "'DM Sans', Arial, sans-serif", display: "'Bricolage Grotesque', 'DM Sans', Arial, sans-serif" };
-const BORDER_DASH = { solid: undefined, dashed: "6 4", dotted: "1.5 3" } as const;
-const n2 = (v: number) => Math.round(v * 100) / 100;
-
-/** Page wireframe (lib/block-visuals.ts data) as SVG at (x, y); `paint` maps the wireframe paints to colours. */
-export function wireframeSvg(kind: Wireframe, x: number, y: number, paint: Record<WfPaint, string>): string {
-  const fill = (k: WfPaint) => (k === "o" || k === "ao" ? "none" : paint[k]);
-  const stroke = (k: WfPaint) => (k === "o" || k === "ao" ? ` stroke="${paint[k]}" stroke-width="1"` : "");
-  const body = WIREFRAMES[kind]
-    .map((sh) => {
-      if (sh[0] === "r") return `<rect x="${sh[1]}" y="${sh[2]}" width="${sh[3]}" height="${sh[4]}" rx="${sh[5]}" fill="${fill(sh[6])}"${stroke(sh[6])}/>`;
-      if (sh[0] === "c") return `<circle cx="${sh[1]}" cy="${sh[2]}" r="${sh[3]}" fill="${fill(sh[4])}"${stroke(sh[4])}/>`;
-      return `<path d="${sh[1]}" fill="none" stroke="${paint[sh[2]]}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-    })
-    .join("");
-  return `<g transform="translate(${n2(x)},${n2(y)})">${body}</g>`;
-}
-
-/** Greedy word wrap (explicit newlines kept); words longer than the line are broken by character. */
-export function wrapText(text: string, maxW: number, size: number, weight: number, family: string, measure: Measure = approxMeasure): string[] {
-  const out: string[] = [];
-  const fits = (t: string) => measure(t, size, weight, family) <= maxW + 0.5;
-  for (const para of text.split("\n")) {
-    let line = "";
-    for (const word of para.split(/(?<=\s)/)) {
-      if (fits(line + word.trimEnd()) || !line) {
-        if (!fits(word.trimEnd()) && !line) {
-          // a single over-long word: break it
-          let w = word;
-          while (w && !fits(w.trimEnd())) {
-            let k = w.length - 1;
-            while (k > 1 && !fits(w.slice(0, k))) k--;
-            out.push(w.slice(0, k));
-            w = w.slice(k);
-          }
-          line = w;
-        } else line += word;
-      } else {
-        out.push(line.trimEnd());
-        line = word;
-      }
-    }
-    out.push(line.trimEnd());
-  }
-  return out;
-}
-
-/** Cut a single line to fit, with an ellipsis (CSS text-overflow). */
-function ellipsis(t: string, maxW: number, size: number, weight: number, family: string, measure: Measure) {
-  if (measure(t, size, weight, family) <= maxW) return t;
-  let k = t.length;
-  while (k > 0 && measure(t.slice(0, k) + "â€¦", size, weight, family) > maxW) k--;
-  return t.slice(0, k).trimEnd() + "â€¦";
-}
-
-interface TextLook {
-  size: number;
-  /** line height in px */
-  lh: number;
-  weight: number;
-  family: string;
-  color: string;
-  align: "left" | "center" | "right";
-  italic?: boolean;
-  deco?: string;
-  ls?: number;
-}
-/** Baseline inside a CSS line box (ascent â‰ˆ 0.99em, descent â‰ˆ 0.31em for the app fonts). */
-const baseline = (top: number, t: TextLook) => top + (t.lh - 1.3 * t.size) / 2 + 0.99 * t.size;
-
-function textAttrs(t: TextLook) {
-  return `font-size="${t.size}" font-weight="${t.weight}" font-family="${esc(t.family)}" fill="${esc(t.color)}"${t.italic ? ' font-style="italic"' : ""}${t.deco ? ` text-decoration="${t.deco}"` : ""}${t.ls ? ` letter-spacing="${t.ls}"` : ""}`;
-}
-/** Lines of text in a box [x, x+w], first line box at `top`. */
-function textBlock(lines: string[], x: number, w: number, top: number, t: TextLook) {
-  const ax = t.align === "center" ? x + w / 2 : t.align === "right" ? x + w : x;
-  const anchor = t.align === "center" ? "middle" : t.align === "right" ? "end" : "start";
-  return lines.map((l, i) => `<text x="${n2(ax)}" y="${n2(baseline(top + i * t.lh, t))}" text-anchor="${anchor}" ${textAttrs(t)} xml:space="preserve">${esc(l)}</text>`).join("");
-}
-
-/** Union of everything drawn: element boxes, frame titles, connection paths and labels. */
-export function mapBounds(boxes: [number, number, number, number][], paths: string[]): [number, number, number, number] {
-  let x0 = Infinity,
-    y0 = Infinity,
-    x1 = -Infinity,
-    y1 = -Infinity;
-  const add = (x: number, y: number) => {
-    x0 = Math.min(x0, x);
-    y0 = Math.min(y0, y);
-    x1 = Math.max(x1, x);
-    y1 = Math.max(y1, y);
-  };
-  boxes.forEach(([x, y, w, h]) => {
-    add(x, y);
-    add(x + w, y + h);
-  });
-  paths.forEach((d) => {
-    const v = (d.match(/-?\d*\.?\d+(?:e-?\d+)?/g) ?? []).map(Number);
-    if (/C/.test(d) && v.length === 8) {
-      // cubic bezier: sample the curve (control points overshoot it)
-      for (let i = 0; i <= 16; i++) {
-        const t = i / 16,
-          u = 1 - t;
-        add(u * u * u * v[0] + 3 * u * u * t * v[2] + 3 * u * t * t * v[4] + t * t * t * v[6], u * u * u * v[1] + 3 * u * u * t * v[3] + 3 * u * t * t * v[5] + t * t * t * v[7]);
-      }
-    } else for (let i = 0; i + 1 < v.length; i += 2) add(v[i], v[i + 1]);
-  });
-  return Number.isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 400, 300];
-}
-
-/** Legacy helper: element boxes only. */
-export function bounds(nodes: FunnelNode[], heightOf: (n: FunnelNode) => number = (n) => (isAnnot(n.type) ? NH : blockH(n.type))) {
-  return mapBounds(
-    nodes.map((n) => [n.x, n.y, n.w ?? nodeW(n.type), n.h ?? heightOf(n)]),
-    [],
-  );
-}
-
-/**
- * Vector map of the funnel, drawn to match the canvas: element styles (fill, border, radius, opacity, fonts, text
- * styling), wrapped text, shapes, images, checklists, frames, connection styles (path, dash, colour, width, arrows,
- * skip / no-data, labels) and layer order. `nums` = show traffic counts and block stats.
- */
-export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, opts: MapSvgOptions): string {
-  const P = opts.palette ?? LIGHT_PALETTE;
-  const H0 = opts.heightOf ?? ((n: FunnelNode) => (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)));
-  const W0 = opts.widthOf ?? ((n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type)));
-  const F = { ...DEFAULT_FONTS, ...opts.fonts };
-  const measure = opts.measure ?? approxMeasure;
-  const fam = (s: FunnelNode["s"], fallback: string) => (s?.font === "sans" ? F.sans : s?.font === "display" ? F.display : s?.font ? FONT_FAMILIES[s.font].css : fallback);
-  /** `rel`: the CSS line height is relative (1.15 / normal) rather than a fixed px value. */
-  const look = (s: FunnelNode["s"], d: Partial<TextLook> & { size: number; lh: number; rel?: boolean }): TextLook => {
-    const size = s?.fontSize ?? d.size;
-    return {
-      size,
-      lh: s?.lh ? size * s.lh : d.rel ? d.lh * (size / d.size) : d.lh,
-      weight: s?.weight ?? d.weight ?? 400,
-      family: fam(s, d.family ?? F.sans),
-      color: s?.color ?? d.color ?? P.ink,
-      align: s?.align ?? d.align ?? "left",
-      italic: s?.italic,
-      deco: [s?.underline && "underline", s?.strike && "line-through"].filter(Boolean).join(" ") || d.deco,
-      ls: s?.ls,
-    };
-  };
-  const box = (x: number, y: number, w: number, h: number, s: FunnelNode["s"], d: { fill: string; stroke: string; sw: number; r: number; dash?: string }) => {
-    const sw = s?.borderW ?? d.sw;
-    const dash = s?.borderStyle ? BORDER_DASH[s.borderStyle] : d.dash;
-    // CSS borders sit inside the box; SVG strokes are centred on the path
-    return `<rect x="${n2(x + sw / 2)}" y="${n2(y + sw / 2)}" width="${n2(Math.max(0, w - sw))}" height="${n2(Math.max(0, h - sw))}" rx="${Math.max(0, (s?.radius ?? d.r) - sw / 2)}" fill="${esc(s?.fill ?? d.fill)}"${sw ? ` stroke="${esc(s?.border ?? d.stroke)}" stroke-width="${sw}"` : ""}${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
-  };
-  const group = (s: FunnelNode["s"], body: string) => (s?.opacity != null && s.opacity < 1 ? `<g opacity="${Math.max(0.1, s.opacity)}">${body}</g>` : body);
-
-  const B = Object.fromEntries(g.nodes.map((n) => [n.id, n]));
-  const boxes: [number, number, number, number][] = [];
-  const paths: string[] = [];
-  let defs = "";
-
-  /* frames: always behind everything (as on the canvas) */
-  let frames = "";
-  g.nodes
-    .filter((f) => f.type === "frame")
-    .forEach((f) => {
-      const c = String(f.p.color ?? "#10B981");
-      const w = f.w ?? 400,
-        h = f.h ?? 300;
-      const t = look(f.s, { size: 13, lh: 17, weight: 700, rel: true });
-      const tw = measure(f.name, t.size, t.weight, t.family) + 20 + 3;
-      const th = t.lh + 4 + 3;
-      frames += group(
-        f.s,
-        box(f.x, f.y, w, h, f.s, { fill: c, stroke: c, sw: 2, r: 18, dash: "8 6" }).replace(/fill="([^"]+)"/, f.s?.fill ? 'fill="$1"' : 'fill="$1" fill-opacity=".07"') +
-          `<rect x="${f.x + 14.75}" y="${f.y - 13.25}" width="${n2(tw - 1.5)}" height="${n2(th - 1.5)}" rx="8" fill="${P.panel}" stroke="${esc(f.s?.border ?? c)}" stroke-width="1.5"/>` +
-          textBlock([f.name], f.x + 14 + 11.5, tw - 23, f.y - 14 + 3.5, { ...t, align: "left" }),
-      );
-      boxes.push([f.x, f.y - 14, Math.max(w, tw + 14), h + 14]);
-    });
-
-  /* connections (React Flow draws them under the elements) */
-  const maxF = Math.max(1, ...Object.values(R.flows));
-  const portXY = (n: FunnelNode, port: "in" | "out" | "alt"): [number, number] => {
-    // handle centres sit 9px outside the block edge (editor.css .fm-port), React Flow anchors on the outer side
-    const w = nodeW(n.type),
-      h = blockH(n.type);
-    if (port === "in") return [n.x - 9, n.y + h / 2];
-    if (port === "alt") return [n.x + w / 2, n.y + h + 9];
-    return [n.x + w + 9, n.y + h / 2];
-  };
-  let edges = "",
-    labels = "";
-  g.edges.forEach((e, i) => {
-    const a = B[e.from],
-      b = B[e.to];
-    if (!a || !b) return;
-    const port = e.port === "alt" ? "alt" : "main";
-    const [sx, sy] = portXY(a, port === "alt" ? "alt" : "out"),
-      [tx, ty] = portXY(b, "in");
-    const L = edgeLook(e.s);
-    const [d, mx, my] = edgePath(L, port, sx, sy, tx, ty);
-    const flow = R.flows[e.id] || 0;
-    const w = L.width ?? (opts.thick ? 2 + 6 * Math.sqrt(flow / maxF) : 2);
-    const color = L.color ?? (L.kind === "nodata" ? P.muted : port === "alt" ? P.alt : P.edge);
-    const dash = L.dash ? DASH[L.dash] : port === "alt" ? "7 6" : undefined;
-    const op = L.kind === "nodata" ? 0.7 : port === "alt" ? 0.9 : 1;
-    let marker = "";
-    if (L.arrow !== "none") {
-      const ms = L.arrowSize + w * 1.5;
-      defs += `<marker id="fm-a${i}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="${n2(ms)}" markerHeight="${n2(ms)}" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${esc(color)}"/></marker>`;
-      marker = ` marker-end="url(#fm-a${i})"${L.arrow === "both" ? ` marker-start="url(#fm-a${i})"` : ""}`;
-    }
-    const opacity = L.opacity != null ? L.opacity : op;
-    edges += `<path d="${d}" fill="none" stroke="${esc(color)}" stroke-width="${n2(w)}"${dash ? ` stroke-dasharray="${dash}"` : ""}${opacity < 1 ? ` opacity="${opacity}"` : ""}${marker}/>`;
-    paths.push(d);
-
-    // label pill: tags (Yes/No, A/B, Skip, custom) + people (Â· share %) or "No data"
-    const tag = edgeTag(a.type, port);
-    const segs: { t: string; c: string; w: number }[] = [];
-    if (tag) segs.push({ t: tag.text, c: tag.alt ? P.alt : P.good, w: 700 });
-    if (L.kind === "skip") segs.push({ t: "Skip", c: P.good, w: 700 });
-    if (L.label) segs.push({ t: L.label, c: P.good, w: 700 });
-    if (L.kind === "nodata") segs.push({ t: "No data", c: P.muted, w: 600 });
-    else if (opts.nums) {
-      const share = num(e.share ?? 100);
-      segs.push({ t: `${nf(flow)}${share !== 100 ? ` Â· ${nf(share)}%` : ""}`, c: P.ink, w: 700 });
-      const conv = L.showPct ? edgeConversion(e.from, flow, R) : null;
-      if (conv != null) segs.push({ t: `${nf(conv * 100, 1)}% convert`, c: P.muted, w: 600 });
-      const rv = L.showRev ? edgeRevenue(e.to, flow, R) : 0;
-      if (rv > 0) segs.push({ t: money(rv, opts.currency), c: P.muted, w: 600 });
-    }
-    if (!segs.length) return;
-    const t = { size: 12, lh: 16, family: F.sans };
-    const widths = segs.map((s) => measure(s.t, t.size, s.w, t.family));
-    const pw = widths.reduce((acc, x) => acc + x, 0) + (segs.length - 1) * 5 + 18 + 2,
-      ph = t.lh + 4 + 2;
-    const px = mx - pw / 2,
-      py = my - ph / 2;
-    labels += `<rect x="${n2(px + 0.5)}" y="${n2(py + 0.5)}" width="${n2(pw - 1)}" height="${n2(ph - 1)}" rx="${n2(ph / 2)}" fill="${P.panel}" stroke="${P.line}"/>`;
-    let cx = px + 10;
-    segs.forEach((s, k) => {
-      labels += `<text x="${n2(cx)}" y="${n2(baseline(py + 3, { ...t, weight: s.w, color: s.c, align: "left" }))}" font-size="12" font-weight="${s.w}" font-family="${esc(F.sans)}" fill="${esc(s.c)}">${esc(s.t)}</text>`;
-      cx += widths[k] + 5;
-    });
-    boxes.push([px, py, pw, ph]);
-  });
-
-  /* elements, in layer order (z), as React Flow stacks them */
-  let body = "";
-  const order = g.nodes
-    .map((n, i) => ({ n, i }))
-    .filter(({ n }) => n.type !== "frame" && typeOf(n.type))
-    .sort((a, b) => (a.n.z ?? 0) - (b.n.z ?? 0) || a.i - b.i)
-    .map(({ n }) => n);
-  order.forEach((n, idx) => {
-    const T = typeOf(n.type);
-    const s = n.s;
-    if (n.type === "shape") {
-      const w = n.w ?? 160,
-        h = n.h ?? 100,
-        shape = String(n.p.shape ?? "rounded");
-      const fill = esc(s?.fill ?? P.panel2),
-        stroke = esc(s?.border ?? P.line),
-        sw = s?.borderW ?? 1.5,
-        dash = s?.borderStyle ? BORDER_DASH[s.borderStyle] : undefined;
-      const st = `fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}`;
-      const geom = shapeGeom(shape, w, h, String(n.p.dir ?? "h"), s?.borderW ?? 2);
-      let o = geom
-        ? geom.open
-          ? `<g transform="translate(${n2(n.x)},${n2(n.y)})"><path d="${geom.d}" fill="none" stroke="${esc(s?.border ?? P.muted)}" stroke-width="${s?.borderW ?? 2}" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ""}/>${geom.head ? `<polygon points="${geom.head}" fill="${esc(s?.border ?? P.muted)}"/>` : ""}</g>`
-          : `<path transform="translate(${n2(n.x)},${n2(n.y)})" d="${geom.d}" ${st}/>`
-        : shape === "ellipse" || shape === "circle"
-          ? `<ellipse cx="${n.x + w / 2}" cy="${n.y + h / 2}" rx="${n2(w / 2 - sw / 2)}" ry="${n2(h / 2 - sw / 2)}" ${st}/>`
-          : shape === "diamond"
-            ? `<polygon points="${n2(n.x + w / 2)},${n2(n.y + h * 0.01)} ${n2(n.x + w * 0.99)},${n2(n.y + h / 2)} ${n2(n.x + w / 2)},${n2(n.y + h * 0.99)} ${n2(n.x + w * 0.01)},${n2(n.y + h / 2)}" ${st}/>`
-            : box(n.x, n.y, w, h, s, { fill: P.panel2, stroke: P.line, sw: 1.5, r: shape === "rect" ? 0 : 16 });
-      const text = String(n.p.text ?? "");
-      if (text && !geom?.open) {
-        const t = look(s, { size: 14, lh: 18.2, weight: 600, align: "center", rel: true });
-        const pad = s?.pad ?? 0;
-        const th = shape === "callout" ? h * 0.78 : h;
-        const lines = wrapText(text, w - 24 - pad * 2, t.size, t.weight, t.family, measure);
-        o += textBlock(lines, n.x + 12 + pad, w - 24 - pad * 2, n.y + (th - lines.length * t.lh) / 2, t);
-      }
-      body += group(s, o);
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "image") {
-      const src = String(n.p.src ?? "");
-      const w = n.w ?? 200,
-        h = n.h ?? 140;
-      if (!src) return; // the empty placeholder is editor-only
-      const r = s?.radius ?? 10;
-      defs += `<clipPath id="fm-c${idx}"><rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${r}"/></clipPath>`;
-      let o = s?.fill ? `<rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="${r}" fill="${esc(s.fill)}"/>` : "";
-      o += `<image href="${esc(src)}" x="${n.x}" y="${n.y}" width="${w}" height="${h}" preserveAspectRatio="${n.p.fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"}" clip-path="url(#fm-c${idx})"/>`;
-      if (s?.border || s?.borderW) o += box(n.x, n.y, w, h, { ...s, fill: "none" }, { fill: "none", stroke: P.line, sw: 1.5, r });
-      body += group(s, o);
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "checklist") {
-      const items = (n.p.items as { text: string; done: boolean; indent?: number }[] | undefined) ?? [];
-      const w = W0(n);
-      const px = (s?.pad ?? 12) + 1.5,
-        py = (s?.pad ?? 10) + 1.5;
-      const tt = look(s, { size: 14, lh: 18.2, weight: 700, rel: true });
-      const it = look(s, { size: 13, lh: 18, weight: 400 });
-      let y = n.y + py;
-      let inner = textBlock([ellipsis(String(n.p.title ?? "Checklist"), w - px * 2 - 40, tt.size, tt.weight, tt.family, measure)], n.x + px, w - px * 2, y, { ...tt, align: "left" });
-      inner += `<text x="${n2(n.x + w - px)}" y="${n2(baseline(y, tt))}" text-anchor="end" font-size="12" font-weight="600" font-family="${esc(F.sans)}" fill="${P.muted}">${items.filter((x) => x.done).length}/${items.length}</text>`;
-      y += tt.lh + 6;
-      items.forEach((x, k) => {
-        const ix = n.x + px + (x.indent ?? 0) * 16;
-        const lines = wrapText(x.text, n.x + w - px - (ix + 22), it.size, it.weight, it.family, measure);
-        inner += x.done
-          ? `<rect x="${n2(ix + 0.5)}" y="${n2(y + 2.5)}" width="14" height="14" rx="3" fill="${P.brand}"/><path d="M${n2(ix + 4)} ${n2(y + 9.5)} l3 3 l5 -6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
-          : `<rect x="${n2(ix + 0.5)}" y="${n2(y + 2.5)}" width="14" height="14" rx="3" fill="${P.panel}" stroke="${P.muted}"/>`;
-        inner += textBlock(lines, ix + 22, w, y, { ...it, align: "left", color: x.done ? P.muted : it.color, deco: x.done ? "line-through" : it.deco });
-        y += lines.length * it.lh + (k < items.length - 1 ? 3 : 0);
-      });
-      const h = Math.max(H0(n), y + py - n.y);
-      body += group(s, box(n.x, n.y, w, h, s, { fill: P.panel, stroke: P.line, sw: 1.5, r: 14 }) + inner);
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "note") {
-      const w = n.w ?? 210;
-      const px = (s?.pad ?? 12) + 1.5,
-        py = (s?.pad ?? 10) + 1.5;
-      const t = look(s, { size: 13, lh: 18, weight: 400, color: "#422006" });
-      const lines = wrapText(richToPlain(String(n.p.text ?? "")), w - px * 2, t.size, t.weight, t.family, measure);
-      const h = Math.max(96, H0(n), lines.length * t.lh + py * 2);
-      body += group(s, box(n.x, n.y, w, h, s, { fill: "#FDE68A", stroke: "#FCD34D", sw: 1.5, r: 14 }) + textBlock(lines, n.x + px, w - px * 2, n.y + py, t));
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "link") {
-      const url = String(n.p.url ?? "");
-      if (!url) return; // an empty link card is editor-only
-      const w = W0(n),
-        h = Math.max(60, H0(n));
-      const video = isVideoUrl(url);
-      const tt = look(s, { size: 13.5, lh: 18, weight: 700 });
-      const title = ellipsis(String(n.p.title ?? "") || hostOf(url), w - 76, tt.size, tt.weight, tt.family, measure);
-      let o = box(n.x, n.y, w, h, s, { fill: P.panel, stroke: P.line, sw: 1.5, r: 14 });
-      o += `<rect x="${n2(n.x + 12)}" y="${n2(n.y + (h - 40) / 2)}" width="40" height="40" rx="9" fill="${video ? "#FEE2E2" : P.panel2}"/>`;
-      o += video
-        ? `<path d="M${n2(n.x + 28)} ${n2(n.y + h / 2 - 7)} l10 7 l-10 7z" fill="#DC2626"/>`
-        : `<g transform="translate(${n2(n.x + 23)},${n2(n.y + h / 2 - 9)}) scale(0.75)" fill="none" stroke="${P.muted}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS.link}</g>`;
-      o += textBlock([title], n.x + 62, w - 74, n.y + h / 2 - 18, { ...tt, align: "left" });
-      o += `<text x="${n2(n.x + 62)}" y="${n2(n.y + h / 2 + 14)}" font-size="12" font-family="${esc(F.sans)}" fill="${P.brand}">${esc(hostOf(url))}</text>`;
-      body += group(s, o);
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "label") {
-      const w = W0(n);
-      const px = (s?.pad ?? 8) + 1,
-        py = (s?.pad ?? 4) + 1;
-      const size = s?.fontSize ?? (Number(n.p.size) || 28);
-      const t = look(s, { size, lh: size * 1.15, weight: 800, family: F.display, rel: true });
-      const lines = wrapText(String(n.p.text ?? ""), w - px * 2, t.size, t.weight, t.family, measure);
-      const h = Math.max(H0(n), lines.length * t.lh + py * 2);
-      const frame = s?.fill || s?.border || s?.borderW ? box(n.x, n.y, w, h, s, { fill: "none", stroke: "none", sw: 0, r: 0 }) : "";
-      body += group(s, frame + textBlock(lines, n.x + px, w - px * 2, n.y + py, t));
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (n.type === "widget") {
-      // widgets are drawn with the plan's numbers (Actuals are not part of an image)
-      if (!opts.nums) return;
-      const cfg = widgetConfig(n.p);
-      const dims = WIDGET_SIZES[cfg.size];
-      const vals = widgetValues(cfg, g.nodes, R, opts.goals ?? []);
-      const { members, invalid } = widgetMembers(cfg, g.nodes);
-      const shown = (cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals);
-      const rows = Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
-      // the same extras as the card on the canvas: MRR detail and, for the Chart display, the 12-month line
-      const mrrV = shown.find((v) => v.metric === "mrr");
-      const mrrLine = mrrV && cfg.size !== "S" && opts.widgetData ? opts.widgetData.mrr(members) : null;
-      const chartV = cfg.display === "chart" && cfg.size !== "S" ? shown.find((v) => ["revenue", "profit", "leads", "customers", "mrr"].includes(v.metric)) : undefined;
-      const series = chartV && opts.widgetData ? opts.widgetData.series(chartV.metric, chartV.value) : [];
-      const h = Math.max(dims.h, 30 + rows * 44 + (mrrLine ? 18 : 0) + (series.length > 1 ? 66 : 0));
-      const w = dims.w;
-      const scope = cfg.scope === "funnel" ? "WHOLE FUNNEL" : cfg.scope === "frame" ? (g.nodes.find((x) => x.id === cfg.frameId)?.name ?? "FRAME").toUpperCase() : `${members?.length ?? 0} SELECTED STEPS`;
-      let o = box(n.x, n.y, w, h, s, { fill: P.panel, stroke: invalid ? P.alt : P.line, sw: 1, r: 12 });
-      o += `<text x="${n2(n.x + 12)}" y="${n2(n.y + 20)}" font-size="10.5" font-weight="700" letter-spacing=".7" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(ellipsis(scope, w - 24, 10.5, 700, F.sans, measure))}</text>`;
-      shown.forEach((v, i) => {
-        const col = cfg.size === "S" ? 0 : i % 2,
-          row = cfg.size === "S" ? i : Math.floor(i / 2);
-        const cw = cfg.size === "S" ? w - 24 : (w - 24 - 14) / 2;
-        const x = n.x + 12 + col * (cw + 14),
-          y = n.y + 28 + row * 44;
-        o += `<text x="${n2(x)}" y="${n2(y + 10)}" font-size="11.5" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(v.label)}</text>`;
-        o += `<text x="${n2(x)}" y="${n2(y + 32)}" font-size="${cfg.size === "L" ? 22 : 20}" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(formatMetricValue(v, opts.currency), cw, 20, 700, F.display, measure))}</text>`;
-      });
-      const below = n.y + 28 + rows * 44;
-      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} Â· ${nf(mrrLine.subscribers, 1)} subscribers`)}</text>`;
-      if (series.length > 1) {
-        const x0 = n.x + 12,
-          x1 = n.x + w - 12,
-          y1 = n.y + h - 10,
-          y0 = y1 - 48;
-        const lo = Math.min(0, ...series),
-          hi = Math.max(...series, lo + 1e-9);
-        const pts = series.map((v, i) => [x0 + (i / (series.length - 1)) * (x1 - x0), y1 - 3 - ((v - lo) / (hi - lo)) * (y1 - y0 - 6)] as const);
-        const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${n2(x)} ${n2(y)}`).join("");
-        o += `<path d="${d}L${n2(x1)} ${n2(y1)}L${n2(x0)} ${n2(y1)}Z" fill="${P.brand}" fill-opacity=".14"/><path d="${d}" fill="none" stroke="${P.brand}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-      }
-      body += group(s, o);
-      boxes.push([n.x, n.y, w, h]);
-      return;
-    }
-    if (!T || isAnnot(n.type)) return;
-
-    /* flow block: the same family anatomy as the canvas card (lib/block-visuals.ts FAMILY_GEOM / CARD) */
-    const w = nodeW(n.type),
-      h = blockH(n.type),
-      c = P.cat[T.color ?? T.cat];
-    const V = visualOf(n.type),
-      G = FAMILY_GEOM[V.family],
-      F2 = FAMILIES[V.family];
-    const perf = !!opts.nums && !!opts.thick;
-    // card outline with per-corner radii (a custom radius in the Style tab wins)
-    const [rtl, rtr, rbr, rbl] = s?.radius != null ? [s.radius, s.radius, s.radius, s.radius] : G.radii;
-    const bw = s?.borderW ?? CARD.border;
-    const cardPath = (inset: number) => {
-      const x = n.x + inset,
-        y = n.y + inset,
-        X = n.x + w - inset,
-        Y = n.y + h - inset;
-      const r = (v: number) => Math.max(0, Math.min(v - inset, (h - 2 * inset) / 2, (w - 2 * inset) / 2));
-      const [a1, a2, a3, a4] = [r(rtl), r(rtr), r(rbr), r(rbl)];
-      return `M${n2(x + a1)} ${n2(y)}H${n2(X - a2)}A${n2(a2)} ${n2(a2)} 0 0 1 ${n2(X)} ${n2(y + a2)}V${n2(Y - a3)}A${n2(a3)} ${n2(a3)} 0 0 1 ${n2(X - a3)} ${n2(Y)}H${n2(x + a4)}A${n2(a4)} ${n2(a4)} 0 0 1 ${n2(x)} ${n2(Y - a4)}V${n2(y + a1)}A${n2(a1)} ${n2(a1)} 0 0 1 ${n2(x + a1)} ${n2(y)}Z`;
-    };
-    const dash = s?.borderStyle ? BORDER_DASH[s.borderStyle] : undefined;
-    const leak = perf && opts.keyLeak === n.id;
-    let o = `<path d="${cardPath(bw / 2)}" fill="${esc(s?.fill ?? P.panel)}" stroke="${esc(s?.border ?? (leak ? P.alt : P.line))}" stroke-width="${bw}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
-    if (G.hatch) {
-      defs += `<pattern id="fm-hatch" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(135)"><rect width="10" height="20" fill="${P.muted}" fill-opacity=".09"/></pattern>`;
-      o += `<path d="${cardPath(bw)}" fill="url(#fm-hatch)"/>`;
-    }
-    if (F2.strip) o += `<rect x="${n2(n.x + 12)}" y="${n2(n.y - 0.5)}" width="${w - 24}" height="3" rx="1.5" fill="${c}"/>`;
-    const [padL, padR] = G.pad;
-    const innerL = n.x + bw + padL,
-      innerR = n.x + w - bw - padR,
-      innerW = innerR - innerL;
-    // stack: head, [strip], [bar], stats; free space is spread between them (flex space-between)
-    const parts: { k: string; h: number }[] = [{ k: "head", h: CARD.head }];
-    if (F2.strip && V.wireframe) parts.push({ k: "strip", h: CARD.strip });
-    if (hasSplitBar(n.type)) parts.push({ k: "split", h: CARD.bar });
-    const PL = perf ? perfLine(n, R, opts.currency) : null;
-    if (PL && PL.ratio != null) parts.push({ k: "conv", h: CARD.bar });
-    const goal = V.family === "goal" ? (opts.goals ?? []).find((g) => g.nodeId === n.id && g.value > 0) : undefined;
-    if (goal) parts.push({ k: "goal", h: CARD.goalBar });
-    const statsH = CARD.stats + (G.dashedStats ? CARD.dashedStats : 0);
-    parts.push({ k: "stats", h: statsH });
-    const inner = h - 2 * bw - 2 * CARD.padY;
-    const gap = parts.length > 1 ? (inner - parts.reduce((a, q) => a + q.h, 0)) / (parts.length - 1) : 0;
-    const top: Record<string, number> = {};
-    let yy = n.y + bw + CARD.padY;
-    parts.forEach((q) => {
-      top[q.k] = yy;
-      yy += q.h + gap;
-    });
-    // head: tile + title + sub-line
-    const ts = G.tileSize,
-      tcy = top.head + CARD.head / 2,
-      tcx = innerL + ts / 2;
-    const tint = V.brand ?? c;
-    const ink = V.brand ? "#FFFFFF" : P.catInk;
-    if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
-    else if (G.tile === "diamond") o += `<rect x="${n2(tcx - ts * 0.41)}" y="${n2(tcy - ts * 0.41)}" width="${n2(ts * 0.82)}" height="${n2(ts * 0.82)}" rx="${G.tileR}" fill="${tint}" transform="rotate(45 ${n2(tcx)} ${n2(tcy)})"/>`;
-    else o += `<rect x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" rx="${G.tileR}" fill="${tint}"/>`;
-    const mark = s?.icon ? undefined : brandMarkOf(n.type);
-    if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
-    else {
-      const icon = ICONS[(s?.icon as IconName) || T.icon] ?? ICONS.page;
-      o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
-    }
-    const tx = innerL + ts + 10,
-      tw = innerR - tx - 10;
-    const tl = look(s, { size: 14, lh: 18, weight: 700 });
-    o += textBlock([ellipsis(n.name, tw, tl.size, tl.weight, tl.family, measure)], tx, tw, top.head, { ...tl, align: "left" });
-    const sub = { size: 11.5, lh: 15, weight: 500, family: F.sans, color: P.muted, align: "left" as const };
-    if (PL) {
-      const hlW = measure(PL.headline, 14, 700, F.display);
-      o += `<text x="${n2(tx)}" y="${n2(baseline(top.head + 18, { ...sub, size: 14, lh: 15 }))}" font-size="14" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(PL.headline, tw, 14, 700, F.display, measure))}</text>`;
-      o += textBlock([ellipsis(" " + PL.caption, Math.max(0, tw - hlW), sub.size, sub.weight, sub.family, measure)], tx + hlW, Math.max(0, tw - hlW), top.head + 18, sub);
-    } else {
-      const subText = V.family === "offer" ? offerSubtitle(n) : subLabel(n, opts.currency);
-      o += textBlock([ellipsis(subText, tw, sub.size, sub.weight, sub.family, measure)], tx, tw, top.head + 18, sub);
-    }
-    // price tab (offers; hidden with the numbers)
-    if (F2.price && opts.nums) {
-      const pt = priceTab(n, opts.currency);
-      const pw = measure(pt, 10.5, 700, F.sans) + 14;
-      o += `<rect x="${n2(n.x + 12.5)}" y="${n2(n.y - 9.5)}" width="${n2(pw - 1)}" height="19" rx="5" fill="${P.bg === "none" ? P.panel : P.bg}" stroke="${c}" stroke-opacity=".6"/>`;
-      o += `<text x="${n2(n.x + 12 + 7)}" y="${n2(n.y + 0.5 + 3.7)}" font-size="10.5" font-weight="700" font-family="${esc(F.sans)}" fill="${c}">${esc(pt)}</text>`;
-    }
-    // preview strip: captured screenshot, else the semantic wireframe
-    if (top.strip != null && V.wireframe) {
-      const sx = innerL,
-        sw = innerW;
-      o += `<rect x="${n2(sx + 0.5)}" y="${n2(top.strip + 0.5)}" width="${n2(sw - 1)}" height="${CARD.strip - 1}" rx="5" fill="${P.bg === "none" ? P.panel2 : P.bg}" stroke="${P.line}"/>`;
-      const shot = opts.shots?.[n.id];
-      if (shot) {
-        defs += `<clipPath id="fm-s${idx}"><rect x="${n2(sx + 1)}" y="${n2(top.strip + 1)}" width="${n2(sw - 2)}" height="${CARD.strip - 2}" rx="4"/></clipPath>`;
-        o += `<image href="${esc(shot)}" x="${n2(sx + 1)}" y="${n2(top.strip + 1)}" width="${n2(sw - 2)}" height="${CARD.strip - 2}" preserveAspectRatio="xMidYMin slice" clip-path="url(#fm-s${idx})"/>`;
-      } else o += wireframeSvg(V.wireframe, sx + (sw - WF_SIZE.w) / 2, top.strip + (CARD.strip - WF_SIZE.h) / 2, { o: P.line, d: P.line, m: P.edge, a: c, ao: c });
-    }
-    // split bar (Yes/No, A/B)
-    if (top.split != null) {
-      const a = Math.max(0, Math.min(100, Number(n.p.pct) || 0)),
-        g2 = 2,
-        avail = innerW - g2;
-      o += `<rect x="${n2(innerL)}" y="${n2(top.split)}" width="${n2((avail * a) / 100)}" height="${CARD.bar}" rx="2" fill="${P.brand}"/>`;
-      o += `<rect x="${n2(innerL + (avail * a) / 100 + g2)}" y="${n2(top.split)}" width="${n2((avail * (100 - a)) / 100)}" height="${CARD.bar}" rx="2" fill="${baseOf(n.type) === "split" ? P.edge : P.alt}"/>`;
-    }
-    // Performance map: share who move on (rest = people lost)
-    if (top.conv != null && PL?.ratio != null) {
-      o += `<rect x="${n2(innerL)}" y="${n2(top.conv)}" width="${n2(innerW)}" height="${CARD.bar}" rx="2" fill="${P.alt}"/><rect x="${n2(innerL)}" y="${n2(top.conv)}" width="${n2(innerW * PL.ratio)}" height="${CARD.bar}" rx="2" fill="${P.brand}"/>`;
-    }
-    // goal progress (target from the funnel's goals, never invented)
-    if (top.goal != null && goal) {
-      const cur = goalCurrent(g.nodes, R, goal);
-      const p = Number.isFinite(cur) ? Math.max(0, Math.min(1, cur / goal.value)) : 0;
-      o += `<rect x="${n2(innerL)}" y="${n2(top.goal)}" width="${n2(innerW)}" height="${CARD.goalBar}" rx="3" fill="${P.line}"/><rect x="${n2(innerL)}" y="${n2(top.goal)}" width="${n2(innerW * p)}" height="${CARD.goalBar}" rx="3" fill="${P.good}"/>`;
-      o += `<text x="${n2(innerR)}" y="${n2(top.goal - 3)}" text-anchor="end" font-size="10" font-weight="700" font-family="${esc(F.sans)}" fill="${P.muted}">${nf(p * 100)}%</text>`;
-    }
-    // stats row
-    if (opts.nums) {
-      const st = { size: 12, lh: 16, weight: 400, family: F.sans, color: P.muted, align: "left" as const };
-      let sy = top.stats;
-      if (G.dashedStats) {
-        o += `<line x1="${n2(innerL)}" y1="${n2(sy + 0.5)}" x2="${n2(innerR)}" y2="${n2(sy + 0.5)}" stroke="${P.line}" stroke-dasharray="3 3"/>`;
-        sy += CARD.dashedStats;
-      }
-      const r0 = R.N[n.id];
-      const nodata = !r0 || (T.cat !== "traffic" && r0.inflow === 0);
-      if (nodata) o += `<text x="${n2(innerL)}" y="${n2(baseline(sy, st))}" font-size="12" font-style="italic" font-family="${esc(F.sans)}" fill="${P.muted}">No data yet</text>`;
-      else {
-        let full = "",
-          tsp = "";
-        for (const sg of nodeStats(n, R, opts.currency)) {
-          const room = innerW - measure(full, 12, 400, F.sans);
-          const t = measure(sg.t, 12, sg.b ? 700 : 400, F.sans) <= room ? sg.t : ellipsis(sg.t, room, 12, sg.b ? 700 : 400, F.sans, measure);
-          full += t;
-          tsp += `<tspan${sg.b ? ` font-weight="700" fill="${P.ink}"` : ""}>${esc(t)}</tspan>`;
-          if (t !== sg.t) break;
-        }
-        o += `<text x="${n2(innerL)}" y="${n2(baseline(sy, st))}" ${textAttrs(st)} xml:space="preserve">${tsp}</text>`;
-      }
-    }
-    if (leak) {
-      const lw = measure("Key leak", 10.5, 800, F.sans) + 16;
-      o += `<rect x="${n2(n.x + w - 10 - lw)}" y="${n2(n.y - 11)}" width="${n2(lw)}" height="20" rx="10" fill="${P.alt}"/><text x="${n2(n.x + w - 10 - lw / 2)}" y="${n2(n.y + 2.8)}" text-anchor="middle" font-size="10.5" font-weight="800" font-family="${esc(F.sans)}" fill="#fff">Key leak</text>`;
-    }
-    body += group(s, o);
-    boxes.push([n.x, n.y - (F2.price || leak ? 11 : 0), w, h + (F2.price || leak ? 11 : 0)]);
-  });
-
-  const [x0, y0, x1, y1] = mapBounds(boxes, paths);
-  const pad = 32,
-    W = Math.ceil(x1 - x0 + pad * 2),
-    H = Math.ceil(y1 - y0 + pad * 2);
-  const style = opts.fonts?.css ? `<style>${opts.fonts.css}</style>` : "";
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${esc(F.sans)}">` +
-    `<defs>${style}${defs}</defs><rect width="100%" height="100%" fill="${P.bg}"/>` +
-    `<g transform="translate(${n2(pad - x0)},${n2(pad - y0)})">${frames}${edges}${body}${labels}</g></svg>`
-  );
-}
+JHOˆÃBˆÜÜKš×HH^NÃBˆ^H
+ÏHKš
+ÈØ\ÃBˆJNÃBˆËÈXYˆ[H
+È]H
+ÈİX‹[[™CBˆÛÛœİÈHË[TÚ^™KBˆŞHHÜšXY
+ÈĞT‘šXYÈ‹BˆŞH[›™\“
+ÈÈÈÃBˆÛÛœİ[H‹˜œ˜[™ÏÈÎÃBˆÛÛœİ[šÈH‹˜œ˜[™ÈˆÑ‘‘‘‘‘ˆˆˆ˜Ø][šÎÃBˆYˆ
+Ë[HOOH˜Ú\˜ÛHŠHÈ
+ÏHÚ\˜ÛHŞH‰ÛŒŠŞ
+_HˆŞOH‰ÛŒŠŞJ_HˆH‰İÈÈŸHˆš[H‰İ[H‹Ï˜ÃBˆ[ÙHYˆ
+Ë[HOOH™X[[Û™ŠHÈ
+ÏH™XİH‰ÛŒŠŞHÈ
+ˆJ_HˆOH‰ÛŒŠŞHHÈ
+ˆJ_HˆÚYH‰ÛŒŠÈ
+ˆŠ_HˆZYÚH‰ÛŒŠÈ
+ˆŠ_HˆH‰ÑË[TŸHˆš[H‰İ[Hˆ˜[œÙ›Ü›OHœ›İ]JH	ÛŒŠŞ
+_H	ÛŒŠŞJ_JH‹Ï˜ÃBˆ[ÙHÈ
+ÏH™XİH‰ÛŒŠŞHÈÈŠ_HˆOH‰ÛŒŠŞHHÈÈŠ_HˆÚYH‰İßHˆZYÚH‰İßHˆH‰ÑË[TŸHˆš[H‰İ[H‹Ï˜ÃBˆÛÛœİX\šÈHÏËšXÛÛˆÈ[™Yš[™Yˆœ˜[™X\šÓÙŠ‹\JNÃBˆYˆ
+X\šÊHÈ
+ÏHİ™ÈH‰ÛŒŠŞHJ_HˆOH‰ÛŒŠŞHHJ_HˆÚYHŒNˆZYÚHŒNˆšY]Ğ›ŞHŒˆš[H‰Ú[šßH]H‰ÛX\šßH‹ÏÜİ™Ï˜ÃBˆ[ÙHÃBˆÛÛœİXÛÛˆHPÓÓ”ÖÊÏËšXÛÛˆ\ÈXÛÛ“˜[YJHšXÛÛ—HÏÈPÓÓ”ËœYÙNÃBˆÈ
+ÏHİ™ÈH‰ÛŒŠŞHJ_HˆOH‰ÛŒŠŞHHJ_HˆÚYHŒNˆZYÚHŒNˆšY]Ğ›ŞHŒˆš[H››Û™Hˆİ›ÚÙOH‰Ú[šßHˆİ›ÚÙK]ÚYHŒˆˆİ›ÚÙK[[™XØ\Hœ›İ[™ˆİ›ÚÙK[[™Z›Ú[Hœ›İ[™‰ÚXÛÛŸOÜİ™Ï˜ÃBˆCBˆÛÛœİH[›™\“
+ÈÈ
+ÈLBˆÈH[›™\”ˆHHLÃBˆÛÛœİHÛÚÊËÈÚ^™NˆMˆNÙZYÚˆÌJNÃBˆÈ
+ÏH^›ØÚÊÙ[\Ú\Ê‹›˜[YKËœÚ^™KÙZYÚ™˜[Z[KYX\İ\™JWKËÜšXYÈ‹‹[YÛˆ›YˆJNÃBˆÛÛœİİXˆHÈÚ^™NˆLKKˆMKÙZYÚˆL˜[Z[Nˆ‹œØ[œËÛÛÜˆ›]]Y[YÛˆ›Yˆ\ÈÛÛœİNÃBˆYˆ
+
+HÃBˆÛÛœİÈHYX\İ\™JšXY[™KMÌ‹™\Ü^JNÃBˆÈ
+ÏH^H‰ÛŒŠ
+_HˆOH‰ÛŒŠ˜\Ù[[™JÜšXY
+ÈNÈ‹‹œİX‹Ú^™NˆMˆMHJJ_Hˆ›Û\Ú^™OHŒMˆ›Û]ÙZYÚHÌˆ›ÛY˜[Z[OH‰Ù\ØÊ‹™\Ü^J_Hˆš[H‰Ôš[šßH‰Ù\ØÊ[\Ú\ÊšXY[™KËMÌ‹™\Ü^KYX\İ\™JJ_Oİ^˜ÃBˆÈ
+ÏH^›ØÚÊÙ[\Ú\Êˆˆ
+È˜Ø\[Û‹X]›X^
+ÈHÊKİX‹œÚ^™KİX‹ÙZYÚİX‹™˜[Z[KYX\İ\™JWK
+ÈËX]›X^
+ÈHÊKÜšXY
+ÈNİXŠNÃBˆH[ÙHÃBˆÛÛœİİX•^H‹™˜[Z[HOOH›Ù™™\ˆˆÈÙ™™\”İX]JŠHˆİX“X™[
+‹ÜË˜İ\œ™[˜ŞJNÃBˆÈ
+ÏH^›ØÚÊÙ[\Ú\ÊİX•^ËİX‹œÚ^™KİX‹ÙZYÚİX‹™˜[Z[KYX\İ\™JWKËÜšXY
+ÈNİXŠNÃBˆCBˆËÈšXÙHXˆ
+Ù™™\œÎÈY[ˆÚ]H[X™\œÊCBˆYˆ
+Œ‹œšXÙH	‰ˆÜË›[\ÊHÃBˆÛÛœİHšXÙUXŠ‹ÜË˜İ\œ™[˜ŞJNÃBˆÛÛœİÈHYX\İ\™JLKÌ‹œØ[œÊH
+ÈMÃBˆÈ
+ÏH™XİH‰ÛŒŠ‹
+ÈL‹J_HˆOH‰ÛŒŠ‹HHKJ_HˆÚYH‰ÛŒŠÈHJ_HˆZYÚHŒNHˆHHˆš[H‰Ô˜™ÈOOH››Û™HˆÈœ[™[ˆ˜™ßHˆİ›ÚÙOH‰ØßHˆİ›ÚÙK[ÜXÚ]OH‹ˆ‹Ï˜ÃBˆÈ
+ÏH^H‰ÛŒŠ‹
+ÈLˆ
+ÈÊ_HˆOH‰ÛŒŠ‹H
+ÈH
+ÈËÊ_Hˆ›Û\Ú^™OHŒLHˆ›Û]ÙZYÚHÌˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰ØßH‰Ù\ØÊ
+_Oİ^˜ÃBˆCBˆËÈ™]šY]Èİš\ˆØ\\™YØÜ™Y[œÚİ[ÙHHÙ[X[XÈÚ\™Yœ˜[YCBˆYˆ
+Üœİš\OH[	‰ˆ‹Ú\™Yœ˜[YJHÃBˆÛÛœİŞH[›™\“BˆİÈH[›™\•ÎÃBˆÈ
+ÏH™XİH‰ÛŒŠŞ
+ÈJ_HˆOH‰ÛŒŠÜœİš\
+ÈJ_HˆÚYH‰ÛŒŠİÈHJ_HˆZYÚH‰ĞĞT‘œİš\H_HˆHHˆš[H‰Ô˜™ÈOOH››Û™HˆÈœ[™[ˆˆ˜™ßHˆİ›ÚÙOH‰Ô›[™_H‹Ï˜ÃBˆÛÛœİÚİHÜËœÚİÏË–Û‹šYNÃBˆYˆ
+Úİ
+HÃBˆYœÈ
+ÏHÛ\]YH™›K\ÉÚYH™XİH‰ÛŒŠŞ
+ÈJ_HˆOH‰ÛŒŠÜœİš\
+ÈJ_HˆÚYH‰ÛŒŠİÈHŠ_HˆZYÚH‰ĞĞT‘œİš\HŸHˆH‹ÏØÛ\]˜ÃBˆÈ
+ÏH[XYÙH™YH‰Ù\ØÊÚİ
+_HˆH‰ÛŒŠŞ
+ÈJ_HˆOH‰ÛŒŠÜœİš\
+ÈJ_HˆÚYH‰ÛŒŠİÈHŠ_HˆZYÚH‰ĞĞT‘œİš\HŸHˆ™\Ù\™P\ÜXİ˜][ÏHZYSZ[ˆÛXÙHˆÛ\\]H\›
+Ù›K\ÉÚYJH‹Ï˜ÃBˆH[ÙHÈ
+ÏHÚ\™Yœ˜[YTİ™Ê‹Ú\™Yœ˜[YKŞ
+È
+İÈHÑ—ÔÒV‘KÊHÈ‹Üœİš\
+È
+ĞT‘œİš\HÑ—ÔÒV‘Kš
+HÈ‹ÈÎˆ›[™Kˆ›[™KNˆ™YÙKNˆË[ÎˆÈJNÃBˆCBˆËÈÜ]˜\ˆ
+Y\ËÓ›ËKĞŠCBˆYˆ
+ÜœÜ]OH[
+HÃBˆÛÛœİHHX]›X^
+X]›Z[ŠL[X™\Š‹œœİ
+H
+JKBˆÌˆH‹Bˆ]˜Z[H[›™\•ÈHÌÃBˆÈ
+ÏH™XİH‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠÜœÜ]
+_HˆÚYH‰ÛŒŠ
+]˜Z[
+ˆJHÈL
+_HˆZYÚH‰ĞĞT‘˜˜\ŸHˆHŒˆˆš[H‰Ô˜œ˜[™H‹Ï˜ÃBˆÈ
+ÏH™XİH‰ÛŒŠ[›™\“
+È
+]˜Z[
+ˆJHÈL
+ÈÌŠ_HˆOH‰ÛŒŠÜœÜ]
+_HˆÚYH‰ÛŒŠ
+]˜Z[
+ˆ
+LHJJHÈL
+_HˆZYÚH‰ĞĞT‘˜˜\ŸHˆHŒˆˆš[H‰Ø˜\ÙSÙŠ‹\JHOOHœÜ]ˆÈ™YÙHˆ˜[H‹Ï˜ÃBˆCBˆËÈ\™›Ü›X[˜ÙHX\ˆÚ\™HÚÈ[İ™HÛˆ
+™\İH[ÜHÜİ
+CBˆYˆ
+Ü˜ÛÛˆOH[	‰ˆËœ˜][ÈOH[
+HÃBˆÈ
+ÏH™XİH‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠÜ˜ÛÛŠ_HˆÚYH‰ÛŒŠ[›™\•Ê_HˆZYÚH‰ĞĞT‘˜˜\ŸHˆHŒˆˆš[H‰Ô˜[H‹Ï™XİH‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠÜ˜ÛÛŠ_HˆÚYH‰ÛŒŠ[›™\•È
+ˆœ˜][Ê_HˆZYÚH‰ĞĞT‘˜˜\ŸHˆHŒˆˆš[H‰Ô˜œ˜[™H‹Ï˜ÃBˆCBˆËÈÛØ[›ÙÜ™\ÜÈ
+\™Ù]œ›ÛHH[›™[	ÜÈÛØ[Ë™]™\ˆ[™[Y
+CBˆYˆ
+Ü™ÛØ[OH[	‰ˆÛØ[
+HÃBˆÛÛœİİ\ˆHÛØ[İ\œ™[
+Ë››Ù\Ë‹ÛØ[
+H
+ˆ
+ÛØ[šÚ[™OOH˜ÛÛ™\œÚ[ÛˆˆÈHˆ\š[Ù˜XİÜŠÛØ[œ\š[ÙÏÈ›[ÛŠJNÃBˆÛÛœİH[X™\‹š\Ñš[š]Jİ\ŠHÈX]›X^
+X]›Z[ŠKİ\ˆÈÛØ[˜[YJJHˆÃBˆÈ
+ÏH™XİH‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠÜ™ÛØ[
+_HˆÚYH‰ÛŒŠ[›™\•Ê_HˆZYÚH‰ĞĞT‘™ÛØ[˜\ŸHˆHŒÈˆš[H‰Ô›[™_H‹Ï™XİH‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠÜ™ÛØ[
+_HˆÚYH‰ÛŒŠ[›™\•È
+ˆ
+_HˆZYÚH‰ĞĞT‘™ÛØ[˜\ŸHˆHŒÈˆš[H‰Ô™ÛÛÙH‹Ï˜ÃBˆÈ
+ÏH^H‰ÛŒŠ[›™\”Š_HˆOH‰ÛŒŠÜ™ÛØ[HÊ_Hˆ^X[˜ÚÜH™[™ˆ›Û\Ú^™OHŒLˆ›Û]ÙZYÚHÌˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô›]]YH‰Û™Š
+ˆL
+_IOİ^˜ÃBˆCBˆËÈİ]È›İÃBˆYˆ
+ÜË›[\ÊHÃBˆÛÛœİİHÈÚ^™NˆL‹ˆM‹ÙZYÚˆ˜[Z[Nˆ‹œØ[œËÛÛÜˆ›]]Y[YÛˆ›Yˆ\ÈÛÛœİNÃBˆ]ŞHHÜœİ]ÎÃBˆYˆ
+Ë™\ÚYİ]ÊHÃBˆÈ
+ÏH[™HOH‰ÛŒŠ[›™\“
+_HˆLOH‰ÛŒŠŞH
+ÈJ_HˆH‰ÛŒŠ[›™\”Š_HˆLH‰ÛŒŠŞH
+ÈJ_Hˆİ›ÚÙOH‰Ô›[™_Hˆİ›ÚÙKY\Ú\œ˜^OHŒÈÈ‹Ï˜ÃBˆŞH
+ÏHĞT‘™\ÚYİ]ÎÃBˆCBˆÛÛœİŒH‹“–Û‹šYNÃBˆÛÛœİ›Ù]HH\Œ
+˜Ø]OOH˜Y™šXÈˆ	‰ˆŒš[™›İÈOOH
+NÃBˆYˆ
+›Ù]JHÈ
+ÏH^H‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠ˜\Ù[[™JŞKİ
+J_Hˆ›Û\Ú^™OHŒLˆˆ›Û\İ[OHš][XÈˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[H‰Ô›]]YH“›È]HY]İ^˜ÃBˆ[ÙHÃBˆ][Hˆ‹BˆÜHˆÃBˆ›Üˆ
+ÛÛœİÙÈÙˆ›ÙTİ]Ê‹‹ÜË˜İ\œ™[˜ŞJJHÃBˆÛÛœİ›ÛÛHH[›™\•ÈHYX\İ\™J[L‹‹œØ[œÊNÃBˆÛÛœİHYX\İ\™JÙËL‹ÙË˜ˆÈÌˆ‹œØ[œÊHH›ÛÛHÈÙËˆ[\Ú\ÊÙË›ÛÛKL‹ÙË˜ˆÈÌˆ‹œØ[œËYX\İ\™JNÃBˆ[
+ÏHÃBˆÜ
+ÏHÜ[‰ÜÙË˜ˆÈ›Û]ÙZYÚHÌˆš[H‰Ôš[šßH˜ˆˆŸO‰Ù\ØÊ
+_OİÜ[˜ÃBˆYˆ
+OOHÙË
+Hœ™XZÎÃBˆCBˆÈ
+ÏH^H‰ÛŒŠ[›™\“
+_HˆOH‰ÛŒŠ˜\Ù[[™JŞKİ
+J_Hˆ	İ^]œÊİ
+_H[œÜXÙOHœ™\Ù\™H‰İÜOİ^˜ÃBˆCBˆCBˆYˆ
+XZÊHÃBˆÛÛœİÈHYX\İ\™J’Ù^HXZÈ‹LK‹œØ[œÊH
+ÈMÃBˆÈ
+ÏH™XİH‰ÛŒŠ‹
+ÈÈHLHÊ_HˆOH‰ÛŒŠ‹HHLJ_HˆÚYH‰ÛŒŠÊ_HˆZYÚHŒŒˆHŒLˆš[H‰Ô˜[H‹Ï^H‰ÛŒŠ‹
+ÈÈHLHÈÈŠ_HˆOH‰ÛŒŠ‹H
+È‹
+_Hˆ^X[˜ÚÜH›ZYHˆ›Û\Ú^™OHŒLHˆ›Û]ÙZYÚHˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_Hˆš[HˆÙ™™ˆ’Ù^HXZÏİ^˜ÃBˆCBˆ›ÙH
+ÏHÜ›İ\
+ËÊNÃBˆ›Ş\Ëœ\Ú
+Û‹‹HH
+Œ‹œšXÙHXZÈÈLHˆ
+KË
+È
+Œ‹œšXÙHXZÈÈLHˆ
+WJNÃBˆJNÃBƒBˆÛÛœİŞLKLWHHX\›İ[™Ê›Ş\Ë]ÊNÃBˆÛÛœİYHÌ‹BˆÈHX]˜ÙZ[
+HH
+ÈY
+ˆŠKBˆHX]˜ÙZ[
+LHHL
+ÈY
+ˆŠNÃBˆÛÛœİİ[HHÜË™›ÛÏË˜ÜÜÈÈİ[O‰ÛÜË™›ÛË˜ÜÜßOÜİ[O˜ˆˆÃBˆ™]\›ˆ
+Bˆİ™È[œÏHš‹ËİİİËÌË›Ü™ËÌŒÜİ™ÈˆÚYH‰ÕßHˆZYÚH‰ÒHˆšY]Ğ›ŞHŒ	ÕßH	ÒHˆ›ÛY˜[Z[OH‰Ù\ØÊ‹œØ[œÊ_H˜
+ÃBˆYœÏ‰Üİ[_IÙYœßOÙYœÏ™XİÚYHŒL	HˆZYÚHŒL	Hˆš[H‰Ô˜™ßH‹Ï˜
+ÃBˆÈ˜[œÙ›Ü›OH˜[œÛ]J	ÛŒŠYH
+_K	ÛŒŠYHL
+_JH‰Ùœ˜[Y\ßIÙYÙ\ßIØ›Ù_IÛX™[ßOÙÏÜİ™Ï˜Bˆ
+NÃBŸCB

@@ -1,11 +1,11 @@
 # Deployment
 
 Funnel Mapper Pro runs on **Supabase** (database, sign-in, file storage) and **Vercel** (the website).
-Two scripts do the whole job, and both are safe to re-run:
+Two scripts support deployment and live checks. `deploy` can create resources and deploy to Production, so verify its target before running it; its repeat handling does not make a wrong target safe.
 
 | Command | What it does |
 |---|---|
-| `npm run deploy` | Creates or reuses the Supabase project (London), applies every migration, sets sign-in to invite-only with the website address and email templates, creates or reuses the Vercel project, sets its environment variables, deploys to production, smoke-tests the site, and invites the first admin. |
+| `npm run deploy` | Creates or reuses the Supabase project (London), applies pending migrations, sets sign-in to invite-only with the website address and email templates, creates or reuses the Vercel project, sets its environment variables, deploys with `--prod`, smoke-tests the site, and may invite the first admin. |
 | `npm run live-check` | Verifies the live site end to end with temporary accounts it creates and deletes again (no emails sent): access rules, private storage, share-link privacy, and a browser walkthrough of the main workflows. |
 
 ## What the person who owns the accounts provides
@@ -57,37 +57,31 @@ PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run live-check
 - **Free-plan note:** Supabase pauses free projects after a week without activity. `npm run deploy` restores a paused project;
   the Pro plan avoids pausing and adds daily backups.
 
-## Databases that were migrated by hand (demo and production)
+## Demo / Production target warning
 
-The demo (`arwedmqmxrxllytzriat`) and production (`kyhlhacbmlbkiibvpsel`) databases were partly migrated through the
-Supabase dashboard / connector, which records its own timestamps and sometimes splits a migration into chunks.
-`npm run deploy` matches those by name (`pendingMigrations` in `scripts/deploy/migrations.mjs`, unit-tested in
-`tests/unit/deploy-migrations.test.ts`) and **refuses** to run when a gap would re-apply an older migration over newer
-ones. In that case, pass the last repo migration that is already in the database:
+The deployment script is a production deployment workflow, not a Demo-only migration command. It selects projects by `.deploy/state.json` and `PROJECT_NAME` (default `funnel-mapper-pro`); if it cannot find a project, it creates one. It sets environment variables for both Production and Preview and runs a Vercel `--prod` deployment. `MIGRATIONS_BASELINE` only affects migration-history matching; it does not select a database or Vercel project. Do not use `npm run deploy` as a Demo-only operation without first verifying the state file, project refs, Vercel project, and resulting domains.
 
-```bash
-MIGRATIONS_BASELINE=20261009000000 npm run deploy   # demo: everything up to workspace_members is already applied
-```
+Dashboard inspection on **2026-10-07** confirmed that Vercel project `funnel-mapper-demo` is connected to `layer2funnels-bot/Funnel-Mapper`, with `main` as its Production branch. Both `funnel-mapper-demo.vercel.app` and `mapper.layer2funnels.com` are assigned to that Production environment. Its `NEXT_PUBLIC_SUPABASE_URL` points to the Demo Supabase project (`arwedmqmxrxllytzriat`); the Preview environment is also configured to use that same Demo project. Therefore, a deployment to `main` affects both Production domains, and Preview builds share the Demo database. This is an observed configuration snapshot, not an instruction to change it. Keep Production deployments and domain changes behind explicit owner approval.
 
-Pending V1-completion migrations (apply in order, together with the code that needs them):
+## Demo and Production migration history
 
-| Migration | What | Notes |
-|---|---|---|
-| `20261010000000_share_notes.sql` | Funnel notes stay off share links unless shared on purpose | Functions replaced in place; compatible with older code. |
-| `20261011000000_roles.sql` | Owner / Admin / Editor / Viewer on `workspace_members` | Replaces the role check constraint (`DROP CONSTRAINT`): apply with `npm run deploy`, the Supabase CLI or the SQL editor, not the dashboard connector. Renames `member` → `editor`, so deploy the code at the same time (older code still writes `member`). |
-| `20261012000000_client_archive.sql` | `clients.archived_at` | Additive. |
-| `20261013000000_workspace_assets.sql` | `workspace_assets` table (saved style presets and workspace blocks), RLS by workspace | Additive: a new table. Older code ignores it; the new code reads it when the editor opens, and shows "Couldn't load the saved blocks" with a retry if the table is missing. Apply with `npm run deploy` or the CLI. |
+The Demo (`arwedmqmxrxllytzriat`) and Production (`kyhlhacbmlbkiibvpsel`) databases have migration histories recorded
+through the Supabase dashboard / connector, which can use its own timestamps and split migrations into chunks.
+`pendingMigrations` in `scripts/deploy/migrations.mjs` matches these records by migration name and **refuses** to run
+when a gap could re-apply an older migration over newer ones. A baseline only tells this matcher which earlier repo
+migrations are already represented in the selected database; it is not a target selector or approval to apply SQL.
 
-None of these were applied to the demo or production databases by the engineering work: apply them as described below, then run `npm run live-check`.
+The Demo migration list was inspected on **2026-10-07**. It contains `share_notes`, `roles`, and `client_archive`
+(latest recorded row: `client_archive`, version `20261003095827`), along with the earlier workspace migrations. The repo's
+`workspace_assets` migration (`20261013000000_workspace_assets.sql`) was not present in that list. With the documented
+baseline through `workspace_members` and the observed names, `workspace_assets` is the remaining repo migration at that
+snapshot. Verify the dashboard history again before any migration operation. The prior statement that none of the V1
+completion migrations had been applied is stale. Production migration history was not inspected in this audit; do not
+rely on the previous “3 of 12” note without checking the Production project directly.
 
-Production additionally still needs everything from `20261003000000_team_workspace.sql` onwards (it has 3 of 12).
-
-Order of operations for an existing database: **migrations first, then the code** (the new code reads
-`clients.archived_at` and the new roles; the old code keeps working on the migrated database apart from changing a
-teammate's role, which briefly fails until the new code is live).
-- Production: run `npm run deploy` from the merged code. It applies the migrations, then deploys. Then run `npm run live-check`.
-- Demo: Vercel deploys `main` automatically, so apply the migrations (`MIGRATIONS_BASELINE=20261009000000 npm run deploy`,
-  or the CLI) right before merging.
+The historical Demo baseline remains `20261009000000` for the manually chunked workspace migration history. It lets
+the matcher skip repo migrations through `workspace_members`; it does not authorize applying later migrations and must
+not be treated as a Demo target selector. No generic deploy command is documented here as a Demo-only migration path.
 
 ## Page thumbnails (optional environment setting)
 

@@ -8,6 +8,7 @@ import {
   goalPlan,
   leaks,
   num,
+  periodFactor,
   periodNumbers,
   planVsActual,
   project,
@@ -110,10 +111,11 @@ export interface StatusReport {
 }
 
 const GOAL_LABEL: Record<Goal["kind"], string> = {
-  revenue: "Monthly revenue",
-  profit: "Monthly profit",
-  customers: "New customers per month",
-  leads: "Leads per month",
+  revenue: "revenue",
+  profit: "profit",
+  traffic: "traffic",
+  customers: "new customers",
+  leads: "leads",
   step: "People completing",
   conversion: "Conversion at",
 };
@@ -131,6 +133,7 @@ export function goalCurrent(nodes: GraphLike["nodes"], R: FunnelResult, goal: Go
   if (goal.kind === "conversion") return node ? stepRate(node) : NaN;
   if (goal.kind === "revenue") return R.rev;
   if (goal.kind === "profit") return R.profit;
+  if (goal.kind === "traffic") return R.traffic;
   if (goal.kind === "customers") return R.cust;
   if (goal.kind === "leads") return R.leads;
   return node ? (R.N[node.id]?.out ?? 0) : NaN;
@@ -140,13 +143,23 @@ export function goalCurrent(nodes: GraphLike["nodes"], R: FunnelResult, goal: Go
 export function goalReport(g: GraphLike, s: ReportSettings, R: FunnelResult, goal: Goal): GoalReport {
   const node = goal.nodeId ? g.nodes.find((n) => n.id === goal.nodeId) : undefined;
   const target = num(goal.value);
-  const label = goal.kind === "step" || goal.kind === "conversion" ? `${GOAL_LABEL[goal.kind]} ${node?.name ?? "(pick a step)"}` : GOAL_LABEL[goal.kind];
+  const period = goal.period ?? "month";
+  const periodScale = periodFactor(period);
+  const periodName = { day: "daily", week: "weekly", month: "monthly", year: "yearly" }[period];
+  const label = goal.kind === "conversion"
+    ? `${GOAL_LABEL[goal.kind]} ${node?.name ?? "(pick a step)"}`
+    : goal.kind === "step"
+      ? `${GOAL_LABEL[goal.kind]} ${node?.name ?? "(pick a step)"} per ${period}`
+      : goal.kind === "customers" || goal.kind === "leads" || goal.kind === "traffic"
+        ? `${GOAL_LABEL[goal.kind]} per ${period}`
+        : `${periodName} ${GOAL_LABEL[goal.kind]}`;
   if (goal.kind === "conversion") {
     const current = node ? stepRate(node) : NaN;
     return { goal, label, current, progress: target ? current / target : 0, plan: null, required: [], impact: node && target > 0 ? withStepRate(g, s, node.id, target) : null, stepName: node?.name };
   }
-  const current = goalCurrent(g.nodes, R, goal);
-  const plan = (goal.kind === "step" && !node) ? null : goalPlan(g, s, { kind: goal.kind, value: target, nodeId: goal.nodeId });
+  const current = goalCurrent(g.nodes, R, goal) * periodScale;
+  const monthlyTarget = periodScale > 0 ? target / periodScale : target;
+  const plan = (goal.kind === "step" && !node) ? null : goalPlan(g, s, { kind: goal.kind, value: monthlyTarget, nodeId: goal.nodeId });
   const required: GoalReport["required"] =
     plan?.reachable && plan.R ? PERIODS.map(([p, k]) => [p, plan.R!.rev * k, plan.R!.profit * k, plan.R!.traffic * k, plan.R!.spend * k, plan.R!.leads * k, plan.R!.cust * k]) : [];
   return { goal, label, current, progress: target ? current / target : 0, plan, required, impact: null, stepName: node?.name };

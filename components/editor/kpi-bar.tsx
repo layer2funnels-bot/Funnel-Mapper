@@ -97,7 +97,7 @@ export function KpiBar() {
     <footer className={`fm-kpis${sim ? " sim" : ""}${before ? " before" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
         <Pop
-          label="Funnel checks"
+          label="Structure checks"
           button={() =>
             checks.length > 0 ? (
               <span className="fm-chk warn">
@@ -108,16 +108,16 @@ export function KpiBar() {
             ) : (
               <span className="fm-chk ok">
                 <Icon name="check" size={14} />
-                Checks pass
+                Structure valid
               </span>
             )
           }
         >
           {(close) => (
             <>
-              <h3>Funnel checks</h3>
+              <h3>Structure checks</h3>
               {checks.length === 0 ? (
-                <p>Every block is connected and every Yes/No has both paths.</p>
+                <p>Structure and setup checks pass. Review Performance health in the Math tab for conversion losses.</p>
               ) : (
                 <>
                   <ul>

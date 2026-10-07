@@ -1,7 +1,7 @@
 // Funnel health: the same checks as warnings() in lib/funnel-math.ts, but each one knows which block it is about,
 // so the inspector can select and zoom to it. The texts are asserted equal to warnings() in tests/unit/health.test.ts.
 import { baseOf, typeOf } from "./catalog";
-import { num, type GraphLike } from "./funnel-math";
+import { leaks, num, stepRate, withStepRate, type FunnelResult, type GraphLike, type MathSettings } from "./funnel-math";
 import { waitValid } from "./wait";
 
 export interface HealthCheck {
@@ -9,6 +9,17 @@ export interface HealthCheck {
   text: string;
   /** The block to select and zoom to (absent for funnel-wide checks). */
   nodeId?: string;
+}
+
+export interface PerformanceCheck extends HealthCheck {
+  /** Deterministic ranking; this is not a threshold-based severity. */
+  rank: "largest-loss" | "highest-drop-rate";
+  inflow: number;
+  lost: number;
+  dropPct: number;
+  revenueGain: number;
+  profitGain: number;
+  customerGain: number;
 }
 
 export function healthChecks(g: GraphLike): HealthCheck[] {
@@ -27,4 +38,32 @@ export function healthChecks(g: GraphLike): HealthCheck[] {
   }
   if (!g.nodes.some((n) => typeOf(n.type)?.cat === "traffic") && g.nodes.length) out.push({ id: "no-traffic", text: "Add a traffic source so numbers can flow." });
   return out;
+}
+
+/** Performance findings reuse the engine's leak model and its 10% relative lift projection. */
+export function performanceChecks(g: GraphLike, s: MathSettings, R: FunnelResult): PerformanceCheck[] {
+  const rows = leaks(g, s, R);
+  if (!rows.length) return [];
+
+  const largest = rows[0];
+  const weakest = [...rows].sort((a, b) => b.dropPct - a.dropPct || b.lost - a.lost)[0];
+  const selected: { row: (typeof rows)[number]; rank: PerformanceCheck["rank"] }[] = [{ row: largest, rank: "largest-loss" }];
+  if (weakest.id !== largest.id) selected.push({ row: weakest, rank: "highest-drop-rate" as const });
+
+  return selected.map(({ row, rank }) => {
+    const node = g.nodes.find((n) => n.id === row.id)!;
+    const improved = withStepRate(g, s, row.id, stepRate(node) * 1.1);
+    return {
+      id: `${rank}-${row.id}`,
+      nodeId: row.id,
+      rank,
+      inflow: row.inn,
+      lost: row.lost,
+      dropPct: row.dropPct,
+      revenueGain: row.revenueGain,
+      profitGain: row.profitGain,
+      customerGain: improved.cust - R.cust,
+      text: row.name,
+    };
+  });
 }

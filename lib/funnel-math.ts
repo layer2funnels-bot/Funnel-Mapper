@@ -605,7 +605,7 @@ export function periodNumbers(R: FunnelResult, factor: number): PeriodNumbers {
 }
 
 /* ---------------- goals ---------------- */
-export type GoalKind = "revenue" | "profit" | "customers" | "leads" | "step" | "conversion";
+export type GoalKind = "revenue" | "profit" | "traffic" | "customers" | "leads" | "step" | "conversion";
 
 export interface GoalPlan {
   /** False when the goal can't be reached by changing traffic alone. */
@@ -627,6 +627,9 @@ export function goalPlan(g: GraphLike, s: MathSettings, goal: { kind: GoalKind; 
   let k: number;
   if (goal.kind === "step") {
     const now = compute(g, s).N[goal.nodeId ?? ""]?.out ?? 0;
+    k = now > 0 ? target / now : NaN;
+  } else if (goal.kind === "traffic") {
+    const now = compute(g, s).traffic;
     k = now > 0 ? target / now : NaN;
   } else {
     const metric = goal.kind === "revenue" ? "rev" : goal.kind === "customers" ? "cust" : goal.kind;

@@ -1,273 +1,1090 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×Ÿtõ:-jZ.¶›­–)Ş³R'W6R6Æ–VçB#°¢òò&W÷'G2ò–ç6–v‡G3¢gVÆÂ×v–GF‚f–WröbF†RgVææVÂw2çVÖ&W'2âWfW'’f–wW&R6öÖW2g&öÒÆ–"÷&W÷'BÖFFçG2Âv†–6‚öæÇ¢òò76VÖ&ÆW2Æ–"ögVææVÂÖÖF‚çG2&W7VÇG2f÷"öæR66Væ&–ò6æ6†÷B‡F†RÖ2—B—2æ÷rÂ2ÖVBÂ÷"6fVB66Væ&–ò’à¦–×÷'B²W6TVffV7BÂW6TÖVÖòÂW6U7FFRÒg&öÒ'&V7B#°¦–×÷'B²–6öâÒg&öÒ$ö6ö×öæVçG2ö–6öâ#°¦–×÷'B²G—TöbÒg&öÒ$öÆ–"ö6FÆör#°¦–×÷'B²ÖöæW’ÂÖöæW•6†÷'BÂæbÂ7BÂ&F–òÒg&öÒ$öÆ–"öf÷&ÖB#°¦–×÷'B²6ö×WFRÂ6ö×WFU66Væ&–òÂW&–öDf7F÷"ÂW&–öDçVÖ&W'2ÂG—RgVææVÅ&W7VÇBÂG—RW&–öD¶W’Òg&öÒ$öÆ–"ögVææVÂÖÖF‚#°¦–×÷'B²tôÅô´”äE2ÂtôÅõU$”ôE2Â5DUõ5DEU4U2ÂG—RgVææVÅ6WGF–æw2ÂG—RvöÂÂG—R7FW7FGW2Òg&öÒ$öÆ–"öw&‚#°¦–×÷'B²ÖöçF†Ç•Æåg47GVÂÂ&W÷'DFFÂ7FGW5&W÷'BÂG—RvöÅ&W÷'BÒg&öÒ$öÆ–"÷&W÷'BÖFF#°¦–×÷'B²æ–BÂ6WD–ç7F"Â6WD÷BÂ6WE6V7F–öâÂ6WE6WGF–æw2Â6WEF"Â6†÷uFö7BÂWFFTæöFRÂW6TVF—F÷"ÂG—R&W÷'E6V7F–öâÒg&öÒ$öÆ–"öVF—F÷"÷7F÷&R#°¦–×÷'B²W6Tfö7W4&Æö6²Òg&öÒ"âöfö7W2#°¦–×÷'B²Vç7W&T7GVÇ2Òg&öÒ"âö76WG2#°¦–×÷'B²v–FvWD6&BÒg&öÒ"â÷v–FvWBÖæöFR#°¦–×÷'B²çVÔ–çWBÒg&öÒ"âöf–VÆG2#°¦–×÷'B²&'46†'BÂ—$&'2ÂF–ÖT6†'BÒg&öÒ"â÷&W÷'BÖ6†'G2#° ¢ò¢¢&W÷'Bæf–vF–öâÂw&÷WVB2–âF†Rc"FW6–vââ¢ğ¦W‡÷'B6öç7B$Uõ%Eôu$õU3¢²æÖS¢7G&–æs²—FV×3¢µ&W÷'E6V7F–öâÂ7G&–æuÕµÒÕµÒÒ°¢°¢æÖS¢%7VÖÖ'’"À¢—FV×3¢°¢²&÷fW'f–Wr"Â$÷fW'f–Wr%ÒÀ¢²&FF"Â$gVææVÂFF%ÒÀ¢²'7FGW2"Â%V&Æ—6†VB7FGW2%ÒÀ¢ÒÀ¢ÒÀ¢°¢æÖS¢$ÖöæW’"À¢—FV×3¢°¢²'6÷W&6W2"Â%G&ff–26÷W&6W2%ÒÀ¢²&öffW'2"Â$öffW'2b&öGV7G2%ÒÀ¢²&W‡Vç6W2"Â$W‡Vç6W2%ÒÀ¢ÒÀ¢ÒÀ¢°¢æÖS¢%Æææ–ær"À¢—FV×3¢°¢²'66Væ&–÷2"Â%66Væ&–ò6ö×&—6öâ%ÒÀ¢²&f÷&V67B"Â%&WfVçVRb&öf—Bf÷&V67B%ÒÀ¢²&vöÇ2"Â$vöÇ2b&WV—&VBçVÖ&W'2%ÒÀ¢²&×'""Â$Õ%"f÷&V67B%ÒÀ¢²&ÖöçF†Ç’"Â$ÖöçF‚×FòÖÖöçF‚%ÒÀ¢²'&V–çfW7B"Â%G&ff–2&V–çfW7FÖVçB%ÒÀ¢ÒÀ¢ÒÀ¥Ó°¦W‡÷'B6öç7B$Uõ%Eõ4T5D”ôå3¢µ&W÷'E6V7F–öâÂ7G&–æuÕµÒÒ$Uõ%Eôu$õU2æfÆDÖ‚†r’Óâræ—FV×2“° ¦6öç7BäUUE$ÂÒ²G&ff–3¢Â6öçc¢Â&–6S¢Â6÷7C¢Ó°¦6öç7BtôÅô´”äEôÄ$TÃ¢&V6÷&CÄvöÅ²&¶–æB%ÒÂ7G&–æsâÒ²&WfVçVS¢%&WfVçVR"Â&öf—C¢%&öf—B"ÂG&ff–3¢%G&ff–2"Â7W7FöÖW'3¢$7W7FöÖW'2"ÂÆVG3¢$ÆVG2"Â7FW¢%7FW6ö×ÆWF–öç2"Â6öçfW'6–öã¢$6öçfW'6–öâ&FRB7FW‚R’"Ó°¦6öç7BU$”ôEõ$õu3¢·7G&–ærÂW&–öD¶W•ÕµÒÒ°¢²%W"F’"Â&F’%ÒÀ¢²%W"vVV²"Â'vVV²%ÒÀ¢²%W"ÖöçF‚"Â&ÖöçF‚%ÒÀ¢²%W"V'FW""Â'V'FW"%ÒÀ¢²%W"–V""Â'–V"%ÒÀ¥Ó° ¢ò¢¢6WGF–æw2f÷"öæR6æ6†÷C¢&7W'&VçB"‡v†BF†RÖ6†÷w2æ÷r’Â&&6R"†2ÖVB’÷"6fVB66Væ&–òw2–Bâ¢ğ¦W‡÷'BgVæ7F–öâ6æ6†÷E6WGF–æw2‡3¢gVææVÅ6WGF–æw2Â6æ¢7G&–ær“¢gVææVÅ6WGF–æw2°¢–b‡6æÓÓÒ&&6R"’&WGW&â²ââç2Âv†F–c¢äUUE$ÂÓ°¢6öç7B62Ò2ç66Væ&–÷2æf–æB‚‡‚’Óâ‚æ–BÓÓÒ6æ“°¢&WGW&â62ò²ââç2Âv†F–c¢62çv†F–bÂf—†VC¢62æf—†VBóò2æf—†VBÒ¢3°§Ğ ¦W‡÷'BgVæ7F–öâ&W÷'G5f–Wr‡²öäW‡÷'EFbÓ¢²öäW‡÷'EFcó¢‚’Óâfö–BÒ’°¢6öç7B6V7F–öâÒW6TVF—F÷"‚‡2’Óâ2ç6V7F–öâ“°¢6öç7Böå6V7F–öâÒ6WE6V7F–öã°¢6öç7BæöFW2ÒW6TVF—F÷"‚‡2’Óâ2ææöFW2“°¢6öç7BVFvW2ÒW6TVF—F÷"‚‡2’Óâ2æVFvW2“°¢6öç7B6WGF–æw2ÒW6TVF—F÷"‚‡2’Óâ2ç6WGF–æw2“°¢6öç7B&æ÷rÒW6TVF—F÷"‚‡2’Óâ2å"“°¢6öç7B·6æÂ6WE6æÒÒW6U7FFR‚&7W'&VçB"“°¢6öç7B6æö²Ò6æÓÓÒ&7W'&VçB"ÇÂ6æÓÓÒ&&6R"ÇÂ6WGF–æw2ç66Væ&–÷2ç6öÖR‚‡‚’Óâ‚æ–BÓÓÒ6æ’ò6æ¢&7W'&VçB#°¢6öç7B2ÒW6TÖVÖò‚‚’Óâ6æ6†÷E6WGF–æw2‡6WGF–æw2Â6æö²’Â·6WGF–æw2Â6æöµÒ“°¢6öç7BrÒW6TÖVÖò‚‚’Óâ‡²æöFW2ÂVFvW2Ò’Â¶æöFW2ÂVFvW5Ò“°¢6öç7B"ÒW6TÖVÖò‚‚’Óâ‡6æö²ÓÓÒ&7W'&VçB"ò&æ÷r¢6ö×WFR†rÂ2’’Â·6æö²Â&æ÷rÂrÂ5Ò“°¢6öç7BFFÒW6TÖVÖò‚‚’Óâ&W÷'DFF†rÂ2Â"’Â¶rÂ2Â%Ò“°¢6öç7B†4fÆ÷rÒæöFW2ç6öÖR‚†â’ÓâG—Töb†âçG—R’bbG—Töb†âçG—R’æ6BÓÒ&ææ÷B"“°¢6öç7B6ææÖRÒ6æö²ÓÓÒ&7W'&VçB"ò$7W'&VçBÖ"¢6æö²ÓÓÒ&&6R"ò$2ÖVB"¢‡6WGF–æw2ç66Væ&–÷2æf–æB‚‡‚’Óâ‚æ–BÓÓÒ6æö²“òææÖRóò%66Væ&–ò"“°¢6öç7BF—FÆRÒ$Uõ%Eõ4T5D”ôå2æf–æB‚…¶µÒ’Óâ²ÓÓÒ6V7F–öâ“òå³Òóò%&W÷'G2#°¢&WGW&â€¢ÆF—b6Æ74æÖSÒ&fÒ×&W÷'G2#à¢Ææb6Æ74æÖSÒ&fÒ×&æb"&–ÖÆ&VÃÒ%&W÷'B6V7F–öç2#à¢Æƒ#å&W÷'G3Âöƒ#à¢µ$Uõ%Eôu$õU2æÖ‚†r’Óâ€¢ÆF—b¶W“×¶rææÖWÒ6Æ74æÖSÒ&fÒ×&w&÷W#à¢Æƒ3ç¶rææÖWÓÂöƒ3à¢ÇVÃà¢¶ræ—FV×2æÖ‚…¶²ÂÅÒ’Óâ€¢ÆÆ’¶W“×¶·Óà¢Æ'WGFöâG—SÒ&'WGFöâ"&–Ö7W'&VçC×·6V7F–öâÓÓÒ²ò'vR"¢VæFVf–æVGÒöä6Æ–6³×²‚’Óâöå6V7F–öâ†²—Óà¢¶ÇĞ¢Âö'WGFöãà¢ÂöÆ“à¢’—Ğ¢Â÷VÃà¢ÂöF—cà¢’—Ğ¢ÆÆ&VÂ6Æ74æÖSÒ&fÒ×&æb×6VÂ#à¢Ç7â6Æ74æÖSÒ'7"ÖöæÇ’#å&W÷'B6V7F–öãÂ÷7ãà¢Ç6VÆV7B6Æ74æÖSÒ&–çWB"fÇVS×·6V7F–öçÒöä6†ævS×²†R’Óâöå6V7F–öâ†RçF&vWBçfÇVR2&W÷'E6V7F–öâ—Óà¢µ$Uõ%Eôu$õU2æÖ‚†r’Óâ€¢Æ÷Fw&÷W¶W“×¶rææÖWÒÆ&VÃ×¶rææÖWÓà¢¶ræ—FV×2æÖ‚…¶²ÂÅÒ’Óâ€¢Æ÷F–öâ¶W“×¶·ÒfÇVS×¶·Óà¢¶ÇĞ¢Âö÷F–öãà¢’—Ğ¢Âö÷Fw&÷Wà¢’—Ğ¢Â÷6VÆV7Cà¢ÂöÆ&VÃà¢Âöæcà¢ÆÖ–â6Æ74æÖSÒ&fÒ×&Ö–â"&–ÖÆ&VÆÆVF'“Ò&fÒ×'F—FÆR#à¢Æ†VFW"6Æ74æÖSÒ&fÒ×&†VB#à¢ÆF—cà¢Æƒ–CÒ&fÒ×'F—FÆR#ç·F—FÆWÓÂöƒà¢Ç6Æ74æÖSÒ'7V"#à¢çVÖ&W'2f÷"Æ#ç·6ææÖWÓÂö#âÂW"ÖöçF‚VæÆW727FFVBâ6ÖRVæv–æR2F†RÖÂF†Rµ’&"æBF†RDb&W÷'Bà¢Â÷à¢ÂöF—cà¢¶öäW‡÷'EFbbb€¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&'Fâ"öä6Æ–6³×¶öäW‡÷'EFgÓà¢Ä–6öâæÖSÒ&F÷væÆöB"6—¦S×³WÒóâW‡÷'BD`¢Âö'WGFöãà¢—Ğ¢·6V7F–öâÓÒ'66Væ&–÷2"bb€¢ÆÆ&VÂ6Æ74æÖSÒ&fÒ×'6æ#à¢Ç7ãå66Væ&–óÂ÷7ãà¢Ç6VÆV7B6Æ74æÖSÒ&–çWB"fÇVS×·6æö·Òöä6†ævS×²†R’Óâ6WE6æ†RçF&vWBçfÇVR—Ò&–ÖÆ&VÃÒ%66Væ&–òf÷"F†W6RçVÖ&W'2#à¢Æ÷F–öâfÇVSÒ&7W'&VçB#ä7W'&VçBÖ·6WGF–æw2çv†F–bbb¥4ôâç7G&–æv–g’‡6WGF–æw2çv†F–b’ÓÒ¥4ôâç7G&–æv–g’„äUUE$Â’ò"‡v—F‚v†BÖ–b’"¢"'ÓÂö÷F–öãà¢Æ÷F–öâfÇVSÒ&&6R#ä2ÖVB†æòv†BÖ–b“Âö÷F–öãà¢·6WGF–æw2ç66Væ&–÷2æÖ‚‡62’Óâ€¢Æ÷F–öâ¶W“×·62æ–GÒfÇVS×·62æ–GÓà¢·62ææÖRÇÂ%66Væ&–ò'Ğ¢Âö÷F–öãà¢’—Ğ¢Â÷6VÆV7Cà¢ÂöÆ&VÃà¢—Ğ¢Âö†VFW#à¢²†4fÆ÷rbb6V7F–öâÓÒ'7FGW2"ò€¢ÆF—b6Æ74æÖSÒ&fÒ×&V×G’#à¢Æ#äæ÷F†–ærFò&W÷'B–WCÂö#à¢ÇäFBG&ff–26÷W&6RæBF†R7FW2V÷ÆRF¶RöâF†RÖÂF†Vâ6öÖR&6²f÷"F†RçVÖ&W'2ãÂ÷à¢ÂöF—cà¢’¢€¢Å6V7F–öâ6V7F–öã×·6V7F–öçÒFF×¶FFÒ#×µ'Ò3×·7Ò6ææÖS×·6ææÖWÒöå6V7F–öã×¶öå6V7F–öçÒóà¢—Ğ¢ÂöÖ–ãà¢ÂöF—cà¢“°§Ğ §G—RFFÒ&WGW&åG—SÇG—Vöb&W÷'DFFã°¦–çFW&f6R5°¢6V7F–öã¢&W÷'E6V7F–öã°¢FF¢FF°¢#¢gVææVÅ&W7VÇC°¢3¢gVææVÅ6WGF–æw3°¢6ææÖS¢7G&–æs°¢öå6V7F–öã¢‡3¢&W÷'E6V7F–öâ’Óâfö–C°§Ğ ¦gVæ7F–öâ6V7F–öâ‡¢5’°¢7v—F6‚‡ç6V7F–öâ’°¢66R&÷fW'f–Wr# ¢&WGW&âÄ÷fW'f–Wr²ââçÒóã°¢66R&FF# ¢&WGW&âÄgVææVÄFF²ââçÒóã°¢66R'6÷W&6W2# ¢&WGW&âÅ6÷W&6W2²ââçÒóã°¢66R&öffW'2# ¢&WGW&âÄöffW'2²ââçÒóã°¢66R&W‡Vç6W2# ¢&WGW&âÄW‡Vç6W2²ââçÒóã°¢66R'66Væ&–÷2# ¢&WGW&âÅ66Væ&–÷2óã°¢66R&f÷&V67B# ¢&WGW&âÄf÷&V67B²ââçÒóã°¢66R&vöÇ2# ¢&WGW&âÄvöÇ2²ââçÒóã°¢66R&×'"# ¢&WGW&âÄ×'"²ââçÒóã°¢66R&ÖöçF†Ç’# ¢&WGW&âÄÖöçF†Ç’²ââçÒóã°¢66R'&V–çfW7B# ¢&WGW&âÅ&V–çfW7B²ââçÒóã°¢66R'7FGW2# ¢&WGW&âÅ7FGW2óã°¢Ğ§Ğ ¦6öç7BW6TÖöæW’Ò‚’Óâ°¢6öç7B7W"ÒW6TVF—F÷"‚‡2’Óâ2ç6WGF–æw2æ7W'&Væ7’“°¢&WGW&â²Ó¢‡c¢çVÖ&W"’ÓâÖöæW’‡bÂ7W"’Â×3¢‡c¢çVÖ&W"’ÓâÖöæW•6†÷'B‡bÂ7W"’Â7W"Ó°§Ó°¦6öç7B6–væVBÒ‡c¢çVÖ&W"Âc¢‡c¢çVÖ&W"’Óâ7G&–ær’Óâ„çVÖ&W"æ—4f–æ—FR‡b’bbbâò"²"¢""’²b‡b“°¦6öç7B6Ç2Ò‡c¢çVÖ&W"’Óâ‡bãÒò'÷2"¢&æVr"“° ¢ò¢¢µ’F–ÆW2â6F–öâ6âÆ–æ²FòF†R&W÷'B6V7F–öâF†BW‡Æ–ç2F†RçVÖ&W"â¢ğ¦gVæ7F–öâ·—2‡²—FV×2Âöå6V7F–öâÓ¢²—FV×3¢·7G&–ærÂ&V7Bå&V7DæöFRÂ7G&–æsòÂ&W÷'E6V7F–öãõÕµÓ²öå6V7F–öãó¢‡3¢&W÷'E6V7F–öâ’Óâfö–BÒ’°¢&WGW&â€¢ÆFÂ6Æ74æÖSÒ&fÒ×&·—2#à¢¶—FV×2æÖ‚…¶Â"Â2ÂFõÒ’Óâ€¢ÆF—b¶W“×¶Óà¢ÆGCç¶ÓÂöGCà¢ÆFCç¶'ÓÂöFCà¢¶2bb€¢ÆFB6Æ74æÖSÒ&6#à¢·Fòbböå6V7F–öâò€¢Ç6ÖÆÃà¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&Æ–æ²"öä6Æ–6³×²‚’Óâöå6V7F–öâ‡Fò—ÒF—FÆS×¶÷VâGµ$Uõ%Eõ4T5D”ôå2æf–æB‚…¶µÒ’Óâ²ÓÓÒFò“òå³×ÖÓà¢¶7Ğ¢Âö'WGFöãà¢Â÷6ÖÆÃà¢’¢€¢Ç6ÖÆÃç¶7ÓÂ÷6ÖÆÃà¢—Ğ¢ÂöFCà¢—Ğ¢ÂöF—cà¢’—Ğ¢ÂöFÃà¢“°§Ğ ¦gVæ7F–öâF&ÆR‡²6F–öâÂ†VBÂ&÷w2Âfö÷BÂ&–v‡BÒG'VRÂFW‡BÒµÒÂ†–v†Æ–v‡BÒÓÓ¢²6F–öã¢7G&–æs²†VC¢&V7Bå&V7DæöFUµÓ²&÷w3¢&V7Bå&V7DæöFUµÕµÓ²fö÷Có¢&V7Bå&V7DæöFUµÓ²&–v‡Có¢&ööÆVã²FW‡Có¢çVÖ&W%µÓ²†–v†Æ–v‡Có¢çVÖ&W"Ò’°¢6öç7B"Ò†“¢çVÖ&W"’Óâ†’bb&–v‡BbbFW‡Bæ–æ6ÇVFW2†’’ò'""¢VæFVf–æVB“°¢&WGW&â€¢ÆF—bF$–æFWƒ×³Ò&öÆSÒ'&Vv–öâ"&–ÖÆ&VÃ×¶G¶6F–öçÒ‡67&öÆÇ26–FWv—2v†Vâ—B—2v–FW"F†âF†R67&VVâ–Ò6Æ74æÖSÒ&fÒ×F&Çw&#à¢ÇF&ÆR6Æ74æÖSÒ'F&ÂfÒ×'F&Â#à¢Æ6F–öâ6Æ74æÖSÒ'7"ÖöæÇ’#ç¶6F–öçÓÂö6F–öãà¢ÇF†VCà¢ÇG#à¢¶†VBæÖ‚†‚Â’’Óâ€¢ÇF‚¶W“×¶—Ò66÷SÒ&6öÂ"6Æ74æÖS×·"†’—Óà¢¶‡Ğ¢Â÷Fƒà¢’—Ğ¢Â÷G#à¢Â÷F†VCà¢ÇF&öG“à¢·&÷w2æÖ‚‡&÷rÂ’’Óâ€¢ÇG"¶W“×¶—Ò6Æ74æÖS×¶’ÓÓÒ†–v†Æ–v‡Bò&†Â"¢VæFVf–æVGÒ&Vc×¶’ÓÓÒ†–v†Æ–v‡Bò†VÂ’ÓâVÃòç67&öÆÄ–çFõf–Wr‡²&Æö6³¢&6VçFW""Ò’¢VæFVf–æVGÓà¢·&÷ræÖ‚†2Â²’Óâ†²ÓÓÒòÇF‚66÷SÒ'&÷r"¶W“×¶·Óç¶7ÓÂ÷Fƒâ¢ÇFB¶W“×¶·Ò6Æ74æÖS×·"†²—Óç¶7ÓÂ÷FCâ’—Ğ¢Â÷G#à¢’—Ğ¢Â÷F&öG“à¢¶fö÷Bbb€¢ÇFfö÷Cà¢ÇG#à¢¶fö÷BæÖ‚†2Â²’Óâ†²ÓÓÒòÇF‚66÷SÒ'&÷r"¶W“×¶·Óç¶7ÓÂ÷Fƒâ¢ÇFB¶W“×¶·Ò6Æ74æÖS×·"†²—Óç¶7ÓÂ÷FCâ’—Ğ¢Â÷G#à¢Â÷Ffö÷Cà¢—Ğ¢Â÷F&ÆSà¢ÂöF—cà¢“°§Ğ ¢ò¢ÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒ÷fW'f–WrÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒ¢ğ¦gVæ7F–öâ÷fW'f–Wr‡²FFÂ"Âöå6V7F–öâÓ¢5’°¢6öç7B²ÒÂ×2ÒÒW6TÖöæW’‚“°¢6öç7Bfö7W2ÒW6Tfö7W4&Æö6²‚“°¢6öç7BæöFW2ÒW6TVF—F÷"‚‡‚’Óâ‚ææöFW2“°¢6öç7B·W"Â6WEW%ÒÒW6U7FFSÂ&ÖöçF‚"Â'–V"#â‚&ÖöçF‚"“°¢6öç7BÖòÒFFæ÷fW'f–WræÖöçF‚À¢—"ÒFFæ÷fW'f–Wrç–V"À¢ÂÒFFæ÷fW'f–Wræ¶W”ÆV³°¢6öç7BbÒFFæf÷&V67C°¢6öç7BÒW"ÓÓÒ&ÖöçF‚"òÖò¢—#°¢6öç7B÷F†W"ÒW"ÓÓÒ&ÖöçF‚"ò—"¢Öó°¢6öç7B÷F†W$Æ&VÂÒW"ÓÓÒ&ÖöçF‚"ò&–V""¢&ÖöçF‚#°¢6öç7Bv–FvWG2ÒæöFW2æf–ÇFW"‚†â’ÓââçG—RÓÓÒ'v–FvWB"“°¢6öç7BG'•v†D–bÒ†–C¢7G&–ær’Óâ°¢fö7W2†–B“°¢6WD–ç7F"‚&æÇ—F–72"“°¢6WD÷B‚&†–FT–ç7"ÂfÇ6R“°¢6†÷uFö7B‚%7FWv†BÖ–c¢6WB&WGFW"6öçfW'6–öâ&FRVæFW"(	ÄvöÂf÷"F†—27FW(	Ò"“°¢Ó°¢&WGW&â€¢Ãà¢ÆF—b6Æ74æÖSÒ&fÒ×'F—FÆR×&÷r#à¢Æƒ26Æ74æÖSÒ&fÒ×&‚#å&ö¦V7B7VÖÖ'“Âöƒ3à¢ÆF—b6Æ74æÖSÒ'6Vr"&öÆSÒ&w&÷W"&–ÖÆ&VÃÒ%W&–öB#à¢Æ'WGFöâG—SÒ&'WGFöâ"&–×&W76VC×·W"ÓÓÒ&ÖöçF‚'Òöä6Æ–6³×²‚’Óâ6WEW"‚&ÖöçF‚"—Óà¢F†—2ÖöçF€¢Âö'WGFöãà¢Æ'WGFöâG—SÒ&'WGFöâ"&–×&W76VC×·W"ÓÓÒ'–V"'Òöä6Æ–6³×²‚’Óâ6WEW"‚'–V""—Óà¢–V ¢Âö'WGFöãà¢ÂöF—cà¢ÂöF—cà¢Ä·—0¢—FV×3×µ°¢²%G&ff–2"Âæb„çV÷ÆR’ÂG¶æb†÷F†W"çV÷ÆR—ÒG¶÷F†W$Æ&VÇÖÂ'6÷W&6W2%ÒÀ¢²$ÆVG2"Âæb„æÆVG2Â’ÂG¶æb†÷F†W"æÆVG2—ÒG¶÷F†W$Æ&VÇÖÂ&FF%ÒÀ¢²$7W7FöÖW'2"Âæb„æ7W7FöÖW'2Â’ÂG¶æb†÷F†W"æ7W7FöÖW'2—ÒG¶÷F†W$Æ&VÇÖÂ&öffW'2%ÒÀ¢²%&WfVçVR"ÂÒ„ç&WfVçVR’ÂG¶×2†÷F†W"ç&WfVçVR—ÒG¶÷F†W$Æ&VÇÖÂ&f÷&V67B%ÒÀ¢²%&öf—B"ÂÇ7â¶W“Ò'"6Æ74æÖS×¶6Ç2„ç&öf—B—Óç¶Ò„ç&öf—B—ÓÂ÷7ãâÂG¶×2†÷F†W"ç&öf—B—ÒG¶÷F†W$Æ&VÇÖÂ&W‡Vç6W2%ÒÀ¢²%$ô2"Â&F–ò…"ç&ö2’Â%&WfVçVR;rB7VæB"Â'6÷W&6W2%ÒÀ¢×Ğ¢öå6V7F–öã×¶öå6V7F–öçĞ¢óà¢Æƒ26Æ74æÖSÒ&fÒ×&‚#åVæ—BV6öæöÖ–73Âöƒ3à¢Ä·—0¢—FV×3×µ°¢²$52"ÂÒ…"æ72’Â$B7VæB;r–Bf—6—F÷'2%ÒÀ¢²$5Â"ÂÒ…"æ7Â’Â$B7VæB;rÆVG2%ÒÀ¢²$5"ÂÒ…"æ7’Â$B7VæB;ræWr7W7FöÖW'2%ÒÀ¢²$õb"ÂÒ…"æ÷b’Â%&WfVçVR;ræWr7W7FöÖW'2%ÒÀ¢²$ÅEbò7W7FöÖW""ÂÒ…"æÇGf2’Â$Æ–fWF–ÖR&WfVçVR;ræWr7W7FöÖW'2"Â&f÷&V67B%ÒÀ¢²$Õ%""ÂÒ…"æ×'"’Â$g&öÒ7V'67&—F–öç2"Â&×'"%ÒÀ¢²%$ô’"Â7B…"ç&ö’’Â%&öf—B;rÆÂ6÷7G2"Â&W‡Vç6W2%ÒÀ¢²$6öçfW'6–öâ"Â7B…"æ6öçb’Â$æWr7W7FöÖW'2;rf—6—F÷'2%ÒÀ¢×Ğ¢öå6V7F–öã×¶öå6V7F–öçĞ¢óà¢·v–FvWG2æÆVæwF‚âbb€¢Ãà¢Æƒ26Æ74æÖSÒ&fÒ×&‚#åv–FvWG3Âöƒ3à¢ÆF—b6Æ74æÖSÒ&fÒ×'v–FvWG2#à¢·v–FvWG2æÖ‚‡r’Óâ€¢Åv–FvWD6&B¶W“×·ræ–GÒ–C×·ræ–GÒfÇV–Bóà¢’—Ğ¢ÂöF—cà¢Âóà¢—Ğ¢´Âbb€¢ÆF—b6Æ74æÖSÒ&fÒ×&6ÆÆ÷WB"&öÆSÒ&æ÷FR#à¢Ç7â6Æ74æÖSÒ&–2"&–Ö†–FFVãÒ'G'VR#à¢Ä–6öâæÖSÒ'F&vWB"6—¦S×³‡Òóà¢Â÷7ãà¢ÆF—cà¢Æ#ä¶W’ÆV³¢´ÂææÖWÓÂö#à¢Çà¢¶æb„ÂæÆ÷7BÂ—Òöb¶æb„Âæ–æâÂ—ÒV÷ÆR‡·7B„ÂæG&÷7B—Ò’Föî(	—BÖ÷fRöâBF†—2´ÂæÆ&VÂçFôÆ÷vW$66R‚—ÒV6‚ÖöçF‚â6öçfW'F–ærR&WGFW"†W&RFG2&÷WBÆ#ç¶Ò„Âç&WfVçVTv–â—ÓÂö#â&WfVçVRæG²"'Ğ¢Æ#ç¶Ò„Âç&öf—Dv–â—ÓÂö#â&öf—BÖöçF‚à¢Â÷à¢ÆF—b6Æ74æÖSÒ&fÒ×&6ÆÆ÷WBÖ7F–öç2#à¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&'Fâ6Ò"öä6Æ–6³×²‚’Óâfö7W2„Âæ–B—Óà¢6†÷röâÖ ¢Âö'WGFöãà¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&'Fâ6Ò"öä6Æ–6³×²‚’ÓâG'•v†D–b„Âæ–B—Óà¢G'’–âv†BÖ–`¢Âö'WGFöãà¢ÂöF—cà¢ÂöF—cà¢ÂöF—cà¢—Ğ¢ÆF—b6Æ74æÖSÒ&fÒ×&w&–B#à¢ÅF–ÖT6†'@¢F—FÆS×¶&WfVçVRæB&öf—BÂG¶bæÖöçF‡7ÒÖöçF‡6Ğ¢FF×¶bç&÷w7Ğ¢6W&–W3×µ°¢²¶W“¢'&WfVçVR"ÂæÖS¢%&WfVçVR"Â6öÆ÷#¢'f"‚ÒÖ6†'BÓ’"ÒÀ¢²¶W“¢'&öf—B"ÂæÖS¢%&öf—B"Â6öÆ÷#¢'f"‚ÒÖ6†'BÓ2’"ÂF6†VC¢G'VRÒÀ¢×Ğ¢f×C×¶×7Ğ¢¦W&ğ¢óà¢Ä&'46†'BF—FÆSÒ%V÷ÆRÆ÷7BW"7FW†6Æ–6²&"Fòf–æB—BöâF†RÖ’"FF×¶FFæÆV·2ç6Æ–6RƒÂ‚’æÖ‚‡‚’Óâ‡²–C¢‚æ–BÂæÖS¢‚ææÖRÂfÇVS¢‚æÆ÷7BÒ’—Òf×C×²‡b’Óâæb‡bÂ—Ò6öÆ÷#Ò'f"‚ÒÖ6†'BÓ"’"öå–6³×¶fö7W7Òóà¢ÂöF—cà¢ÅF&ÆP¢6F–öãÒ%V÷ÆRÆ÷7BW"7FW ¢†VC×µ²%7FW"Â%G—R"Â%V÷ÆR–â"Â$Æ÷7B"Â$G&÷Ööfb"Â"%×Ğ¢FW‡C×µ³ÂU×Ğ¢&÷w3×¶FFæÆV·2ç6Æ–6RƒÂ‚’æÖ‚‡‚’Óâ·‚ææÖRÂ‚æÆ&VÂÂæb‡‚æ–æâÂ’Âæb‡‚æÆ÷7BÂ’Â7B‡‚æG&÷7B’ÂÆ'WGFöâ¶W“Ò&""G—SÒ&'WGFöâ"6Æ74æÖSÒ&Æ–æ²"öä6Æ–6³×²‚’Óâfö7W2‡‚æ–B—Óå6†÷röâÖÂö'WGFöãåÒ—Ğ¢óà¢Ç6Æ74æÖSÒ'7V"#à¢f÷&V67B6WGF–æw2æBÖ÷&R6†'G3¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&Æ–æ²"öä6Æ–6³×²‚’Óâöå6V7F–öâ‚&f÷&V67B"—Óå&WfVçVRb&öf—Bf÷&V67CÂö'WGFöãâ+rWfW'’7FW§²"'Ğ¢Æ'WGFöâG—SÒ&'WGFöâ"6Æ74æÖSÒ&Æ–æ²"öä6Æ–6³×²‚’Óâöå6V7F–öâ‚&FF"—ÓägVææVÂFFÂö'WGFöãà¢Â÷à¢Âóà¢“°§Ğ ¢ò¢ÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒgVææVÂFFÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒÒ¢ğ¦gVæ7F–öâgVææVÄFF‡²"Â2Ó¢5’°¢6öç7B²ÒÒÒW6TÖöæW’‚“°¢6öç7BæöFW2ÒW6TVF—F÷"‚‡‚’Óâ‚ææöFW2“°¢6öç7BVFvW2ÒW6TVF—F÷"‚‡‚’Óâ‚æVFvW2“°¢6öç7B&òÒW6TVF—F÷"‚‡‚’Óâ‚ç&VDöæÇ’“°¢6öç7B6†&VBÒW6TVF—F÷"‚‡‚’Óâ‚ç6†&VB“°¢6öç7B&÷w2ÒW6TÖVÖò‚‚’Óâ°¢òòfÆ÷r÷&FW"ÂÆ–¶RF†R7FW2F"Â6òF†RÆ—7B&VG22F†R¦÷W&æW¢6öç7B÷2Òö&¦V7Bæg&öÔVçG&–W2…"æ÷&FW"æÖ‚†–BÂ’’Óâ¶–BÂ•Ò’“°¢&WGW&âæöFW2æf–ÇFW"‚†â’ÓâG—Töb†âçG—R’bbG—Töb†âçG—R’æ6BÓÒ&ææ÷B"’ç6÷'B‚†Â"’Óâ‡÷5¶æ–EÒóò’Ò‡÷5¶"æ–EÒóò’“°¢ÒÂ¶æöFW2Â"æ÷&FW%Ò“°¢6öç7B7&4öbÒW6TÖVÖò‚‚’Óâ°¢òòF†RG&ff–26÷W&6W2fVVF–ærV6‚7FW†6öçFW‡B6öÇVÖâ¢6öç7B–æ3¢&V6÷&CÇ7G&–ærÂ7G&–æuµÓâÒ·Ó°¢VFvW2æf÷$V6‚‚†R’Óâ†–æ5¶RçFõÒóóÒµÒ’çW6‚†Ræg&öÒ’“°¢6öç7BÖVÖó¢&V6÷&CÇ7G&–ærÂ6WCÇ7G&–æsãâÒ·Ó°¢6öç7BvÆ²Ò†–C¢7G&–ærÂ6VVâÒæWr6WCÇ7G&–æsâ‚’“¢6WCÇ7G&–æsâÓâ°¢–b†ÖVÖõ¶–EÒ’&WGW&âÖVÖõ¶–EÓ°¢6öç7BâÒæöFW2æf–æB‚‡‚’Óâ‚æ–BÓÓÒ–B“°¢6öç7B÷WBÒæWr6WCÇ7G&–æsâ‚“°¢–b‚âÇÂ6VVâæ†2†–B’’&WGW&â÷WC°¢6VVâæFB†–B“°¢–b‡G—Töb†âçG—R“òæ6BÓÓÒ'G&ff–2"’÷WBæFB†âææÖR“°¢†–æ5¶–EÒóòµÒ’æf÷$V6‚‚†b’ÓâvÆ²†bÂ6VVâ’æf÷$V6‚‚‡‚’Óâ÷WBæFB‡‚’’“°¢&WGW&â†ÖVÖõ¶–EÒÒ÷WB“°¢Ó°¢&WGW&â†–C¢7G&–ær’Óâ²ââçvÆ²†–B•Òæ¦ö–â‚"Â"“°¢ÒÂ¶VFvW2ÂæöFW5Ò“°¢fö–B3°¢6öç7Bfö7W4–BÒW6TVF—F÷"‚‡‚’Óâ‚ç&W÷'Dfö7W2“°¢&WGW&â€¢Ãà¢Ç6Æ74æÖSÒ'7V"#äWfW'’7FW–â¦÷W&æW’÷&FW#¢V÷ÆR–âÂ6öçfW'6–öâÂV÷ÆR÷WBÂ&WfVçVRæB6÷7G2ãÂ÷à¢ÅF&ÆP¢†–v†Æ–v‡C×¶fö7W4–Bò&÷w2æf–æD–æFW‚‚†â’Óââæ–BÓÓÒfö7W4–B’¢ÓĞ¢6F–öãÒ$gVææVÂFF ¢FW‡C×µ³ÂrÂ…×Ğ¢†VC×µ²%7FW"Â%G—R"Â%f—6—F÷'2"Â$6öçfW'6–öâ"Â$7W7FöÖW'2ò÷&FW'2"Â%&WfVçVR"Â$6÷7B"Â%6÷W&6W2"Â%7FGW2%×Ğ¢&÷w3×·&÷w2æÖ‚†â’Óâ°¢6öç7B"Ò"äå¶âæ–EÒÀ¢BÒG—Töb†âçG—R“°¢6öç7B–æâÒBæ6BÓÓÒ'G&ff–2"ò"æ÷WB¢"æ–æfÆ÷s°¢&WGW&â°¢âææÖRÀ¢BæÆ&VÂÀ¢æb†–æâÂ’À¢Bæ6BÓÓÒ'G&ff–2"ò.(	2"¢7B†–æâò"æ÷WBò–æâ¢æâ’À¢æb‡"æ÷WBÂ’À¢Bæ6BÓÓÒ&öffW""òÒ‡"ç&Wb’¢""À¢"ç7VæB²"æ6÷7B²"æ6öw2òÒ‡"ç7VæB²"æ6÷7B²"æ6öw2’¢""À¢Ç7â¶W“Ò'2"6Æ74æÖSÒ'FW‡BÖ×WFVB#çµBæ6BÓÓÒ'G&ff–2"ò.(	2"¢7&4öb†âæ–B—ÓÂ÷7ãâÀ¢&òÇÂ6†&VBò€¢5DUõ5DEU4U2æf–æB‚…¶µÒ’Óâ²ÓÓÒ†âç7FGW2óò'ÆææVB"’“òå³Ğ¢’¢€¢Ç6VÆV7B¶W“Ò'7B"6Æ74æÖSÒ&–çWBfÒ×'6VÂ"&–ÖÆ&VÃ×¶7FGW=ıÓÛh‘éì¶»§q«^tÈØØ[Y]™\][™È[ÙH\ÈX\Y
-KÜ‚ˆİ\™Ù]ˆ	‰ˆœ[ˆ	‰ˆ
-ˆÛØ[Ø\™ˆ^ŞÈÛØ[ˆÈYˆ\™Ù]‹˜[YNˆ”™]™[YH\™Ù]‹Ú[™ˆœ™]™[YH‹˜[YNˆ\™Ù]\š[Ùˆ›[ÛˆKX™[ˆ“[ÛH™]™[YH
-Ú]ZYˆXŠH‹İ\œ™[ˆ]K›İ™\šY]Ë›[Ûœ™]™[YK›ÙÜ™\ÜÎˆ]K›İ™\šY]Ë›[Ûœ™]™[YHÈ\™Ù][ˆ[™\]Z\™Yˆ×K[\Xİˆ[_BˆYØXŞO^İœ™\]Z\™YBˆÏ‚ˆ
-_Bˆİš][\Ë›X\
+"use client";
+// Reports / Insights: a full-width view of the funnel's numbers. Every figure comes from lib/report-data.ts, which only
+// assembles lib/funnel-math.ts results for one scenario snapshot (the map as it is now, as mapped, or a saved scenario).
+import { useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/icon";
+import { typeOf } from "@/lib/catalog";
+import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
+import { compute, computeScenario, periodFactor, periodNumbers, type FunnelResult, type PeriodKey } from "@/lib/funnel-math";
+import { GOAL_KINDS, GOAL_PERIODS, STEP_STATUSES, type FunnelSettings, type Goal, type StepStatus } from "@/lib/graph";
+import { monthlyPlanVsActual, reportData, statusReport, type GoalReport } from "@/lib/report-data";
+import { nid, setInspTab, setOpt, setSection, setSettings, setTab, showToast, updateNode, useEditor, type ReportSection } from "@/lib/editor/store";
+import { useFocusBlock } from "./focus";
+import { ensureActuals } from "./assets";
+import { WidgetCard } from "./widget-node";
+import { NumInput } from "./fields";
+import { BarsChart, PairBars, TimeChart } from "./report-charts";
 
-ŠHOˆ
-ˆÛØ[Ø\™Ù^O^Ü‹™ÛØ[šYH^ÜŸHÏ‚ˆ
-J_BˆšY[Ù]\ØX›Y^Ü›ßHÛ\ÜÓ˜[YOH›KL›Ü™\‹LL‚ˆÈÛ\ÜÓ˜[YOH™›K\šÙÛØ[Ë›[™İÈ‘Y]ÛØ[ÈˆˆYHÛØ[ŸOÚÏ‚ˆÙÛØ[Ë›X\
+/** Report navigation, grouped as in the V2 design. */
+export const REPORT_GROUPS: { name: string; items: [ReportSection, string][] }[] = [
+  {
+    name: "Summary",
+    items: [
+      ["overview", "Overview"],
+      ["data", "Funnel data"],
+      ["status", "Published status"],
+    ],
+  },
+  {
+    name: "Money",
+    items: [
+      ["sources", "Traffic sources"],
+      ["offers", "Offers & products"],
+      ["expenses", "Expenses"],
+    ],
+  },
+  {
+    name: "Planning",
+    items: [
+      ["scenarios", "Scenario comparison"],
+      ["forecast", "Revenue & profit forecast"],
+      ["goals", "Goals & required numbers"],
+      ["mrr", "MRR forecast"],
+      ["monthly", "Month-to-month"],
+      ["reinvest", "Traffic reinvestment"],
+    ],
+  },
+];
+export const REPORT_SECTIONS: [ReportSection, string][] = REPORT_GROUPS.flatMap((g) => g.items);
 
-
-HOˆ
-ˆ]ˆÙ^O^ŞšYHÛ\ÜÓ˜[YOH™›K\™ÛØ[YY]‚ˆX™[‚ˆ˜[YBˆ[œ]Û\ÜÓ˜[YOHš[œ]ˆ˜[YO^Ş›˜[Y_HXÙZÛ\H™K™Ëˆ™X[H›Ùš]ˆÛÚ[™ÙO^ÊJHOˆ\
-šYÈ˜[YNˆK\™Ù]˜[YHJ_HÏ‚ˆÛX™[‚ˆX™[‚ˆ\BˆÙ[XİÛ\ÜÓ˜[YOHš[œ]ˆ˜[YO^ŞšÚ[™HÛÚ[™ÙO^ÊJHOˆ\
-šYÈÚ[™ˆK\™Ù]˜[YH\ÈÛØ[ÈšÚ[™—HJ_O‚ˆÑÓĞSÒÒS‘Ë›X\
+const NEUTRAL = { traffic: 1, conv: 1, price: 1, cost: 1 };
+const GOAL_KIND_LABEL: Record<Goal["kind"], string> = { revenue: "Revenue", profit: "Profit", traffic: "Traffic", customers: "Customers", leads: "Leads", step: "Step completions", conversion: "Conversion rate at a step (%)" };
+const PERIOD_ROWS: [string, PeriodKey][] = [
+  ["Per day", "day"],
+  ["Per week", "week"],
+  ["Per month", "month"],
+  ["Per quarter", "quarter"],
+  ["Per year", "year"],
+];
 
-ÊHOˆ
-ˆÜ[ÛˆÙ^O^ÚßH˜[YO^ÚßO‚ˆÑÓĞSÒÒS‘ÓP‘SÚ×_BˆÛÜ[Û‚ˆ
-J_BˆÜÙ[Xİ‚ˆÛX™[‚ˆX™[‚ˆ\™Ù]ˆ[R[œ]˜[YO^Ş˜[YH[™Yš[™YHZ[^ÌHXÙZÛ\H™K™ËˆŒˆÛÚ[™ÙO^ÊŠHOˆ\
-šYÈ˜[YNˆˆJ_HÏ‚ˆÛX™[‚ˆŞšÚ[™OOH˜ÛÛ™\œÚ[Ûˆˆ	‰ˆ
-ˆX™[‚ˆ\š[ÙˆÙ[XİÛ\ÜÓ˜[YOHš[œ]ˆ\šXK[X™[^Ø\š[Ù›Üˆ	Ş›˜[YHÓĞSÒÒS‘ÓP‘SŞšÚ[™_HÛØ[H˜[YO^Şœ\š[ÙÏÈ›[ÛŸHÛÚ[™ÙO^ÊJHOˆ\
-šYÈ\š[ÙˆK\™Ù]˜[YH\ÈÛØ[Èœ\š[Ù—HJ_O‚ˆÑÓĞSÔT’SÑË›X\
+/** Settings for one snapshot: "current" (what the map shows now), "base" (as mapped) or a saved scenario's id. */
+export function snapshotSettings(s: FunnelSettings, snap: string): FunnelSettings {
+  if (snap === "base") return { ...s, whatif: NEUTRAL };
+  const sc = s.scenarios.find((x) => x.id === snap);
+  return sc ? { ...s, whatif: sc.whatif, fixed: sc.fixed ?? s.fixed } : s;
+}
 
-\š[Ù
-HOˆÜ[ÛˆÙ^O^Ü\š[ÙH˜[YO^Ü\š[ÙOÜ\š[ÙOOH™^HˆÈ”\ˆ^Hˆˆ\š[ÙOOHÙYZÈˆÈ”\ˆÙYZÈˆˆ\š[ÙOOH›[ÛˆÈ”\ˆ[Ûˆˆ”\ˆYX\ˆŸOÛÜ[ÛŠ_BˆÜÙ[Xİ‚ˆÛX™[‚ˆ
-_BˆÊšÚ[™OOHœİ\ˆšÚ[™OOH˜ÛÛ™\œÚ[ÛˆŠH	‰ˆ
-ˆX™[‚ˆİ\ˆÙ[XİÛ\ÜÓ˜[YOHš[œ]ˆ˜[YO^Ş››ÙRYÏÈˆŸHÛÚ[™ÙO^ÊJHOˆ\
-šYÈ›ÙRYˆK\™Ù]˜[YH[™Yš[™YJ_O‚ˆÜ[Ûˆ˜[YOHˆ”XÚÈHİ\8 )ÛÜ[Û‚ˆÜİ\Ë›X\
+export function ReportsView({ onExportPdf }: { onExportPdf?: () => void }) {
+  const section = useEditor((s) => s.section);
+  const onSection = setSection;
+  const nodes = useEditor((s) => s.nodes);
+  const edges = useEditor((s) => s.edges);
+  const settings = useEditor((s) => s.settings);
+  const Rnow = useEditor((s) => s.R);
+  const [snap, setSnap] = useState("current");
+  const snapOk = snap === "current" || snap === "base" || settings.scenarios.some((x) => x.id === snap) ? snap : "current";
+  const s = useMemo(() => snapshotSettings(settings, snapOk), [settings, snapOk]);
+  const g = useMemo(() => ({ nodes, edges }), [nodes, edges]);
+  const R = useMemo(() => (snapOk === "current" ? Rnow : compute(g, s)), [snapOk, Rnow, g, s]);
+  const data = useMemo(() => reportData(g, s, R), [g, s, R]);
+  const hasFlow = nodes.some((n) => typeOf(n.type) && typeOf(n.type).cat !== "annot");
+  const snapName = snapOk === "current" ? "Current map" : snapOk === "base" ? "As mapped" : (settings.scenarios.find((x) => x.id === snapOk)?.name ?? "Scenario");
+  const title = REPORT_SECTIONS.find(([k]) => k === section)?.[1] ?? "Reports";
+  return (
+    <div className="fm-reports">
+      <nav className="fm-rnav" aria-label="Report sections">
+        <h2>Reports</h2>
+        {REPORT_GROUPS.map((g) => (
+          <div key={g.name} className="fm-rgroup">
+            <h3>{g.name}</h3>
+            <ul>
+              {g.items.map(([k, l]) => (
+                <li key={k}>
+                  <button type="button" aria-current={section === k ? "page" : undefined} onClick={() => onSection(k)}>
+                    {l}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <label className="fm-rnav-sel">
+          <span className="sr-only">Report section</span>
+          <select className="input" value={section} onChange={(e) => onSection(e.target.value as ReportSection)}>
+            {REPORT_GROUPS.map((g) => (
+              <optgroup key={g.name} label={g.name}>
+                {g.items.map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+      </nav>
+      <main className="fm-rmain" aria-labelledby="fm-rtitle">
+        <header className="fm-rhead">
+          <div>
+            <h1 id="fm-rtitle">{title}</h1>
+            <p className="sub">
+              Numbers for <b>{snapName}</b>, per month unless stated. Same engine as the map, the KPI bar and the PDF report.
+            </p>
+          </div>
+          {onExportPdf && (
+            <button type="button" className="btn" onClick={onExportPdf}>
+              <Icon name="download" size={15} /> Export PDF
+            </button>
+          )}
+          {section !== "scenarios" && (
+            <label className="fm-rsnap">
+              <span>Scenario</span>
+              <select className="input" value={snapOk} onChange={(e) => setSnap(e.target.value)} aria-label="Scenario for these numbers">
+                <option value="current">Current map{settings.whatif && JSON.stringify(settings.whatif) !== JSON.stringify(NEUTRAL) ? " (with what-if)" : ""}</option>
+                <option value="base">As mapped (no what-if)</option>
+                {settings.scenarios.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.name || "Scenario"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </header>
+        {!hasFlow && section !== "status" ? (
+          <div className="fm-rempty">
+            <b>Nothing to report yet</b>
+            <p>Add a traffic source and the steps people take on the map, then come back for the numbers.</p>
+          </div>
+        ) : (
+          <Section section={section} data={data} R={R} s={s} snapName={snapName} onSection={onSection} />
+        )}
+      </main>
+    </div>
+  );
+}
 
-ŠHOˆ
-ˆÜ[ÛˆÙ^O^Û‹šYH˜[YO^Û‹šYO‚ˆÛ‹›˜[Y_BˆÛÜ[Û‚ˆ
-J_BˆÜÙ[Xİ‚ˆÛX™[‚ˆ
-_Bˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜ˆXÛÛˆ[™Ù\ˆÙ[‹Y[™ˆ\šXK[X™[^Ø™[[İ™HÛØ[	Ş›˜[YHÓĞSÒÒS‘ÓP‘SŞšÚ[™_XH]O^Ø™[[İ™HÛØ[	Ş›˜[YHÓĞSÒÒS‘ÓP‘SŞšÚ[™_XHÛÛXÚÏ^Ê
-HOˆÙ]Ù][™ÜÊÈÛØ[ÎˆÛØ[Ë™š[\Š
-ÊHOˆËšYOOHšY
-HJ_O‚ˆXÛÛˆ˜[YOH˜\ÚˆÚ^™O^ÌMŸHÏ‚ˆØ]Û‚ˆÙ]‚ˆ
-J_Bˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜ˆˆÛÛXÚÏ^Ê
-HOˆÙ]Ù][™ÜÊÈÛØ[ÎˆË‹‹™ÛØ[ËÈYˆšY
+type Data = ReturnType<typeof reportData>;
+interface SP {
+  section: ReportSection;
+  data: Data;
+  R: FunnelResult;
+  s: FunnelSettings;
+  snapName: string;
+  onSection: (s: ReportSection) => void;
+}
 
-K˜[YNˆˆ‹Ú[™ˆœ›Ùš]‹˜[YNˆ\š[Ùˆ›[ÛˆWHJ_O‚ˆXÛÛˆ˜[YOHœ\ÈˆÏˆYÛØ[ˆØ]Û‚ˆÙšY[Ù]‚ˆİ˜›ØÚÜË›[™İˆ	‰ˆ
-ˆ‚ˆÈÛ\ÜÓ˜[YOH™›K\š‘ÛØ[›ØÚÜÈÛˆHX\ÚÏ‚ˆX›HØ\[ÛH‘ÛØ[›ØÚÜÈˆXY^ÖÈ‘ÛØ[›ØÚÈ‹”[ÜH™XXÚ[™È]È[Û—_H›İÜÏ^İ˜›ØÚÜË›X\
+function Section(p: SP) {
+  switch (p.section) {
+    case "overview":
+      return <Overview {...p} />;
+    case "data":
+      return <FunnelData {...p} />;
+    case "sources":
+      return <Sources {...p} />;
+    case "offers":
+      return <Offers {...p} />;
+    case "expenses":
+      return <Expenses {...p} />;
+    case "scenarios":
+      return <Scenarios />;
+    case "forecast":
+      return <Forecast {...p} />;
+    case "goals":
+      return <Goals {...p} />;
+    case "mrr":
+      return <Mrr {...p} />;
+    case "monthly":
+      return <Monthly {...p} />;
+    case "reinvest":
+      return <Reinvest {...p} />;
+    case "status":
+      return <Status />;
+  }
+}
 
-ŠHOˆØ‹›˜[YK™Š‹œ[ÜKJWJ_HÏ‚ˆÏ‚ˆ
-_BˆÛ\ÜÓ˜[YOHœİXˆ”™]™[YHÛJ]K›İ™\šY]Ë›[Ûœ™]™[YJ_H\ˆ[ÛÙ^KÜ‚ˆÏ‚ˆ
-NÂŸB‚™[˜İ[ÛˆÛØ[Ø\™
-È‹YØXŞHNˆÈˆÛØ[™\ÜÈYØXŞOÎˆÜİš[™Ë[X™\‹[X™\‹[X™\‹[X™\—V×HJHÂˆÛÛœİÈHHH\ÙS[Û™^J
-NÂˆÛÛœİÈH‹™ÛØ[ÂˆÛÛœİ\Ó[Û™^HHËšÚ[™OOHœ™]™[YHˆËšÚ[™OOHœ›Ùš]ÂˆÛÛœİˆH
-ˆ[X™\ŠHOˆ
-\Ó[Û™^HÈJŠHˆËšÚ[™OOH˜ÛÛ™\œÚ[ÛˆˆÈ	Û™Š‹J_IXˆ™Š‹JJNÂˆÛÛœİÛ™HH‹œ›ÙÜ™\ÜÈHNÂˆÛÛœİ›ÙÈHX]›X^
-X]›Z[ŠK[X™\‹š\Ñš[š]J‹œ›ÙÜ™\ÜÊHÈ‹œ›ÙÜ™\ÜÈˆ
-JNÂˆ™]\›ˆ
-ˆÙXİ[ÛˆÛ\ÜÓ˜[YOH™›K\™ÛØ[ˆ\šXK[X™[^ØÛØ[ˆ	ÙË›˜[YH‹›X™[XO‚ˆXY\‚ˆ]‚ˆÙË›˜[YH‹›X™[OØ‚ˆÛX[Ü‹›X™[OÜÛX[‚ˆÙ]‚ˆÜ[ˆÛ\ÜÓ˜[YO^ÙÛ™HÈœÜÈˆˆ[™Yš[™YO‚ˆÙŠ‹˜İ\œ™[
-_HÙˆÙŠË˜[YJ_BˆÙÛ™HÈˆ0­È™XXÚYˆˆˆŸBˆÜÜ[‚ˆÚXY\‚ˆ]ˆÛ\ÜÓ˜[YOH™›K\œ›ÙÈˆ›ÛOHœ›ÙÜ™\ÜØ˜\ˆˆ\šXK]˜[Y[Z[^ÌH\šXK]˜[Y[X^^ÌLH\šXK]˜[Y[›İÏ^ÓX]œ›İ[™
-›ÙÈ
-ˆL
-_H\šXK[X™[H”›ÙÜ™\ÜÈİØ\™ÈHÛØ[‚ˆÜ[ˆİ[O^ŞÈÚYˆ	Ü›ÙÈ
-ˆLIX_HÏ‚ˆÙ]‚ˆÛYØXŞHÈ
-ˆX›HØ\[ÛH”™\]Z\™Y[X™\œÈˆXY^ÖÈ”\š[Ù‹”™]™[YH‹•š\Ú]ÜœÈ‹YÜ[™‹İ\İÛY\œÈ—_H›İÜÏ^ÛYØXŞK›X\
+const useMoney = () => {
+  const cur = useEditor((s) => s.settings.currency);
+  return { m: (v: number) => money(v, cur), ms: (v: number) => moneyShort(v, cur), cur };
+};
+const signed = (v: number, f: (v: number) => string) => (Number.isFinite(v) && v > 0 ? "+" : "") + f(v);
+const cls = (v: number) => (v >= 0 ? "pos" : "neg");
 
-Ü™]‹š\ËÜ[™İ\İJHOˆÜJ™]ŠK™Šš\ÊKJÜ[™
-K™Šİ\İJWJ_HÏ‚ˆ
-HˆËšÚ[™OOH˜ÛÛ™\œÚ[ÛˆˆÈ
-ˆ‹š[\XİÈ
-ˆÛ\ÜÓ˜[YOHœİXˆ‚ˆ]Û™ŠË˜[YKJ_IHÛÛ™\œÚ[Û‹Ü‹œİ\˜[Y_HÛİ[œš[™È™]™[YHÈÛJ‹š[\Xİœ™]Š_OØˆ[™›Ùš]ÈˆÛ\ÜÓ˜[YO^ØÛÊ‹š[\Xİœ›Ùš]
-_OÛJ‹š[\Xİœ›Ùš]
-_OØˆH[Û‚ˆÜ‚ˆ
-Hˆ
-ˆÛ\ÜÓ˜[YOHœİXˆ”XÚÈHİ\[™H\™Ù]ÛÛ™\œÚ[Ûˆ˜]KÜ‚ˆ
-Bˆ
-Hˆ‹œ[Ëœ™XXÚX›HÈ
-ˆ‚ˆÛ\ÜÓ˜[YOHœİXˆ“™YYÈÛ™Š‹œ[‹›][\Y\‹Š_påÈÙ^x &\È˜Y™šXËÚ]Ù^x &\ÈÛÛ™\œÚ[Ûˆ˜]\ËšXÙ\È[™ÛÜİ\ˆš\Ú]Ü‹Ü‚ˆX›BˆØ\[Û^Ø™\]Z\™Y[X™\œÈ›Üˆ	ÙË›˜[YH‹›X™[XBˆXY^ÖÈ”\š[Ù‹”™]™[YH‹”›Ùš]‹•˜Y™šXÈ‹•˜Y™šXÈÛÜİ‹“XYÈ‹İ\İÛY\œÈ—_Bˆ›İÜÏ^Ü‹œ™\]Z\™Y›X\
+/** KPI tiles. A caption can link to the report section that explains the number. */
+function Kpis({ items, onSection }: { items: [string, React.ReactNode, string?, ReportSection?][]; onSection?: (s: ReportSection) => void }) {
+  return (
+    <dl className="fm-rkpis">
+      {items.map(([a, b, c, to]) => (
+        <div key={a}>
+          <dt>{a}</dt>
+          <dd>{b}</dd>
+          {c && (
+            <dd className="cap">
+              {to && onSection ? (
+                <small>
+                  <button type="button" className="link" onClick={() => onSection(to)} title={`Open ${REPORT_SECTIONS.find(([k]) => k === to)?.[1]}`}>
+                    {c}
+                  </button>
+                </small>
+              ) : (
+                <small>{c}</small>
+              )}
+            </dd>
+          )}
+        </div>
+      ))}
+    </dl>
+  );
+}
 
-Ü™]‹›Ùš]š\ËÜ[™XYËİ\İJHOˆÜJ™]ŠKÜ[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ›Ùš]
-_OÛJ›Ùš]
-_OÜÜ[‹™Šš\ÊKJÜ[™
-K™ŠXYËJK™Šİ\İJWJ_BˆÏ‚ˆÏ‚ˆ
-Hˆ
-ˆÛ\ÜÓ˜[YOHœİXˆÙË˜[YHˆÈØ[¸ &]™H™XXÚYHY[™È˜Y™šXÈ[Û™H]Ù^x &\È˜]\È
-›Üˆ^[\K]™\H^˜Hš\Ú]ÜˆÜÙ\È[Û™^JKˆHHÚ]ZYˆÛØ[ÙYZÈÛˆÛÛ™\œÚ[ÛˆÜˆšXÙ\Ëˆˆˆ‘[\ˆH\™Ù]ˆŸOÜ‚ˆ
-_BˆÜÙXİ[Û‚ˆ
-NÂŸB‚‹ÊˆKKKKKKKKKKKKKKKHT”ˆKKKKKKKKKKKKKKKH
-‹Â™[˜İ[Ûˆ\œŠÈ]HNˆÔ
-HÂˆÛÛœİÈK\ÈHH\ÙS[Û™^J
-NÂˆÛÛœİ›İÜÈH]K™›Ü™XØ\İœ›İÜÎÂˆYˆ
-\›İÜËœÛÛYJ
-ŠHOˆ‹›\œˆˆ
-JH™]\›ˆ[\H^H“›ÈİXœØÜš\[ÛœÈÛˆ\ÈX\ˆYHİXœØÜš\[ÛˆÜˆY[X™\œÚ\Ù™™\ˆÈ›Ü™XØ\İ™Xİ\œš[™È™]™[YKˆˆÏÂˆÛÛœİ\İH›İÜÖÜ›İÜË›[™İHWNÂˆ™]\›ˆ
-ˆ‚ˆÜ\Âˆ][\Ï^ÖÂˆØT”ˆ][Û	Û\İ›[ÛXJ\İ›\œŠWKˆÈXİ]™HİXœØÜš\[ÛœÈ‹™Š\İ˜Xİ]™TİXœËJWKˆÈİ[][]]™H™]™[YH‹\Ê\İ˜İ[][]]™T™]™[YJWKˆÈİ[][]]™H›Ùš]‹Ü[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ\İ˜İ[][]]™J_OÛ\Ê\İ˜İ[][]]™J_OÜÜ[—Kˆ_BˆÏ‚ˆ]ˆÛ\ÜÓ˜[YOH™›K\™ÜšY‚ˆ[YPÚ\]OH“T”ˆ\ˆ[Ûˆ]O^Ü›İÜßHÙ\šY\Ï^ÖŞÈÙ^Nˆ›\œˆ‹˜[YNˆ“T”ˆ‹ÛÛÜˆ˜\ŠKXÚ\LJHˆW_H›]^Û\ßHÏ‚ˆ[YPÚ\]OHXİ]™HİXœØÜš\[ÛœÈˆ]O^Ü›İÜßHÙ\šY\Ï^ÖŞÈÙ^Nˆ˜Xİ]™TİXœÈ‹˜[YNˆXİ]™HİXœØÜš\[ÛœÈ‹ÛÛÜˆ˜\ŠKXÚ\LÊHˆW_H›]^ÊŠHOˆ™Š‹J_HÏ‚ˆÙ]‚ˆX›BˆØ\[ÛH“T”ˆ›Ü™XØ\İ‚ˆXY^ÖÈ“[Û‹“™]Èİ\İÛY\œÈ‹Xİ]™HİXœÈ‹“T”ˆ‹”™]™[YH‹İ[][]]™H™]™[YH‹•˜Y™šXÈÛÜİ‹\Ú[™\ÜÈ^[œÙ\È‹”›Ùš]‹İ[][]]™H›Ùš]—_Bˆ›İÜÏ^Ü›İÜË›X\
+function Table({ caption, head, rows, foot, right = true, text = [], highlight = -1 }: { caption: string; head: React.ReactNode[]; rows: React.ReactNode[][]; foot?: React.ReactNode[]; right?: boolean; text?: number[]; highlight?: number }) {
+  const r = (i: number) => (i && right && !text.includes(i) ? "r" : undefined);
+  return (
+    <div tabIndex={0} role="region" aria-label={`${caption} (scrolls sideways when it is wider than the screen)`} className="fm-tblwrap">
+      <table className="tbl fm-rtbl">
+        <caption className="sr-only">{caption}</caption>
+        <thead>
+          <tr>
+            {head.map((h, i) => (
+              <th key={i} scope="col" className={r(i)}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className={i === highlight ? "hl" : undefined} ref={i === highlight ? (el) => el?.scrollIntoView({ block: "center" }) : undefined}>
+              {row.map((c, k) => (k === 0 ? <th scope="row" key={k}>{c}</th> : <td key={k} className={r(k)}>{c}</td>))}
+            </tr>
+          ))}
+        </tbody>
+        {foot && (
+          <tfoot>
+            <tr>
+              {foot.map((c, k) => (k === 0 ? <th scope="row" key={k}>{c}</th> : <td key={k} className={r(k)}>{c}</td>))}
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
 
-ŠHOˆÂˆ‹›[Ûˆ™Š‹›™]Ğİ\İÛY\œËJKˆ™Š‹˜Xİ]™TİXœËJKˆJ‹›\œŠKˆJ‹œ™]™[YJKˆJ‹˜İ[][]]™T™]™[YJKˆJ‹˜YÜ[™
-KˆJ‹™^[œÙ\È
-È‹™›ÛİÕ\
-È‹™[]™\JKˆÜ[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ‹œ›Ùš]
-_OÛJ‹œ›Ùš]
-_OÜÜ[‹ˆÜ[ˆÙ^OH˜ÈˆÛ\ÜÓ˜[YO^ØÛÊ‹˜İ[][]]™J_OÛJ‹˜İ[][]]™J_OÜÜ[‹ˆJ_BˆÏ‚ˆÛ\ÜÓ˜[YOHœİXˆ”İXœØÜš\[ÛœÈ™[™]È[ÛHÚ]Ú\›ˆÙˆH0íÈ]™\˜YÙHİ^NÈ\Ú[™\ÜÈ^[œÙ\È[˜ÛYH›ÛİË]\[]™\H[™š^YÛÜİËÜ‚ˆÏ‚ˆ
-NÂŸB‚‹ÊˆKKKKKKKKKKKKKKKH[ÛÈ[ÛKKKKKKKKKKKKKKKH
-‹Â˜ÛÛœİ[ÛX™[H
-[Nˆİš[™ÊHOˆ™]È]J	Ş[_KLUŒŒ˜
-KÓØØ[Q]Tİš[™Ê™[‹UTÈ‹È[ÛˆœÚÜ‹YX\ˆ›[Y\šXÈ‹[YV›Û™Nˆ•UÈˆJNÂ‚‹ÊŠˆ[\™YXİX[È™^ÈH[‹[ÛH[Ûˆ[ˆHHXİX[ÈX‰ÜÈ[›™Y[X™\œÈ›ÜˆH^\È[\™Yˆ
-‹Â™[˜İ[ÛˆXİX[œÔ[ŠÈˆNˆXÚÏÔ”ˆŠHÂˆÛÛœİÈK\ÈHH\ÙS[Û™^J
-NÂˆÛÛœİXİX[ÈH\ÙQY]ÜŠ
-
-HOˆ˜XİX[ÊNÂˆÛÛœİ›Ù\ÈH\ÙQY]ÜŠ
-
-HOˆ››Ù\ÊNÂˆÛÛœİYÙ\ÈH\ÙQY]ÜŠ
-
-HOˆ™YÙ\ÊNÂˆÛÛœİÚ\™YH\ÙQY]ÜŠ
-
-HOˆœÚ\™Y
-NÂˆÛÛœİ›ÈH\ÙQY]ÜŠ
-
-HOˆœ™XYÛ›JNÂˆÛÛœİÛY]šXËÙ]Y]šX×HH\ÙTİ]Oœ™]ˆˆœÜ[™Šœ™]ˆŠNÂˆ\ÙQY™™Xİ
+/* ---------------- overview ---------------- */
+function Overview({ data, R, onSection }: SP) {
+  const { m, ms } = useMoney();
+  const focus = useFocusBlock();
+  const nodes = useEditor((x) => x.nodes);
+  const [per, setPer] = useState<"month" | "year">("month");
+  const mo = data.overview.month,
+    yr = data.overview.year,
+    L = data.overview.keyLeak;
+  const f = data.forecast;
+  const A = per === "month" ? mo : yr;
+  const other = per === "month" ? yr : mo;
+  const otherLabel = per === "month" ? "a year" : "a month";
+  const widgets = nodes.filter((n) => n.type === "widget");
+  const tryWhatIf = (id: string) => {
+    focus(id);
+    setInspTab("analytics");
+    setOpt("hideInsp", false);
+    showToast("Step what-if: set a better conversion rate under â€œGoal for this stepâ€");
+  };
+  return (
+    <>
+      <div className="fm-rtitle-row">
+        <h3 className="fm-rh">Project summary</h3>
+        <div className="seg" role="group" aria-label="Period">
+          <button type="button" aria-pressed={per === "month"} onClick={() => setPer("month")}>
+            This month
+          </button>
+          <button type="button" aria-pressed={per === "year"} onClick={() => setPer("year")}>
+            Year
+          </button>
+        </div>
+      </div>
+      <Kpis
+        items={[
+          ["Traffic", nf(A.people), `${nf(other.people)} ${otherLabel}`, "sources"],
+          ["Leads", nf(A.leads, 1), `${nf(other.leads)} ${otherLabel}`, "data"],
+          ["Customers", nf(A.customers, 1), `${nf(other.customers)} ${otherLabel}`, "offers"],
+          ["Revenue", m(A.revenue), `${ms(other.revenue)} ${otherLabel}`, "forecast"],
+          ["Profit", <span key="p" className={cls(A.profit)}>{m(A.profit)}</span>, `${ms(other.profit)} ${otherLabel}`, "expenses"],
+          ["ROAS", ratio(R.roas), "Revenue Ã· ad spend", "sources"],
+        ]}
+        onSection={onSection}
+      />
+      <h3 className="fm-rh">Unit economics</h3>
+      <Kpis
+        items={[
+          ["CPC", m(R.cpc), "Ad spend Ã· paid visitors"],
+          ["CPL", m(R.cpl), "Ad spend Ã· leads"],
+          ["CPA", m(R.cpa), "Ad spend Ã· new customers"],
+          ["AOV", m(R.aov), "Revenue Ã· new customers"],
+          ["LTV / customer", m(R.ltvc), "Lifetime revenue Ã· new customers", "forecast"],
+          ["MRR", m(R.mrr), "From subscriptions", "mrr"],
+          ["ROI", pct(R.roi), "Profit Ã· all costs", "expenses"],
+          ["Conversion", pct(R.conv), "New customers Ã· visitors"],
+        ]}
+        onSection={onSection}
+      />
+      {widgets.length > 0 && (
+        <>
+          <h3 className="fm-rh">Widgets</h3>
+          <div className="fm-rwidgets">
+            {widgets.map((w) => (
+              <WidgetCard key={w.id} id={w.id} fluid />
+            ))}
+          </div>
+        </>
+      )}
+      {L && (
+        <div className="fm-rcallout" role="note">
+          <span className="ic" aria-hidden="true">
+            <Icon name="target" size={18} />
+          </span>
+          <div>
+            <b>Key leak: {L.name}</b>
+            <p>
+              {nf(L.lost, 1)} of {nf(L.inn, 1)} people ({pct(L.dropPct)}) donâ€™t move on at this {L.label.toLowerCase()} each month. Converting 10% better here adds about <b>{m(L.revenueGain)}</b> revenue and{" "}
+              <b>{m(L.profitGain)}</b> profit a month.
+            </p>
+            <div className="fm-rcallout-actions">
+              <button type="button" className="btn sm" onClick={() => focus(L.id)}>
+                Show on map
+              </button>
+              <button type="button" className="btn sm" onClick={() => tryWhatIf(L.id)}>
+                Try in What-if
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="fm-rgrid">
+        <TimeChart
+          title={`Revenue and profit, ${f.months} months`}
+          data={f.rows}
+          series={[
+            { key: "revenue", name: "Revenue", color: "var(--chart-1)" },
+            { key: "profit", name: "Profit", color: "var(--chart-3)", dashed: true },
+          ]}
+          fmt={ms}
+          zero
+        />
+        <BarsChart title="People lost per step (click a bar to find it on the map)" data={data.leaks.slice(0, 8).map((x) => ({ id: x.id, name: x.name, value: x.lost }))} fmt={(v) => nf(v, 1)} color="var(--chart-2)" onPick={focus} />
+      </div>
+      <Table
+        caption="People lost per step"
+        head={["Step", "Type", "People in", "Lost", "Drop-off", ""]}
+        text={[1, 5]}
+        rows={data.leaks.slice(0, 8).map((x) => [x.name, x.label, nf(x.inn, 1), nf(x.lost, 1), pct(x.dropPct), <button key="b" type="button" className="link" onClick={() => focus(x.id)}>Show on map</button>])}
+      />
+      <p className="sub">
+        Forecast settings and more charts: <button type="button" className="link" onClick={() => onSection("forecast")}>Revenue & profit forecast</button> Â· Every step:{" "}
+        <button type="button" className="link" onClick={() => onSection("data")}>Funnel data</button>
+      </p>
+    </>
+  );
+}
 
+/* ---------------- funnel data ---------------- */
+function FunnelData({ R, s }: SP) {
+  const { m } = useMoney();
+  const nodes = useEditor((x) => x.nodes);
+  const edges = useEditor((x) => x.edges);
+  const ro = useEditor((x) => x.readOnly);
+  const shared = useEditor((x) => x.shared);
+  const rows = useMemo(() => {
+    // flow order, like the Steps tab, so the list reads as the journey
+    const pos = Object.fromEntries(R.order.map((id, i) => [id, i]));
+    return nodes.filter((n) => typeOf(n.type) && typeOf(n.type).cat !== "annot").sort((a, b) => (pos[a.id] ?? 0) - (pos[b.id] ?? 0));
+  }, [nodes, R.order]);
+  const srcOf = useMemo(() => {
+    // the traffic sources feeding each step (context column)
+    const inc: Record<string, string[]> = {};
+    edges.forEach((e) => (inc[e.to] ??= []).push(e.from));
+    const memo: Record<string, Set<string>> = {};
+    const walk = (id: string, seen = new Set<string>()): Set<string> => {
+      if (memo[id]) return memo[id];
+      const n = nodes.find((x) => x.id === id);
+      const out = new Set<string>();
+      if (!n || seen.has(id)) return out;
+      seen.add(id);
+      if (typeOf(n.type)?.cat === "traffic") out.add(n.name);
+      (inc[id] ?? []).forEach((f) => walk(f, seen).forEach((x) => out.add(x)));
+      return (memo[id] = out);
+    };
+    return (id: string) => [...walk(id)].join(", ");
+  }, [edges, nodes]);
+  void s;
+  const focusId = useEditor((x) => x.reportFocus);
+  return (
+    <>
+      <p className="sub">Every step in journey order: people in, conversion, people out, revenue and costs.</p>
+      <Table
+        highlight={focusId ? rows.findIndex((n) => n.id === focusId) : -1}
+        caption="Funnel data"
+        text={[1, 7, 8]}
+        head={["Step", "Type", "Visitors", "Conversion", "Customers / orders", "Revenue", "Cost", "Sources", "Status"]}
+        rows={rows.map((n) => {
+          const r = R.N[n.id],
+            T = typeOf(n.type);
+          const inn = T.cat === "traffic" ? r.out : r.inflow;
+          return [
+            n.name,
+            T.label,
+            nf(inn, 1),
+            T.cat === "traffic" ? "â€“" : pct(inn ? r.out / inn : NaN),
+            nf(r.out, 1),
+            T.cat === "offer" ? m(r.rev) : "",
+            r.spend + r.cost + r.cogs ? m(r.spend + r.cost + r.cogs) : "",
+            <span key="s" className="text-muted">{T.cat === "traffic" ? "â€“" : srcOf(n.id)}</span>,
+            ro || shared ? (
+              STEP_STATUSES.find(([k]) => k === (n.status ?? "planned"))?.[1]
+            ) : (
+              <select key="st" className="input fm-rsel" aria-label={`Status of ${n.name}`} value={n.status ?? "planned"} onChange={(e) => updateNode(n.id, { status: e.target.value as StepStatus })}>
+                {STEP_STATUSES.map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            ),
+          ];
+        })}
+        foot={["Total", "", nf(R.traffic), pct(R.conv), `${nf(R.cust, 1)} customers Â· ${nf(R.orders, 1)} orders`, m(R.rev), m(R.costs - R.fixed - R.perSale), "", ""]}
+      />
+      <p className="sub">The cost column is ad spend, follow-up costs, delivery and affiliate commission per step. Fixed costs and expenses are in Expenses.</p>
+    </>
+  );
+}
 
-HOˆÂˆYˆ
-\Ú\™Y
-H[œİ\™PXİX[Ê
-NÂˆKÜÚ\™YJNÂˆÛÛœİ›İÜÈH\ÙSY[[Ê
+/* ---------------- sources ---------------- */
+function Sources({ data, R }: SP) {
+  const { m, ms } = useMoney();
+  const rows = data.sources;
+  if (!rows.length) return <Empty text="Add a traffic source to compare sources." />;
+  return (
+    <>
+      <PairBars
+        title="Revenue and ad spend by source"
+        data={rows.map((x) => ({ name: x.name, rev: x.rev, spend: x.spend }))}
+        series={[
+          { key: "rev", name: "Revenue", color: "var(--chart-1)" },
+          { key: "spend", name: "Ad spend", color: "var(--chart-2)" },
+        ]}
+        fmt={ms}
+      />
+      <Table
+        caption="Traffic sources"
+        head={["Source", "Visitors", "Share of traffic", "Customers", "Revenue", "Ad spend", "CPA", "ROAS"]}
+        rows={rows.map((x) => [x.name, nf(x.traffic), pct(R.traffic ? x.traffic / R.traffic : NaN), nf(x.cust, 1), m(x.rev), x.spend ? m(x.spend) : "free", x.spend ? m(x.cpa) : "â€“", x.spend ? ratio(x.roas) : "â€“"])}
+        foot={["All sources", nf(R.traffic), "100%", nf(R.cust, 1), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)]}
+      />
+      <p className="sub">Each row is what that source brings in on its own, through the same funnel.</p>
+    </>
+  );
+}
 
-HOˆ[ÛT[•œĞXİX[
-È›Ù\ËYÙ\ÈK‹
-XİX[ÈÏÈ×JH\È™]™\ŠKÛ›Ù\ËYÙ\Ë‹XİX[×JNÂˆYˆ
-Ú\™Y
-H™]\›ˆ[ÂˆÛÛœİ™]ˆHY]šXÈOOHœ™]ˆÂˆÛÛœİ]HH›İÜË›X\
+/* ---------------- offers ---------------- */
+function Offers({ data, R }: SP) {
+  const { m, ms } = useMoney();
+  const rows = data.offers;
+  if (!rows.length) return <Empty text="Add an offer (checkout, product, subscriptionâ€¦) to see revenue by product." />;
+  return (
+    <>
+      <BarsChart title="Revenue by offer" data={rows.map((x) => ({ name: x.name, value: x.revenue }))} fmt={ms} />
+      <Table
+        caption="Offer and product revenue"
+        text={[1]}
+        head={["Offer", "Type", "Buyers", "Revenue", "Share of revenue", "MRR"]}
+        rows={rows.map((x) => [x.name, x.label, nf(x.buyers, 1), m(x.revenue), pct(x.share), R.N[x.id]?.mrr ? m(R.N[x.id].mrr) : "â€“"])}
+        foot={["All offers", "", nf(R.orders, 1), m(R.rev), "100%", m(R.mrr)]}
+      />
+    </>
+  );
+}
 
-ŠHOˆ
-ÈX™[ˆ[ÛX™[
-‹›[Û
-K[ˆ™]ˆÈ‹œ[”™]ˆˆ‹œ[”Ü[™XİX[ˆ™]ˆÈ‹˜Xİ™]ˆˆ‹˜XİÜ[™JJNÂˆÛÛœİˆH
-[ˆ[X™\‹Xİˆ[X™\ŠHOˆ
-[ˆÈÜ[ˆÛ\ÜÓ˜[YO^Ü™]ˆOOHXİH[ˆÈœÜÈˆˆ›™YÈŸOÜÚYÛ™Y
-XİÈ[ˆHKİ
-_OÜÜ[ˆˆ¸ $ÈŠNÂˆ™]\›ˆ
-ˆÙXİ[Ûˆ\šXK[X™[YOH™›KX]œ‚ˆ]ˆÛ\ÜÓ˜[YOH™›KX]œZXY‚ˆÈYH™›KX]œXİX[œÈ[ÚÏ‚ˆ]ˆÛ\ÜÓ˜[YOHœÙYÈˆ›ÛOH™Ü›İ\ˆ\šXK[X™[H“YX\İ\™H‚ˆ]Ûˆ\OH˜]Ûˆˆ\šXK\™\ÜÙY^Ü™]ŸHÛÛXÚÏ^Ê
-HOˆÙ]Y]šXÊœ™]ˆŠ_O‚ˆ™]™[YBˆØ]Û‚ˆ]Ûˆ\OH˜]Ûˆˆ\šXK\™\ÜÙY^È\™]ŸHÛÛXÚÏ^Ê
-HOˆÙ]Y]šXÊœÜ[™Š_O‚ˆYÜ[™ˆØ]Û‚ˆÙ]‚ˆÙ]‚ˆØXİX[ÈOOH[È
-ˆÛ\ÜÓ˜[YOHœİXˆ›KX]œ\İ]Hˆ›ÛOHœİ]\È‚ˆØY[™ÈXİX[ø )‚ˆÜ‚ˆ
-Hˆ\›İÜË›[™İÈ
-ˆ]ˆÛ\ÜÓ˜[YOH™›K\™[\H‚ˆ“›ÈXİX[È[\™YY]ˆY™X[[X™\œÈ\ˆİ\[™^H\X\ˆ\™HYØZ[œİH[‹Ü‚ˆÈ\›È	‰ˆ
-ˆ]Ûˆ\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜ˆÛHˆÛÛXÚÏ^Ê
-HOˆÙ]XŠ˜XİX[ÈŠ_O‚ˆ[\ˆXİX[ÂˆØ]Û‚ˆ
-_BˆÙ]‚ˆ
-Hˆ
-ˆ‚ˆ[YPÚ\ˆ]O^Ø	Ü™]ˆÈ”™]™[YHˆˆYÜ[™ŸNˆXİX[œÈ[˜Bˆ]O^Ù]_BˆH›X™[‚ˆX™[^Ê
-HOˆİš[™Ê
-_BˆÙ\šY\Ï^ÖÂˆÈÙ^Nˆ˜XİX[‹˜[YNˆXİX[‹ÛÛÜˆ˜\ŠKXÚ\LJHˆKˆÈÙ^Nˆœ[ˆ‹˜[YNˆ”[ˆ‹ÛÛÜˆ˜\ŠK[]]Y
-H‹\ÚYˆYHKˆ_Bˆ›]^Û\ßBˆ™\›ÂˆÏ‚ˆX›BˆØ\[ÛHXİX[œÈ[ˆH[Û‚ˆXY^ÖÈ“[Û‹‘^\È[\™Y‹”[ˆ™]™[YH‹XİX[™]™[YH‹œÈ[ˆ‹”[ˆYÜ[™‹XİX[YÜ[™‹œÈ[ˆ—_Bˆ›İÜÏ^Ü›İÜË›X\
+/* ---------------- expenses ---------------- */
+function Expenses({ data, R }: SP) {
+  const { m, ms } = useMoney();
+  const ex = data.expenses;
+  return (
+    <>
+      <Kpis
+        items={[
+          ["All costs / month", m(ex.total)],
+          ["Ad spend", m(R.spend), pct(ex.total ? R.spend / ex.total : NaN) + " of costs"],
+          ["One-time costs", m(ex.oneTime), ex.oneTime ? (Number.isFinite(R.payback) ? `Paid back in ${nf(R.payback, 1)} months` : "Not paid back") : "None"],
+          ["Profit after costs", <span key="p" className={cls(R.profit)}>{m(R.profit)}</span>],
+        ]}
+      />
+      {ex.lines.length ? <BarsChart title="Costs per month by type" data={ex.lines.map(([name, value]) => ({ name, value }))} fmt={ms} color="var(--chart-2)" /> : <Empty text="No costs yet." />}
+      <Table caption="Cost breakdown" head={["Cost", "Per month", "Share"]} rows={ex.lines.map(([l, v]) => [l, m(v), pct(ex.total ? v / ex.total : NaN)])} foot={["Total", m(ex.total), "100%"]} />
+      {ex.items.length > 0 && (
+        <>
+          <h3 className="fm-rh">Itemised expenses</h3>
+          <Table caption="Itemised expenses" text={[1, 2]} head={["Expense", "Category", "How often", "Amount", "Per month"]} rows={ex.items.map((x) => [x.name, x.category, x.kind, m(x.amount), x.perPeriod ? m(x.perPeriod) : "â€“"])} />
+        </>
+      )}
+      <p className="sub">
+        Edit costs in the mapâ€™s{" "}
+        <button type="button" className="link" onClick={() => setTab("costs")}>
+          Costs tab
+        </button>
+        .
+      </p>
+    </>
+  );
+}
 
-ŠHOˆÛ[ÛX™[
-‹›[Û
-K™Š‹™^\ÊKJ‹œ[”™]ŠKJ‹˜Xİ™]ŠKŠ‹œ[”™]‹‹˜Xİ™]ŠKJ‹œ[”Ü[™
-KJ‹˜XİÜ[™
-KŠ‹œ[”Ü[™‹˜XİÜ[™
-WJ_BˆÏ‚ˆÛ\ÜÓ˜[YOHœİXˆ”[ˆ\ÈH[›™[8 &\È[ÛH[X™\œÈØØ[YÈH^\È[İH[\™YHØ[YH\ÈHXİX[ÈX‹ˆYÜ[™İ™\ˆ[ˆÚİÜÈ™YÜ‚ˆÏ‚ˆ
-_BˆÜÙXİ[Û‚ˆ
-NÂŸB‚™[˜İ[Ûˆ[ÛJÈ]KˆNˆÔ
-HÂˆÛÛœİÈK\ÈHH\ÙS[Û™^J
-NÂˆÛÛœİ›İÜÈH]K™›Ü™XØ\İœ›İÜÎÂˆÛÛœİÚH
-Nˆ[X™\‹ˆ[X™\ˆ[™Yš[™Y
-HOˆ
-ˆOH[XˆÈ¸ $ÈˆˆÚYÛ™Y
+/* ---------------- scenarios ---------------- */
+function Scenarios() {
+  const { m, ms } = useMoney();
+  const nodes = useEditor((x) => x.nodes);
+  const edges = useEditor((x) => x.edges);
+  const settings = useEditor((x) => x.settings);
+  const Rnow = useEditor((x) => x.R);
+  const cols = useMemo(() => {
+    const g = { nodes, edges };
+    const base = compute(g, { ...settings, whatif: NEUTRAL });
+    const c: { name: string; R: FunnelResult }[] = [{ name: "As mapped", R: base }];
+    if (JSON.stringify(settings.whatif) !== JSON.stringify(NEUTRAL)) c.push({ name: "Current what-if", R: Rnow });
+    settings.scenarios.forEach((sc) => c.push({ name: sc.name || "Scenario", R: computeScenario(g, settings, sc) }));
+    return c;
+  }, [nodes, edges, settings, Rnow]);
+  const metrics: [string, (r: FunnelResult) => number, (v: number) => string, boolean?][] = [
+    ["Traffic", (r) => r.traffic, (v) => nf(v)],
+    ["Leads", (r) => r.leads, (v) => nf(v, 1)],
+    ["Customers", (r) => r.cust, (v) => nf(v, 1)],
+    ["Revenue", (r) => r.rev, m],
+    ["Ad spend", (r) => r.spend, m, true],
+    ["Profit", (r) => r.profit, m],
+    ["ROAS", (r) => r.roas, ratio],
+    ["ROI", (r) => r.roi, pct],
+    ["CPA", (r) => r.cpa, m, true],
+    ["CPL", (r) => r.cpl, m, true],
+    ["AOV", (r) => r.aov, m],
+    ["LTV / customer", (r) => r.ltvc, m],
+    ["MRR", (r) => r.mrr, m],
+  ];
+  const base = cols[0].R;
+  return (
+    <>
+      <p className="sub">The map as it is (baseline) next to every saved scenario. Differences are against the baseline.</p>
+      {cols.length < 2 && (
+        <div className="fm-rcallout" role="note">
+          <span className="ic" aria-hidden="true">
+            <Icon name="layers" size={18} />
+          </span>
+          <div>
+            <b>No scenarios yet</b>
+            <p>
+              Add Conservative, Expected and Best cases in the mapâ€™s{" "}
+              <button type="button" className="link" onClick={() => setTab("scenarios")}>
+                Scenarios tab
+              </button>
+              .
+            </p>
+          </div>
+        </div>
+      )}
+      <BarsChart title="Profit per month by scenario" data={cols.map((c) => ({ name: c.name, value: c.R.profit }))} fmt={ms} />
+      <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
+        <table className="tbl fm-rtbl">
+          <caption className="sr-only">Scenario comparison</caption>
+          <thead>
+            <tr>
+              <th scope="col">Per month</th>
+              {cols.map((c, i) => (
+                <th key={i} scope="col" className="r">
+                  {c.name}
+                  {i === 0 && <small className="block font-normal text-muted">baseline</small>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map(([label, get, f, costLike]) => (
+              <tr key={label}>
+                <th scope="row">{label}</th>
+                {cols.map((c, i) => {
+                  const v = get(c.R),
+                    d = v - get(base);
+                  const good = costLike ? d < 0 : d > 0;
+                  return (
+                    <td key={i} className="r">
+                      <span className={label === "Profit" ? cls(v) : undefined}>{f(v)}</span>
+                      {i > 0 && Number.isFinite(d) && Math.abs(d) > 1e-9 && <small className={`block ${good ? "pos" : "neg"}`}>{signed(d, f)}</small>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
 
-HHŠHÈX]˜XœÊŠKİ
-JNÂˆ™]\›ˆ
-ˆ‚ˆXİX[œÔ[ˆ^ÔŸHÏ‚ˆ[YPÚ\ˆ]OH”™]™[YH[™›Ùš]\ˆ[Û‚ˆ]O^Ü›İÜßBˆÙ\šY\Ï^ÖÂˆÈÙ^Nˆœ™]™[YH‹˜[YNˆ”™]™[YH‹ÛÛÜˆ˜\ŠKXÚ\LJHˆKˆÈÙ^Nˆœ›Ùš]‹˜[YNˆ”›Ùš]‹ÛÛÜˆ˜\ŠKXÚ\LÊH‹\ÚYˆYHKˆ_Bˆ›]^Û\ßBˆ™\›ÂˆÏ‚ˆX›BˆØ\[ÛH“[Û]Ë[[Û‚ˆXY^ÖÈ“[Û‹•˜Y™šXÈ‹İ\İÛY\œÈ‹”™]™[YH‹Ú[™ÙH‹ÛÜİÈ‹”›Ùš]‹Ú[™ÙH‹İ[][]]™H—_Bˆ›İÜÏ^Ü›İÜË›X\
+/* ---------------- forecast ---------------- */
+function Forecast({ data, R }: SP) {
+  const { m, ms } = useMoney();
+  const ro = useEditor((x) => x.readOnly);
+  const proj = useEditor((x) => x.settings.projection);
+  const [days, setDays] = useState(90);
+  const f = data.forecast;
+  const periods: [string, number][] = [...PERIOD_ROWS.map(([l, k]) => [l, periodFactor(k)] as [string, number]), [`Custom (${nf(days)} days)`, periodFactor(days)]];
+  return (
+    <>
+      <fieldset disabled={ro} className="fm-rcontrols">
+        <label>
+          Months
+          <NumInput value={proj.months} min={1} max={60} step={1} onChange={(v) => setSettings({ projection: { ...proj, months: Math.max(1, Math.min(60, Math.round(v) || 1)) } })} />
+        </label>
+        <label>
+          Traffic growth / month (%)
+          <NumInput value={proj.growth} min={-50} max={100} onChange={(v) => setSettings({ projection: { ...proj, growth: v } })} />
+        </label>
+      </fieldset>
+      <Kpis
+        items={[
+          [`Revenue, ${f.months} months`, ms(f.revenue)],
+          [`Profit, ${f.months} months`, <span key="p" className={cls(f.profit)}>{ms(f.profit)}</span>],
+          ["Cash break-even", f.breakEven ? `Month ${f.breakEven}` : "Not within range"],
+          [`MRR at month ${f.months}`, m(f.mrr)],
+        ]}
+      />
+      <div className="fm-rgrid">
+        <TimeChart
+          title="Revenue and costs per month"
+          data={f.rows}
+          series={[
+            { key: "revenue", name: "Revenue", color: "var(--chart-1)" },
+            { key: "costs", name: "Costs", color: "var(--chart-2)", dashed: true },
+          ]}
+          fmt={ms}
+        />
+        <TimeChart title="Cumulative profit" data={f.rows} series={[{ key: "cumulative", name: "Cumulative profit", color: "var(--chart-1)" }]} fmt={ms} zero />
+        <TimeChart title="Traffic per month" data={f.rows} series={[{ key: "traffic", name: "Visitors", color: "var(--chart-3)" }]} fmt={(v) => nf(v)} />
+        <TimeChart title="Leads per month" data={f.rows} series={[{ key: "leads", name: "Leads", color: "var(--chart-4)" }]} fmt={(v) => nf(v)} />
+      </div>
+      <h3 className="fm-rh">By period</h3>
+      <p className="sub">
+        The funnel models one month; other periods scale it.{" "}
+        <label className="inline-flex items-center gap-2">
+          Custom period (days)
+          <NumInput className="input w-24!" value={days} min={1} max={3650} step={1} onChange={(v) => setDays(Math.max(1, Math.round(v) || 1))} />
+        </label>
+      </p>
+      <Table
+        caption="Numbers by period"
+        head={["Period", "People", "Leads", "Purchases", "Revenue", "Ad spend", "Other costs", "Profit", "ROI", "ROAS"]}
+        rows={periods.map(([l, k]) => {
+          const p = periodNumbers(R, k);
+          return [l, nf(p.people), nf(p.leads, 1), nf(p.orders, 1), m(p.revenue), m(p.adSpend), m(p.expenses), <span key="p" className={cls(p.profit)}>{m(p.profit)}</span>, pct(p.roi), ratio(p.roas)];
+        })}
+      />
+      <p className="sub">The month-by-month cash table is in Month-to-month; subscriptions in MRR forecast.</p>
+    </>
+  );
+}
 
-‹JHOˆÂˆ‹›[Ûˆ™Š‹˜Y™šXÊKˆ™Š‹›™]Ğİ\İÛY\œËJKˆJ‹œ™]™[YJKˆÚ
-‹œ™]™[YK›İÜÖÚHHWOËœ™]™[YJKˆJ‹˜ÛÜİÊKˆÜ[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ‹œ›Ùš]
-_OÛJ‹œ›Ùš]
-_OÜÜ[‹ˆÚ
-‹œ›Ùš]›İÜÖÚHHWOËœ›Ùš]
-KˆÜ[ˆÙ^OH˜ÈˆÛ\ÜÓ˜[YO^ØÛÊ‹˜İ[][]]™J_OÛJ‹˜İ[][]]™J_OÜÜ[‹ˆJ_BˆÏ‚ˆÏ‚ˆ
-NÂŸB‚‹ÊˆKKKKKKKKKKKKKKKH™Z[™\İY[KKKKKKKKKKKKKKKH
-‹Â™[˜İ[Ûˆ™Z[™\İ
-È]HNˆÔ
-HÂˆÛÛœİÈK\ÈHH\ÙS[Û™^J
-NÂˆÛÛœİ›ÈH\ÙQY]ÜŠ
-
-HOˆœ™XYÛ›JNÂˆÛÛœİˆH]Kœ™Z[™\İÂˆÛÛœİÙ]H
-]Úˆ\X[[›™[Ù][™ÜÖÈœ™Z[™\İ—OŠHOˆÙ]Ù][™ÜÊÈ™Z[™\İˆÈİˆ‹œİ[ÛÎˆ‹›[ÛË‹‹œ]ÚHJNÂˆÛÛœİ›İÜÈH‹œ›İÜË›X\
+/* ---------------- goals ---------------- */
+function Goals({ data }: SP) {
+  const { m } = useMoney();
+  const ro = useEditor((x) => x.readOnly);
+  const goals = useEditor((x) => x.settings.goals);
+  const nodes = useEditor((x) => x.nodes);
+  const steps = nodes.filter((n) => typeOf(n.type) && !["annot", "traffic"].includes(typeOf(n.type).cat));
+  const upd = (id: string, patch: Partial<Goal>) => setSettings({ goals: goals.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
+  const t = data.goals;
+  return (
+    <>
+      <p className="sub">Name a target and see what it takes per day, week, month and year at todayâ€™s rates (traffic scaled, everything else as mapped).</p>
+      {t.target > 0 && t.plan && (
+        <GoalCard
+          r={{ goal: { id: "target", name: "Revenue target", kind: "revenue", value: t.target, period: "month" }, label: "Monthly revenue (What-if tab)", current: data.overview.month.revenue, progress: data.overview.month.revenue / t.target, plan: null, required: [], impact: null }}
+          legacy={t.required}
+        />
+      )}
+      {t.items.map((r) => (
+        <GoalCard key={r.goal.id} r={r} />
+      ))}
+      <fieldset disabled={ro} className="m-0 border-0 p-0">
+        <h3 className="fm-rh">{goals.length ? "Edit goals" : "Add a goal"}</h3>
+        {goals.map((x) => (
+          <div key={x.id} className="fm-rgoal-edit">
+            <label>
+              Name
+              <input className="input" value={x.name} placeholder="e.g. Dream profit" onChange={(e) => upd(x.id, { name: e.target.value })} />
+            </label>
+            <label>
+              Type
+              <select className="input" value={x.kind} onChange={(e) => upd(x.id, { kind: e.target.value as Goal["kind"] })}>
+                {GOAL_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {GOAL_KIND_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Target
+              <NumInput value={x.value || undefined} min={0} placeholder="e.g. 20000" onChange={(v) => upd(x.id, { value: v })} />
+            </label>
+            {x.kind !== "conversion" && (
+              <label>
+                Period
+                <select className="input" aria-label={`Period for ${x.name || GOAL_KIND_LABEL[x.kind]} goal`} value={x.period ?? "month"} onChange={(e) => upd(x.id, { period: e.target.value as Goal["period"] })}>
+                  {GOAL_PERIODS.map((period) => <option key={period} value={period}>{period === "day" ? "Per day" : period === "week" ? "Per week" : period === "month" ? "Per month" : "Per year"}</option>)}
+                </select>
+              </label>
+            )}
+            {(x.kind === "step" || x.kind === "conversion") && (
+              <label>
+                Step
+                <select className="input" value={x.nodeId ?? ""} onChange={(e) => upd(x.id, { nodeId: e.target.value || undefined })}>
+                  <option value="">Pick a stepâ€¦</option>
+                  {steps.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button type="button" className="btn icon danger self-end" aria-label={`Remove goal ${x.name || GOAL_KIND_LABEL[x.kind]}`} title={`Remove goal ${x.name || GOAL_KIND_LABEL[x.kind]}`} onClick={() => setSettings({ goals: goals.filter((g) => g.id !== x.id) })}>
+              <Icon name="trash" size={16} />
+            </button>
+          </div>
+        ))}
+        <button type="button" className="btn" onClick={() => setSettings({ goals: [...goals, { id: nid(), name: "", kind: "profit", value: 0, period: "month" }] })}>
+          <Icon name="plus" /> Add goal
+        </button>
+      </fieldset>
+      {t.blocks.length > 0 && (
+        <>
+          <h3 className="fm-rh">Goal blocks on the map</h3>
+          <Table caption="Goal blocks" head={["Goal block", "People reaching it / month"]} rows={t.blocks.map((b) => [b.name, nf(b.people, 1)])} />
+        </>
+      )}
+      <p className="sub">Revenue {m(data.overview.month.revenue)} per month today.</p>
+    </>
+  );
+}
 
-‹JHOˆ
-È‹‹œ‹Z[”›Ùš]ˆ‹œZ[–ÚWOË˜İ[][]]™HÏÈJJNÂˆ™]\›ˆ
-ˆ‚ˆÛ\ÜÓ˜[YOHœİXˆ”]\ÙˆXXÚ[Û8 &\È›Ùš]˜XÚÈ[ÈYÈH™^[Û]Ù^x &\ÈÛÜİ\ˆZYš\Ú]Ü‹[™ÙYHİÈ˜Y™šXË™]™[YH[™›Ùš]Ü›İËÜ‚ˆšY[Ù]\ØX›Y^Ü›ßHÛ\ÜÓ˜[YOH™›K\˜ÛÛ›ÛÈ‚ˆX™[‚ˆ™Z[™\İ
-	HÙˆ›Ùš]
-Bˆ[R[œ]˜[YO^Ü‹œİHZ[^ÌHX^^ÌLHÛÚ[™ÙO^ÊŠHOˆÙ]
-ÈİˆX]›X^
-X]›Z[ŠLŠJHJ_HÏ‚ˆÛX™[‚ˆX™[‚ˆ[ÛÂˆ[R[œ]˜[YO^Ü‹›[ÛßHZ[^Ì_HX^^ÍŒHİ\^Ì_HÛÚ[™ÙO^ÊŠHOˆÙ]
-È[ÛÎˆX]›X^
-KX]›Z[ŠŒX]œ›İ[™
-ŠHJJHJ_HÏ‚ˆÛX™[‚ˆÙšY[Ù]‚ˆÈ\‹š\ÔZYÈ
-ˆ[\H^H”™Z[™\İY[^\È[Ü™HZY˜Y™šXËˆYHZY˜Y™šXÈÛİ\˜ÙH
-Ú]Ü[™
-HÈ\ÙH]ˆˆÏ‚ˆ
-Hˆ\‹œİÈ
-ˆ]ˆÛ\ÜÓ˜[YOH™›K\™[\H‚ˆ”XÚÈİÈ]XÚ›Ùš]È™Z[™\İØ‚ˆ‘XXÚ[Û]Ú\™HÙˆ\İ[Û8 &\È›Ùš]^\È^˜HZY˜Y™šXÈ]Ù^x &\ÈÛÜİ\ˆš\Ú]Ü‹ˆÜ›İİÛÛ\İ[™ËÛÈİ\ÛX[Ü‚ˆÈ\›È	‰ˆ
-ˆ]ˆÛ\ÜÓ˜[YOH›]LÈ›^›^]Ü˜\Ø\Lˆ‚ˆÖÌKLÍWK›X\
+function GoalCard({ r, legacy }: { r: GoalReport; legacy?: [string, number, number, number, number][] }) {
+  const { m } = useMoney();
+  const g = r.goal;
+  const isMoney = g.kind === "revenue" || g.kind === "profit";
+  const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : nf(v, 1));
+  const done = r.progress >= 1;
+  const prog = Math.max(0, Math.min(1, Number.isFinite(r.progress) ? r.progress : 0));
+  return (
+    <section className="fm-rgoal" aria-label={`Goal: ${g.name || r.label}`}>
+      <header>
+        <div>
+          <b>{g.name || r.label}</b>
+          <small>{r.label}</small>
+        </div>
+        <span className={done ? "pos" : undefined}>
+          {fv(r.current)} of {fv(g.value)}
+          {done ? " Â· reached" : ""}
+        </span>
+      </header>
+      <div className="fm-rprog" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog * 100)} aria-label="Progress towards the goal">
+        <span style={{ width: `${prog * 100}%` }} />
+      </div>
+      {legacy ? (
+        <Table caption="Required numbers" head={["Period", "Revenue", "Visitors", "Ad spend", "Customers"]} rows={legacy.map(([p, rev, vis, spend, cust]) => [p, m(rev), nf(vis), m(spend), nf(cust, 1)])} />
+      ) : g.kind === "conversion" ? (
+        r.impact ? (
+          <p className="sub">
+            At {nf(g.value, 1)}% conversion, {r.stepName} would bring revenue to <b>{m(r.impact.rev)}</b> and profit to <b className={cls(r.impact.profit)}>{m(r.impact.profit)}</b> a month.
+          </p>
+        ) : (
+          <p className="sub">Pick a step and a target conversion rate.</p>
+        )
+      ) : r.plan?.reachable ? (
+        <>
+          <p className="sub">Needs {nf(r.plan.multiplier, 2)}Ã— todayâ€™s traffic, with todayâ€™s conversion rates, prices and cost per visitor.</p>
+          <Table
+            caption={`Required numbers for ${g.name || r.label}`}
+            head={["Period", "Revenue", "Profit", "Traffic", "Traffic cost", "Leads", "Customers"]}
+            rows={r.required.map(([p, rev, profit, vis, spend, leads, cust]) => [p, m(rev), <span key="p" className={cls(profit)}>{m(profit)}</span>, nf(vis), m(spend), nf(leads, 1), nf(cust, 1)])}
+          />
+        </>
+      ) : (
+        <p className="sub">{g.value > 0 ? "Canâ€™t be reached by adding traffic alone at todayâ€™s rates (for example, every extra visitor loses money). Try the What-if goal seek on conversion or prices." : "Enter a target."}</p>
+      )}
+    </section>
+  );
+}
 
-ŠHOˆ
-ˆ]ÛˆÙ^O^İŸH\OH˜]ÛˆˆÛ\ÜÓ˜[YOH˜ˆÛHˆÛÛXÚÏ^Ê
-HOˆÙ]
-ÈİˆˆJ_O‚ˆ™Z[™\İİŸIBˆØ]Û‚ˆ
-J_BˆÙ]‚ˆ
-_BˆÙ]‚ˆ
-Hˆ
-ˆ‚ˆÜ\Âˆ][\Ï^ÖÂˆØ™Z[™\İYİ™\ˆ	Ü‹›[ÛßH[ÛØ\Ê‹İ[œ™Z[™\İY
-WKˆÈ•˜Y™šXÈ‹™Š‹İ[˜Y™šXÊK	ÜÚYÛ™Y
-‹İ[˜Y™šXÈH‹œZ[•İ[˜Y™šXË
-ŠHOˆ™ŠŠJ_HœÈ›È™Z[™\İY[KˆÈ”™]™[YH‹\Ê‹İ[œ™]™[YJK	ÜÚYÛ™Y
-‹İ[œ™]™[YHH‹œZ[•İ[œ™]™[YK\Ê_HœÈ›È™Z[™\İY[KˆÈ”›Ùš]
-Y\ˆ™Z[™\İ[™ÊH‹Ü[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ‹İ[œ›Ùš]
-_OÛ\Ê‹İ[œ›Ùš]
-_OÜÜ[‹	ÜÚYÛ™Y
-‹İ[œ›Ùš]H‹œZ[•İ[œ›Ùš]\Ê_HœÈ›È™Z[™\İY[Kˆ_BˆÏ‚ˆ]ˆÛ\ÜÓ˜[YOH™›K\™ÜšY‚ˆ[YPÚ\ˆ]OHİ[][]]™H›Ùš]‚ˆ]O^Ü›İÜßBˆÙ\šY\Ï^ÖÂˆÈÙ^Nˆ˜İ[][]]™H‹˜[YNˆ™Z[™\İ[™È	Û™Š‹œİ
-_IXÛÛÜˆ˜\ŠKXÚ\LJHˆKˆÈÙ^NˆœZ[”›Ùš]‹˜[YNˆ“›È™Z[™\İY[‹ÛÛÜˆ˜\ŠKXÚ\LŠH‹\ÚYˆYHKˆ_Bˆ›]^Û\ßBˆ™\›ÂˆÏ‚ˆ[YPÚ\]OH•˜Y™šXÈ\ˆ[Ûˆ]O^Ü›İÜßHÙ\šY\Ï^ÖŞÈÙ^Nˆ˜Y™šXÈ‹˜[YNˆ•š\Ú]ÜœÈ‹ÛÛÜˆ˜\ŠKXÚ\LÊHˆW_H›]^ÊŠHOˆ™ŠŠ_HÏ‚ˆÙ]‚ˆX›BˆØ\[ÛH•˜Y™šXÈ™Z[™\İY[H[Û‚ˆXY^ÖÈ“[Û‹YYÙ]‹“ÙˆÚXÚ™Z[™\İY‹•˜Y™šXÈ‹”™]™[YH‹”›Ùš]‹İ[][]]™H›Ùš]—_Bˆ›İÜÏ^Ü‹œ›İÜË›X\
+/* ---------------- MRR ---------------- */
+function Mrr({ data }: SP) {
+  const { m, ms } = useMoney();
+  const rows = data.forecast.rows;
+  if (!rows.some((r) => r.mrr > 0)) return <Empty text="No subscriptions on this map. Add a Subscription or Membership offer to forecast recurring revenue." />;
+  const last = rows[rows.length - 1];
+  return (
+    <>
+      <Kpis
+        items={[
+          [`MRR at month ${last.month}`, m(last.mrr)],
+          ["Active subscriptions", nf(last.activeSubs, 1)],
+          ["Cumulative revenue", ms(last.cumulativeRevenue)],
+          ["Cumulative profit", <span key="p" className={cls(last.cumulative)}>{ms(last.cumulative)}</span>],
+        ]}
+      />
+      <div className="fm-rgrid">
+        <TimeChart title="MRR per month" data={rows} series={[{ key: "mrr", name: "MRR", color: "var(--chart-1)" }]} fmt={ms} />
+        <TimeChart title="Active subscriptions" data={rows} series={[{ key: "activeSubs", name: "Active subscriptions", color: "var(--chart-3)" }]} fmt={(v) => nf(v, 1)} />
+      </div>
+      <Table
+        caption="MRR forecast"
+        head={["Month", "New customers", "Active subs", "MRR", "Revenue", "Cumulative revenue", "Traffic cost", "Business expenses", "Profit", "Cumulative profit"]}
+        rows={rows.map((r) => [
+          r.month,
+          nf(r.newCustomers, 1),
+          nf(r.activeSubs, 1),
+          m(r.mrr),
+          m(r.revenue),
+          m(r.cumulativeRevenue),
+          m(r.adSpend),
+          m(r.expenses + r.followUp + r.delivery),
+          <span key="p" className={cls(r.profit)}>{m(r.profit)}</span>,
+          <span key="c" className={cls(r.cumulative)}>{m(r.cumulative)}</span>,
+        ])}
+      />
+      <p className="sub">Subscriptions renew monthly with churn of 1 Ã· average stay; business expenses include follow-up, delivery and fixed costs.</p>
+    </>
+  );
+}
 
-ŠHOˆÜ‹›[ÛJ‹˜YÜ[™
-K‹œ™Z[™\İYÈJ‹œ™Z[™\İY
-Hˆ¸ $È‹™Š‹˜Y™šXÊKJ‹œ™]™[YJKÜ[ˆÙ^OHœˆÛ\ÜÓ˜[YO^ØÛÊ‹œ›Ùš]
-_OÛJ‹œ›Ùš]
-_OÜÜ[‹Ü[ˆÙ^OH˜ÈˆÛ\ÜÓ˜[YO^ØÛÊ‹˜İ[][]]™J_OÛJ‹˜İ[][]]™J_OÜÜ[—J_Bˆ›Ûİ^ÖØYX\‹Y[™
-	Ü‹›[ÛßH[ÊXJ‹œ›İÜËœ™YXÙJ
-KŠHOˆH
-È‹˜YÜ[™
-JKJ‹İ[œ™Z[™\İY
-K™Š‹İ[˜Y™šXÊKJ‹İ[œ™]™[YJKJ‹İ[œ›Ùš]
-Kˆ—_BˆÏ‚ˆÏ‚ˆ
-_BˆÏ‚ˆ
-NÂŸB‚‹ÊˆKKKKKKKKKKKKKKKHX›\ÚYİ]\ÈKKKKKKKKKKKKKKKH
-‹Â™[˜İ[Ûˆİ]\Ê
-HÂˆÛÛœİ›Ù\ÈH\ÙQY]ÜŠ
-
-HOˆ››Ù\ÊNÂˆÛÛœİ›ÈH\ÙQY]ÜŠ
-
-HOˆœ™XYÛ›JNÂˆÛÛœİÚ\™YH\ÙQY]ÜŠ
-
-HOˆœÚ\™Y
-NÂˆÛÛœİİH\ÙSY[[Ê
+/* ---------------- month to month ---------------- */
+const monthLabel = (ym: string) => new Date(`${ym}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 
-HOˆİ]\Ô™\Ü
-›Ù\ÊKÛ›Ù\×JNÂˆYˆ
-\İİ[
-H™]\›ˆ[\H^H“›È[›™[İ\ÈY]ˆˆÏÂˆ™]\›ˆ
-ˆ‚ˆÜ\Âˆ][\Ï^ÖÂˆÈÛÛ\]H‹İ
-İœİ
-K	Üİ™Û™_HÙˆ	Üİİ[Hİ\È]™XKˆÈ’[ˆ›ÙÜ™\ÜÈ‹™Šİ˜Z[[™ÊWKˆÈ”[›™Y‹™Šİœ[›™Y
-WKˆÈ”™[XZ[š[™È‹™Šİİ[Hİ™Û™JWKˆ_BˆÏ‚ˆ]ˆÛ\ÜÓ˜[YOH™›K\œ›ÙÈÈˆ›ÛOHœ›ÙÜ™\ÜØ˜\ˆˆ\šXK]˜[Y[Z[^ÌH\šXK]˜[Y[X^^ÌLH\šXK]˜[Y[›İÏ^ÓX]œ›İ[™
-İœİ
-ˆL
-_H\šXK[X™[H”İ\È]™H‚ˆÜ[ˆİ[O^ŞÈÚYˆ	Üİœİ
-ˆLIX_HÏ‚ˆÙ]‚ˆX›BˆØ\[ÛH”İ\İ]\È‚ˆšYÚ^Ù˜[Ù_BˆXY^ÖÈ”İ\‹•\H‹”İ]\È—_Bˆ›İÜÏ^ÖË‹‹œİœİ\×BˆœÛÜ
+/** Entered actuals next to the plan, month by month. Plan = the Actuals tab's planned numbers for the days entered. */
+function ActualVsPlan({ R }: Pick<SP, "R">) {
+  const { m, ms } = useMoney();
+  const actuals = useEditor((x) => x.actuals);
+  const nodes = useEditor((x) => x.nodes);
+  const edges = useEditor((x) => x.edges);
+  const shared = useEditor((x) => x.shared);
+  const ro = useEditor((x) => x.readOnly);
+  const [metric, setMetric] = useState<"rev" | "spend">("rev");
+  useEffect(() => {
+    if (!shared) ensureActuals();
+  }, [shared]);
+  const rows = useMemo(() => monthlyPlanVsActual({ nodes, edges }, R, (actuals ?? []) as never), [nodes, edges, R, actuals]);
+  if (shared) return null;
+  const rev = metric === "rev";
+  const data = rows.map((r) => ({ label: monthLabel(r.month), plan: rev ? r.planRev : r.planSpend, actual: rev ? r.actRev : r.actSpend }));
+  const v = (plan: number, act: number) => (plan ? <span className={rev === act >= plan ? "pos" : "neg"}>{signed(act / plan - 1, pct)}</span> : "â€“");
+  return (
+    <section aria-labelledby="fm-avp">
+      <div className="fm-avp-head">
+        <h3 id="fm-avp">Actual vs plan</h3>
+        <div className="seg" role="group" aria-label="Measure">
+          <button type="button" aria-pressed={rev} onClick={() => setMetric("rev")}>
+            Revenue
+          </button>
+          <button type="button" aria-pressed={!rev} onClick={() => setMetric("spend")}>
+            Ad spend
+          </button>
+        </div>
+      </div>
+      {actuals === null ? (
+        <p className="sub fm-avp-state" role="status">
+          Loading actualsâ€¦
+        </p>
+      ) : !rows.length ? (
+        <div className="fm-rempty">
+          <p>No actuals entered yet. Add real numbers per step and they appear here against the plan.</p>
+          {!ro && (
+            <button type="button" className="btn sm" onClick={() => setTab("actuals")}>
+              Enter actuals
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <TimeChart
+            title={`${rev ? "Revenue" : "Ad spend"}: actual vs plan`}
+            data={data}
+            x="label"
+            xLabel={(l) => String(l)}
+            series={[
+              { key: "actual", name: "Actual", color: "var(--chart-1)" },
+              { key: "plan", name: "Plan", color: "var(--muted)", dashed: true },
+            ]}
+            fmt={ms}
+            zero
+          />
+          <Table
+            caption="Actual vs plan by month"
+            head={["Month", "Days entered", "Plan revenue", "Actual revenue", "vs plan", "Plan ad spend", "Actual ad spend", "vs plan"]}
+            rows={rows.map((r) => [monthLabel(r.month), nf(r.days), m(r.planRev), m(r.actRev), v(r.planRev, r.actRev), m(r.planSpend), m(r.actSpend), v(r.planSpend, r.actSpend)])}
+          />
+          <p className="sub">Plan is the funnelâ€™s monthly numbers scaled to the days you entered, the same as the Actuals tab. Ad spend over plan shows red.</p>
+        </>
+      )}
+    </section>
+  );
+}
 
-KŠHOˆ
-Kœİ]\ÈOOH™Û™HˆÈHˆ
-HH
-‹œİ]\ÈOOH™Û™HˆÈHˆ
-JBˆ›X\
+function Monthly({ data, R }: SP) {
+  const { m, ms } = useMoney();
+  const rows = data.forecast.rows;
+  const ch = (a: number, b: number | undefined) => (b == null || !b ? "â€“" : signed((a - b) / Math.abs(b), pct));
+  return (
+    <>
+      <ActualVsPlan R={R} />
+      <TimeChart
+        title="Revenue and profit per month"
+        data={rows}
+        series={[
+          { key: "revenue", name: "Revenue", color: "var(--chart-1)" },
+          { key: "profit", name: "Profit", color: "var(--chart-3)", dashed: true },
+        ]}
+        fmt={ms}
+        zero
+      />
+      <Table
+        caption="Month-to-month"
+        head={["Month", "Traffic", "Customers", "Revenue", "Change", "Costs", "Profit", "Change", "Cumulative"]}
+        rows={rows.map((r, i) => [
+          r.month,
+          nf(r.traffic),
+          nf(r.newCustomers, 1),
+          m(r.revenue),
+          ch(r.revenue, rows[i - 1]?.revenue),
+          m(r.costs),
+          <span key="p" className={cls(r.profit)}>{m(r.profit)}</span>,
+          ch(r.profit, rows[i - 1]?.profit),
+          <span key="c" className={cls(r.cumulative)}>{m(r.cumulative)}</span>,
+        ])}
+      />
+    </>
+  );
+}
 
-
-HOˆÂˆ›˜[YKˆ›X™[ˆ›ÈÚ\™YÈ
-ˆÕTÔÕUTÑTË™š[™
+/* ---------------- reinvestment ---------------- */
+function Reinvest({ data }: SP) {
+  const { m, ms } = useMoney();
+  const ro = useEditor((x) => x.readOnly);
+  const rv = data.reinvest;
+  const set = (patch: Partial<FunnelSettings["reinvest"]>) => setSettings({ reinvest: { pct: rv.pct, months: rv.months, ...patch } });
+  const rows = rv.rows.map((r, i) => ({ ...r, plainProfit: rv.plain[i]?.cumulative ?? 0 }));
+  return (
+    <>
+      <p className="sub">Put part of each monthâ€™s profit back into ads the next month, at todayâ€™s cost per paid visitor, and see how traffic, revenue and profit grow.</p>
+      <fieldset disabled={ro} className="fm-rcontrols">
+        <label>
+          Reinvest (% of profit)
+          <NumInput value={rv.pct} min={0} max={100} onChange={(v) => set({ pct: Math.max(0, Math.min(100, v)) })} />
+        </label>
+        <label>
+          Months
+          <NumInput value={rv.months} min={1} max={60} step={1} onChange={(v) => set({ months: Math.max(1, Math.min(60, Math.round(v) || 1)) })} />
+        </label>
+      </fieldset>
+      {!rv.hasPaid ? (
+        <Empty text="Reinvestment buys more paid traffic. Add a paid traffic source (with spend) to use it." />
+      ) : !rv.pct ? (
+        <div className="fm-rempty">
+          <b>Pick how much profit to reinvest</b>
+          <p>Each month, that share of last monthâ€™s profit buys extra paid traffic at todayâ€™s cost per visitor. Growth compounds, so start small.</p>
+          {!ro && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[25, 50, 75].map((v) => (
+                <button key={v} type="button" className="btn sm" onClick={() => set({ pct: v })}>
+                  Reinvest {v}%
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <Kpis
+            items={[
+              [`Reinvested over ${rv.months} months`, ms(rv.total.reinvested)],
+              ["Traffic", nf(rv.total.traffic), `${signed(rv.total.traffic - rv.plainTotal.traffic, (v) => nf(v))} vs no reinvestment`],
+              ["Revenue", ms(rv.total.revenue), `${signed(rv.total.revenue - rv.plainTotal.revenue, ms)} vs no reinvestment`],
+              ["Profit (after reinvesting)", <span key="p" className={cls(rv.total.profit)}>{ms(rv.total.profit)}</span>, `${signed(rv.total.profit - rv.plainTotal.profit, ms)} vs no reinvestment`],
+            ]}
+          />
+          <div className="fm-rgrid">
+            <TimeChart
+              title="Cumulative profit"
+              data={rows}
+              series={[
+                { key: "cumulative", name: `Reinvesting ${nf(rv.pct)}%`, color: "var(--chart-1)" },
+                { key: "plainProfit", name: "No reinvestment", color: "var(--chart-2)", dashed: true },
+              ]}
+              fmt={ms}
+              zero
+            />
+            <TimeChart title="Traffic per month" data={rows} series={[{ key: "traffic", name: "Visitors", color: "var(--chart-3)" }]} fmt={(v) => nf(v)} />
+          </div>
+          <Table
+            caption="Traffic reinvestment by month"
+            head={["Month", "Ad budget", "Of which reinvested", "Traffic", "Revenue", "Profit", "Cumulative profit"]}
+            rows={rv.rows.map((r) => [r.month, m(r.adSpend), r.reinvested ? m(r.reinvested) : "â€“", nf(r.traffic), m(r.revenue), <span key="p" className={cls(r.profit)}>{m(r.profit)}</span>, <span key="c" className={cls(r.cumulative)}>{m(r.cumulative)}</span>])}
+            foot={[`Year-end (${rv.months} mo)`, m(rv.rows.reduce((a, r) => a + r.adSpend, 0)), m(rv.total.reinvested), nf(rv.total.traffic), m(rv.total.revenue), m(rv.total.profit), ""]}
+          />
+        </>
+      )}
+    </>
+  );
+}
 
-Ú×JHOˆÈOOHœİ]\ÊOË–ÌWBˆ
-Hˆ
-ˆÙ[XİÙ^OHœÈˆÛ\ÜÓ˜[YOHš[œ]›K\œÙ[ˆ\šXK[X™[^Øİ]\ÈÙˆ	Ş›˜[Y_XH˜[YO^Şœİ]\ßHÛÚ[™ÙO^ÊJHOˆ\]S›ÙJšYÈİ]\ÎˆK\™Ù]˜[YH\Èİ\İ]\ÈJ_O‚ˆÔÕTÔÕUTÑTË›X\
+/* ---------------- published status ---------------- */
+function Status() {
+  const nodes = useEditor((x) => x.nodes);
+  const ro = useEditor((x) => x.readOnly);
+  const shared = useEditor((x) => x.shared);
+  const st = useMemo(() => statusReport(nodes), [nodes]);
+  if (!st.total) return <Empty text="No funnel steps yet." />;
+  return (
+    <>
+      <Kpis
+        items={[
+          ["Complete", pct(st.pct), `${st.done} of ${st.total} steps live`],
+          ["In progress", nf(st.building)],
+          ["Planned", nf(st.planned)],
+          ["Remaining", nf(st.total - st.done)],
+        ]}
+      />
+      <div className="fm-rprog lg" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(st.pct * 100)} aria-label="Steps live">
+        <span style={{ width: `${st.pct * 100}%` }} />
+      </div>
+      <Table
+        caption="Step status"
+        right={false}
+        head={["Step", "Type", "Status"]}
+        rows={[...st.steps]
+          .sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0))
+          .map((x) => [
+            x.name,
+            x.label,
+            ro || shared ? (
+              STEP_STATUSES.find(([k]) => k === x.status)?.[1]
+            ) : (
+              <select key="s" className="input fm-rsel" aria-label={`Status of ${x.name}`} value={x.status} onChange={(e) => updateNode(x.id, { status: e.target.value as StepStatus })}>
+                {STEP_STATUSES.map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            ),
+          ])}
+      />
+      <p className="sub">Set a stepâ€™s status here or in its Details panel on the map.</p>
+    </>
+  );
+}
 
-ÚËJHOˆ
-ˆÜ[ÛˆÙ^O^ÚßH˜[YO^ÚßO‚ˆÛBˆÛÜ[Û‚ˆ
-J_BˆÜÙ[Xİ‚ˆ
-KˆJ_BˆÏ‚ˆÛ\ÜÓ˜[YOHœİXˆ”Ù]Hİ\8 &\Èİ]\È\™HÜˆ[ˆ]È]Z[È[™[ÛˆHX\Ü‚ˆÏ‚ˆ
-NÂŸB‚™[˜İ[Ûˆ[\JÈ^NˆÈ^ˆİš[™ÈJHÂˆ™]\›ˆ
-ˆ]ˆÛ\ÜÓ˜[YOH™›K\™[\H‚ˆİ^OÜ‚ˆÙ]‚ˆ
-NÂŸB
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="fm-rempty">
+      <p>{text}</p>
+    </div>
+  );
+}

@@ -200,8 +200,14 @@ describe("wrapText", () => {
 });
 
 describe("V1 completion: report data, CSV and map export additions", () => {
+  it("exports dated actuals with original period boundaries and escaped step names", async () => {
+    const { actualsCsv } = await import("@/lib/export");
+    const csv = actualsCsv([{ period_start: "2026-09-01", period_end: "2026-09-30", node_id: "page", visitors: 120, conversions: 30, revenue: 600, spend: 80 }], { page: 'Page, "A"' });
+    expect(csv).toContain('"Period start","Period end","Step","Visitors","Conversions","Revenue","Spend"');
+    expect(csv).toContain('"2026-09-01","2026-09-30","Page, ""A""","120","30","600","80"');
+  });
   it("overview, leaks, reinvestment, goals and status come from the engine", async () => {
-    const { graph, settings } = golden({ goals: [{ id: "g1", name: "Dream profit", kind: "profit", value: 20000 }, { id: "g2", name: "Trial rate", kind: "conversion", value: 25, nodeId: "quiz-tl" }], reinvest: { pct: 40, months: 6 } });
+    const { graph, settings } = golden({ goals: [{ id: "g1", name: "Dream profit", kind: "profit", value: 20000, period: "month" }, { id: "g2", name: "Trial rate", kind: "conversion", value: 25, period: "month", nodeId: "quiz-tl" }], reinvest: { pct: 40, months: 6 } });
     const R = compute(graph, settings);
     const D = reportData(graph, settings, R);
     expect(D.overview.year.revenue).toBeCloseTo(R.rev * 12, 6);

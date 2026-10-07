@@ -22,4 +22,5 @@ jobs:
       - name: Verify public Preview routes
         env:
           PREVIEW_URL: ${{ github.event.deployment_status.environment_url }}
+          EXPECTED_SHA: ${{ github.event.deployment.sha }}
         run: node scripts/deploy/preview-smoke.mjs

@@ -29,6 +29,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: File integrity
+        run: npm run check:files
       - name: Lint
         run: npm run lint
       - name: Unit tests

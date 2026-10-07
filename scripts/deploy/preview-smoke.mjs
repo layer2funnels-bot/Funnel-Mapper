@@ -46,3 +46,14 @@ if (!shareBody.toLowerCase().includes("isn’t available")) {
   throw new Error("Missing share-token page did not show its expected unavailable state.");
 }
 console.log("PASS missing share link shows its unavailable state");
+
+const version = await request("/api/version");
+if (version.status !== 200) {
+  throw new Error(`/api/version returned HTTP ${version.status}; expected 200.`);
+}
+const { commit } = await version.json();
+const expected = process.env.EXPECTED_SHA;
+if (expected && commit !== expected) {
+  throw new Error(`Deployment serves commit ${commit ?? "unknown"}, expected ${expected}.`);
+}
+console.log(`PASS /api/version reports commit ${commit ?? "unknown"}`);

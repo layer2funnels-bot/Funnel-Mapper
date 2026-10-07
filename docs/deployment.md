@@ -57,6 +57,39 @@ PW_CHROMIUM_PATH=/opt/pw-browsers/chromium npm run live-check
 - **Free-plan note:** Supabase pauses free projects after a week without activity. `npm run deploy` restores a paused project;
   the Pro plan avoids pausing and adds daily backups.
 
+## Agent deployment workflow (Codex and Claude Code)
+
+Vercel project `funnel-mapper-demo` is Git-connected: **every push builds automatically**. A push to `main` deploys to
+Production (both `funnel-mapper-demo.vercel.app` and `mapper.layer2funnels.com`); a push to any other branch builds a Preview.
+Previews use the Demo Supabase project (same data as Production). Nobody needs to run a deploy command for ordinary changes.
+
+1. **Work on a branch** (never commit straight to `main`). Do not re-upload files through the GitHub API one at a time
+   from tools that may re-encode them; push with git so files stay byte-identical.
+2. **Check locally**, in this order: `npm run check:files`, `npm run lint`, `npm test`, `npm run build`, `npm run typecheck`
+   (typecheck needs the build first because Next generates the route types). GitHub's **Branch CI** runs the same list.
+3. **Push the branch.** Vercel builds a Preview. The **Vercel Preview smoke check** workflow then requests `/login`,
+   `/clients` (must redirect to login), a missing share link, and `/api/version`, which must report the exact commit that was pushed.
+4. **Verify the Preview** (GitHub shows the Vercel status on the PR; `https://<preview-url>/api/version` shows the commit).
+   Fix and push again if anything is red. Failed builds: open the Vercel status link on the commit, or run
+   `npx vercel inspect <deployment-id> --logs` with an authorised token.
+5. **Merge to `main`** only when CI and the Preview are green and the owner has approved a Production change. Vercel deploys
+   Production; confirm with `https://funnel-mapper-demo.vercel.app/api/version` (the `commit` must equal the merged commit) and `/login`.
+6. **Database migrations are separate** and never run by a push. Check the target project's migration history first (see below).
+
+`/api/version` is public and returns only `commit`, `branch` and `environment`.
+
+Reading deployment results without Vercel access: `GET /repos/<owner>/<repo>/commits/<sha>/statuses` on the GitHub API shows the
+`Vercel` status (`success` or `failure`) for each commit, with a link to the deployment.
+
+### Incident record: failed Production builds on 7 Oct 2026
+
+Two merges to `main` (`2cc505e` at 11:55 UTC and `acfff14` at 12:00 UTC) failed on Vercel within seconds. Cause: commit `82f5996`
+(and later Phase 2 commits) stored `lib/export.ts`, `components/editor/reports-view.tsx` and `components/editor/editor.css` with
+corrupted leading bytes (not valid UTF-8; ESLint reported "File appears to be binary"), so Next.js could not parse them.
+Later commits on the same Codex branch re-uploaded clean copies, and the merge `6be54f7` (identical tree to the passing Preview)
+deployed successfully at 12:06 UTC. Those re-uploads also converted 16 files to CRLF line endings; they are normalised back to LF
+and `.gitattributes` now enforces LF. `npm run check:files` (run in CI) fails on NUL bytes, invalid UTF-8 and CRLF so this cannot reach `main` silently.
+
 ## Demo / Production target warning
 
 The deployment script is a production deployment workflow, not a Demo-only migration command. It selects projects by `.deploy/state.json` and `PROJECT_NAME` (default `funnel-mapper-pro`); if it cannot find a project, it creates one. It sets environment variables for both Production and Preview and runs a Vercel `--prod` deployment. `MIGRATIONS_BASELINE` only affects migration-history matching; it does not select a database or Vercel project. Do not use `npm run deploy` as a Demo-only operation without first verifying the state file, project refs, Vercel project, and resulting domains.

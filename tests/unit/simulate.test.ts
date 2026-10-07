@@ -106,3 +106,47 @@ describe("simulate: what the user changed", () => {
     expect(knobsOf({ ...src, p: { ...src.p, model: "cpc" } }).map((k) => k.key)).toEqual(["clicks", "cpc"]);
   });
 });
+
+import { dotSeconds, flowDots, lostDots } from "@/lib/simulate";
+
+describe("simulate: people-flow animation parameters", () => {
+  it("dots follow the engine's flows: none without people, more on busier lines, capped", () => {
+    expect(flowDots(0, 100)).toBe(0);
+    expect(flowDots(10, 0)).toBe(0);
+    expect(flowDots(NaN, 100)).toBe(0);
+    expect(flowDots(1, 10000)).toBeGreaterThanOrEqual(1);
+    const a = flowDots(100, 2500),
+      b = flowDots(1000, 2500),
+      c = flowDots(2500, 2500);
+    expect(a).toBeLessThan(b);
+    expect(b).toBeLessThan(c);
+    expect(c).toBe(8);
+    expect(flowDots(5000, 2500)).toBe(8);
+    expect(flowDots(2500, 2500, true)).toBe(3); // a crowded map keeps it light
+  });
+
+  it("is deterministic and the busiest golden connection carries the most dots", () => {
+    const R = base;
+    const flows = Object.values(R.flows);
+    const max = Math.max(...flows);
+    const dots = flows.map((f) => flowDots(f, max));
+    expect(dots).toEqual(flows.map((f) => flowDots(f, max)));
+    expect(Math.max(...dots)).toBe(8);
+    expect(dots[flows.indexOf(max)]).toBe(8);
+    expect(Math.min(...dots)).toBeGreaterThanOrEqual(1);
+  });
+
+  it("dots take longer on longer lines, within sane bounds", () => {
+    expect(dotSeconds(10)).toBe(0.9);
+    expect(dotSeconds(300)).toBeLessThan(dotSeconds(600));
+    expect(dotSeconds(100000)).toBe(6);
+  });
+
+  it("lost-people dots grow with the share lost", () => {
+    expect(lostDots(0, 100)).toBe(0);
+    expect(lostDots(10, 100)).toBe(1);
+    expect(lostDots(50, 100)).toBe(2);
+    expect(lostDots(90, 100)).toBe(3);
+    expect(lostDots(5, 0)).toBe(0);
+  });
+});

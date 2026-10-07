@@ -5,6 +5,13 @@ Phase 1 audit against `docs/MASTER_HANDOFF.md`, verified on the repository at `0
 client pricing model and Tidy Up annotations are done. See "Batch 1" below; the tables reflect the new state.
 Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short of the handoff · **FAIL** missing or broken · **UNKNOWN** not verifiable here.
 
+## Deployment status (7 Oct 2026)
+
+- Production (`main` at `6be54f7`, Phase 2 reporting) deployed successfully on Vercel and serves `/login` on `funnel-mapper-demo.vercel.app` and `mapper.layer2funnels.com`.
+- Earlier failures (`2cc505e`, `acfff14`) were corrupted files in Codex's Phase 2 commits, not a Vercel setting. Details and the agent workflow are in `docs/deployment.md`.
+- Added: `npm run check:files` (CI), public `/api/version` (checked by the Preview smoke test), LF line endings via `.gitattributes`.
+- Not changed: Vercel settings, domains, Supabase projects, migrations. `workspace_assets` is still unapplied on Demo per the 7 Oct inspection; verify before any migration.
+
 ## A. Executive summary
 
 **Final V1 completion (3 Oct 2026, branch `claude/funnel-mapper-v1-completion-5r8743`).** Every in-scope V1 requirement of

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:files": "node scripts/check-files.mjs",
     "gen:sql": "tsx scripts/gen-sql.ts",
     "gen:fixtures": "node scripts/gen-prototype-fixtures.mjs",
     "test": "vitest run",

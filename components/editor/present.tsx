@@ -86,7 +86,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(at.current + (dx < 0 ? 1 : -1));
       }}
     >
-      <nav className="fp-progress" aria-label="Presentation stages">
+      <div className="fp-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={Math.max(0, Math.min(total, i + 1))} aria-label="Presentation progress">
         <ol>
           {stages.map((s, k) => (
             <li key={s.key}>
@@ -97,10 +97,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
             </li>
           ))}
         </ol>
-        <span className="sr-only" role="status" aria-live="polite">
-          {i < 0 ? "Overview" : `Stage ${Math.min(total, i + 1)} of ${total}: ${st?.name ?? ""}`}
-        </span>
-      </nav>
+      </div>
       {st ? (
         <>
           <div className="fp-kicker">

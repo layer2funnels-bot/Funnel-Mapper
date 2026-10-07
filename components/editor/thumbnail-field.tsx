@@ -12,7 +12,7 @@ import { showToast, updateNode, useEditor } from "@/lib/editor/store";
 import { WireframeStrip } from "./block-visual";
 import { TextField } from "./fields";
 
-type Phase = "idle" | "loading" | "error" | "unavailable";
+type Phase = "idle" | "loading" | "error";
 
 export function ThumbnailField({ n }: { n: FunnelNode }) {
   const ro = useEditor((s) => s.readOnly);
@@ -30,14 +30,7 @@ export function ThumbnailField({ n }: { n: FunnelNode }) {
     setMsg("");
     try {
       const r = await fetch("/api/capture", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nodeId: n.id }) });
-      const j = (await r.json().catch(() => ({}))) as { path?: string; message?: string; error?: string };
-      if (r.status === 503 || j.error === "unavailable") {
-        // no capture service is configured on this deployment (CAPTURE_URL_TEMPLATE): uploading is the way to add a preview
-        setPhase("unavailable");
-        setMsg(j.message ?? "Automatic capture isn’t set up here.");
-        setMore(true);
-        return;
-      }
+      const j = (await r.json().catch(() => ({}))) as { path?: string; message?: string };
       if (!r.ok || !j.path) {
         setPhase("error");
         setMsg(j.message ?? "The page couldn’t be captured.");
@@ -71,7 +64,7 @@ export function ThumbnailField({ n }: { n: FunnelNode }) {
       )}
       {!ro && (
         <div className="tn-actions">
-          {!n.shot && phase !== "error" && phase !== "unavailable" && (
+          {!n.shot && phase !== "error" && (
             <button type="button" className="btn sm" disabled={!check?.ok || phase === "loading"} onClick={capture}>
               {phase === "loading" ? "Capturing…" : "Capture preview"}
             </button>
@@ -97,18 +90,13 @@ export function ThumbnailField({ n }: { n: FunnelNode }) {
             </>
           )}
           <button type="button" className="btn sm ghost" aria-expanded={more} onClick={() => setMore((v) => !v)}>
-            {n.shot ? "Upload a different screenshot" : "Upload instead"}
+            Upload instead
           </button>
         </div>
       )}
       {phase === "error" && (
         <p className="help" role="alert">
           {msg} The wireframe stays until a preview is saved.
-        </p>
-      )}
-      {phase === "unavailable" && (
-        <p className="help" role="status">
-          {msg} Upload a screenshot instead; an admin can switch capture on by setting <code>CAPTURE_URL_TEMPLATE</code> on the server.
         </p>
       )}
       {!n.shot && !url && phase === "idle" && <p className="help">Optional. Until a preview is saved, the card shows a wireframe for this page type. Previews never change the numbers.</p>}

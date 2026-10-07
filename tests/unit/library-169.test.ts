@@ -80,14 +80,3 @@ describe("the 169-block library, verified programmatically", () => {
     });
   });
 });
-
-describe("Quick Add shows every block", () => {
-  it("each of the 169 is among the first results (Quick Add lists 12, 20 on a phone) when its own name is typed", () => {
-    const misses: string[] = [];
-    for (const i of ITEMS) {
-      const top = searchLibrary(i.label).slice(0, 12).map((x) => x.key);
-      if (!top.includes(i.key)) misses.push(`${i.key} (${i.label})`);
-    }
-    expect(misses).toEqual([]);
-  });
-});

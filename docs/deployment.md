@@ -76,9 +76,6 @@ Pending V1-completion migrations (apply in order, together with the code that ne
 | `20261010000000_share_notes.sql` | Funnel notes stay off share links unless shared on purpose | Functions replaced in place; compatible with older code. |
 | `20261011000000_roles.sql` | Owner / Admin / Editor / Viewer on `workspace_members` | Replaces the role check constraint (`DROP CONSTRAINT`): apply with `npm run deploy`, the Supabase CLI or the SQL editor, not the dashboard connector. Renames `member` → `editor`, so deploy the code at the same time (older code still writes `member`). |
 | `20261012000000_client_archive.sql` | `clients.archived_at` | Additive. |
-| `20261013000000_workspace_assets.sql` | `workspace_assets` table (saved style presets and workspace blocks), RLS by workspace | Additive: a new table. Older code ignores it; the new code reads it when the editor opens, and shows "Couldn't load the saved blocks" with a retry if the table is missing. Apply with `npm run deploy` or the CLI. |
-
-None of these were applied to the demo or production databases by the engineering work: apply them as described below, then run `npm run live-check`.
 
 Production additionally still needs everything from `20261003000000_team_workspace.sql` onwards (it has 3 of 12).
 
@@ -88,13 +85,6 @@ teammate's role, which briefly fails until the new code is live).
 - Production: run `npm run deploy` from the merged code. It applies the migrations, then deploys. Then run `npm run live-check`.
 - Demo: Vercel deploys `main` automatically, so apply the migrations (`MIGRATIONS_BASELINE=20261009000000 npm run deploy`,
   or the CLI) right before merging.
-
-## Page thumbnails (optional environment setting)
-
-"Capture preview" on a Page block needs a screenshot service. Set `CAPTURE_URL_TEMPLATE` (server-only, see `.env.example`) on
-Vercel, for example `https://screenshots.example.com/v1/shot?key=SECRET&width=1280&url={url}`; it must answer with an image.
-Redeploy after adding it. Until it is set, the editor tells people automatic capture is not set up and goes straight to
-"Upload instead", so nothing is blocked. The end-to-end tests run against a local stand-in (`tests/e2e/capture-stub.mjs`).
 
 ## Doing it by hand instead
 

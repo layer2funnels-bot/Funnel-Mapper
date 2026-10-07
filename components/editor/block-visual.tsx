@@ -2,7 +2,6 @@
 // Shared renderers for the block visual system (lib/block-visuals.ts). Used by the canvas card (nodes.tsx),
 // the library tiles (palette.tsx) and Quick Add, so one block reads the same everywhere.
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { Icon } from "@/components/icon";
 import { useSignedUrl } from "@/components/signed-image";
 import { CATCOLOR, typeOf } from "@/lib/catalog";
@@ -36,39 +35,16 @@ export function PageShot({ path }: { path: string }) {
   return <img className="fm-shot" src={src} alt="" draggable={false} onError={() => setBad(true)} />;
 }
 
-/** Bigger look at a captured page while the pointer rests on its strip (fixed to the screen, so zoom and clipping do not shrink it). */
-function ShotPeek({ path, anchor }: { path: string; anchor: DOMRect }) {
-  const W = 320,
-    H = 200;
-  const left = Math.max(8, Math.min(window.innerWidth - W - 8, anchor.left + anchor.width / 2 - W / 2));
-  const above = anchor.top - H - 10 >= 8;
-  const top = above ? anchor.top - H - 10 : Math.min(window.innerHeight - H - 8, anchor.bottom + 10);
-  return createPortal(
-    <div className="fm-peek" style={{ left, top, width: W, height: H }} aria-hidden="true">
-      <PageShot path={path} />
-    </div>,
-    document.body,
-  );
-}
-
-/** Semantic page wireframe (preview strip). A saved capture replaces it; the wireframe stays whenever there is none (or it fails to load). */
+/** Semantic page wireframe (preview strip). Replaced by a real screenshot in a later phase, never by a generic placeholder. */
 export function WireframeStrip({ kind, accent, shot }: { kind: Wireframe; accent: string; shot?: string }) {
-  const [peek, setPeek] = useState<DOMRect | null>(null);
   return (
-    <div
-      className={`fm-wf${shot ? " has-shot" : ""}`}
-      style={{ ["--wfa" as string]: accent }}
-      aria-hidden="true"
-      onPointerEnter={shot ? (e) => e.pointerType === "mouse" && setPeek(e.currentTarget.getBoundingClientRect()) : undefined}
-      onPointerLeave={shot ? () => setPeek(null) : undefined}
-    >
+    <div className="fm-wf" style={{ ["--wfa" as string]: accent }} aria-hidden="true">
       {shot && <PageShot path={shot} />}
       <svg viewBox={`0 0 ${WF_SIZE.w} ${WF_SIZE.h}`} preserveAspectRatio="xMidYMid meet" strokeWidth={1}>
         {WIREFRAMES[kind].map((s, i) => (
           <Shape key={i} s={s} />
         ))}
       </svg>
-      {shot && peek && <ShotPeek path={shot} anchor={peek} />}
     </div>
   );
 }

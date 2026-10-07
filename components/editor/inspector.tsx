@@ -356,7 +356,7 @@ function PeriodForecast({ n }: { n: FunnelNode }) {
   return (
     <div className="mb-3">
       <h4>Forecast for this step</h4>
-      <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
+      <div className="fm-tblwrap">
         <table className="tbl">
           <caption className="sr-only">Forecast for {n.name}</caption>
           <thead>

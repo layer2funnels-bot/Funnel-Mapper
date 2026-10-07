@@ -90,7 +90,7 @@ export function DeleteClient({ id, name, funnels }: { id: string; name: string; 
 
 type FunnelItem = { id: string; name: string; description: string; status: string; summary: unknown; settings: unknown; graph: unknown; thumbnail_url: string | null; updated_at: string };
 
-export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, total = funnels.length, allHref }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean; hidden?: number; total?: number; allHref?: string }) {
+export function FunnelList({ funnels, currency, canEdit = true }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean }) {
   const [showArchived, setShowArchived] = useState(false);
   const archived = funnels.filter((f) => f.status === "archived").length;
   const list = funnels.filter((f) => showArchived || f.status !== "archived");
@@ -102,14 +102,6 @@ export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, tota
           <FunnelCard key={f.id} f={f} canEdit={canEdit} currency={(f.settings as { currency?: string })?.currency ?? currency} />
         ))}
       </ul>
-      {hidden > 0 && allHref && (
-        <p className="mt-4 text-sm text-muted">
-          Showing the {funnels.length} most recently updated of {total} funnels.{" "}
-          <Link href={allHref} className="font-semibold text-brand hover:underline">
-            Show all {total}
-          </Link>
-        </p>
-      )}
       {archived > 0 && (
         <button type="button" className="btn ghost mt-3" onClick={() => setShowArchived((s) => !s)}>
           <Icon name="archive" /> {showArchived ? "Hide" : "Show"} {archived} archived

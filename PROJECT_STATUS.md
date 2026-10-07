@@ -348,7 +348,7 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 
 ## V2 final completion pass (checkpoint)
 
-See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, unit 209/209, E2E 151/151, typecheck / lint / build clean. Final QA pass: see "Final Phase 1 QA and completion pass" in the same file. Owner actions still open: apply pending migrations (docs/deployment.md), set CAPTURE_URL_TEMPLATE for automatic thumbnails; final Figma 169 visuals not available.
+See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, unit 204/204, E2E 112/112, typecheck / lint / build clean.
 New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
 
 ## I. Recommended order (history)

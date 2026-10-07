@@ -27,27 +27,14 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const tab = String(Array.isArray(sp.tab) ? sp.tab[0] : (sp.tab ?? "funnels"));
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { sb, isTeam, canEdit } = await requireUser();
-  const [{ data: client }, { data: funnelRows }, { data: allClients }, tpls, { data: products }] = await Promise.all([
+  const [{ data: client }, { data: funnels }, { data: allClients }, tpls, { data: products }] = await Promise.all([
     sb.from("clients").select("*").eq("id", id).maybeSingle(),
-    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
+    sb.from("funnels").select("id, name, description, status, summary, settings, graph, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
     sb.from("clients").select("id, name, niche").order("name"),
     templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
     sb.from("products").select("*").or(`client_id.eq.${id},client_id.is.null`).order("name"),
   ]);
   if (!client) notFound();
-  // A client can have hundreds of funnels. Each card draws its whole map, so the page shows the most recently updated ones and loads
-  // the maps (the heavy part) only for those, unless asked for all of them.
-  const PAGE = 24;
-  const showAll = String(Array.isArray(sp.all) ? sp.all[0] : (sp.all ?? "")) === "1";
-  const rows = funnelRows ?? [];
-  const live = rows.filter((f) => f.status !== "archived"),
-    archivedRows = rows.filter((f) => f.status === "archived");
-  const picked = showAll ? rows : [...live.slice(0, PAGE), ...archivedRows.slice(0, PAGE)];
-  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
-  const { data: graphRows } = picked.length ? await graphQ : { data: [] as { id: string; graph: unknown }[] };
-  const graphs = new Map((graphRows ?? []).map((g) => [g.id, g.graph]));
-  const funnels = picked.map((f) => ({ ...f, graph: graphs.get(f.id) ?? null }));
-  const hiddenFunnels = showAll ? 0 : Math.max(0, live.length - PAGE) + Math.max(0, archivedRows.length - PAGE);
   const update = updateClientAction.bind(null, client.id);
   const niches = [...new Set((allClients ?? []).map((c) => c.niche).filter(Boolean))];
   return (
@@ -104,13 +91,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
           {
             key: "funnels",
             label: "Funnels",
-            count: rows.length,
+            count: funnels?.length ?? 0,
             content: (
               <section aria-labelledby="funnels-h">
                 <h2 id="funnels-h" className="sr-only">
                   Funnels
                 </h2>
-                <FunnelList funnels={funnels} currency={client.currency} canEdit={canEdit} hidden={hiddenFunnels} total={rows.length} allHref={`/clients/${client.id}?tab=funnels&all=1`} />
+                <FunnelList funnels={funnels ?? []} currency={client.currency} canEdit={canEdit} />
               </section>
             ),
           },
@@ -150,7 +137,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                     <ClientForm action={update} client={client} niches={niches} submitLabel="Save details" />
                   </section>
                 </div>
-                {canEdit && <DeleteClient id={client.id} name={client.name} funnels={rows.length} />}
+                {canEdit && <DeleteClient id={client.id} name={client.name} funnels={funnels?.length ?? 0} />}
               </fieldset>
             ),
           },

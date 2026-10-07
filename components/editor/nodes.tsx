@@ -5,13 +5,12 @@ import { Icon } from "@/components/icon";
 import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
 import { brandMarkOf } from "@/lib/brand-marks";
-import { lostDots, stepDelta } from "@/lib/simulate";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { stepDelta } from "@/lib/simulate";
 import { SimChip } from "./simulate";
 import { BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
-import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor } from "@/lib/editor/store";
+import { checklistOf, moveNodes, setChecklist, startRename, updateNode, useEditor } from "@/lib/editor/store";
 import { frameTotals, nodeStats, perfLine, subLabel } from "@/lib/editor/labels";
 import { goalCurrent } from "@/lib/report-data";
 import { nf } from "@/lib/format";
@@ -113,7 +112,7 @@ function GoalBar({ n }: { n: FunnelNode }) {
 
 export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
-  const R = useEditor(shownR);
+  const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const leak = useEditor((s) => s.keyLeak === id && s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
@@ -126,10 +125,6 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const period = useEditor((s) => s.opts.period);
   const shared = useEditor((s) => s.shared);
   const simBase = useEditor((s) => s.simBase);
-  const simBefore = useEditor((s) => s.simBefore);
-  const playing = useEditor((s) => s.simPlay && !!s.simBase);
-  const altWired = useEditor((s) => s.edges.some((e) => e.from === id && e.port === "alt"));
-  const calm = useReducedMotion();
   if (!n) return null;
   const T = typeOf(n.type);
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
@@ -142,7 +137,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const pl = perf ? perfLine(n, R, cur, k) : null;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
-  const sd = simBase && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, simBase.R) : null;
+  const sd = simBase && perf && !spot && !outOfStage && !shared ? stepDelta(n, R, simBase.R) : null;
   const tone = sd?.changed ? (sd.dRev ? (sd.dRev > 0 ? "up" : "down") : sd.dOut ? (sd.dOut > 0 ? "up" : "down") : null) : null;
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
@@ -202,13 +197,6 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
         )}
       </div>
       {sd && <SimChip d={sd} k={k} cur={cur} source={T.cat === "traffic"} />}
-      {playing && !calm && perf && T.cat !== "traffic" && !altWired && !nodata && (
-        <span className="fm-lostfx" aria-hidden="true">
-          {Array.from({ length: lostDots(R.N[n.id]?.non ?? 0, R.N[n.id]?.inflow ?? 0) }, (_, j) => (
-            <i key={j} style={{ animationDelay: `${j * 0.45}s` }} />
-          ))}
-        </span>
-      )}
       {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
       {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
       {labels && (

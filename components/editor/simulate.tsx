@@ -24,9 +24,8 @@ import {
   stopSim,
   updateParams,
   useEditor,
-  keyLeakOf, setSimBefore, setSimPlay,
+  keyLeakOf,
 } from "@/lib/editor/store";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useFocusBlock } from "./focus";
 import { NumInput } from "./fields";
 
@@ -194,9 +193,6 @@ export function SimulatePanel() {
   const cur = settings.currency;
   const focus = useFocusBlock();
   const [name, setName] = useState("");
-  const playing = useEditor((x) => x.simPlay);
-  const before = useEditor((x) => x.simBefore);
-  const calm = useReducedMotion();
   const w = settings.whatif;
   const setLever = (k: keyof typeof w) => (v: number) =>
     setSettings({ whatif: { ...w, [k]: v } });
@@ -302,24 +298,6 @@ export function SimulatePanel() {
               </div>
             ))}
         </div>
-        <div className="fm-sim-view">
-          <div className="seg" role="group" aria-label="Show the map">
-            <button type="button" aria-pressed={!before} onClick={() => setSimBefore(false)}>
-              After
-            </button>
-            <button type="button" aria-pressed={before} onClick={() => setSimBefore(true)} title="See the whole map as it was when you started">
-              Before
-            </button>
-          </div>
-          <button type="button" className={`btn sm fm-playbtn${playing ? " on" : ""}`} aria-pressed={playing} disabled={calm} onClick={() => setSimPlay(!playing)} title={calm ? "Your device asks for less motion, so the flow animation is off" : "Watch people move through the funnel"}>
-            <Icon name={playing ? "pause" : "play"} size={14} /> {playing ? "Pause flow" : "Play flow"}
-          </button>
-        </div>
-        <p className="sr-only" role="status" aria-live="polite">
-          {before ? "Showing the map before your changes" : "Showing the map with your changes"}
-        </p>
-        {before && <p className="fm-sim-note">Showing the map as it was at {at}. Switch to After to see your changes.</p>}
-        {playing && !before && <p className="fm-sim-note">Each dot is a share of the people on that line, so busier lines carry more. Orange dots are people lost at a step.</p>}
       </div>
 
       <section aria-label="Result" className="fm-sim-sec fm-sim-result">

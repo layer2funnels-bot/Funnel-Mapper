@@ -196,7 +196,7 @@ export interface PdfInfo {
   /** Funnel settings: scenarios, forecast, expenses and target feed the report pages. */
   settings: ReportSettings;
   /** Map drawing options (measured sizes, line thickness). */
-  map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick" | "keyLeak" | "goals" | "widgetData">;
+  map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick" | "keyLeak" | "goals">;
   /** Entered actuals next to the plan by month (lib/report-data.ts monthlyPlanVsActual); the page is left out when empty. */
   actualVsPlan?: MonthlyActualRow[];
 }

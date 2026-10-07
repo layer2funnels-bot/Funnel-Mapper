@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio } from "@/lib/format";
 import { healthChecks } from "@/lib/health";
-import { setTab, clearSelection, shownR, useEditor } from "@/lib/editor/store";
+import { setTab, clearSelection, useEditor } from "@/lib/editor/store";
 import { totalsDelta } from "@/lib/simulate";
 import { DeltaChip } from "./simulate";
 
@@ -41,9 +41,7 @@ function Pop({ label, button, children, wide }: { label: string; button: (open: 
 /** Bottom strip (V2 D2): checks chip, the six headline numbers, "+N more", and the unit the numbers are in. Every figure is the engine's `R`. */
 export function KpiBar() {
   const band = useBand();
-  const R = useEditor(shownR);
-  const liveR = useEditor((s) => s.R);
-  const before = useEditor((s) => s.simBefore);
+  const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
   const basis = useEditor((s) => s.settings.basis);
   const nodes = useEditor((s) => s.nodes);
@@ -52,7 +50,7 @@ export function KpiBar() {
   const shared = useEditor((s) => s.shared);
   const focus = useFocusBlock();
   const simBase = useEditor((s) => s.simBase);
-  const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, t])) : null;
+  const sim = simBase ? Object.fromEntries(totalsDelta(R, simBase.R).map((t) => [t.key, t])) : null;
   // KPI label -> the simulate total it is compared with
   const SIMKEY: Record<string, "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa"> = { Traffic: "traffic", Leads: "leads", Customers: "cust", "Revenue (first pay)": "rev", "Revenue (lifetime)": "rev", Profit: "profit", ROAS: "roas", "Ad spend": "spend", CPA: "cpa" };
   const chip = (label: string) => (sim && SIMKEY[label] ? <DeltaChip t={sim[SIMKEY[label]]} cur={cur} compact /> : null);
@@ -94,7 +92,7 @@ export function KpiBar() {
   const rest = rule === "all" ? [] : all.filter(([k]) => !rule.includes(k));
   const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
-    <footer className={`fm-kpis${sim ? " sim" : ""}${before ? " before" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
+    <footer className={`fm-kpis${sim ? " sim" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
         <Pop
           label="Funnel checks"

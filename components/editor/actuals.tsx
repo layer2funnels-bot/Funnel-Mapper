@@ -154,7 +154,7 @@ export function Actuals() {
               Spend actual<b>{inRange.length ? money(tot.actSpend, cur) : "–"}</b>
             </div>
           </div>
-          <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap">
+          <div className="fm-tblwrap">
             <table className="tbl">
               <caption className="sr-only">Planned vs actual by step</caption>
               <thead>
@@ -201,7 +201,7 @@ export function Actuals() {
           Actuals: {fmtDate(range.start)} – {fmtDate(range.end)}
         </h3>
         <p className="sub mb-3 text-sm text-muted">Visitors = people arriving at the step (traffic sources: visits). Conversions = people who moved on or bought. Leave blanks for unknowns.</p>
-        <div tabIndex={0} role="region" aria-label="Table (scrolls sideways when it is wider than the screen)" className="fm-tblwrap max-h-[60vh] overflow-y-auto">
+        <div className="fm-tblwrap max-h-[60vh] overflow-y-auto">
           <table className="tbl">
             <thead>
               <tr>

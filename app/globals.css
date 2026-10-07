@@ -642,10 +642,6 @@ button {
   .fm-funnels .fm-c-status {
     display: none;
   }
-  .fm-funnels td:first-child a,
-  .fm-funnels td:first-child .fm-c-client2 {
-    max-width: 150px !important;
-  }
   /* icon + count only; the words stay available to screen readers */
   .fm-funnels .fm-hp-label {
     position: absolute;
@@ -756,70 +752,4 @@ button {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-}
-
-/* Touch targets: 40-44px on a tablet or phone (the spec's minimum). Small inline links keep their look and get a bigger hit area. */
-@media (max-width: 1023px) {
-  .btn {
-    min-height: 44px;
-  }
-  .btn.sm {
-    min-height: 40px;
-  }
-  .btn.icon {
-    min-width: 44px;
-  }
-  .fm-search {
-    height: 44px;
-  }
-  .fm-search input {
-    min-height: 40px;
-  }
-  .fm-brandlink {
-    min-height: 44px;
-  }
-  .fm-fname,
-  .fm-scen {
-    min-height: 40px;
-  }
-  .fm-scopehead .fm-back {
-    min-height: 40px;
-    display: inline-flex;
-    align-items: center;
-  }
-  .seg button,
-  .seg a {
-    min-height: 40px;
-  }
-  .fm-insp-tabs button,
-  .fm-groups [role="tab"],
-  [role="tablist"] > button {
-    min-height: 40px;
-  }
-  .fm-top .seg button,
-  .fm-modes button {
-    min-width: 44px;
-    min-height: 40px;
-  }
-  .fm-stagebar .btn,
-  .fm-stagebar .seg button {
-    min-height: 40px;
-  }
-  .fm-rkpis small .link,
-  .fm-funnels td a,
-  .fm-health-pill {
-    position: relative;
-  }
-  .fm-rkpis small .link::after,
-  .fm-funnels td a::after {
-    content: "";
-    position: absolute;
-    inset: -13px -8px;
-  }
-}
-
-/* the top search field shows focus as a ring like every other control */
-.fm-search:focus-within {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand-soft), 0 0 0 1px var(--brand);
 }

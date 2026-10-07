@@ -10,7 +10,7 @@ import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 import { goalCurrent } from "./report-data";
-import { formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
+import { formatMetricValue, widgetConfig, widgetMembers, widgetValues } from "./widget-data";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -125,11 +125,6 @@ export interface MapSvgOptions {
   goals?: Goal[];
   /** Page screenshots as data URLs, by node id (drawn instead of the semantic wireframe). */
   shots?: Record<string, string>;
-  /** Engine-backed extras for widgets (the 12-month series for Chart widgets, MRR detail); the editor passes them, nothing is calculated here. */
-  widgetData?: {
-    series: (metric: WidgetMetric, value: number) => number[];
-    mrr: (members: FunnelNode[] | null) => { month12: number; subscribers: number };
-  };
 }
 
 const DEFAULT_FONTS = { sans: "'DM Sans', Arial, sans-serif", display: "'Bricolage Grotesque', 'DM Sans', Arial, sans-serif" };
@@ -509,12 +504,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       const { members, invalid } = widgetMembers(cfg, g.nodes);
       const shown = (cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals);
       const rows = Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
-      // the same extras as the card on the canvas: MRR detail and, for the Chart display, the 12-month line
-      const mrrV = shown.find((v) => v.metric === "mrr");
-      const mrrLine = mrrV && cfg.size !== "S" && opts.widgetData ? opts.widgetData.mrr(members) : null;
-      const chartV = cfg.display === "chart" && cfg.size !== "S" ? shown.find((v) => ["revenue", "profit", "leads", "customers", "mrr"].includes(v.metric)) : undefined;
-      const series = chartV && opts.widgetData ? opts.widgetData.series(chartV.metric, chartV.value) : [];
-      const h = Math.max(dims.h, 30 + rows * 44 + (mrrLine ? 18 : 0) + (series.length > 1 ? 66 : 0));
+      const h = Math.max(dims.h, 30 + rows * 44);
       const w = dims.w;
       const scope = cfg.scope === "funnel" ? "WHOLE FUNNEL" : cfg.scope === "frame" ? (g.nodes.find((x) => x.id === cfg.frameId)?.name ?? "FRAME").toUpperCase() : `${members?.length ?? 0} SELECTED STEPS`;
       let o = box(n.x, n.y, w, h, s, { fill: P.panel, stroke: invalid ? P.alt : P.line, sw: 1, r: 12 });
@@ -528,19 +518,6 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
         o += `<text x="${n2(x)}" y="${n2(y + 10)}" font-size="11.5" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(v.label)}</text>`;
         o += `<text x="${n2(x)}" y="${n2(y + 32)}" font-size="${cfg.size === "L" ? 22 : 20}" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(formatMetricValue(v, opts.currency), cw, 20, 700, F.display, measure))}</text>`;
       });
-      const below = n.y + 28 + rows * 44;
-      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${nf(mrrLine.subscribers, 1)} subscribers`)}</text>`;
-      if (series.length > 1) {
-        const x0 = n.x + 12,
-          x1 = n.x + w - 12,
-          y1 = n.y + h - 10,
-          y0 = y1 - 48;
-        const lo = Math.min(0, ...series),
-          hi = Math.max(...series, lo + 1e-9);
-        const pts = series.map((v, i) => [x0 + (i / (series.length - 1)) * (x1 - x0), y1 - 3 - ((v - lo) / (hi - lo)) * (y1 - y0 - 6)] as const);
-        const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${n2(x)} ${n2(y)}`).join("");
-        o += `<path d="${d}L${n2(x1)} ${n2(y1)}L${n2(x0)} ${n2(y1)}Z" fill="${P.brand}" fill-opacity=".14"/><path d="${d}" fill="none" stroke="${P.brand}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-      }
       body += group(s, o);
       boxes.push([n.x, n.y, w, h]);
       return;

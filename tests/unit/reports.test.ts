@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { baseOf, BLOCK_TYPES, isShareLogic, libOf, portsFor, typeOf } from "@/lib/catalog";
 import { compute, goalPlan, leaks, offerVals, periodFactor, periodNumbers, project, withStepRate } from "@/lib/funnel-math";
+import { goalReport } from "@/lib/report-data";
 import { parseSettings, type FunnelNode } from "@/lib/graph";
 import { builtinTemplate } from "@/lib/templates";
 
@@ -83,6 +84,17 @@ describe("periods, goals and leaks come from compute()", () => {
     const step = goalPlan(graph, settings, { kind: "step", value: 108, nodeId: callId });
     expect(step.R!.N[callId].out).toBeCloseTo(108, 4);
     expect(goalPlan(graph, settings, { kind: "revenue", value: 0 }).reachable).toBe(false);
+  });
+  it("traffic goals and period-based targets resolve through the same monthly engine", () => {
+    const daily = goalReport(graph, settings, R, { id: "traffic", name: "Daily visitors", kind: "traffic", value: 200, period: "day" });
+    expect(daily.label).toBe("traffic per day");
+    expect(daily.current).toBeCloseTo(R.traffic * (12 / 365), 8);
+    expect(daily.plan?.reachable).toBe(true);
+    expect(daily.plan!.R!.traffic * (12 / 365)).toBeCloseTo(200, 6);
+
+    const annualRevenue = goalReport(graph, settings, R, { id: "revenue", name: "Annual revenue", kind: "revenue", value: 120000, period: "year" });
+    expect(annualRevenue.current).toBeCloseTo(R.rev * 12, 6);
+    expect((annualRevenue.plan?.R?.rev ?? 0) * 12).toBeCloseTo(120000, 2);
   });
   it("step-rate impact and the key leak", () => {
     const trial = graph.nodes.find((n) => n.name === "7-day free trial")!;

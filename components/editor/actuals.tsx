@@ -7,6 +7,8 @@ import { planVsActual, stepRows, type ActualRow } from "@/lib/funnel-math";
 import type { ActualRowDb } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { useEditor } from "@/lib/editor/store";
+import { actualsCsv, fileName } from "@/lib/export";
+import { download } from "./exporters";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 function lastMonth() {
@@ -59,6 +61,7 @@ export function Actuals() {
   }, [rows]);
 
   const inRange = rows.filter((r) => r.period_start >= range.start && r.period_end <= range.end);
+  const overlapping = rows.some((r) => r.period_start <= range.end && r.period_end >= range.start && (r.period_start < range.start || r.period_end > range.end));
   const scale = days(range.start, range.end) / DAYS_PER_PERIOD;
   const cmp = planVsActual({ nodes, edges }, R, inRange.map((r) => ({ node_id: r.node_id, visitors: r.visitors, conversions: r.conversions, revenue: r.revenue, spend: r.spend }) as ActualRow), scale);
   const tot = cmp.reduce(
@@ -131,6 +134,10 @@ export function Actuals() {
           <Icon name="edit" /> Enter actuals for this range
         </button>
       )}
+      <button type="button" className="btn mb-3" disabled={!inRange.length} onClick={() => download(fileName(`${useEditor.getState().name} actuals ${range.start} to ${range.end}`, "csv"), actualsCsv(inRange, Object.fromEntries(nodes.map((n) => [n.id, n.name]))), "text/csv")}>
+        <Icon name="download" /> Export actuals CSV
+      </button>
+      {overlapping && <p className="sub" role="status">Some saved actuals cross the selected dates. They are excluded because step totals cannot be split accurately across days; select a range containing each full saved period.</p>}
       {err && (
         <p role="alert" className="text-sm text-bad">
           {err}

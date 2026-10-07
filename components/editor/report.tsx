@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { money, nf, pct, ratio, sym } from "@/lib/format";
 import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
-import { healthChecks } from "@/lib/health";
+import { healthChecks, performanceChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
 import type { Expense, Scenario } from "@/lib/graph";
 import { nid, setSection, setSettings, setTab, startSim, useEditor, type ReportTab } from "@/lib/editor/store";
@@ -85,6 +85,7 @@ function MathTab() {
   const R = useEditor((s) => s.R);
   const nodes = useEditor((s) => s.nodes);
   const edges = useEditor((s) => s.edges);
+  const settings = useEditor((s) => s.settings);
   const basis = useEditor((s) => s.settings.basis);
   const fixed = useEditor((s) => s.settings.fixed);
   const cur = useEditor((s) => s.settings.currency);
@@ -92,6 +93,7 @@ function MathTab() {
   const m = useM();
   const shared = useEditor((s) => s.shared);
   const w = useMemo(() => (shared ? [] : healthChecks({ nodes, edges })), [nodes, edges, shared]);
+  const performance = useMemo(() => (shared ? [] : performanceChecks({ nodes, edges }, settings, R)), [nodes, edges, settings, R, shared]);
   const focus = useFocusBlock();
   const rows: [string, React.ReactNode, string][] = [
     ["Revenue", m(R.rev), basis === "ltv" ? "Lifetime value of every sale, after refunds" : "First payment of every sale, after refunds"],
@@ -119,11 +121,11 @@ function MathTab() {
   return (
     <>
       {!shared && (
-        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Funnel health">
-          <h4>Health</h4>
+        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Structural health">
+          <h4>Structural health</h4>
           {w.length === 0 ? (
             <p className="ok">
-              <Icon name="check" size={14} /> Every block is connected and every Yes/No has both paths.
+              <Icon name="check" size={14} /> Structure and setup checks pass.
             </p>
           ) : (
             <ul>
@@ -140,6 +142,24 @@ function MathTab() {
                       <span>{c.text}</span>
                     </span>
                   )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <h4 className="fm-health-subhead">Performance health</h4>
+          {performance.length === 0 ? (
+            <p className="ok"><Icon name="check" size={14} />{R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}</p>
+          ) : (
+            <ul>
+              {performance.map((item) => (
+                <li key={item.id}>
+                  <button type="button" onClick={() => focus(item.nodeId!)} title="Select this step and zoom to it">
+                    <Icon name="alert" size={14} />
+                    <span>
+                      {item.text} is the {item.rank === "largest-loss" ? "largest leak" : "weakest continuing step"}: {nf(item.lost, 1)} of {nf(item.inflow, 1)} people ({pct(item.dropPct)}) do not continue.
+                      <small>A 10% relative conversion lift projects +{nf(item.customerGain, 1)} customers, {m(item.revenueGain)} revenue, and {m(item.profitGain)} profit per month.</small>
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>

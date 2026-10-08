@@ -71,7 +71,7 @@ test.describe("funnel editor", () => {
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await page.getByLabel("Share of them (%)").fill("50");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("360");
-    await page.getByRole("radio", { name: "No: people who leave" }).click();
+    await page.getByRole("radio", { name: "No", exact: true }).click();
     // now half of the 1,680 who didn't register
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("840");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("No");
@@ -79,7 +79,7 @@ test.describe("funnel editor", () => {
     await expect(edgeLabels(page)).toHaveCount(8);
     // traffic sources have no "didn't convert" path, so the option isn't offered
     await page.locator(".fm-elabel", { hasText: "2,400" }).first().click();
-    await expect(page.getByRole("radio", { name: "No: people who leave" })).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: "No", exact: true })).toHaveCount(0);
   });
 
   test("box select with shift-drag, then group actions", async ({ page }) => {

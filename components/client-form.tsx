@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { FormMessage, Submit } from "./form-bits";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
 import { CLIENT_STATUSES, STATUS_LABEL, type ClientRow } from "@/lib/schemas";
@@ -12,17 +12,18 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
   const [state, formAction] = useActionState(action, undefined);
   const c = client ?? {};
   const [model, setModel] = useState<PricingModel>(pricingModel(c));
+  const p = `cf${useId().replace(/:/g, "")}`; // unique per form: the New client sheet and the Details tab can both be mounted
   return (
     <form action={formAction} noValidate>
       <FormMessage state={state?.error ? state : undefined} />
       <div className="row2">
         <div className="field">
-          <label htmlFor="cf-name">Client name *</label>
-          <input className="input" id="cf-name" name="name" defaultValue={c.name ?? ""} required autoComplete="off" />
+          <label htmlFor={`${p}-name`}>Client name *</label>
+          <input className="input" id={`${p}-name`} name="name" defaultValue={c.name ?? ""} required autoComplete="off" />
         </div>
         <div className="field">
-          <label htmlFor="cf-status">Status *</label>
-          <select className="input" id="cf-status" name="status" defaultValue={c.status ?? "lead"}>
+          <label htmlFor={`${p}-status`}>Status *</label>
+          <select className="input" id={`${p}-status`} name="status" defaultValue={c.status ?? "lead"}>
             {CLIENT_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s]}
@@ -33,8 +34,8 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
       </div>
       <div className="row2">
         <div className="field">
-          <label htmlFor="cf-currency">Currency *</label>
-          <select className="input" id="cf-currency" name="currency" defaultValue={c.currency ?? defaultCurrency}>
+          <label htmlFor={`${p}-currency`}>Currency *</label>
+          <select className="input" id={`${p}-currency`} name="currency" defaultValue={c.currency ?? defaultCurrency}>
             {CURRENCY_CODES.map((k) => (
               <option key={k} value={k}>
                 {CURRENCIES[k].label}
@@ -43,8 +44,8 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           </select>
         </div>
         <div className="field">
-          <label htmlFor="cf-pricing">Pricing model *</label>
-          <select className="input" id="cf-pricing" name="pricing_model" value={model} onChange={(e) => setModel(e.target.value as PricingModel)}>
+          <label htmlFor={`${p}-pricing`}>Pricing model *</label>
+          <select className="input" id={`${p}-pricing`} name="pricing_model" value={model} onChange={(e) => setModel(e.target.value as PricingModel)}>
             {PRICING_MODELS.map((m) => (
               <option key={m} value={m}>
                 {PRICING_LABEL[m]}
@@ -53,18 +54,18 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           </select>
         </div>
       </div>
-      <PricingFields model={model} c={c} />
+      <PricingFields model={model} c={c} p={p} />
       {/* V2 New client: the required fields first; everything else is one click away */}
       <details className="fm-moredetails" open={!!client?.id}>
         <summary>Add details</summary>
       <div className="row2">
         <div className="field">
-          <label htmlFor="cf-business">Business name</label>
-          <input className="input" id="cf-business" name="business_name" defaultValue={c.business_name ?? ""} autoComplete="off" />
+          <label htmlFor={`${p}-business`}>Business name</label>
+          <input className="input" id={`${p}-business`} name="business_name" defaultValue={c.business_name ?? ""} autoComplete="off" />
         </div>
         <div className="field">
-          <label htmlFor="cf-niche">Niche</label>
-          <input className="input" id="cf-niche" name="niche" list="niche-list" defaultValue={c.niche ?? ""} placeholder="Fitness, coaching…" />
+          <label htmlFor={`${p}-niche`}>Niche</label>
+          <input className="input" id={`${p}-niche`} name="niche" list="niche-list" defaultValue={c.niche ?? ""} placeholder="Fitness, coaching…" />
           <datalist id="niche-list">
             {niches.map((n) => (
               <option key={n} value={n} />
@@ -74,33 +75,33 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
       </div>
       <div className="row2">
         <div className="field">
-          <label htmlFor="cf-email">Email</label>
-          <input className="input" id="cf-email" name="email" type="email" defaultValue={c.email ?? ""} autoComplete="off" />
+          <label htmlFor={`${p}-email`}>Email</label>
+          <input className="input" id={`${p}-email`} name="email" type="email" defaultValue={c.email ?? ""} autoComplete="off" />
         </div>
         <div className="field">
-          <label htmlFor="cf-phone">Phone</label>
-          <input className="input" id="cf-phone" name="phone" type="tel" defaultValue={c.phone ?? ""} autoComplete="off" />
+          <label htmlFor={`${p}-phone`}>Phone</label>
+          <input className="input" id={`${p}-phone`} name="phone" type="tel" defaultValue={c.phone ?? ""} autoComplete="off" />
         </div>
       </div>
       <div className="row2">
         <div className="field">
-          <label htmlFor="cf-website">Website</label>
-          <input className="input" id="cf-website" name="website" defaultValue={c.website ?? ""} placeholder="https://" autoComplete="off" />
+          <label htmlFor={`${p}-website`}>Website</label>
+          <input className="input" id={`${p}-website`} name="website" defaultValue={c.website ?? ""} placeholder="https://" autoComplete="off" />
         </div>
         <div className="field">
-          <label htmlFor="cf-country">Country</label>
-          <input className="input" id="cf-country" name="country" defaultValue={c.country ?? ""} autoComplete="off" />
+          <label htmlFor={`${p}-country`}>Country</label>
+          <input className="input" id={`${p}-country`} name="country" defaultValue={c.country ?? ""} autoComplete="off" />
         </div>
       </div>
       <div className="field">
-        <label htmlFor="cf-tags">Tags</label>
-        <input className="input" id="cf-tags" name="tags" defaultValue={(c.tags ?? []).join(", ")} placeholder="tripwire, retainer" />
+        <label htmlFor={`${p}-tags`}>Tags</label>
+        <input className="input" id={`${p}-tags`} name="tags" defaultValue={(c.tags ?? []).join(", ")} placeholder="tripwire, retainer" />
         <span className="help">Separate tags with commas.</span>
       </div>
       {client?.id ? null : (
         <div className="field">
-          <label htmlFor="cf-notes">Notes</label>
-          <textarea className="input" id="cf-notes" name="notes" defaultValue={c.notes ?? ""} />
+          <label htmlFor={`${p}-notes`}>Notes</label>
+          <textarea className="input" id={`${p}-notes`} name="notes" defaultValue={c.notes ?? ""} />
         </div>
       )}
       </details>
@@ -122,7 +123,7 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
 const amountProps = { className: "input", type: "number", min: "0", step: "any" } as const;
 
 /** The inputs that apply to the chosen pricing model (the server clears the others on save). */
-function PricingFields({ model, c }: { model: PricingModel; c: Partial<ClientRow> }) {
+function PricingFields({ model, c, p }: { model: PricingModel; c: Partial<ClientRow>; p: string }) {
   const amount = (id: string, label: string, help?: string) => (
     <div className="field">
       <label htmlFor={id}>{label}</label>
@@ -141,50 +142,50 @@ function PricingFields({ model, c }: { model: PricingModel; c: Partial<ClientRow
       {model === "retainer" && (
         <div className="row2">
           <div className="field">
-            <label htmlFor="cf-retainer">Monthly retainer</label>
-            <input {...amountProps} id="cf-retainer" name="monthly_retainer" defaultValue={c.monthly_retainer ?? 0} />
+            <label htmlFor={`${p}-retainer`}>Monthly retainer</label>
+            <input {...amountProps} id={`${p}-retainer`} name="monthly_retainer" defaultValue={c.monthly_retainer ?? 0} />
           </div>
         </div>
       )}
       {model === "fixed" && (
         <>
-          <div className="row2">{amount("cf-amount", "Project fee")}</div>
+          <div className="row2">{amount(`${p}-amount`, "Project fee")}</div>
           <div className="row2">
-            {date("cf-start", "project_start", "Project start")}
-            {date("cf-end", "project_end", "Project end")}
+            {date(`${p}-start`, "project_start", "Project start")}
+            {date(`${p}-end`, "project_end", "Project end")}
           </div>
         </>
       )}
       {model === "one_time" && (
         <div className="row2">
-          {amount("cf-amount", "Amount")}
-          {date("cf-start", "project_start", "Date")}
+          {amount(`${p}-amount`, "Amount")}
+          {date(`${p}-start`, "project_start", "Date")}
         </div>
       )}
       {model === "hourly" && (
         <div className="row2">
-          {amount("cf-amount", "Hourly rate")}
+          {amount(`${p}-amount`, "Hourly rate")}
           <div className="field">
-            <label htmlFor="cf-hours">Estimated hours per month</label>
-            <input {...amountProps} id="cf-hours" name="hours_per_month" defaultValue={c.hours_per_month || ""} placeholder="0" />
+            <label htmlFor={`${p}-hours`}>Estimated hours per month</label>
+            <input {...amountProps} id={`${p}-hours`} name="hours_per_month" defaultValue={c.hours_per_month || ""} placeholder="0" />
           </div>
         </div>
       )}
       {model === "commission" && (
         <div className="row2">
           <div className="field">
-            <label htmlFor="cf-commission">Commission (% of revenue)</label>
-            <input {...amountProps} id="cf-commission" name="commission_pct" max="100" defaultValue={c.commission_pct || ""} placeholder="0" />
+            <label htmlFor={`${p}-commission`}>Commission (% of revenue)</label>
+            <input {...amountProps} id={`${p}-commission`} name="commission_pct" max="100" defaultValue={c.commission_pct || ""} placeholder="0" />
           </div>
-          {amount("cf-amount", "Base fee per month (optional)")}
+          {amount(`${p}-amount`, "Base fee per month (optional)")}
         </div>
       )}
       {model === "other" && (
         <div className="row2">
-          {amount("cf-amount", "Amount")}
+          {amount(`${p}-amount`, "Amount")}
           <div className="field">
-            <label htmlFor="cf-frequency">Billed</label>
-            <select className="input" id="cf-frequency" name="billing_frequency" defaultValue={c.billing_frequency ?? "monthly"}>
+            <label htmlFor={`${p}-frequency`}>Billed</label>
+            <select className="input" id={`${p}-frequency`} name="billing_frequency" defaultValue={c.billing_frequency ?? "monthly"}>
               {BILLING_FREQUENCIES.map((f) => (
                 <option key={f} value={f}>
                   {FREQUENCY_LABEL[f]}
@@ -195,8 +196,8 @@ function PricingFields({ model, c }: { model: PricingModel; c: Partial<ClientRow
         </div>
       )}
       <div className="field">
-        <label htmlFor="cf-pricing-notes">Pricing notes</label>
-        <input className="input" id="cf-pricing-notes" name="pricing_notes" defaultValue={c.pricing_notes ?? ""} placeholder="Payment terms, milestones, what the commission is on…" maxLength={500} autoComplete="off" />
+        <label htmlFor={`${p}-pricing-notes`}>Pricing notes</label>
+        <input className="input" id={`${p}-pricing-notes`} name="pricing_notes" defaultValue={c.pricing_notes ?? ""} placeholder="Payment terms, milestones, what the commission is on…" maxLength={500} autoComplete="off" />
       </div>
     </>
   );

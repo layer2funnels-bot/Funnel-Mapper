@@ -1,7 +1,7 @@
 "use client";
 import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { GraphThumb } from "@/components/graph-thumb";
 import { Icon } from "@/components/icon";
 import { LogoUpload } from "@/components/logo-upload";
@@ -34,14 +34,15 @@ export function ClientNotes({ id, notes }: { id: string; notes: string }) {
   const [v, setV] = useState(notes);
   const [st, setSt] = useState<"" | "saving" | "saved" | "error">("");
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const nid = `client-notes${useId().replace(/:/g, "")}`;
   useEffect(() => () => clearTimeout(t.current), []);
   return (
     <div className="field mb-0">
-      <label htmlFor="client-notes" className="sr-only">
+      <label htmlFor={nid} className="sr-only">
         Notes
       </label>
       <textarea
-        id="client-notes"
+        id={nid}
         className="input min-h-[140px]!"
         value={v}
         placeholder="Goals, offers, call notes, access details…"

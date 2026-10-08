@@ -54,7 +54,7 @@ test.describe("Page URL to thumbnail", () => {
     await expect(page.locator(".fm-toast")).toContainText("Preview saved");
     await page.getByRole("button", { name: "Remove" }).first().click();
     await expect(shotOf(page, "Quiz funnel")).toHaveCount(0);
-    await expect(node(page, "Quiz funnel").locator(".fm-wf:not(.has-shot) svg")).toBeAttached(); // the stand-in is back (drawn from the mid zoom up)
+    await expect(node(page, "Quiz funnel").locator(".pgo-win:not(.has-shot) svg, .fm-wf:not(.has-shot) svg").first()).toBeAttached(); // the stand-in is back (drawn from the mid zoom up)
     await expect(page.getByLabel("Page URL")).toHaveValue("https://example.com/quiz");
     await expect(nodes(page)).toHaveCount(graph.nodes.length);
   });

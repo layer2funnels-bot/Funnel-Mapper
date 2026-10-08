@@ -1,7 +1,7 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
 import { brandMarkOf } from "./brand-marks";
 import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
-import { money, nf } from "./format";
+import { money, nf, people } from "./format";
 import { num, periodFactor, stepRows, type FunnelResult } from "./funnel-math";
 import type { FunnelEdge, FunnelNode, Goal } from "./graph";
 import { ICONS, type IconName } from "./icons";
@@ -116,6 +116,8 @@ const approxMeasure: Measure = (t, size, weight) => t.length * size * (weight >=
 
 export interface MapSvgOptions {
   currency: string;
+  /** Revenue basis: money on blocks carries the LTV tag when it is "ltv". */
+  basis?: "first" | "ltv";
   nums: boolean;
   palette?: SvgPalette;
   /** Rendered height/width of an element (the editor passes its measured sizes). */
@@ -546,7 +548,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
         o += `<text x="${n2(n.x + w - 12)}" y="${n2(y)}" text-anchor="end" font-size="12" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(v)}</text>`;
       });
       const below = n.y + 28 + rows * 44;
-      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${nf(mrrLine.subscribers, 1)} subscribers`)}</text>`;
+      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${people(mrrLine.subscribers)} subscribers`)}</text>`;
       if (series.length > 1) {
         const x0 = n.x + 12,
           x1 = n.x + w - 12,
@@ -600,7 +602,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
     const parts: { k: string; h: number }[] = [{ k: "head", h: CARD.head }];
     if (F2.strip && V.wireframe) parts.push({ k: "strip", h: CARD.strip });
     if (hasSplitBar(n.type)) parts.push({ k: "split", h: CARD.bar });
-    const PL = perf ? perfLine(n, R, opts.currency) : null;
+    const PL = perf ? perfLine(n, R, opts.currency, 1, opts.basis) : null;
     if (PL && PL.ratio != null) parts.push({ k: "conv", h: CARD.bar });
     const goal = V.family === "goal" ? (opts.goals ?? []).find((g) => g.nodeId === n.id && g.value > 0) : undefined;
     if (goal) parts.push({ k: "goal", h: CARD.goalBar });
@@ -697,7 +699,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       else {
         let full = "",
           tsp = "";
-        for (const sg of nodeStats(n, R, opts.currency)) {
+        for (const sg of nodeStats(n, R, opts.currency, 1, opts.basis)) {
           const room = innerW - measure(full, 12, 400, F.sans);
           const t = measure(sg.t, 12, sg.b ? 700 : 400, F.sans) <= room ? sg.t : ellipsis(sg.t, room, 12, sg.b ? 700 : 400, F.sans, measure);
           full += t;

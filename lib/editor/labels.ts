@@ -2,7 +2,7 @@
 // Returns plain segments (bold or not) so React, SVG and PDF exports can all render them.
 import { getSmoothStepPath, getStraightPath, Position } from "@xyflow/react";
 import { baseOf, INT_LABEL, typeOf, type Interval } from "../catalog";
-import { money, nf } from "../format";
+import { money, moneyPer, nf, people as ppl } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
 import type { FunnelNode } from "../graph";
 import type { edgeLook } from "../style";
@@ -26,21 +26,24 @@ export function subLabel(n: FunnelNode, cur: string): string {
   return T.label;
 }
 
-/** Block stats. `k` scales people and money to another period (Forecast layer: day / week / year). */
-export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1): Seg[] {
+/**
+ * Block stats. `k` scales people and money to another period (Forecast layer: day / week / year). People are whole
+ * (V2 data trust; the exact value is in the block's hover and inspector) and money carries its period and basis.
+ */
+export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1, basis?: "first" | "ltv"): Seg[] {
   const T = typeOf(n.type),
     r0 = R.N[n.id];
   if (!r0 || !T) return [];
   const r = k === 1 ? r0 : { ...r0, inflow: r0.inflow * k, out: r0.out * k, non: r0.non * k, rev: r0.rev * k, spend: r0.spend * k };
-  if (T.cat === "traffic") return [{ t: nf(r.out), b: true }, { t: ` visits · ${r.spend ? money(r.spend, cur) : "free"}` }];
-  if (T.cat === "offer") return [{ t: nf(r.out, 1), b: true }, { t: " buy · " }, { t: money(r.rev, cur), b: true }];
+  if (T.cat === "traffic") return [{ t: ppl(r.out), b: true }, { t: ` visits · ${r.spend ? moneyPer(r.spend, cur, k) : "free"}` }];
+  if (T.cat === "offer") return [{ t: ppl(r.out), b: true }, { t: " buy · " }, { t: moneyPer(r.rev, cur, k, basis), b: true }];
   const b = baseOf(n.type);
   if (b === "cond" || b === "split") {
     const [ya, yb] = T.ports ?? ["Yes", "No"];
-    return [{ t: `${ya} ` }, { t: nf(r.out, 1), b: true }, { t: ` · ${yb} ` }, { t: nf(r.non, 1), b: true }];
+    return [{ t: `${ya} ` }, { t: ppl(r.out), b: true }, { t: ` · ${yb} ` }, { t: ppl(r.non), b: true }];
   }
-  if (b === "goal" || b === "exit") return [{ t: nf(r.inflow, 1), b: true }, { t: " people" }];
-  return [{ t: `In ${nf(r.inflow)} → ` }, { t: nf(r.out, 1), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
+  if (b === "goal" || b === "exit") return [{ t: ppl(r.inflow), b: true }, { t: " people" }];
+  return [{ t: `In ${ppl(r.inflow)} → ` }, { t: ppl(r.out), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
 }
 
 const SHORT: Record<Interval, string> = { weekly: "wk", monthly: "mo", quarterly: "qtr", yearly: "yr" };
@@ -73,20 +76,20 @@ export interface PerfLine {
   /** Share of arriving people who move on (0–1); null when the block has no such rate (sources, goals, logic). */
   ratio: number | null;
 }
-export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1): PerfLine | null {
+export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1, basis?: "first" | "ltv"): PerfLine | null {
   const T = typeOf(n.type),
     r0 = R.N[n.id];
   // a Wait has nothing to measure: its card keeps "Wait 2 days" as its second line
   if (!r0 || !T || n.type === "wait") return null;
   const inflow = r0.inflow * k,
     out = r0.out * k;
-  if (T.cat === "traffic") return { headline: nf(out), caption: r0.spend ? `visits · ${money(r0.spend * k, cur)}` : "visits · free", ratio: null };
+  if (T.cat === "traffic") return { headline: ppl(out), caption: r0.spend ? `visits · ${moneyPer(r0.spend * k, cur, k)}` : "visits · free", ratio: null };
   const b = baseOf(n.type);
-  if (b === "goal" || b === "exit") return { headline: nf(inflow, 1), caption: "people", ratio: null };
-  if (b === "cond" || b === "split") return { headline: nf(inflow, 1), caption: "people in", ratio: null };
+  if (b === "goal" || b === "exit") return { headline: ppl(inflow), caption: "people", ratio: null };
+  if (b === "cond" || b === "split") return { headline: ppl(inflow), caption: "people in", ratio: null };
   const ratio = inflow > 0 ? Math.min(1, out / inflow) : 0;
-  if (T.cat === "offer") return { headline: money(r0.rev * k, cur), caption: `${nf(out, 1)} buy · ${nf(ratio * 100)}%`, ratio };
-  return { headline: nf(out, 1), caption: `${nf(ratio * 100)}% move on`, ratio };
+  if (T.cat === "offer") return { headline: moneyPer(r0.rev * k, cur, k, basis), caption: `${ppl(out)} buy · ${nf(ratio * 100)}%`, ratio };
+  return { headline: ppl(out), caption: `${nf(ratio * 100)}% move on`, ratio };
 }
 
 /**
@@ -121,7 +124,7 @@ export function frameTotals(members: FunnelNode[], R: FunnelResult, cur: string,
     people = Math.max(people, r.inflow);
   }
   const f = { visits: visits * k, spend: spend * k, buyers: buyers * k, revenue: revenue * k, people: people * k };
-  const text = visits > 0 ? `${nf(f.visits)} visits · ${f.spend ? money(f.spend, cur) : "free"}` : buyers > 0 ? `${nf(f.buyers, 1)} customers · ${money(f.revenue, cur)}` : members.length ? `${nf(f.people)} people` : "";
+  const text = visits > 0 ? `${ppl(f.visits)} visits · ${f.spend ? moneyPer(f.spend, cur, k) : "free"}` : buyers > 0 ? `${ppl(f.buyers)} customers · ${moneyPer(f.revenue, cur, k)}` : members.length ? `${ppl(f.people)} people` : "";
   return { text, ...f };
 }
 

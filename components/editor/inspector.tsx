@@ -4,7 +4,7 @@ import { ThumbnailField } from "./thumbnail-field";
 import { WaitField } from "./wait-field";
 import { WidgetFields } from "./widget-fields";
 import { baseOf, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
-import { money, nf, pct } from "@/lib/format";
+import { money, nf, pct, people } from "@/lib/format";
 import { Icon } from "@/components/icon";
 import { RichTextField } from "@/components/rich-text";
 import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } from "@/lib/funnel-math";
@@ -374,8 +374,8 @@ function PeriodForecast({ n }: { n: FunnelNode }) {
               return (
                 <tr key={k}>
                   <th scope="row" className="font-semibold">{k[0].toUpperCase() + k.slice(1)}</th>
-                  <td className="r">{nf(inn * f, 1)}</td>
-                  <td className="r">{nf(r.out * f, 1)}</td>
+                  <td className="r">{people(inn * f)}</td>
+                  <td className="r">{people(r.out * f)}</td>
                   {T.cat === "offer" && <td className="r">{money(r.rev * f, cur)}</td>}
                   {(T.cat === "traffic" || T.cat === "action") && <td className="r">{money((r.spend + r.cost) * f, cur)}</td>}
                 </tr>
@@ -432,7 +432,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
                 ["Revenue at target", m(impact.rev)],
                 ["Change", `${impact.rev - R.rev >= 0 ? "+" : ""}${m(impact.rev - R.rev)}`],
                 ["Profit at target", m(impact.profit)],
-                ["Customers at target", nf(impact.cust, 1)],
+                ["Customers at target", people(impact.cust)],
               ]}
             />
           )}
@@ -541,8 +541,8 @@ function NodeStats({ n }: { n: FunnelNode }) {
     return (
       <StatBox
         items={[
-          ["Reaching offer", nf(r.inflow, 1)],
-          ["Buying", nf(r.out, 1)],
+          ["Reaching offer", people(r.inflow)],
+          ["Buying", people(r.out)],
           ["Cash now", m(r.cash)],
           ["Lifetime value", m(r.ltv)],
           ...(baseOf(n.type) === "sub"
@@ -552,7 +552,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
               ] as [string, string][])
             : []),
           ["Costs", m(r.cogs)],
-          ["Not buying", nf(r.non, 1)],
+          ["Not buying", people(r.non)],
         ]}
       />
     );
@@ -562,9 +562,9 @@ function NodeStats({ n }: { n: FunnelNode }) {
   return (
     <StatBox
       items={[
-        ["Arriving", nf(r.inflow, 1)],
-        [yes, nf(r.out, 1)],
-        [no, nf(r.non, 1)],
+        ["Arriving", people(r.inflow)],
+        [yes, people(r.out)],
+        [no, people(r.non)],
         ...(T.cat === "action" ? ([["Cost", m(r.cost)]] as [string, string][]) : []),
       ]}
     />
@@ -622,7 +622,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
             </Field>
             <StatBox
               items={[
-                ["People on this path", nf(flow, 1)],
+                ["People on this path", people(flow)],
                 ["Conversion at the source step", conv == null ? "No data yet" : `${nf(conv * 100, 1)}%`],
                 ["Revenue through this path", rev > 0 ? money(rev, cur) : "No data yet"],
               ]}

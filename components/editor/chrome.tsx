@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { setOpt, setSideTab, useEditor } from "@/lib/editor/store";
-import { scenarioLabel } from "@/lib/scenario-label";
+import { BASELINE, scenarioLabel } from "@/lib/scenario-label";
 
 /** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
 export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
@@ -11,9 +11,10 @@ export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
   const list = useEditor((s) => s.settings.scenarios);
   const label = scenarioLabel({ whatif: w, scenarios: list });
   return (
-    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}`} title="Choose a scenario">
+    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}${label !== BASELINE ? " vs Baseline" : ""}`} title="Choose a scenario">
       <i aria-hidden="true" />
-      {label}
+      <span className="lbl">Scenario:</span> {label}
+      {label !== BASELINE && <span className="vs"> vs Baseline</span>}
     </button>
   );
 }

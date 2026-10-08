@@ -15,7 +15,7 @@ import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor } from "@/lib/editor/store";
 import { frameTotals, nodeStats, perfLine, subLabel } from "@/lib/editor/labels";
 import { goalCurrent } from "@/lib/report-data";
-import { nf } from "@/lib/format";
+import { nf, peopleExact } from "@/lib/format";
 import { periodFactor } from "@/lib/funnel-math";
 import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
@@ -116,6 +116,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
   const R = useEditor(shownR);
   const cur = useEditor((s) => s.settings.currency);
+  const basis = useEditor((s) => s.settings.basis);
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const leak = useEditor((s) => s.keyLeak === id && s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
   const perf = useEditor((s) => s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
@@ -139,8 +140,10 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const V = visualOf(n.type),
     F = FAMILIES[V.family];
   const k = periodFactor(period);
-  const stats = nodeStats(n, R, cur, k);
-  const pl = perf ? perfLine(n, R, cur, k) : null;
+  const stats = nodeStats(n, R, cur, k, basis);
+  const pl = perf ? perfLine(n, R, cur, k, basis) : null;
+  const rN = R.N[n.id];
+  const exact = rN ? (T.cat === "traffic" ? `${peopleExact(rN.out * k)} visits` : `${peopleExact(rN.inflow * k)} arrive · ${peopleExact(rN.out * k)} continue`) : undefined;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
   const sd = simBase && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, simBase.R) : null;
@@ -189,7 +192,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
         </div>
       )}
       {V.family === "goal" && <GoalBar n={n} />}
-      <div className="fm-nstats">
+      <div className="fm-nstats" title={nodata ? undefined : exact}>
         {nodata ? (
           <span className="fm-nodata">No data yet</span>
         ) : (

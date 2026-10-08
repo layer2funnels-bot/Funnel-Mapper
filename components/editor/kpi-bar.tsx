@@ -3,7 +3,7 @@ import { useBand } from "@/lib/use-band";
 import { useFocusBlock } from "./focus";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { money, nf, pct, ratio } from "@/lib/format";
+import { money, pct, people, peopleExact, ratio } from "@/lib/format";
 import { healthChecks } from "@/lib/health";
 import { setTab, clearSelection, shownR, useEditor } from "@/lib/editor/store";
 import { totalsDelta } from "@/lib/simulate";
@@ -38,7 +38,11 @@ function Pop({ label, button, children, wide }: { label: string; button: (open: 
   );
 }
 
-/** Bottom strip (V2 D2): checks chip, the six headline numbers, "+N more", and the unit the numbers are in. Every figure is the engine's `R`. */
+/**
+ * Bottom strip (V2 F11): checks chip, the headline numbers in priority order, "+N more", one Plan tag and the unit.
+ * Priority: Traffic, Revenue, Profit, Customers, ROAS, Leads, then ROI, AOV, CPA, CPL, EPC, Conversion rate. Traffic
+ * never collapses; lower-priority figures move into More as the space shrinks. Every figure is the engine's `R`.
+ */
 export function KpiBar() {
   const band = useBand();
   const R = useEditor(shownR);
@@ -50,76 +54,71 @@ export function KpiBar() {
   const edges = useEditor((s) => s.edges);
   const warnIds = useEditor((s) => s.warnIds);
   const shared = useEditor((s) => s.shared);
+  const sideOpen = useEditor((s) => !s.opts.hideSide && !s.readOnly);
   const focus = useFocusBlock();
   const simBase = useEditor((s) => s.simBase);
   const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, t])) : null;
-  // KPI label -> the simulate total it is compared with
-  const SIMKEY: Record<string, "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa"> = { Traffic: "traffic", Leads: "leads", Customers: "cust", "Revenue (first pay)": "rev", "Revenue (lifetime)": "rev", Profit: "profit", ROAS: "roas", "Ad spend": "spend", CPA: "cpa" };
-  const chip = (label: string) => (sim && SIMKEY[label] ? <DeltaChip t={sim[SIMKEY[label]]} cur={cur} compact /> : null);
   // checks are for the team, not for clients viewing a share link
   const checks = shared ? [] : healthChecks({ nodes, edges });
   const hasTraffic = nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label");
   const m = (v: number) => money(v, cur);
-  const main: [string, React.ReactNode][] = [
-    ["Traffic", nf(R.traffic)],
-    ["Leads", nf(R.leads, 1)],
-    ["Customers", nf(R.cust, 1)],
-    [basis === "ltv" ? "Revenue (lifetime)" : "Revenue (first pay)", m(R.rev)],
-    ["Profit", <span key="p" className={R.profit >= 0 ? "pos" : "neg"}>{m(R.profit)}</span>],
-    ["ROAS", ratio(R.roas)],
+  const ltv = basis === "ltv" ? <span className="fm-ltv" title="Lifetime value is the basis for revenue, profit and ROAS">LTV</span> : null;
+  const neg = (v: number, node: React.ReactNode) => <span className={v >= 0 ? "pos" : "neg"}>{node}</span>;
+  type K = { id: string; label: React.ReactNode; text: string; value: React.ReactNode; title?: string; sim?: "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa" };
+  const all: K[] = [
+    { id: "traffic", label: "Traffic / mo", text: "Traffic", value: people(R.traffic), title: peopleExact(R.traffic), sim: "traffic" },
+    { id: "revenue", label: <>Revenue / mo {ltv}</>, text: "Revenue", value: m(R.rev), sim: "rev" },
+    { id: "profit", label: <>Profit / mo {ltv}</>, text: "Profit", value: neg(R.profit, m(R.profit)), sim: "profit" },
+    { id: "customers", label: "Customers / mo", text: "Customers", value: people(R.cust), title: peopleExact(R.cust), sim: "cust" },
+    { id: "roas", label: <>ROAS {ltv}</>, text: "ROAS", value: ratio(R.roas), sim: "roas" },
+    { id: "leads", label: "Leads / mo", text: "Leads", value: people(R.leads), title: peopleExact(R.leads), sim: "leads" },
+    { id: "roi", label: "ROI", text: "ROI", value: pct(R.roi) },
+    { id: "aov", label: "AOV", text: "AOV", value: m(R.aov) },
+    { id: "cpa", label: "CPA", text: "CPA", value: m(R.cpa), sim: "cpa" },
+    { id: "cpl", label: "CPL", text: "CPL", value: m(R.cpl) },
+    { id: "epc", label: "EPC", text: "EPC", value: m(R.epc) },
+    { id: "conv", label: "Conversion rate", text: "Conversion rate", value: pct(R.conv) },
+    { id: "spend", label: "Ad spend / mo", text: "Ad spend", value: m(R.spend), sim: "spend" },
+    { id: "mrr", label: "MRR", text: "MRR", value: m(R.mrr) },
+    { id: "ltvc", label: "LTV / customer", text: "LTV / customer", value: m(R.ltvc) },
   ];
-  const more: [string, React.ReactNode][] = [
-    ["Ad spend", m(R.spend)],
-    ["ROI", pct(R.roi)],
-    ["AOV", m(R.aov)],
-    ["CPA", m(R.cpa)],
-    ["CPL", m(R.cpl)],
-    ["EPC", m(R.epc)],
-    ["Conv. rate", pct(R.conv)],
-    ["MRR", m(R.mrr)],
-    ["LTV / customer", m(R.ltvc)],
-  ];
+  const chip = (k: K) => (sim && k.sim ? <DeltaChip t={sim[k.sim]} cur={cur} compact /> : null);
   const named = nodes.filter((n) => warnIds.has(n.id));
-  // bands: what the strip shows; everything else goes into "+N more" (phone: every figure, scrolling)
-  const all = [...main, ...more];
-  const SHOW: Record<string, string[] | "all"> = {
-    xl: main.map(([k]) => k),
-    lg: main.map(([k]) => k),
-    md: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS", "Customers"],
-    tablet: ["Revenue (first pay)", "Revenue (lifetime)", "Profit", "ROAS"],
-    phone: "all",
-  };
-  const rule = SHOW[band];
-  const strip = rule === "all" ? all : all.filter(([k]) => rule.includes(k));
-  const rest = rule === "all" ? [] : all.filter(([k]) => !rule.includes(k));
+  // visible counts per band (F11); phone shows every figure as scrolling chips, starting with Traffic
+  const visible = band === "phone" ? all.length : band === "tablet" ? 3 : band === "md" ? 4 : sideOpen ? 5 : 6;
+  const SHOW_MD = ["traffic", "revenue", "profit", "roas"];
+  const strip = band === "md" ? all.filter((k) => SHOW_MD.includes(k.id)) : all.slice(0, visible);
+  const rest = all.filter((k) => !strip.includes(k));
   const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
     <footer className={`fm-kpis${sim ? " sim" : ""}${before ? " before" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
         <Pop
-          label="Structure checks"
+          label="Model checks"
           button={() =>
             checks.length > 0 ? (
               <span className="fm-chk warn">
                 <Icon name="alert" size={14} />
-                {checks.length}
-                {!compactChecks && (checks.length === 1 ? " check" : " checks")}
+                {compactChecks ? checks.length : `Checks · ${checks.length} to fix`}
               </span>
             ) : (
               <span className="fm-chk ok">
                 <Icon name="check" size={14} />
-                Structure valid
+                All clear
               </span>
             )
           }
         >
           {(close) => (
             <>
-              <h3>Structure checks</h3>
+              <h3>Model checks</h3>
               {checks.length === 0 ? (
-                <p>Structure and setup checks pass. Review Performance health in the Math tab for conversion losses.</p>
+                <p>All clear: the map is connected and set up. Conversion losses are under Performance (Biggest leak) in the funnel panel.</p>
               ) : (
                 <>
+                  <p className="fm-kcap">
+                    {checks.length} to fix. These may affect the numbers.
+                  </p>
                   <ul>
                     {checks.map((c) => (
                       <li key={c.id}>{c.text}</li>
@@ -151,7 +150,7 @@ export function KpiBar() {
                       document.querySelector(".fm-editor")?.classList.add("show-insp");
                     }}
                   >
-                    Open the Math tab
+                    Open the funnel panel
                   </button>
                 </>
               )}
@@ -159,11 +158,11 @@ export function KpiBar() {
           )}
         </Pop>
       )}
-      {strip.map(([a, b]) => (
-        <div className="fm-kpi" key={a}>
-          <div>{a}</div>
-          <b>{b}</b>
-          {chip(a)}
+      {strip.map((k) => (
+        <div className="fm-kpi" key={k.id} data-kpi={k.id}>
+          <div>{k.label}</div>
+          <b title={k.title}>{k.value}</b>
+          {chip(k)}
         </div>
       ))}
       {rest.length > 0 && (
@@ -178,11 +177,11 @@ export function KpiBar() {
         >
           {() => (
             <dl className="fm-kgrid">
-              {rest.map(([a, b]) => (
-                <div key={a}>
-                  <dt>{a}</dt>
-                  <dd>
-                    {b} {chip(a)}
+              {rest.map((k) => (
+                <div key={k.id}>
+                  <dt>{k.label}</dt>
+                  <dd title={k.title}>
+                    {k.value} {chip(k)}
                   </dd>
                 </div>
               ))}
@@ -190,7 +189,13 @@ export function KpiBar() {
           )}
         </Pop>
       )}
-      <span className="fm-kunit">per month · {cur}</span>
+      <span className="fm-kunit">
+        <span className="fm-tag plan" title="Modelled numbers from the map (the plan)">
+          Plan
+        </span>{" "}
+        per month · {cur}
+        {basis === "ltv" ? " · lifetime value" : ""}
+      </span>
     </footer>
   );
 }

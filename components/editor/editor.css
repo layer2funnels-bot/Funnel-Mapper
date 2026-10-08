@@ -4549,3 +4549,46 @@ dialog.fm-sharedlg {
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
 }
+
+/* Data trust (F10): Plan / Forecast / Actual tags and the LTV tag. Never colour alone: each tag is worded and drawn differently. */
+.fm-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.fm-tag.plan {
+  border: 1px solid var(--edge);
+  color: var(--muted);
+}
+.fm-tag.forecast {
+  border: 1px dashed var(--edge);
+  color: var(--muted);
+}
+.fm-tag.actual {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.fm-ltv {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--brand);
+  color: var(--brand-light);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  vertical-align: 1px;
+}
+.fm-kcap {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+}

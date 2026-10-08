@@ -6,7 +6,7 @@
 // Scoped (frame / selection) figures add up the same per-step results `compute()` adds up for the whole funnel.
 import { baseOf, isAnnot, typeOf, WIDGET_SIZES, type NodeParams } from "./catalog";
 import { frameMembersOf } from "./geometry";
-import { money, nf, pct, ratio } from "./format";
+import { money, pct, ratio, people } from "./format";
 import { project, num, type ActualRow, type FunnelResult, type GraphLike } from "./funnel-math";
 import { goalCurrent } from "./report-data";
 import type { FunnelNode, Goal } from "./graph";
@@ -297,6 +297,6 @@ export function formatMetricValue(v: Pick<MetricValue, "kind" | "value">, cur: s
   if (v.kind === "money") return money(v.value, cur);
   if (v.kind === "ratio") return ratio(v.value);
   if (v.kind === "pct") return pct(v.value);
-  return nf(v.value, 1);
+  return people(v.value);
 }
 export { num };

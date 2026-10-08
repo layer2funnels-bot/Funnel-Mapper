@@ -147,6 +147,8 @@ export const whatifSchema = z.object({
 });
 export type WhatIf = z.infer<typeof whatifSchema>;
 
+const isNeutral = (w: WhatIf) => w.traffic === 1 && w.conv === 1 && w.price === 1 && w.cost === 1;
+
 export const SCENARIO_KINDS = ["conservative", "expected", "best", "custom"] as const;
 export const scenarioSchema = z.object({
   id: z.string(),
@@ -189,7 +191,12 @@ export const settingsSchema = z.object({
   target: finite.default(0),
   currency: z.string().default("GBP").transform((c) => currencyFromSymbol(c)),
   expenses: z.array(expenseSchema).default([]),
-  scenarios: z.array(scenarioSchema).default([]),
+  // Owner decision (V2): Baseline is the current map, so an "Expected" scenario that equals the map is merged into it.
+  // One with its own assumptions stays as a real scenario.
+  scenarios: z
+    .array(scenarioSchema)
+    .default([])
+    .transform((list) => list.filter((sc) => !(isNeutral(sc.whatif) && sc.fixed == null && (sc.kind === "expected" || sc.name.trim().toLowerCase() === "expected")))),
   projection: projectionSchema.default({ months: 12, growth: 0 }),
   /** Hide numbers on the public share page. */
   hideNumbers: z.boolean().default(false),

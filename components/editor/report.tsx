@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { money, nf, pct, ratio, sym } from "@/lib/format";
+import { money, nf, pct, ratio, sym, people } from "@/lib/format";
 import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
 import { healthChecks, performanceChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
@@ -113,19 +113,19 @@ function MathTab() {
     ["EPC", m(R.epc), "Revenue ÷ all visitors"],
     ["Conversion rate", pct(R.conv), "New customers ÷ visitors"],
     ["Lead rate", pct(R.leadRate), "Leads ÷ visitors"],
-    ["Orders", nf(R.orders, 1), "Every purchase, including bumps and upsells"],
-    ["Calls attended", nf(R.calls, 1), "People who showed up to sales calls"],
-    ["Goal completions", nf(R.goals, 1), "People reaching Goal blocks"],
+    ["Orders", people(R.orders), "Every purchase, including bumps and upsells"],
+    ["Calls attended", people(R.calls), "People who showed up to sales calls"],
+    ["Goal completions", people(R.goals), "People reaching Goal blocks"],
     ...(R.oneTime > 0 ? ([["Payback period", Number.isFinite(R.payback) ? `${nf(R.payback, 1)} periods` : "Never", `Time to earn back ${m(R.oneTime)} of one-time costs`]] as [string, string, string][]) : []),
   ];
   return (
     <>
       {!shared && (
-        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Structural health">
-          <h4>Structural health</h4>
+        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Model checks">
+          <h4>Model checks · {w.length === 0 ? "All clear" : `${w.length} to fix`}</h4>
           {w.length === 0 ? (
             <p className="ok">
-              <Icon name="check" size={14} /> Structure and setup checks pass.
+              <Icon name="check" size={14} /> The map is connected and set up.
             </p>
           ) : (
             <ul>
@@ -146,7 +146,7 @@ function MathTab() {
               ))}
             </ul>
           )}
-          <h4 className="fm-health-subhead">Performance health</h4>
+          <h4 className="fm-health-subhead">Performance · Biggest leak</h4>
           {performance.length === 0 ? (
             <p className="ok"><Icon name="check" size={14} />{R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}</p>
           ) : (
@@ -156,8 +156,8 @@ function MathTab() {
                   <button type="button" onClick={() => focus(item.nodeId!)} title="Select this step and zoom to it">
                     <Icon name="alert" size={14} />
                     <span>
-                      {item.text} is the {item.rank === "largest-loss" ? "largest leak" : "weakest continuing step"}: {nf(item.lost, 1)} of {nf(item.inflow, 1)} people ({pct(item.dropPct)}) do not continue.
-                      <small>A 10% relative conversion lift projects +{nf(item.customerGain, 1)} customers, {m(item.revenueGain)} revenue, and {m(item.profitGain)} profit per month.</small>
+                      {item.text} is the {item.rank === "largest-loss" ? "largest leak" : "weakest continuing step"}: {people(item.lost)} of {people(item.inflow)} people ({pct(item.dropPct)}) do not continue.
+                      <small>A 10% relative conversion lift projects +{people(item.customerGain)} customers, {m(item.revenueGain)} revenue, and {m(item.profitGain)} profit per month.</small>
                     </span>
                   </button>
                 </li>
@@ -222,7 +222,7 @@ function StepsTab() {
               <tr key={r.id}>
                 <td>{r.name}</td>
                 <td className="r">{nf(r.inn)}</td>
-                <td className="r">{nf(r.out, 1)}</td>
+                <td className="r">{people(r.out)}</td>
                 <td className="r">{r.cat === "traffic" ? "–" : pct(r.dropPct)}</td>
                 <td className="r">{r.cat === "offer" ? m(r.rev) : ""}</td>
               </tr>
@@ -261,7 +261,7 @@ function SourcesTab() {
                 <tr key={x.id}>
                   <td>{x.name}</td>
                   <td className="r">{nf(x.traffic)}</td>
-                  <td className="r">{nf(x.cust, 1)}</td>
+                  <td className="r">{people(x.cust)}</td>
                   <td className="r">{m(x.rev)}</td>
                   <td className="r">{x.spend ? m(x.cpa) : "free"}</td>
                   <td className="r">{x.spend ? ratio(x.roas) : "–"}</td>
@@ -336,7 +336,7 @@ function WhatIfTab() {
             Ad spend at today’s cost<b>{m(plan.spendNeeded)}</b>
           </div>
           <div>
-            Customers needed<b>{nf(plan.customersNeeded, 1)}</b>
+            Customers needed<b>{people(plan.customersNeeded)}</b>
           </div>
         </div>
       ) : (
@@ -472,13 +472,12 @@ function ScenariosTab() {
     setSettings({
       scenarios: [
         { id: nid(), name: "Conservative", kind: "conservative", whatif: { traffic: 0.8, conv: 0.75, price: 1, cost: 1.15 } },
-        { id: nid(), name: "Expected", kind: "expected", whatif: { traffic: 1, conv: 1, price: 1, cost: 1 } },
         { id: nid(), name: "Best case", kind: "best", whatif: { traffic: 1.25, conv: 1.2, price: 1, cost: 0.9 } },
       ],
     });
   const metrics: [string, (r: typeof base) => string][] = [
     ["Traffic", (r) => nf(r.traffic)],
-    ["Customers", (r) => nf(r.cust, 1)],
+    ["Customers", (r) => people(r.cust)],
     ["Revenue", (r) => m(r.rev)],
     ["Ad spend", (r) => m(r.spend)],
     ["Profit", (r) => m(r.profit)],
@@ -488,10 +487,10 @@ function ScenariosTab() {
   ];
   return (
     <fieldset disabled={ro} className="m-0 border-0 p-0">
-      <p className="sub">Save named sets of assumptions and compare them side by side. Multipliers apply on top of the map (1 = as mapped).</p>
+      <p className="sub">The Baseline is the current map. Save named sets of assumptions and compare them side by side. Multipliers apply on top of the map (1 = as mapped).</p>
       {list.length === 0 && (
         <button type="button" className="btn mb-3" onClick={presets}>
-          Add conservative / expected / best case
+          Add conservative and best case
         </button>
       )}
       {list.map((sc) => (
@@ -506,7 +505,7 @@ function ScenariosTab() {
             </label>
             <select id={`sck-${sc.id}`} className="input w-auto! shrink-0" value={sc.kind ?? "custom"} onChange={(e) => upd(sc.id, { kind: e.target.value as Scenario["kind"] })}>
               <option value="conservative">Conservative</option>
-              <option value="expected">Expected</option>
+              {sc.kind === "expected" && <option value="expected">Expected</option>}
               <option value="best">Best case</option>
               <option value="custom">Custom</option>
             </select>
@@ -565,7 +564,7 @@ function ScenariosTab() {
             <thead>
               <tr>
                 <th />
-                <th className="r">As mapped</th>
+                <th className="r">Baseline (current map)</th>
                 {list.map((sc) => (
                   <th key={sc.id} className="r">
                     {sc.name}
@@ -653,7 +652,7 @@ function ForecastTab() {
                   <td className="r">{m(r.costs)}</td>
                   <td className={`r ${r.profit >= 0 ? "pos" : "neg"}`}>{m(r.profit)}</td>
                   <td className={`r ${r.cumulative >= 0 ? "pos" : "neg"}`}>{m(r.cumulative)}</td>
-                  <td className="r">{nf(r.activeSubs, 1)}</td>
+                  <td className="r">{people(r.activeSubs)}</td>
                 </tr>
               ))}
             </tbody>

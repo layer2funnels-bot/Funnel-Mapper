@@ -299,8 +299,8 @@ function EditorInner(props: EditorProps) {
         const img = { ...map, palette: paletteFor(s.opts.bg) };
         // the map image shows what's on screen: hidden layers (notes, checklists) stay out of it
         const shown = { nodes: s.nodes.filter((n) => (s.opts.notes || n.type !== "note") && (s.opts.checks || n.type !== "checklist")), edges: s.edges };
-        if (kind === "svg") download(fileName(s.name, "svg"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }), "image/svg+xml");
-        if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, nums, ...img }));
+        if (kind === "svg") download(fileName(s.name, "svg"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, basis: s.settings.basis, nums, ...img }), "image/svg+xml");
+        if (kind === "png") await downloadPng(fileName(s.name, "png"), await renderMapSvg(shown, s.R, { currency: s.settings.currency, basis: s.settings.basis, nums, ...img }));
         if (kind === "pdf") {
           showToast("Building PDF…");
           if (!s.shared) await ensureActuals();
@@ -795,7 +795,7 @@ function EditorInner(props: EditorProps) {
               <Icon name="redo" />
             </button>
             <button type="button" className="btn tidy" title={`Tidy up layout (${kbd("Mod+Shift+L")})`} aria-label="Tidy up" onClick={() => runTidy()} disabled={readOnly}>
-              <Icon name="sparkle" />
+              <Icon name="tidy" />
               <span className="fm-lbl">Tidy up</span>
             </button>
           </span>

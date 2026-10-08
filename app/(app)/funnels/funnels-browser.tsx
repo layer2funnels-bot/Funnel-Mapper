@@ -81,10 +81,10 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
                 <th className="fm-c-client">Client</th>
                 <th className="fm-c-status">Status</th>
                 <th className="fm-c-scen">Scenario</th>
-                <th className="r">Revenue</th>
-                <th className="r fm-c-profit">Profit</th>
+                <th className="r">Revenue / mo</th>
+                <th className="r fm-c-profit">Profit / mo</th>
                 <th className="r fm-c-roas">ROAS</th>
-                <th>Health</th>
+                <th>Checks</th>
                 <th className="r pr-4 fm-c-upd">Updated</th>
               </tr>
             </thead>
@@ -114,11 +114,11 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
                   <td>
                     {f.checks > 0 ? (
                       <Link href={`/funnels/${f.id}`} className="fm-health-pill warn" title="Open the funnel to see the checks">
-                        <Icon name="alert" size={13} /> {f.checks}<span className="fm-hp-label"> {f.checks === 1 ? "check" : "checks"}</span>
+                        <Icon name="alert" size={13} /> {f.checks}<span className="fm-hp-label"> to fix</span>
                       </Link>
                     ) : (
                       <span className="fm-health-pill ok">
-                        <Icon name="check" size={13} aria-hidden="true" /> <span className="fm-hp-label">Healthy</span>
+                        <Icon name="check" size={13} aria-hidden="true" /> <span className="fm-hp-label">All clear</span>
                       </span>
                     )}
                   </td>

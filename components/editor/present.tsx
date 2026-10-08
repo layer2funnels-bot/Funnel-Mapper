@@ -17,6 +17,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
   const nodes = useEditor((s) => s.nodes);
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
+  const basis = useEditor((s) => s.settings.basis);
   const hideNums = useEditor((s) => s.settings.hideNumbers);
   const showNums = useEditor((s) => s.opts.nums);
   const period = useEditor((s) => s.opts.period);
@@ -112,7 +113,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
             <div className="fp-obj">
               <b>{obj.name}</b> <span className="text-muted">· {typeOf(obj.type).label}</span>
               <div className="text-muted">{subLabel(obj, cur)}</div>
-              {nums && <div>{nodeStats(obj, R, cur, periodFactor(period)).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
+              {nums && <div>{nodeStats(obj, R, cur, periodFactor(period), basis).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
             </div>
           )}
           {!obj && <p className="fp-hint">Click a block to see its own numbers.</p>}

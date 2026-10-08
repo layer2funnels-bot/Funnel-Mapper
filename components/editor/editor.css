@@ -7250,3 +7250,57 @@ dialog.fm-sharedlg > p {
 .fm-readonly .react-flow__handle.fm-port:not(.side) {
   opacity: 0;
 }
+
+/* ===== zoom levels (V2 "Canvas zoom levels"): far = coloured shapes, mid = names and types, near = everything ===== */
+.fm-node.zb-mid:not(.sel) .fm-nstats,
+.fm-node.zb-far .fm-nstats,
+.fm-node.zb-far .fm-ntitle small,
+.fm-node.zb-far .fm-conv,
+.fm-node.zb-far .fm-split,
+.fm-node.zb-far .fm-goalbar,
+.fm-node.zb-far .fm-st,
+.fm-node.zb-far .fm-lostfx {
+  display: none !important;
+}
+.fm-node.zb-far {
+  background: var(--cc) !important;
+  border-color: transparent !important;
+  justify-content: center;
+}
+.fm-node.zb-far.fam-logic {
+  background-image: none;
+}
+.fm-node.zb-far .fm-ntitle {
+  display: none;
+}
+.fm-node.zb-far .fm-nhead {
+  justify-content: center;
+  padding: 0;
+}
+.fm-node.zb-far .fm-nicon,
+.fm-node.zb-far .fm-nicon.art {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--cc);
+  border-radius: 10px;
+}
+.fm-node.zb-far .fm-nicon.art img {
+  border-radius: 50%;
+}
+.fm-node.zb-far.fam-page .pgo-info,
+.fm-node.zb-far.fam-offer .pgo-info,
+.fm-node.zb-far.fam-page .pgo-cap,
+.fm-node.zb-far.fam-offer .pgo-cap {
+  display: none;
+}
+.fm-node.zb-far.fam-page .pgo-top,
+.fm-node.zb-far.fam-offer .pgo-top {
+  justify-content: center;
+  padding: 0;
+  align-items: center;
+}
+.fm-node.zb-far.fam-page .fm-price,
+.fm-node.zb-far.fam-offer .fm-price {
+  display: none;
+}

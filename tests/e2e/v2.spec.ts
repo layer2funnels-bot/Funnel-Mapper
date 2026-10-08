@@ -122,13 +122,13 @@ test.describe("V2 editor interactions", () => {
     // one undo goes back to the quiz
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 600 } });
     await page.keyboard.press(`${mod}+z`);
-    await expect(node(page, "Quiz funnel").locator(".fm-ntitle small")).not.toContainText("Survey");
+    await expect(node(page, "Quiz funnel").locator(".pgo-cap, .fm-ntitle small").first()).not.toContainText("Survey");
   });
 
   test("Wait: duration + unit, live label, invalid state, no analytics", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Wait / delay", exact: true }).click();
+    await (await paletteItem(page, "Wait / delay")).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.getByRole("tab", { name: "Analytics" })).toBeDisabled();
     await page.getByLabel("Wait for").fill("2");
@@ -317,7 +317,8 @@ test.describe("V2 finishing pass", () => {
   test("platform blocks carry their brand mark on the map and in the library; others keep their icon", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark")).toHaveCount(1);
+    // V2: platform blocks use the owner's brand art on the map; pages and offers keep their window
+    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark, .fm-nicon img")).toHaveCount(1);
     await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
     await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
     await expect(page.locator(".fm-pal .pi.brand svg.fm-bmark").first()).toBeVisible();
@@ -523,8 +524,10 @@ test.describe("V2 QA regressions", () => {
     const p = await ctx.newPage();
     await p.goto(`/s/${link.data!.token}`);
     await expect(p.locator(".react-flow__node").first()).toBeVisible();
-    await expect(p.getByRole("tab", { name: "Forecast" })).toBeVisible();
+    // V2 shared view: the map and the KPI strip; the team's Actuals are never part of it
+    await expect(p.getByRole("contentinfo", { name: "Funnel numbers" })).toBeVisible();
     await expect(p.getByRole("tab", { name: "Actuals" })).toHaveCount(0);
+    expect(await p.locator("body").innerText()).not.toMatch(/Actuals/);
     await ctx.close();
   });
 

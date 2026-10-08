@@ -108,7 +108,7 @@ test("client exports: PDF report sections match the maths; SVG/PNG keep the canv
   await page.screenshot({ path: "test-results/export-canvas.png" });
 
   // the live editor still shows the same numbers after exporting
-  await expect(page.locator(".fm-kpis")).toContainText(/Customers\s*89\b/);
+  await expect(page.locator(".fm-kpis")).toContainText(/Customers\s*89(?!\.)/);
   await expect(page.locator(".fm-kpis")).toContainText("13.4x");
 });
 

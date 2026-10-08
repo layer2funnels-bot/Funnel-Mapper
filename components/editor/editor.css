@@ -7363,3 +7363,31 @@ dialog.fm-sharedlg > p {
     min-height: 44px;
   }
 }
+
+/* touch targets, second pass: fixed heights in the older rules need height:auto to let the minimum win */
+@media (max-width: 1023px) {
+  .fm-top .btn,
+  .fm-top .fm-cbtn,
+  .fm-top .btn.tidy,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-ftb button,
+  .fm-kpis select,
+  .fm-insp select,
+  .fm-scen {
+    height: auto;
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-top .btn,
+  .fm-top .fm-cbtn,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-kpis select,
+  .fm-insp select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

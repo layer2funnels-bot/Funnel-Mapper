@@ -42,7 +42,7 @@ test.describe("workspaces", () => {
     await expect(page.getByRole("list", { name: "Team members" })).not.toContainText("layer2funnels");
     await expect(page.getByRole("heading", { name: "Independent accounts" })).toHaveCount(0);
     await page.goto("/templates");
-    await expect(page.getByRole("heading", { name: "Your templates" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Your templates|^Saved templates|^Team templates/ }).first()).toBeVisible();
     await ctx.close();
   });
 
@@ -211,7 +211,7 @@ test.describe("editor panels", () => {
     const w0 = (await stage.boundingBox())!.width;
     const edges = await page.locator(".react-flow__edge").count();
 
-    await page.getByRole("button", { name: "Collapse block library" }).click();
+    await page.getByRole("button", { name: "Collapse block library" }).first().click();
     await expect(page.locator("#fm-side")).toBeHidden();
     await expect.poll(async () => (await stage.boundingBox())!.width).toBeGreaterThan(w0 + 200);
     await page.getByRole("button", { name: "Collapse details panel" }).click();

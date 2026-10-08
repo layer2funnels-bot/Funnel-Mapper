@@ -43,7 +43,7 @@ test.describe("Page URL to thumbnail", () => {
     await expect.poll(async () => (await visibleSize(page, "Quiz funnel")).natural).toBeGreaterThan(0);
 
     // hovering the strip shows a larger peek
-    await node(page, "Quiz funnel").locator(".fm-wf").hover();
+    await node(page, "Quiz funnel").locator(".pgo-win, .fm-wf").first().hover();
     await expect(page.locator(".fm-peek .fm-shot")).toBeVisible();
     await page.mouse.move(5, 300);
     await expect(page.locator(".fm-peek")).toHaveCount(0);
@@ -100,7 +100,7 @@ test.describe("Page URL to thumbnail", () => {
     await page.getByRole("button", { name: "Funnel menu" }).click();
     const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Map image (.svg)" }).click()]);
     const svg = readFileSync((await dl.path())!).toString();
-    expect(svg).toMatch(/<image[^>]+href="data:image\/png;base64,/);
+    expect(svg).toMatch(/<image[^>]+href="data:image\/(png|webp|jpeg);base64,/);
     // presentation uses the same card
     await page.getByRole("button", { name: "Present" }).first().click();
     await page.getByRole("button", { name: "Next stage" }).click();

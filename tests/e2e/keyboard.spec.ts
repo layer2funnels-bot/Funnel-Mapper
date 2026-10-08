@@ -12,7 +12,7 @@ async function tabWalk(page: Page, n: number) {
         const el = document.activeElement as HTMLElement | null;
         if (!el || el === document.body) return { inCanvas: false, ring: true, label: "(body)" };
         const own = getComputedStyle(el);
-        const wrap = el.closest(".fm-search") ? getComputedStyle(el.closest(".fm-search") as HTMLElement) : null; // the search field rings its frame
+        const wrap = el.closest(".fm-search, .fm-sb-s") ? getComputedStyle(el.closest(".fm-search, .fm-sb-s") as HTMLElement) : null; // the search field rings its frame
         const ring = (own.outlineStyle !== "none" && parseFloat(own.outlineWidth) > 0) || own.boxShadow !== "none" || (!!wrap && wrap.boxShadow !== "none");
         return { inCanvas: !!el.closest(".react-flow"), ring, label: `${el.tagName.toLowerCase()} "${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 24)}"` };
       }),

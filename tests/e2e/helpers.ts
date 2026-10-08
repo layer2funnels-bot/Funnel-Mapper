@@ -127,3 +127,11 @@ export async function paletteItem(page: Page, label: string) {
   await page.getByPlaceholder(/^Search( \d+)? blocks$/).fill(label);
   return page.getByRole("button", { name: `Add ${label}`, exact: true });
 }
+
+const GROUP_OF: Record<string, string> = { Overview: "Model", Steps: "Model", Sources: "Model", Costs: "Model", "What-if": "Simulate", Scenarios: "Simulate", Forecast: "Track", Actuals: "Track" };
+/** A tab of the Funnel panel: open its group (Model | Simulate | Track) first, then the tab. */
+export async function funnelTab(page: Page, name: keyof typeof GROUP_OF | string) {
+  const tab = page.getByRole("tab", { name, exact: true });
+  if (!(await tab.isVisible().catch(() => false))) await page.getByRole("tablist", { name: "Funnel tools" }).getByRole("tab", { name: GROUP_OF[name], exact: true }).click();
+  await tab.click();
+}

@@ -115,7 +115,7 @@ test.describe("Quick Add adapts to the screen", () => {
     const { id } = await createFunnel({ graph: blankGraph() });
     await openEditor(page, id);
     await (await paletteItem(page, "Facebook Ads")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
-    const fb = node(page, "Facebook ads");
+    const fb = node(page, "Facebook Ads");
     for (const zoomOut of [0, 1, 3]) {
       await page.getByRole("button", { name: "Fit" }).first().click();
       await page.waitForTimeout(450); // the fit animates
@@ -152,7 +152,7 @@ test.describe("Quick Add adapts to the screen", () => {
     await openEditor(page, id);
     await page.getByRole("button", { name: "Show building blocks" }).click();
     await (await paletteItem(page, "Facebook Ads")).click();
-    const fb = node(page, "Facebook ads");
+    const fb = node(page, "Facebook Ads");
     await expect(fb).toBeVisible();
     await page.getByRole("button", { name: "Close details" }).click(); // the new block opened its details sheet
     const from = await centre(page, fb.locator(".fm-port.side.right"));

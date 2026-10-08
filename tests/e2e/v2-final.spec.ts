@@ -1,6 +1,6 @@
 // Funnel Mapper Pro V2 final features, through the real UI.
 import { expect, test } from "@playwright/test";
-import { centre, createFunnel, node, openEditor, waitSaved } from "./helpers";
+import { centre, createFunnel, node, openEditor, waitSaved, funnelTab } from "./helpers";
 import { blankGraph } from "../../lib/graph";
 
 test.describe("four ports and line meanings", () => {
@@ -140,7 +140,7 @@ test.describe("actuals", () => {
   test("typed and CSV actuals land in the same place, bad rows are reported, and Actual mode draws them on the map", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("tab", { name: "Actuals" }).click();
+    await funnelTab(page, "Actuals");
     await page.getByRole("button", { name: "Type in or import CSV" }).click();
     const dlg = page.getByRole("dialog", { name: "Actuals" });
     await expect(dlg.getByRole("tab", { name: "Type it in" })).toHaveAttribute("aria-selected", "true");

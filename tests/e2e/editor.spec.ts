@@ -33,7 +33,7 @@ test.describe("funnel editor", () => {
     expect(box.x).toBeLessThan(stage.x);
     await (await paletteItem(page, "Facebook Ads")).click();
     await expect(nodes(page)).toHaveCount(2);
-    await expect(page.locator(".fm-insp h3")).toHaveText("Facebook ads");
+    await expect(page.locator(".fm-insp h3")).toHaveText("Facebook Ads");
   });
 
   test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe("funnel editor", () => {
     await (await paletteItem(page, "Thank-you page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
     await (await paletteItem(page, "Email sequence")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
     await expect(nodes(page)).toHaveCount(4);
-    const fb = node(page, "Facebook ads"),
+    const fb = node(page, "Facebook Ads"),
       lp = node(page, "Landing page"),
       ty = node(page, "Thank-you page"),
       seq = node(page, "Email sequence");
@@ -224,9 +224,9 @@ test.describe("funnel editor", () => {
       await page.getByRole("button", { name: "Funnel menu" }).click();
       await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     }
-    // locked Emerald dark tokens: panels #1E293B, workspace chrome / blocks #111827
+    // locked Emerald dark tokens; V2 board: the right panel sits on the workspace chrome #111827
     const bg = await page.locator(".fm-insp").evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(bg).toBe("rgb(30, 41, 59)");
+    expect(bg).toBe("rgb(17, 24, 39)");
     const nodeBg = await page.locator(".fm-node").first().evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(nodeBg).toBe("rgb(17, 24, 39)");
     await page.screenshot({ path: "test-results/editor-dark.png" });

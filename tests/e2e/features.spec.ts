@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createFunnel, node, nodes, openEditor, waitSaved } from "./helpers";
+import { createFunnel, node, nodes, openEditor, waitSaved, funnelTab } from "./helpers";
 
 const WEBINAR_LIVE = "20000000-0000-4000-8000-000000000003"; // seeded, has last month's actuals
 
@@ -153,7 +153,7 @@ test.describe("reports and planning tools", () => {
     const profit = async () => (await page.locator(".fm-kpis .fm-kpi", { hasText: "Profit" }).locator("b").textContent())!;
     const before = await profit();
     // costs
-    await page.getByRole("tab", { name: "Costs" }).click();
+    await funnelTab(page, "Costs");
     await page.getByRole("button", { name: "Add expense", exact: true }).click();
     await page.getByLabel("Expense name").fill("Funnel software");
     await page.getByLabel("Amount").fill("300");
@@ -164,23 +164,23 @@ test.describe("reports and planning tools", () => {
     await page.getByLabel("How often").nth(1).selectOption("one_time");
     await expect(page.locator(".statbox", { hasText: "Payback" })).toContainText("periods");
     // scenarios
-    await page.getByRole("tab", { name: "Scenarios" }).click();
+    await funnelTab(page, "Scenarios");
     await page.getByRole("button", { name: "Add conservative and best case", exact: true }).click();
     const table = page.getByRole("table", { name: "Scenario comparison" });
     await expect(table.getByRole("columnheader")).toHaveCount(4);
     await expect(table.getByRole("row", { name: /Profit/ })).toBeVisible();
     // forecast
-    await page.getByRole("tab", { name: "Forecast" }).click();
+    await funnelTab(page, "Forecast");
     await expect(page.locator(".recharts-surface").first()).toBeVisible();
     await page.getByLabel("Months").fill("6");
     await page.getByRole("button", { name: "Show table" }).click();
     await expect(page.locator("#rbody table tbody tr")).toHaveCount(6);
     // what-if + goal seek
-    await page.getByRole("tab", { name: "What-if" }).click();
+    await funnelTab(page, "What-if");
     await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
     await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
     await page.getByRole("button", { name: "Apply to what-if" }).click();
-    await page.getByRole("tab", { name: "Overview" }).click();
+    await funnelTab(page, "Overview");
     await expect(page.locator(".rline", { hasText: "Profit" }).first()).toContainText("£50,000");
   });
 
@@ -219,7 +219,7 @@ test.describe("reports and planning tools", () => {
 
   test("planned vs actual", async ({ page }) => {
     await openEditor(page, WEBINAR_LIVE);
-    await page.getByRole("tab", { name: "Actuals" }).click();
+    await funnelTab(page, "Actuals");
     await expect(page.locator(".statbox", { hasText: "Revenue actual" })).not.toContainText("–");
     await expect(page.getByRole("table", { name: "Planned vs actual by step" }).getByRole("row")).toHaveCount(10);
     await page.getByRole("button", { name: "Enter actuals for this range" }).click();

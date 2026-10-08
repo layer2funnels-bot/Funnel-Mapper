@@ -135,11 +135,11 @@ test.describe("notes, layers, analytics and the library", () => {
     const side = page.locator(".fm-side");
     await expect(side.getByRole("heading", { name: "Communication" })).toBeVisible();
     await expect(side.getByRole("heading", { name: "Sales & CRM" })).toBeVisible();
-    await side.getByPlaceholder(/Search \d+ blocks/).fill("membership");
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("membership");
     await side.getByRole("button", { name: "Add Membership", exact: true }).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp")).toContainText("Billing"); // subscription fields
-    await side.getByPlaceholder(/Search \d+ blocks/).fill("");
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("");
     await expect(side.getByRole("button", { name: "Recent: Membership" })).toBeVisible();
     await side.getByRole("button", { name: "Favourite Callout" }).click();
     await side.getByRole("button", { name: "Favourite: Callout" }).click();

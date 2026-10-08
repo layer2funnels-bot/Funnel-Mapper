@@ -62,7 +62,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     expect(zFront).toBeGreaterThan(zBack);
 
     // lock: can't be dragged, nudged or deleted; unlock restores it
-    await page.getByRole("button", { name: "Lock", exact: true }).click();
+    await page.getByRole("button", { name: "Lock", exact: true }).first().click();
     await expect(box.locator(".fm-lock")).toBeVisible();
     const before = await pos(page, target.id);
     const c = await centre(page, box.locator(".fm-ntitle"));

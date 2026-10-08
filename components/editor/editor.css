@@ -6191,6 +6191,7 @@ dialog.fm-sharedlg {
   border-top: 1px solid var(--side-line);
 }
 .pgo-ty {
+  color: var(--cc);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -7320,4 +7321,14 @@ dialog.fm-sharedlg > p {
   .fm-top .fm-fname {
     text-overflow: ellipsis;
   }
+}
+
+/* Light theme contrast: category colours are fills, not text colours; text that borrows them is darkened toward ink */
+:root[data-theme="light"] .fm-price,
+:root[data-theme="light"] .pgo-ty {
+  color: color-mix(in srgb, var(--cc, var(--ink)) 45%, #0f172a);
+}
+:root[data-theme="light"] .text-brand,
+:root[data-theme="light"] .fm-moredetails > summary {
+  color: var(--brand-light);
 }

@@ -221,7 +221,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
             </div>
           </div>
           <div className="pgo-cap">
-            <span className="pgo-ty" style={{ color: cc }}>
+            <span className="pgo-ty" style={{ "--cc": cc } as React.CSSProperties}>
               <span className="pgo-ic" style={{ background: cc }}>
                 <Icon name={(n.s?.icon as IconName) || T.icon} size={9} />
               </span>

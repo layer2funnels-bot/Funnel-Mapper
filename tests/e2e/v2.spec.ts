@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { blankGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
-import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos } from "./helpers";
+import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, startSimulate } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -319,7 +319,7 @@ test.describe("V2 finishing pass", () => {
     await openEditor(page, id);
     await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark")).toHaveCount(1);
     await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
-    await page.getByPlaceholder(/^Search \d+ blocks/).fill("Facebook ads");
+    await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
     await expect(page.locator(".fm-pal .pi.brand svg.fm-bmark").first()).toBeVisible();
   });
 
@@ -349,7 +349,7 @@ test.describe("V2 Simulate", () => {
     await openEditor(page, id);
     const kpis = page.getByRole("contentinfo", { name: "Funnel numbers" });
     await expect(kpis).toContainText("£6,032");
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await expect(panel).toBeVisible();
     // nothing has changed yet: no chips, no ghost lines
@@ -385,7 +385,7 @@ test.describe("V2 Simulate", () => {
   test("change one block: its own rate flows through the map; the change is listed and can be undone one by one", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await node(page, "Quiz funnel").click();
     await expect(panel.getByRole("region", { name: "One block" })).toContainText("Quiz funnel");
@@ -406,7 +406,7 @@ test.describe("V2 Simulate", () => {
   test("save the levers as a scenario, try a scenario, and Done keeps the map; a viewer can't simulate", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await panel.getByLabel("Prices").fill("1.1");
     await panel.getByLabel("Scenario name").fill("Price rise");
@@ -432,7 +432,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
   test("Play flow draws people moving along the connections in proportion to the engine's flows, and Pause stops it", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await expect(page.locator(".fm-flowdots")).toHaveCount(0);
     const play = panel.locator(".fm-playbtn");
@@ -467,7 +467,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
     const kpis = page.getByRole("contentinfo", { name: "Funnel numbers" });
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await panel.getByLabel("Conversion rates").fill("0.8");
     await expect(kpis).not.toContainText("£6,032");
@@ -494,7 +494,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Simulate" }).click();
+    await startSimulate(page);
     const play = page.getByLabel("Simulate", { exact: true }).getByRole("button", { name: "Play flow" });
     await expect(play).toBeDisabled();
     await expect(page.locator(".fm-flowdots")).toHaveCount(0);

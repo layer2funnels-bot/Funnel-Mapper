@@ -102,8 +102,16 @@ export async function latestMail(to: string, since = 0) {
 
 /** Add a library block through the palette search (annotation blocks sit in a collapsed group). */
 export async function addFromPalette(page: Page, label: string) {
-  const search = page.getByPlaceholder(/^Search \d+ blocks$/);
+  const search = page.getByPlaceholder(/^Search( \d+)? blocks$/);
   await search.fill(label);
   await page.getByRole("button", { name: `Add ${label}`, exact: true }).click();
   await search.fill("");
+}
+
+/** Start Simulate on the map: the Simulate group of the Funnel panel (What-if), or the collapsed rail's button. */
+export async function startSimulate(page: Page) {
+  const rail = page.getByRole("button", { name: "Simulate", exact: true });
+  if (await rail.isVisible().catch(() => false)) return rail.click();
+  await page.getByRole("tab", { name: "Simulate", exact: true }).click();
+  await page.getByRole("button", { name: "Simulate on the map" }).click();
 }

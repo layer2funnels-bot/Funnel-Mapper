@@ -42,7 +42,9 @@ export function WorkspaceSwitcher({ currentId, workspaces, canCreate, logo, team
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logo} alt="" className="h-7 w-7 shrink-0 rounded-md bg-white object-contain" />
         ) : (
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand text-sm font-bold text-brand-ink">{name.slice(0, 1).toUpperCase()}</span>
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] bg-slate-50 text-[#15803d]" aria-hidden="true">
+            <Icon name="logo" size={16} strokeWidth={2.2} />
+          </span>
         )}
         <span className="min-w-0 flex-1 lg:max-xl:sr-only">
           <span className="block truncate text-[13.5px] font-semibold text-side-ink">{name}</span>

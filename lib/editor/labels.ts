@@ -2,9 +2,11 @@
 // Returns plain segments (bold or not) so React, SVG and PDF exports can all render them.
 import { getSmoothStepPath, getStraightPath, Position } from "@xyflow/react";
 import { baseOf, INT_LABEL, typeOf, type Interval } from "../catalog";
-import { money, nf } from "../format";
+import { money, moneyPer, nf, people as ppl } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
-import type { FunnelNode } from "../graph";
+import type { FunnelNode, Side } from "../graph";
+import { curveSides } from "../edge-geometry";
+export { curve, curveSides, sidesOf } from "../edge-geometry";
 import type { edgeLook } from "../style";
 import { waitLabel } from "../wait";
 
@@ -26,21 +28,24 @@ export function subLabel(n: FunnelNode, cur: string): string {
   return T.label;
 }
 
-/** Block stats. `k` scales people and money to another period (Forecast layer: day / week / year). */
-export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1): Seg[] {
+/**
+ * Block stats. `k` scales people and money to another period (Forecast layer: day / week / year). People are whole
+ * (V2 data trust; the exact value is in the block's hover and inspector) and money carries its period and basis.
+ */
+export function nodeStats(n: FunnelNode, R: FunnelResult, cur: string, k = 1, basis?: "first" | "ltv"): Seg[] {
   const T = typeOf(n.type),
     r0 = R.N[n.id];
   if (!r0 || !T) return [];
   const r = k === 1 ? r0 : { ...r0, inflow: r0.inflow * k, out: r0.out * k, non: r0.non * k, rev: r0.rev * k, spend: r0.spend * k };
-  if (T.cat === "traffic") return [{ t: nf(r.out), b: true }, { t: ` visits · ${r.spend ? money(r.spend, cur) : "free"}` }];
-  if (T.cat === "offer") return [{ t: nf(r.out, 1), b: true }, { t: " buy · " }, { t: money(r.rev, cur), b: true }];
+  if (T.cat === "traffic") return [{ t: ppl(r.out), b: true }, { t: ` visits · ${r.spend ? moneyPer(r.spend, cur, k) : "free"}` }];
+  if (T.cat === "offer") return [{ t: ppl(r.out), b: true }, { t: " buy · " }, { t: moneyPer(r.rev, cur, k, basis), b: true }];
   const b = baseOf(n.type);
   if (b === "cond" || b === "split") {
     const [ya, yb] = T.ports ?? ["Yes", "No"];
-    return [{ t: `${ya} ` }, { t: nf(r.out, 1), b: true }, { t: ` · ${yb} ` }, { t: nf(r.non, 1), b: true }];
+    return [{ t: `${ya} ` }, { t: ppl(r.out), b: true }, { t: ` · ${yb} ` }, { t: ppl(r.non), b: true }];
   }
-  if (b === "goal" || b === "exit") return [{ t: nf(r.inflow, 1), b: true }, { t: " people" }];
-  return [{ t: `In ${nf(r.inflow)} → ` }, { t: nf(r.out, 1), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
+  if (b === "goal" || b === "exit") return [{ t: ppl(r.inflow), b: true }, { t: " people" }];
+  return [{ t: `In ${ppl(r.inflow)} → ` }, { t: ppl(r.out), b: true }, { t: ` (${nf(num(n.p.cr), 1)}%)` }];
 }
 
 const SHORT: Record<Interval, string> = { weekly: "wk", monthly: "mo", quarterly: "qtr", yearly: "yr" };
@@ -73,20 +78,20 @@ export interface PerfLine {
   /** Share of arriving people who move on (0–1); null when the block has no such rate (sources, goals, logic). */
   ratio: number | null;
 }
-export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1): PerfLine | null {
+export function perfLine(n: FunnelNode, R: FunnelResult, cur: string, k = 1, basis?: "first" | "ltv"): PerfLine | null {
   const T = typeOf(n.type),
     r0 = R.N[n.id];
   // a Wait has nothing to measure: its card keeps "Wait 2 days" as its second line
   if (!r0 || !T || n.type === "wait") return null;
   const inflow = r0.inflow * k,
     out = r0.out * k;
-  if (T.cat === "traffic") return { headline: nf(out), caption: r0.spend ? `visits · ${money(r0.spend * k, cur)}` : "visits · free", ratio: null };
+  if (T.cat === "traffic") return { headline: ppl(out), caption: r0.spend ? `visits · ${moneyPer(r0.spend * k, cur, k)}` : "visits · free", ratio: null };
   const b = baseOf(n.type);
-  if (b === "goal" || b === "exit") return { headline: nf(inflow, 1), caption: "people", ratio: null };
-  if (b === "cond" || b === "split") return { headline: nf(inflow, 1), caption: "people in", ratio: null };
+  if (b === "goal" || b === "exit") return { headline: ppl(inflow), caption: "people", ratio: null };
+  if (b === "cond" || b === "split") return { headline: ppl(inflow), caption: "people in", ratio: null };
   const ratio = inflow > 0 ? Math.min(1, out / inflow) : 0;
-  if (T.cat === "offer") return { headline: money(r0.rev * k, cur), caption: `${nf(out, 1)} buy · ${nf(ratio * 100)}%`, ratio };
-  return { headline: nf(out, 1), caption: `${nf(ratio * 100)}% move on`, ratio };
+  if (T.cat === "offer") return { headline: moneyPer(r0.rev * k, cur, k, basis), caption: `${ppl(out)} buy · ${nf(ratio * 100)}%`, ratio };
+  return { headline: ppl(out), caption: `${nf(ratio * 100)}% move on`, ratio };
 }
 
 /**
@@ -121,7 +126,7 @@ export function frameTotals(members: FunnelNode[], R: FunnelResult, cur: string,
     people = Math.max(people, r.inflow);
   }
   const f = { visits: visits * k, spend: spend * k, buyers: buyers * k, revenue: revenue * k, people: people * k };
-  const text = visits > 0 ? `${nf(f.visits)} visits · ${f.spend ? money(f.spend, cur) : "free"}` : buyers > 0 ? `${nf(f.buyers, 1)} customers · ${money(f.revenue, cur)}` : members.length ? `${nf(f.people)} people` : "";
+  const text = visits > 0 ? `${ppl(f.visits)} visits · ${f.spend ? moneyPer(f.spend, cur, k) : "free"}` : buyers > 0 ? `${ppl(f.buyers)} customers · ${moneyPer(f.revenue, cur, k)}` : members.length ? `${ppl(f.people)} people` : "";
   return { text, ...f };
 }
 
@@ -136,6 +141,44 @@ export function edgeConversion(fromId: string, flow: number, R: FunnelResult): n
   return f && f.inflow > 0 ? Math.min(1, flow / f.inflow) : null;
 }
 
+/**
+ * A line's number as a sentence (V2 F9): "59% of 1,500 = 885". The share is of the people who arrive at the source
+ * step; traffic sources (nobody arrives, they start the flow) and lines without data give null. Display only.
+ */
+export function edgeSentence(fromId: string, flow: number, R: FunnelResult, k = 1): string | null {
+  const f = R.N[fromId];
+  if (!f || !(f.inflow > 0) || !(flow > 0)) return null;
+  const pct = Math.min(1, flow / f.inflow) * 100;
+  return `${nf(pct, pct < 10 && Math.abs(pct - Math.round(pct)) > 0.05 ? 1 : 0)}% of ${ppl(f.inflow * k)} = ${ppl(flow * k)}`;
+}
+/** People who stop at a step without a line carrying them on ("615 leave here"), or null when nobody does. */
+export function leaveText(n: FunnelNode, R: FunnelResult, hasAltLine: boolean, k = 1): string | null {
+  const r = R.N[n.id];
+  if (!r || hasAltLine || typeOf(n.type)?.cat === "traffic" || !(r.non * k >= 0.5)) return null;
+  return `${ppl(r.non * k)} leave here`;
+}
+
+/**
+ * The number row of a flow block as the design draws it (V2 "Editor-default"): the left side and, when there is one, the
+ * right side ("2,000 visits … $600 / mo", "Yes 29 … No 54", "952 → 381 … 40%"). Same figures as nodeStats, just laid out
+ * for the card. Pages and offers have their own object and don't use this.
+ */
+export function nodeRow(n: FunnelNode, R: FunnelResult, cur: string, k = 1): { l: Seg[]; r?: Seg[] } {
+  const T = typeOf(n.type),
+    r0 = R.N[n.id];
+  if (!r0 || !T) return { l: [] };
+  const r = k === 1 ? r0 : { ...r0, inflow: r0.inflow * k, out: r0.out * k, non: r0.non * k, rev: r0.rev * k, spend: r0.spend * k };
+  if (T.cat === "traffic") return { l: [{ t: ppl(r.out), b: true }, { t: " visits" }], r: [{ t: r.spend ? moneyPer(r.spend, cur, k) : "free" }] };
+  const b = baseOf(n.type);
+  if (b === "cond" || b === "split") {
+    const [ya, yb] = T.ports ?? ["Yes", "No"];
+    return { l: [{ t: `${ya} ` }, { t: ppl(r.out), b: true }], r: [{ t: `${yb} ` }, { t: ppl(r.non), b: true }] };
+  }
+  if (b === "goal" || b === "exit") return { l: [{ t: ppl(r.inflow), b: true }, { t: " people" }] };
+  const rate = r.inflow > 0 ? Math.min(1, r.out / r.inflow) : 0;
+  return { l: [{ t: `${ppl(r.inflow)} → ` }, { t: ppl(r.out), b: true }], r: [{ t: `${nf(rate * 100)}%` }] };
+}
+
 export const segText = (s: Seg[]) => s.map((x) => x.t).join("");
 
 /** Edge label tag: Yes/No, A/B, or No for a didn't-convert path. */
@@ -146,24 +189,20 @@ export function edgeTag(fromType: string | undefined, port: "main" | "alt"): { t
   return null;
 }
 
-/** Same bezier as the prototype's curve(): right/bottom port out, left port in. Returns path + label midpoint. */
-export function curve(x1: number, y1: number, port: "main" | "alt", x2: number, y2: number): [string, [number, number]] {
-  const dx = Math.max(50, Math.abs(x2 - x1) / 2);
-  const c1 = port === "alt" ? [x1, y1 + Math.max(60, Math.abs(y2 - y1) / 2)] : [x1 + dx, y1];
-  const c2 = [x2 - dx, y2];
-  return [`M ${x1} ${y1} C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${x2} ${y2}`, [(x1 + 3 * c1[0] + 3 * c2[0] + x2) / 8, (y1 + 3 * c1[1] + 3 * c2[1] + y2) / 8]];
-}
-
 /** Path + label point for the connection's line style (curved is the prototype's own bezier). Shared by the canvas and the map export. */
-export function edgePath(look: Pick<ReturnType<typeof edgeLook>, "path">, port: "main" | "alt", sx: number, sy: number, tx: number, ty: number): [string, number, number] {
+const POS: Record<Side, Position> = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
+
+export function edgePath(look: Pick<ReturnType<typeof edgeLook>, "path">, port: "main" | "alt", sx: number, sy: number, tx: number, ty: number, sp?: Side, tp?: Side): [string, number, number] {
+  const s1 = sp ?? (port === "alt" ? "bottom" : "right"),
+    t1 = tp ?? "left";
   if (look.path === "straight") {
     const [d, lx, ly] = getStraightPath({ sourceX: sx, sourceY: sy, targetX: tx, targetY: ty });
     return [d, lx, ly];
   }
   if (look.path === "elbow") {
-    const [d, lx, ly] = getSmoothStepPath({ sourceX: sx, sourceY: sy, sourcePosition: port === "alt" ? Position.Bottom : Position.Right, targetX: tx, targetY: ty, targetPosition: Position.Left, borderRadius: 10 });
+    const [d, lx, ly] = getSmoothStepPath({ sourceX: sx, sourceY: sy, sourcePosition: POS[s1], targetX: tx, targetY: ty, targetPosition: POS[t1], borderRadius: 10 });
     return [d, lx, ly];
   }
-  const [d, [mx, my]] = curve(sx, sy, port, tx, ty);
+  const [d, [mx, my]] = curveSides(sx, sy, s1, tx, ty, t1);
   return [d, mx, my];
 }

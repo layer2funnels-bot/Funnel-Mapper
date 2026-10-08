@@ -159,11 +159,11 @@ async function supabaseKeys() {
 function templates() {
   const t = (f) => readFileSync(`${ROOT}supabase/templates/${f}.html`, "utf8");
   return {
-    mailer_subjects_invite: "You’re invited to Funnel Mapper Pro",
+    mailer_subjects_invite: "You’re invited to Funnel Mapper Pro V2",
     mailer_templates_invite_content: t("invite"),
-    mailer_subjects_magic_link: "Your Funnel Mapper Pro sign-in link",
+    mailer_subjects_magic_link: "Your Funnel Mapper Pro V2 sign-in link",
     mailer_templates_magic_link_content: t("magic_link"),
-    mailer_subjects_recovery: "Reset your Funnel Mapper Pro password",
+    mailer_subjects_recovery: "Reset your Funnel Mapper Pro V2 password",
     mailer_templates_recovery_content: t("recovery"),
   };
 }

@@ -2,12 +2,13 @@
 // Editor state (Zustand). Holds the funnel graph + settings, selection, undo/redo history and view options.
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
-import { blockH, DEFAULT_SIZE, defaultsFor, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
+import { blockH, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
 import type { ActualRowDb } from "../schemas";
-import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
+import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Side, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
 import { knobsOf, type SimBase } from "../simulate";
+import { actualResult, actualsInRange } from "../actual-result";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
@@ -71,7 +72,7 @@ export interface QuickAddState {
   fx: number;
   fy: number;
   /** Opened by dragging a connection off a port into empty space: the new block lands at `fx/fy` (its in-port at that point) and is connected. */
-  from?: { id: string; port: "main" | "alt" };
+  from?: { id: string; port: "main" | "alt"; sh?: Side };
   /** Opened from "Insert step on line": the block goes onto this connection. */
   edge?: string;
 }
@@ -101,8 +102,12 @@ export interface EditorState {
   products: ClientProduct[];
   /** Actuals rows of this funnel (loaded on demand for Trend widgets). */
   actuals: ActualRowDb[] | null;
+  /** Actual mode (F4): the map draws recorded actuals for this date range instead of the plan. */
+  actualView: { start: string; end: string; label: string } | null;
+  /** The recorded numbers for `actualView`, shaped like an engine result (lib/actual-result.ts). */
+  actualR: FunnelResult | null;
   /** Left panel: block library, funnel outline or workspace blocks. */
-  sideTab: "library" | "outline" | "blocks";
+  sideTab: "library" | "outline" | "blocks" | "templates" | "math";
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
@@ -158,6 +163,12 @@ export interface EditorState {
   shared: boolean;
   /** Floating quick-add: where it opened (screen px inside the canvas) and the flow position blocks go to. */
   quick: QuickAddState | null;
+  /** Simulate: flow-dot speed, walk-through step, and the "keep or discard" question on leaving. */
+  simSpeed: 1 | 2 | 4;
+  simWalk: number | null;
+  simAsk: boolean;
+  /** "Connect as" menu for a line just drawn (screen px inside the canvas). */
+  lineMenu: { id: string; sx: number; sy: number } | null;
   /** Workspace viewer: always read-only (the database refuses their writes too). */
   viewer: boolean;
   /** Map (canvas) or the full-width Reports view. */
@@ -167,7 +178,7 @@ export interface EditorState {
 
 const OPTS_KEY = "fm-editor-opts";
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
@@ -197,6 +208,8 @@ export const useEditor = create<EditorState>(() => ({
   keyLeak: null,
   products: [],
   actuals: null,
+  actualView: null,
+  actualR: null,
   sideTab: "library",
   selectMode: false,
   stageIds: null,
@@ -219,7 +232,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -232,6 +245,10 @@ export const useEditor = create<EditorState>(() => ({
   spot: null,
   shared: false,
   quick: null,
+  simSpeed: 1,
+  simWalk: null,
+  simAsk: false,
+  lineMenu: null,
   viewer: false,
   mode: "map",
   section: "overview",
@@ -295,6 +312,9 @@ function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" |
     settings = patch.settings ?? s.settings;
   const math = opts.math ?? true;
   set({ ...patch, ...(math ? recompute(nodes, edges, settings) : {}) });
+  // Actual mode redraws the recorded numbers on the edited map
+  const av = get().actualView;
+  if (av && (patch.nodes || patch.edges)) setActualView(av);
   touched();
   if (opts.discrete) commitHistory();
 }
@@ -384,8 +404,17 @@ export function openQuickAdd(q: EditorState["quick"]) {
 export function closeQuickAdd() {
   set({ quick: null });
 }
+export function openLineMenu(m: EditorState["lineMenu"]) {
+  if (get().readOnly) return;
+  set({ lineMenu: m });
+}
+export function closeLineMenu() {
+  set({ lineMenu: null });
+}
 export function setActuals(actuals: ActualRowDb[] | null) {
   set({ actuals });
+  const v = get().actualView;
+  if (v) setActualView(v);
 }
 /** Add a widget at (x, y). Scope "frame" needs the frame's id, "selection" the steps it covers. */
 export function addWidget(cfg: { scope: "funnel" | "frame" | "selection"; frameId?: string; nodeIds?: string[]; display?: "number" | "trend" | "chart"; metrics?: string[]; wsize?: "S" | "M" | "L" }, x: number, y: number) {
@@ -404,13 +433,68 @@ const takeBase = (): SimBase => {
 export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
-  set({ simBase: takeBase(), simPlay: false, simBefore: false, panel: "simulate" });
+  if (s.actualView) set({ actualView: null, actualR: null });
+  set({ simBase: { ...takeBase(), prev: { nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
   setOpt("nums", true);
   setOpt("thick", true);
 }
-/** Stop simulating and keep whatever the map says now. */
+/** Stop simulating and keep whatever the map says now; the view (layers, period) goes back to what it was. */
 export function stopSim() {
-  set((s) => ({ simBase: null, simPlay: false, simBefore: false, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+  const prev = get().simBase?.prev;
+  set((s) => ({ simBase: null, simPlay: false, simBefore: false, simWalk: null, simAsk: false, spot: s.simWalk != null ? null : s.spot, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+  if (prev) {
+    setOpt("nums", prev.nums);
+    setOpt("thick", prev.thick);
+    setOpt("period", prev.period);
+  }
+}
+const sameWhatif = (a: FunnelSettings["whatif"], b: FunnelSettings["whatif"]) => (["traffic", "conv", "price", "cost"] as const).every((k) => Math.abs((Number(a[k]) || 1) - (Number(b[k]) || 1)) < 1e-9);
+/** The what-if levers moved since simulating started and the result isn't saved as a scenario yet. */
+export function simUnsaved(s: Pick<EditorState, "simBase" | "settings"> = get()) {
+  const b = s.simBase;
+  if (!b || sameWhatif(s.settings.whatif, b.settings.whatif)) return false;
+  return !s.settings.scenarios.some((sc) => sameWhatif(sc.whatif, s.settings.whatif));
+}
+/** Leave Simulate (S, Esc or the toggle). Unsaved what-if changes ask once: keep as a scenario, or discard. */
+export function leaveSim() {
+  if (!get().simBase) return;
+  if (simUnsaved()) return set({ simAsk: true });
+  stopSim();
+}
+/** Keep the what-if as a named scenario; the map goes back to its baseline numbers. Block edits stay on the map. */
+export function keepSimAsScenario(name: string) {
+  const s = get(),
+    b = s.simBase;
+  if (!b) return;
+  const n = (name.trim() || `Simulation ${s.settings.scenarios.length + 1}`).slice(0, 60);
+  setSettings({ scenarios: [...s.settings.scenarios, { id: nid(), name: n, kind: "custom", whatif: { ...s.settings.whatif } }], whatif: { ...b.settings.whatif } });
+  stopSim();
+  showToast(`Saved as scenario “${n}”`);
+}
+/** Discard every change made while simulating (levers and block assumptions), then leave. One undo step. */
+export function discardSim() {
+  revertSim();
+  stopSim();
+}
+/** Compare with the baseline (current map) or with a saved scenario. The comparison is the engine's own run. */
+export function setSimVs(scenarioId: string | null) {
+  const s = get(),
+    b = s.simBase;
+  if (!b) return;
+  const sc = scenarioId ? s.settings.scenarios.find((x) => x.id === scenarioId) : undefined;
+  const settings = sc ? { ...b.settings, whatif: { ...sc.whatif } } : b.settings;
+  set({ simBase: { ...b, vs: sc ? sc.id : null, R: compute({ nodes: b.nodes, edges: b.edges }, settings) } });
+}
+export function setSimSpeed(simSpeed: 1 | 2 | 4) {
+  set({ simSpeed });
+}
+/** Walk-through: step through the funnel one stage at a time (the others dim). null ends it. */
+export function setSimWalk(i: number | null) {
+  const s = get();
+  const order = s.R.order.filter((id) => s.nodes.some((n) => n.id === id && !isAnnot(n.type)));
+  if (i == null || !order.length) return set({ simWalk: null, spot: null });
+  const k = Math.max(0, Math.min(order.length - 1, i));
+  set({ simWalk: k, spot: order[k] });
 }
 export function setSimPlay(simPlay: boolean) {
   set({ simPlay });
@@ -419,7 +503,14 @@ export function setSimBefore(simBefore: boolean) {
   set({ simBefore: simBefore && !!get().simBase });
 }
 /** The results the map draws: the live run, or the baseline while "Before" is on in Simulate. */
-export const shownR = (s: Pick<EditorState, "R" | "simBase" | "simBefore">): FunnelResult => (s.simBefore && s.simBase ? s.simBase.R : s.R);
+export const shownR = (s: Pick<EditorState, "R" | "simBase" | "simBefore"> & Partial<Pick<EditorState, "actualR">>): FunnelResult => s.actualR ?? (s.simBefore && s.simBase ? s.simBase.R : s.R);
+/** Model | Actual on the map. Actual draws the recorded numbers for the range (never changes the plan or the engine). */
+export function setActualView(v: EditorState["actualView"]) {
+  const s = get();
+  if (!v) return set({ actualView: null, actualR: null });
+  const rows = actualsInRange(s.actuals ?? [], v.start, v.end);
+  set({ actualView: v, actualR: actualResult({ nodes: s.nodes, edges: s.edges }, s.settings, rows) });
+}
 /** Use the map as it is now as the new "before". */
 export function rebaseSim() {
   if (get().simBase) set({ simBase: takeBase() });
@@ -807,15 +898,34 @@ export function frameMembers(frameId: string): string[] {
 export function canConnect(from: string, to: string, port: "main" | "alt") {
   const s = get();
   if (from === to) return false;
+  const fb = s.nodes.find((n) => n.id === from);
   const tb = s.nodes.find((n) => n.id === to);
+  if (!fb || !portsFor(fb.type).hasOut) return false;
   if (!tb || !canReceive(tb.type)) return false;
   return !s.edges.some((e) => e.from === from && e.to === to && (e.port || "main") === port);
 }
-export function connect(from: string, port: "main" | "alt", to: string) {
-  if (!canConnect(from, to, port)) return;
-  const e: FunnelEdge = { id: "e" + nid(), from, to, share: 100, port };
+/** Line meanings (V2 four ports): Yes continues, No leaves, Skip step goes past a block, No data has no numbers. */
+export type LineMeaning = "yes" | "no" | "skip" | "nodata";
+/** The meaning a connection reads as (from its port and style kind). */
+export const meaningOf = (e: Pick<FunnelEdge, "port" | "s">): LineMeaning => (e.s?.kind === "skip" ? "skip" : e.s?.kind === "nodata" ? "nodata" : e.port === "alt" ? "no" : "yes");
+/** Change what a line means. Yes / No set who travels it (the maths' port); Skip / No data are drawn differently. */
+export function setMeaning(id: string, m: LineMeaning) {
+  const e = get().edges.find((x) => x.id === id);
+  if (!e || get().readOnly) return;
+  const from = get().nodes.find((n) => n.id === e.from);
+  const alt = m === "no" && !!from && portsFor(from.type).hasAlt;
+  const kind = m === "skip" || m === "nodata" ? m : undefined;
+  const st = { ...(e.s ?? {}) };
+  if (kind) st.kind = kind;
+  else delete st.kind;
+  apply({ edges: get().edges.map((x) => (x.id === id ? { ...x, port: alt ? "alt" : m === "no" ? x.port : "main", s: Object.keys(st).length ? st : undefined } : x)) }, { discrete: true });
+}
+export function connect(from: string, port: "main" | "alt", to: string, sides: { sh?: Side; th?: Side } = {}) {
+  if (!canConnect(from, to, port)) return null;
+  const e: FunnelEdge = { id: "e" + nid(), from, to, share: 100, port, ...(sides.sh ? { sh: sides.sh } : {}), ...(sides.th ? { th: sides.th } : {}) };
   apply({ edges: [...get().edges, e] }, { discrete: true });
   selectEdge(e.id);
+  return e.id;
 }
 /**
  * Change a block's type in place (Change page type / block type). Keeps id, position, connections, URL, thumbnail,
@@ -833,6 +943,57 @@ export function retypeNode(id: string, type: string) {
   return true;
 }
 
+/**
+ * Templates inside the map (V2 F3): add a template's blocks to the open funnel as ONE labelled frame, centred on
+ * `centre` (the middle of the view) but moved right / down until it covers no existing element, never moving anything
+ * that is already on the map. One undo step. Returns the frame's id.
+ */
+export function insertTemplateGraph(g: FunnelGraph, name: string, centre: { x: number; y: number }) {
+  const s = get();
+  if (s.readOnly || !g.nodes.length) return null;
+  const map: Record<string, string> = {};
+  const nodes0 = g.nodes.map((n) => {
+    const id = nid();
+    map[n.id] = id;
+    return { ...structuredClone(n), id };
+  });
+  const edges = g.edges.filter((e) => map[e.from] && map[e.to]).map((e) => ({ ...structuredClone(e), id: "e" + nid(), from: map[e.from], to: map[e.to] }));
+  const PAD = 40;
+  const x0 = Math.min(...nodes0.map((n) => n.x)) - PAD,
+    y0 = Math.min(...nodes0.map((n) => n.y)) - PAD - 10,
+    x1 = Math.max(...nodes0.map((n) => n.x + nodeW(n.type))) + PAD,
+    y1 = Math.max(...nodes0.map((n) => n.y + blockH(n.type))) + PAD;
+  const w = x1 - x0,
+    h = y1 - y0;
+  const occupied = s.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w ?? nodeW(n.type), h: n.h ?? heightOf(n) }));
+  const free = (fx: number, fy: number) => occupied.every((o) => fx + w <= o.x - 20 || o.x + o.w + 20 <= fx || fy + h <= o.y - 20 || o.y + o.h + 20 <= fy);
+  let fx = snapV(centre.x - w / 2),
+    fy = snapV(centre.y - h / 2);
+  // search outward: right, then down, in growing steps, until the frame lands on empty canvas
+  outer: for (let ring = 0; ring < 40; ring++) {
+    for (const [dx, dy] of [
+      [ring, 0],
+      [0, ring],
+      [ring, ring],
+    ]) {
+      const tx = snapV(centre.x - w / 2 + dx * 220),
+        ty = snapV(centre.y - h / 2 + dy * 160);
+      if (free(tx, ty)) {
+        fx = tx;
+        fy = ty;
+        break outer;
+      }
+    }
+  }
+  const dx = fx - x0,
+    dy = fy - y0;
+  const nodes = nodes0.map((n) => ({ ...n, x: snapV(n.x + dx), y: snapV(n.y + dy) }));
+  const frame: FunnelNode = { id: nid(), type: "frame", name, x: fx, y: fy, w, h, p: { ...defaultsFor("frame") } };
+  apply({ nodes: [frame, ...s.nodes, ...nodes], edges: [...s.edges, ...edges] }, { discrete: true });
+  selectNodes([frame.id]);
+  return frame.id;
+}
+
 /** Block types that may follow a connection (they receive people): no traffic sources, no layout elements. */
 export const canFollowType = (type: string) => canReceive(type);
 /** Block types that may sit in the middle of a line (receive and pass people on). */
@@ -842,12 +1003,12 @@ export const canInsertType = (type: string) => canReceive(type) && portsFor(type
  * Add a block at the end of a dragged connection and connect it, as ONE change: one undo step, one autosave.
  * The block's in-port lands on (x, y); the new block is selected so the inspector follows.
  */
-export function addConnectedNode(from: { id: string; port: "main" | "alt" }, type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; w?: number; h?: number } = {}) {
+export function addConnectedNode(from: { id: string; port: "main" | "alt"; sh?: Side }, type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; w?: number; h?: number } = {}) {
   const T = typeOf(type);
   const src = get().nodes.find((n) => n.id === from.id);
   if (!T || !src || !canFollowType(type) || get().readOnly) return null;
   const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
-  const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port };
+  const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port, ...(from.sh && fourPorts(src.type) ? { sh: from.sh } : {}) };
   apply({ nodes: [...get().nodes, n], edges: [...get().edges, e] }, { discrete: true });
   selectNodes([n.id]);
   return n;

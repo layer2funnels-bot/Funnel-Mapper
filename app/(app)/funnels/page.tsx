@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FunnelPreview } from "@/components/funnel-preview";
 import { PageHeader } from "@/components/page-header";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { parseGraph, parseSettings } from "@/lib/graph";
@@ -13,8 +14,8 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
   const { sb, workspace } = await requireUser();
   const sp = await searchParams;
   const [{ data: funnels }, { data: clients }] = await Promise.all([
-    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, currency, archived_at").order("name"),
+    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, currency, archived_at").is("deleted_at", null).order("name"),
   ]);
   const byClient = Object.fromEntries((clients ?? []).map((c) => [c.id, c]));
   const items: FunnelListItem[] = (funnels ?? [])
@@ -35,6 +36,7 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
         roas: sum.roas ?? null,
         checks: healthChecks(parseGraph(f.graph)).length,
         updated: f.updated_at,
+        preview: <FunnelPreview graph={f.graph} settings={f.settings} name={f.name} width={112} height={60} pad={4} archived={f.status === "archived"} />,
       };
     });
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";

@@ -3,20 +3,23 @@ import { useMemo, useState } from "react";
 import { ThumbnailField } from "./thumbnail-field";
 import { WaitField } from "./wait-field";
 import { WidgetFields } from "./widget-fields";
-import { baseOf, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
-import { money, nf, pct } from "@/lib/format";
+import { baseOf, fourPorts, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { money, nf, pct, people } from "@/lib/format";
 import { Icon } from "@/components/icon";
 import { RichTextField } from "@/components/rich-text";
 import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } from "@/lib/funnel-math";
 import { STEP_STATUSES, type FunnelEdge, type FunnelNode, type StepStatus } from "@/lib/graph";
 import { safeUrl } from "@/lib/rich-text";
 import { sym } from "@/lib/format";
-import { align, clearSelection, nid, setSection, tidySelection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, clearSelection, meaningOf, nid, setMeaning, setSection, tidySelection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
 import { edgeConversion, edgeRevenue } from "@/lib/editor/labels";
 import { openInsertStep } from "./quick-add";
+import { MEANINGS, MeaningSwatch } from "./line-menu";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
+import { InsightsSlot } from "@/components/finding";
+import { blockFindings } from "@/lib/findings";
 
 export function Inspector() {
   const hideAll = useEditor((s) => s.shared && s.settings.hideNumbers);
@@ -92,8 +95,8 @@ function Actions({ ro, n }: { ro: boolean; n: FunnelNode }) {
 
 const STATUS_PILL: Record<StepStatus, string> = { planned: "Planned", building: "In progress", done: "Live" };
 
-/** Scope header: "← Funnel" back link, then the block's name alone on the first line, type + build status on the second. */
-function ScopeHeader({ title, sub, status, locked }: { title: string; sub: string; status?: StepStatus; locked?: boolean }) {
+/** Scope header: "← Funnel" back link, then the block's name alone on the first line, type and the build-status select on the second. */
+function ScopeHeader({ title, sub, status, locked, onStatus }: { title: string; sub: string; status?: StepStatus; locked?: boolean; onStatus?: (s: StepStatus) => void }) {
   return (
     <header className="fm-scopehead">
       <button type="button" className="fm-back" onClick={clearSelection}>
@@ -102,7 +105,22 @@ function ScopeHeader({ title, sub, status, locked }: { title: string; sub: strin
       <h3 title={title}>{title}</h3>
       <p className="sub">
         <span>{sub}</span>
-        {status && <span className={`fm-pill ${status}`}>{STATUS_PILL[status]}</span>}
+        {status && onStatus ? (
+          <label className={`fm-pillsel ${status}`} title="Build status: planned, in progress or live (shown in Reports → Published status)">
+            <span className="sr-only">Build status</span>
+            <i aria-hidden="true" />
+            <select value={status} onChange={(e) => onStatus(e.target.value as StepStatus)}>
+              {STEP_STATUSES.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <Icon name="chevronDown" size={12} />
+          </label>
+        ) : (
+          status && <span className={`fm-pill ${status}`}>{STATUS_PILL[status]}</span>
+        )}
         {locked && <span className="fm-pill lock">Locked</span>}
       </p>
     </header>
@@ -127,7 +145,7 @@ function NodeInspector({ n }: { n: FunnelNode }) {
   const choose = setInspTab;
   return (
     <>
-      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} />
+      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} onStatus={ro || n.locked ? undefined : (v) => updateNode(n.id, { status: v })} />
       <div className="fm-insp-tabs" role="tablist" aria-label="Element panels">
         {tabs.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => choose(k)}>
@@ -309,21 +327,8 @@ function NodeDetails({ n }: { n: FunnelNode }) {
           {T.cat === "offer" && <OfferFields n={n} C={C} />}
 
           {baseOf(n.type) === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
-          {!shared && (
-            <Field label="Build status" help="Track which steps are planned, in progress or live. Shown in Reports → Published status.">
-              {(id) => (
-                <select id={id} className="input" value={n.status ?? "planned"} onChange={(e) => updateNode(n.id, { status: e.target.value as StepStatus })}>
-                  {STEP_STATUSES.map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
-          )}
           <NodeStats n={n} />
-          {baseOf(n.type) !== "goal" && !shared && <InternalNotes n={n} />}
+          {flowish(n) && <Paths n={n} />}
         </>
       )}
       <Actions ro={ro} n={n} />
@@ -374,8 +379,8 @@ function PeriodForecast({ n }: { n: FunnelNode }) {
               return (
                 <tr key={k}>
                   <th scope="row" className="font-semibold">{k[0].toUpperCase() + k.slice(1)}</th>
-                  <td className="r">{nf(inn * f, 1)}</td>
-                  <td className="r">{nf(r.out * f, 1)}</td>
+                  <td className="r">{people(inn * f)}</td>
+                  <td className="r">{people(r.out * f)}</td>
                   {T.cat === "offer" && <td className="r">{money(r.rev * f, cur)}</td>}
                   {(T.cat === "traffic" || T.cat === "action") && <td className="r">{money((r.spend + r.cost) * f, cur)}</td>}
                 </tr>
@@ -402,6 +407,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
   const goal = settings.goals.find((g) => g.kind === "conversion" && g.nodeId === n.id);
   const rateable = ["page", "offer", "action"].includes(T.cat) || isShareLogic(n.type);
   const impact = useMemo(() => (goal && goal.value > 0 ? withStepRate({ nodes, edges }, settings, n.id, goal.value) : null), [goal, nodes, edges, settings, n.id]);
+  const findings = useMemo(() => (shared ? [] : blockFindings(n.id, { nodes, edges }, settings, R)), [shared, n.id, nodes, edges, settings, R]);
   if (!r) return null;
   const inn = T.cat === "traffic" ? r.out : r.inflow;
   const setGoal = (v: number) => {
@@ -410,6 +416,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
   };
   return (
     <>
+      <InsightsSlot findings={findings} />
       <h4>Numbers (per month)</h4>
       <NodeStats n={n} />
       <StatBox
@@ -432,7 +439,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
                 ["Revenue at target", m(impact.rev)],
                 ["Change", `${impact.rev - R.rev >= 0 ? "+" : ""}${m(impact.rev - R.rev)}`],
                 ["Profit at target", m(impact.profit)],
-                ["Customers at target", nf(impact.cust, 1)],
+                ["Customers at target", people(impact.cust)],
               ]}
             />
           )}
@@ -529,6 +536,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
   if (T.cat === "traffic")
     return (
       <StatBox
+        title="This month"
         items={[
           ["Visitors", nf(r.out)],
           ["Spend", m(r.spend)],
@@ -540,9 +548,10 @@ function NodeStats({ n }: { n: FunnelNode }) {
     const v = offerVals(n, wp);
     return (
       <StatBox
+        title="This month"
         items={[
-          ["Reaching offer", nf(r.inflow, 1)],
-          ["Buying", nf(r.out, 1)],
+          ["Reaching offer", people(r.inflow)],
+          ["Buying", people(r.out)],
           ["Cash now", m(r.cash)],
           ["Lifetime value", m(r.ltv)],
           ...(baseOf(n.type) === "sub"
@@ -552,7 +561,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
               ] as [string, string][])
             : []),
           ["Costs", m(r.cogs)],
-          ["Not buying", nf(r.non, 1)],
+          ["Not buying", people(r.non)],
         ]}
       />
     );
@@ -561,13 +570,56 @@ function NodeStats({ n }: { n: FunnelNode }) {
     no = T.ports?.[1] ?? "Dropping off";
   return (
     <StatBox
+      title="Flow this month"
       items={[
-        ["Arriving", nf(r.inflow, 1)],
-        [yes, nf(r.out, 1)],
-        [no, nf(r.non, 1)],
+        ["Arriving", people(r.inflow)],
+        [yes, people(r.out)],
+        [no, people(r.non)],
         ...(T.cat === "action" ? ([["Cost", m(r.cost)]] as [string, string][]) : []),
       ]}
     />
+  );
+}
+
+const flowish = (n: FunnelNode) => !isAnnot(n.type) && n.type !== "widget";
+
+/** Where this block's people go: one line per exit ("Yes → Monthly coaching"), and the exits that aren't connected yet. */
+function Paths({ n }: { n: FunnelNode }) {
+  const T = typeOf(n.type);
+  const edges = useEditor((s) => s.edges);
+  const nodes = useEditor((s) => s.nodes);
+  const [yes, no] = T.ports ?? ["Yes", "No"];
+  const { hasAlt } = portsFor(n.type);
+  const out = edges.filter((e) => e.from === n.id);
+  const to = (e: FunnelEdge) => nodes.find((x) => x.id === e.to)?.name ?? "Unknown step";
+  const rows: { key: string; label: string; alt: boolean; targets: FunnelEdge[] }[] = [
+    { key: "main", label: T.cat === "traffic" ? "Sends people to" : yes, alt: false, targets: out.filter((e) => e.port !== "alt") },
+    ...(hasAlt ? [{ key: "alt", label: no, alt: true, targets: out.filter((e) => e.port === "alt") }] : []),
+  ];
+  return (
+    <section className="fm-flowsec">
+      <div className="fm-sh">
+        <h4>Paths</h4>
+      </div>
+      {rows.map((r) => (
+        <div className="fm-path" key={r.key}>
+          <span className={r.alt ? "no" : "yes"}>
+            {r.label} <Icon name="arrow" size={12} />
+          </span>
+          {r.targets.length ? (
+            <span className="to">
+              {r.targets.map((e) => (
+                <button key={e.id} type="button" onClick={() => selectNodes([e.to])} title="Select this step">
+                  {to(e)}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <span className="none">Not connected</span>
+          )}
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -584,10 +636,18 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
   const rev = edgeRevenue(e.to, flow, R);
   return (
     <>
-      <h3>Connection</h3>
-      <p className="sub">
-        {a?.name} → {b?.name}
-      </p>
+      <header className="fm-scopehead">
+        <button type="button" className="fm-back" onClick={clearSelection}>
+          <Icon name="chevronLeft" size={14} /> Funnel
+        </button>
+        <h3 className="sr-only">Connection</h3>
+        <span className="eyebrow">Connection · {{ yes: "Converted", no: "Didn’t convert", skip: "Skip step", nodata: "No data" }[meaningOf(e)]}</span>
+        <div className="fm-conchips">
+          <span title={a?.name}>{a?.name}</span>
+          <Icon name="arrow" size={13} />
+          <span title={b?.name}>{b?.name}</span>
+        </div>
+      </header>
       <div className="fm-insp-tabs" role="tablist" aria-label="Connection panels">
         {(
           [
@@ -603,7 +663,20 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
       <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
         {tab === "flow" ? (
           <>
-            {a && portsFor(a.type).hasAlt && (
+            {a && fourPorts(a.type) && (
+              <div className="field">
+                <span className="lbl">This line means</span>
+                <div className="fm-meanings" role="radiogroup" aria-label="This line means">
+                  {MEANINGS.filter(([k]) => k !== "no" || portsFor(a.type).hasAlt).map(([k, label, help]) => (
+                    <button key={k} type="button" role="radio" aria-checked={meaningOf(e) === k} onClick={() => setMeaning(e.id, k)} title={help}>
+                      <MeaningSwatch m={k} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {a && !fourPorts(a.type) && portsFor(a.type).hasAlt && (
               <div className="field">
                 <span className="lbl">Who goes this way</span>
                 <Seg<"main" | "alt">
@@ -622,7 +695,7 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
             </Field>
             <StatBox
               items={[
-                ["People on this path", nf(flow, 1)],
+                ["People on this path", people(flow)],
                 ["Conversion at the source step", conv == null ? "No data yet" : `${nf(conv * 100, 1)}%`],
                 ["Revenue through this path", rev > 0 ? money(rev, cur) : "No data yet"],
               ]}

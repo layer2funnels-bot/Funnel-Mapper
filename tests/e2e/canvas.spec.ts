@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { centre, createFunnel, drag, node, nodes, openEditor, pos, waitSaved } from "./helpers";
+import { addFromPalette, centre, createFunnel, drag, node, nodes, openEditor, pos, waitSaved } from "./helpers";
 
 const rfNode = (page: Page, id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
 const styleTab = (page: Page) => page.getByRole("tab", { name: "Style" });
@@ -14,7 +14,7 @@ test.describe("canvas completeness (Batch 2)", () => {
   test("canvas text: Font Size label, text styling and persistence", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Heading text", exact: true }).click();
+    await addFromPalette(page, "Heading");
     await expect(page.getByLabel("Font Size")).toBeVisible();
     await expect(page.getByText("Size (px)")).toHaveCount(0);
     await page.getByLabel("Font Size").fill("40");
@@ -123,7 +123,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     await expect(page.getByRole("list", { name: "Checklist" }).getByRole("textbox").first()).toHaveValue("Book the guest");
     await expect(node(page, "Live webinar").locator(".fm-ntasks")).toHaveText("✓ 1/2");
     // canvas checklist element
-    await page.getByRole("button", { name: "Add Checklist", exact: true }).click();
+    await addFromPalette(page, "Checklist");
     await page.getByLabel("Title").fill("Launch prep");
     await page.getByLabel("New checklist item").fill("Record the webinar");
     await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -142,7 +142,7 @@ test.describe("canvas completeness (Batch 2)", () => {
   test("shapes and images", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Shape", exact: true }).click();
+    await addFromPalette(page, "Rectangle");
     await page.getByLabel("Shape", { exact: true }).selectOption("ellipse");
     await page.getByLabel("Text inside").fill("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toContainText("Big idea");

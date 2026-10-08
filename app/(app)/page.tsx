@@ -8,37 +8,51 @@ import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, moneyShort, ratio, timeAgo } from "@/lib/format";
 import { parseGraph } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
-import { monthlyValue } from "@/lib/pricing";
+import { monthlyValue, pricingValue } from "@/lib/pricing";
+import { STATUS_LABEL } from "@/lib/schemas";
+import { typeOf } from "@/lib/catalog";
+import { byCurrencyRows, homeRange } from "@/lib/home-range";
+import { HomeRangePicker } from "@/components/home-range-picker";
 import { requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-/** Sums a value per currency and renders "£12.3k + $4k". */
-function byCurrency(rows: { cur: string; v: number }[]) {
-  const m = new Map<string, number>();
-  rows.forEach((r) => m.set(r.cur, (m.get(r.cur) ?? 0) + (Number.isFinite(r.v) ? r.v : 0)));
-  if (!m.size) return money(0);
-  return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([c, v]) => moneyShort(v, c)).join(" + ");
-}
+const PIPE: Record<string, string> = { active: "#22c55e", proposal: "#60a5fa", lead: "#94a3b8", paused: "#fbbf24", past: "#64748b" };
 
-const RANGES = [
-  ["month", "This month", 1],
-  ["year", "Year", 12],
-] as const;
+/** Money per currency, one row each (V2: never added across currencies). */
+function byCurrency(rows: { cur: string; v: number }[], fallback = "GBP") {
+  const list = byCurrencyRows(rows);
+  if (!list.length) return money(0, fallback);
+  return (
+    <span className="fm-curlist">
+      {list.map((r) => (
+        <span key={r.cur} className="block">
+          {moneyShort(r.v, r.cur)}
+        </span>
+      ))}
+    </span>
+  );
+}
+const byCurrencyText = (rows: { cur: string; v: number }[]) => byCurrencyRows(rows).map((r) => moneyShort(r.v, r.cur)).join(" · ") || "–";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const { sb, profile, workspace } = await requireUser();
   const sp = await searchParams;
-  const range = RANGES.find(([k]) => k === (Array.isArray(sp.range) ? sp.range[0] : sp.range)) ?? RANGES[0];
-  const k = range[2];
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const range = homeRange(one(sp.range), one(sp.from), one(sp.to));
+  // plan figures are per month: a range multiplies them by its number of months
+  const k = range.months;
   const [{ data: clients }, { data: funnels }] = await Promise.all([
     // archived clients (and their funnels) are out of the active portfolio
-    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).order("name"),
-    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).is("deleted_at", null).order("name"),
+    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url").is("deleted_at", null).order("updated_at", { ascending: false }),
   ]);
   const cl = clients ?? [];
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));
   const fs = (funnels ?? []).filter((f) => clientById[f.client_id] && f.status !== "archived");
+  // recorded actuals in the range (whole periods inside it), for live funnels
+  const liveIds = fs.filter((f) => f.status === "live").map((f) => f.id);
+  const { data: acts } = liveIds.length ? await sb.from("funnel_actuals").select("funnel_id, revenue, spend, period_start, period_end").in("funnel_id", liveIds).gte("period_start", range.start).lte("period_end", range.end) : { data: [] as { funnel_id: string; revenue: number | null; spend: number | null }[] };
   const curOf = (f: (typeof fs)[number]) => ((f.settings as { currency?: string })?.currency ?? clientById[f.client_id]?.currency ?? workspace.default_currency);
   const sum = (f: (typeof fs)[number]) => (f.summary ?? {}) as Partial<FunnelSummary>;
   const active = cl.filter((c) => c.status === "active");
@@ -55,114 +69,71 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const attention = checked.filter((x) => x.checks.length > 0).slice(0, 5);
   const recent = fs.slice(0, 3);
   const perClient = (["active", "proposal", "lead", "paused", "past"] as const).map((s) => ({ s, n: cl.filter((c) => c.status === s).length }));
-  const maxN = Math.max(1, ...perClient.map((x) => x.n));
+
+  const weekday = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const blocks = (f: (typeof fs)[number]) => parseGraph(f.graph).nodes.filter((n) => typeOf(n.type)?.cat !== "annot").length;
+  // other things worth a look, from the saved numbers only: funnels losing money, clients with funnels and no price set
+  const losing = fs.filter((f) => (sum(f).profit ?? 0) < 0 && f.status !== "draft").slice(0, 2);
+  const unpriced = cl.filter((c) => c.status !== "past" && pricingValue(c) <= 0 && fs.some((f) => f.client_id === c.id)).slice(0, 2);
 
   return (
     <div className="mx-auto max-w-[1280px]">
-      <PageHeader title={`${greet}${first ? `, ${first}` : ""}`} sub={`${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${workspace.agency_name || "Layer2Funnels"} at a glance.`}>
-        <div className="seg" role="group" aria-label="Period">
-          {RANGES.map(([key, label]) => (
-            <Link key={key} href={key === "month" ? "/" : `/?range=${key}`} aria-pressed={range[0] === key} className="no-underline" role="button" scroll={false}>
-              {label}
-            </Link>
-          ))}
-        </div>
+      <PageHeader eyebrow={weekday} title={`${greet}${first ? `, ${first}` : ""}`}>
+        <HomeRangePicker current={range.key} label={range.label} from={range.from} to={range.to} />
       </PageHeader>
 
-      <section aria-label="Totals" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Totals" className="fm-kgrid mb-9">
         <Stat label="Active clients" value={active.length} hint={`${pipeline.length} in the pipeline · ${cl.length} total`} />
         <Stat label="Live funnels" value={live.length} hint={`${proposed.length} proposed · ${fs.length} total`} />
-        <Stat label={`Planned revenue (live funnels)${k > 1 ? " · a year" : " · a month"}`} value={byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })))} hint={`Profit ${byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}`} />
         <Stat
-          label={`Agency MRR${k > 1 ? " · a year" : ""}`}
-          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })))}
-          hint={`Client funnel MRR ${byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).mrr ?? 0) * k })))}`}
+          label={`Planned revenue · ${range.label}`}
+          value={byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })), workspace.default_currency)}
+          hint={
+            <>
+              <span className="fm-tag plan">Plan</span> live funnels · {k === 1 ? "1 month" : `${k} months`} · profit {byCurrencyText(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}
+              {(acts ?? []).length > 0 && (
+                <span className="mt-1 block">
+                  <span className="fm-tag actual">Actual</span> recorded {byCurrencyText((acts ?? []).map((a) => ({ cur: curOf(fs.find((f) => f.id === a.funnel_id)!), v: Number(a.revenue ?? 0) })))}
+                </span>
+              )}
+            </>
+          }
+        />
+        <Stat
+          label={`Agency fees · ${range.label}`}
+          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })), workspace.default_currency)}
+          hint={`Agency MRR ${byCurrencyText(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })))} / mo · client funnel MRR ${byCurrencyText(live.map((f) => ({ cur: curOf(f), v: sum(f).mrr ?? 0 })))} / mo`}
         />
       </section>
 
-      {latest && (
-        <section className="card mb-8 overflow-hidden" aria-labelledby="resume-h">
-          <div className="grid items-stretch md:grid-cols-[minmax(0,320px)_1fr]">
-            <GraphThumb graph={latest.graph} className="h-[150px] w-full border-b border-line md:h-full md:border-r md:border-b-0" />
-            <div className="flex flex-col justify-center gap-1 p-5">
-              <h2 id="resume-h" className="text-xs font-bold tracking-wider text-muted uppercase">
-                Pick up where you left off
-              </h2>
-              <Link href={`/funnels/${latest.id}`} className="truncate font-display text-[22px] font-bold text-ink no-underline hover:text-brand">
-                {latest.name}
-              </Link>
-              <p className="text-sm text-muted">
-                {clientById[latest.client_id]?.name} · <StatusPill status={latest.status} /> · edited {timeAgo(latest.updated_at)}
-              </p>
-              <p className="text-sm">
-                {sum(latest).rev == null ? <span className="text-muted">No data yet</span> : <>Plans {money(sum(latest).rev, curOf(latest))} revenue · ROAS {ratio(sum(latest).roas)}</>}
-              </p>
-              <div className="mt-2 flex gap-2">
-                <Link href={`/funnels/${latest.id}`} className="btn primary sm">
-                  Continue mapping
-                </Link>
-                <Link href={`/funnels/${latest.id}?view=reports`} className="btn sm">
-                  Reports
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0 space-y-6">
-          <section aria-labelledby="recent-h">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 id="recent-h" className="font-display text-lg font-bold">
-                Recent funnels
-              </h2>
-              <Link href="/funnels" className="text-sm text-brand no-underline hover:underline">
-                All funnels →
-              </Link>
+      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-10">
+          <section aria-labelledby="resume-h">
+            <div className="fm-secth">
+              <h2 id="resume-h">Pick up where you left off</h2>
+              <Link href="/funnels">All funnels</Link>
             </div>
             {recent.length === 0 ? (
-              <p className="card px-5 py-10 text-center text-sm text-muted">No funnels yet. Create a client, then map their first funnel.</p>
+              <p className="fm-empty-line">No funnels yet. Create a client, then map their first funnel.</p>
             ) : (
-              <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 2xl:grid-cols-3">
+              <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
                 {recent.map((f) => (
                   <li key={f.id}>
-                    <Link href={`/funnels/${f.id}`} className="card flex h-full flex-col overflow-hidden text-ink no-underline transition hover:border-brand">
-                      <GraphThumb graph={f.graph} className="h-[120px] w-full border-b border-line" />
-                      <div className="flex flex-1 flex-col gap-1 p-4">
-                        <b className="truncate font-display text-[16px]" title={f.name}>
-                          {f.name}
-                        </b>
-                        <span className="truncate text-[13px] text-muted">{clientById[f.client_id]?.name}</span>
-                        <div className="mt-auto flex items-center justify-between pt-2 text-xs text-muted">
-                          <StatusPill status={f.status} />
-                          <span>{money(sum(f).rev, curOf(f))}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="card p-5" aria-labelledby="attn-h">
-            <h2 id="attn-h" className="mb-3 font-display text-lg font-bold">
-              Needs attention
-            </h2>
-            {attention.length === 0 ? (
-              <p className="text-sm text-muted">Every funnel passes its checks.</p>
-            ) : (
-              <ul className="m-0 list-none p-0">
-                {attention.map(({ f, checks }) => (
-                  <li key={f.id} className="border-b border-line py-2.5 text-sm last:border-0">
-                    <Link href={`/funnels/${f.id}`} className="flex items-start gap-2 text-ink no-underline hover:text-brand">
-                      <Icon name="alert" size={15} className="mt-0.5 shrink-0 text-attention" />
-                      <span className="min-w-0">
-                        <b className="block truncate">{f.name}</b>
-                        <span className="block truncate text-muted">
-                          {clientById[f.client_id]?.name} · {checks[0].text}
-                          {checks.length > 1 && ` (+${checks.length - 1} more)`}
+                    <Link href={`/funnels/${f.id}`} className="fm-fcard">
+                      <span className="fm-fthumb">
+                        <GraphThumb graph={f.graph} settings={f.settings} name={f.name} height={118} className="h-[118px] w-full" />
+                        <span className="fm-fchip">{blocks(f)} blocks</span>
+                      </span>
+                      <span className="fm-frow">
+                        <b title={f.name}>{f.name}</b>
+                        <StatusPill status={f.status} />
+                      </span>
+                      <span className="fm-frow sub">
+                        <span className="truncate">
+                          {clientById[f.client_id]?.name} · edited {timeAgo(f.updated_at)}
+                        </span>
+                        <span className="shrink-0 text-ink">
+                          <b className="font-semibold">{money(sum(f).rev, curOf(f))}</b> / mo
                         </span>
                       </span>
                     </Link>
@@ -171,27 +142,144 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
               </ul>
             )}
           </section>
+
+          <section aria-labelledby="recent-h">
+            <div className="fm-secth">
+              <h2 id="recent-h">Recent funnels</h2>
+              <Link href="/funnels">View {fs.length}</Link>
+            </div>
+            {fs.length === 0 ? null : (
+              <div className="fm-tblwrap" tabIndex={0} role="region" aria-label="Recent funnels (scrolls sideways when it is wider than the screen)">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Funnel</th>
+                      <th>Client</th>
+                      <th>Status</th>
+                      <th className="r">Revenue / mo</th>
+                      <th className="r">Profit / mo</th>
+                      <th className="r">ROAS</th>
+                      <th className="r">Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fs.slice(0, 6).map((f) => (
+                      <tr key={f.id}>
+                        <td>
+                          <Link href={`/funnels/${f.id}`} className="font-semibold text-ink no-underline hover:text-brand">
+                            {f.name}
+                          </Link>
+                        </td>
+                        <td className="text-muted">{clientById[f.client_id]?.name}</td>
+                        <td>
+                          <StatusPill status={f.status} />
+                        </td>
+                        <td className="r">{money(sum(f).rev, curOf(f))}</td>
+                        <td className={`r ${(sum(f).profit ?? 0) < 0 ? "text-neg" : "text-good"}`}>{money(sum(f).profit, curOf(f))}</td>
+                        <td className="r">{ratio(sum(f).roas)}</td>
+                        <td className="r text-muted">{timeAgo(f.updated_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </div>
 
-        <section className="card h-fit p-5" aria-labelledby="clients-h">
-          <h2 id="clients-h" className="mb-3 font-display text-lg font-bold">
-            Client pipeline
-          </h2>
-          {perClient.map(({ s, n }) => (
-            <Link key={s} href={`/clients?status=${s}`} className="block border-b border-line py-2.5 text-sm last:border-0 hover:text-brand">
-              <span className="flex items-center justify-between">
-                <StatusPill status={s} />
-                <b className="font-display text-base">{n}</b>
-              </span>
-              <span className="mt-1.5 block h-1 overflow-hidden rounded bg-line" aria-hidden="true">
-                <span className="block h-full rounded bg-brand" style={{ width: `${(n / maxN) * 100}%` }} />
-              </span>
-            </Link>
-          ))}
-          <Link href="/clients" className="btn mt-4 w-full">
-            All clients
-          </Link>
-        </section>
+        <aside className="min-w-0 space-y-10">
+          <section aria-labelledby="attn-h">
+            <div className="fm-secth">
+              <h2 id="attn-h">Needs attention</h2>
+              <span className="text-xs text-muted">{attention.length + losing.length + unpriced.length}</span>
+            </div>
+            {attention.length + losing.length + unpriced.length === 0 ? (
+              <p className="fm-empty-line">Every funnel passes its checks.</p>
+            ) : (
+              <ul className="fm-attn">
+                {attention.map(({ f, checks }) => (
+                  <li key={`c-${f.id}`}>
+                    <span className="fm-aic warn">
+                      <Icon name="alert" size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b>
+                        {f.name} has {checks.length} {checks.length === 1 ? "check" : "checks"}
+                      </b>
+                      <small>
+                        {clientById[f.client_id]?.name} · {checks[0].text}
+                      </small>
+                    </span>
+                    <Link href={`/funnels/${f.id}`} className="btn sm">
+                      Fix
+                    </Link>
+                  </li>
+                ))}
+                {losing.map((f) => (
+                  <li key={`l-${f.id}`}>
+                    <span className="fm-aic lost">
+                      <Icon name="chart" size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b>
+                        {f.name} loses {money(Math.abs(sum(f).profit ?? 0), curOf(f))} / mo
+                      </b>
+                      <small>
+                        {clientById[f.client_id]?.name} · ROAS {ratio(sum(f).roas)}
+                      </small>
+                    </span>
+                    <Link href={`/funnels/${f.id}`} className="btn sm">
+                      Open
+                    </Link>
+                  </li>
+                ))}
+                {unpriced.map((c) => (
+                  <li key={`p-${c.id}`}>
+                    <span className="fm-aic">
+                      <Icon name="users" size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b>
+                        {c.name} has {fs.filter((f) => f.client_id === c.id).length} funnels, no pricing set
+                      </b>
+                      <small>{STATUS_LABEL[c.status] ?? c.status}</small>
+                    </span>
+                    <Link href={`/clients/${c.id}?tab=details`} className="btn sm">
+                      Set pricing
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section aria-labelledby="clients-h">
+            <div className="fm-secth">
+              <h2 id="clients-h">Client pipeline</h2>
+              <Link href="/clients">Clients</Link>
+            </div>
+            <div className="fm-pipebar" aria-hidden="true">
+              {perClient
+                .filter((x) => x.n > 0)
+                .map((x) => (
+                  <i key={x.s} style={{ flex: x.n, background: PIPE[x.s] }} />
+                ))}
+            </div>
+            <ul className="fm-pipe">
+              {perClient.map(({ s, n }) => (
+                <li key={s}>
+                  <Link href={`/clients?status=${s}`}>
+                    <span className="stp">
+                      <i style={{ background: PIPE[s] }} aria-hidden="true" />
+                      {STATUS_LABEL[s] ?? s}
+                    </span>
+                    <b>{n}</b>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </aside>
       </div>
     </div>
   );

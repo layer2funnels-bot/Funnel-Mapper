@@ -1,6 +1,7 @@
 "use client";
 // Browser-side exports: file download, the map as SVG/PNG (with the canvas fonts embedded) and the PDF client report.
-import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
+import { money, moneyShort, nf, pct, ratio, people } from "@/lib/format";
+import { artOf, artSrc } from "@/lib/block-art";
 import { stepRows, type FunnelResult } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
@@ -172,13 +173,29 @@ async function loadShots(nodes: FunnelNode[]): Promise<Record<string, string>> {
   return out;
 }
 
+/** The owner's block artwork for the block types on the map, as data URLs (static files, same origin). */
+async function loadArt(nodes: FunnelNode[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const types = [...new Set(nodes.map((n) => n.type))].filter((t) => artOf(t));
+  await Promise.all(
+    types.map(async (t) => {
+      try {
+        const r = await fetch(artSrc(artOf(t)!));
+        if (r.ok) out[t] = await toDataUrl(await r.blob());
+      } catch {}
+    }),
+  );
+  return out;
+}
+
 /** The map as a self-contained SVG: canvas fonts embedded, text measured with them, images inlined. */
 export async function renderMapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, opts: Omit<MapSvgOptions, "fonts" | "measure"> & { embedFonts?: boolean }) {
   await document.fonts?.ready;
   const fonts = await appFonts();
   const nodes = await inlineImages(g.nodes);
   const shots = opts.shots ?? (await loadShots(g.nodes));
-  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, shots, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
+  const art = opts.art ?? (await loadArt(g.nodes));
+  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, shots, art, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
 }
 
 /* ---------------- PDF client report ---------------- */
@@ -348,7 +365,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
   fill(C.bg);
   doc.roundedRect(mapX, mapY, mapW, mapH, 3, 3, "FD");
   if (g.nodes.length) {
-    const svg = await renderMapSvg(g, R, { currency: info.currency, nums, ...info.map });
+    const svg = await renderMapSvg(g, R, { currency: info.currency, basis: info.basis, nums, ...info.map });
     const sz = svg.match(/width="([\d.]+)" height="([\d.]+)"/);
     const sw = Number(sz?.[1] ?? 1200),
       sh = Number(sz?.[2] ?? 800);
@@ -371,7 +388,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     { h: "Revenue", w: 32 },
     { h: "Cost", w: 31 },
   ];
-  const stepCells = (r: (typeof steps)[number]): Cell[] => [r.name, r.label, nf(r.inn), nf(r.out, 1), r.cat === "traffic" ? "–" : pct(r.convPct), r.cat === "offer" ? m(r.rev) : "", r.cost ? m(r.cost) : ""];
+  const stepCells = (r: (typeof steps)[number]): Cell[] => [r.name, r.label, nf(r.inn), people(r.out), r.cat === "traffic" ? "–" : pct(r.convPct), r.cat === "offer" ? m(r.rev) : "", r.cost ? m(r.cost) : ""];
   let overflow = 0;
   if (nums) {
     const kx = mapX + mapW + 6,
@@ -382,8 +399,8 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
       ["Ad spend", m(R.spend)],
       ["ROAS", ratio(R.roas)],
       ["Traffic", nf(R.traffic)],
-      ["Leads", nf(R.leads, 1)],
-      ["Customers", nf(R.cust, 1)],
+      ["Leads", people(R.leads)],
+      ["Customers", people(R.cust)],
       ["CPA", m(R.cpa)],
       ["AOV", m(R.aov)],
       ["ROI", pct(R.roi)],
@@ -465,7 +482,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
             [`Revenue (${F.months} mo)`, m(F.revenue)],
             [`Profit (${F.months} mo)`, m(F.profit), signed(F.profit)],
             [`MRR at month ${F.months}`, m(F.mrr)],
-            [`Active subscriptions at month ${F.months}`, nf(F.activeSubs, 1)],
+            [`Active subscriptions at month ${F.months}`, people(F.activeSubs)],
             ["Cash break-even", F.breakEven ? `Month ${F.breakEven}` : "Not within range"],
           ];
           const sw = (w - 4 * 3) / 5;
@@ -526,7 +543,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
           doc.text(fit(`Key leak: ${L.name}`, w - 4), x + 3, y + 20);
           font(7.5);
           ink(C.muted);
-          doc.text(fit(`${nf(L.lost, 1)} of ${nf(L.inn, 1)} people (${pct(L.dropPct)}) don't move on each month. Converting 10% better here adds about ${m(L.revenueGain)} revenue and ${m(L.profitGain)} profit a month.`, w - 4), x + 3, y + 24);
+          doc.text(fit(`${people(L.lost)} of ${people(L.inn)} people (${pct(L.dropPct)}) don't move on each month. Converting 10% better here adds about ${m(L.revenueGain)} revenue and ${m(L.profitGain)} profit a month.`, w - 4), x + 3, y + 24);
         }
       },
     });
@@ -536,8 +553,8 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
       const cols = D.scenarios.slice(0, 9);
       const metrics: [string, (r: FunnelResult) => Cell][] = [
         ["Traffic", (r) => nf(r.traffic)],
-        ["Leads", (r) => nf(r.leads, 1)],
-        ["Customers", (r) => nf(r.cust, 1)],
+        ["Leads", (r) => people(r.leads)],
+        ["Customers", (r) => people(r.cust)],
         ["Revenue", (r) => m(r.rev)],
         ["Ad spend", (r) => m(r.spend)],
         ["Total costs", (r) => m(r.costs)],
@@ -602,8 +619,8 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
         "Traffic source performance",
         [{ h: "Source", w: 2, a: "left" }, { h: "Visitors", w: 1 }, { h: "Customers", w: 1 }, { h: "Revenue", w: 1.1 }, { h: "Ad spend", w: 1.1 }, { h: "CPA", w: 1 }, { h: "ROAS", w: 0.8 }],
         [
-          ...D.sources.map((s): Cell[] => [s.name, nf(s.traffic), nf(s.cust, 1), m(s.rev), s.spend ? m(s.spend) : "free", m(s.cpa), ratio(s.roas)]),
-          ...(D.sources.length > 1 ? [["All sources", nf(R.traffic), nf(R.cust, 1), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)] as Cell[]] : []),
+          ...D.sources.map((s): Cell[] => [s.name, nf(s.traffic), people(s.cust), m(s.rev), s.spend ? m(s.spend) : "free", m(s.cpa), ratio(s.roas)]),
+          ...(D.sources.length > 1 ? [["All sources", nf(R.traffic), people(R.cust), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)] as Cell[]] : []),
         ],
         { total: D.sources.length > 1 },
       );
@@ -619,7 +636,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
             y,
             w,
             [{ h: "Offer", w: 2, a: "left" }, { h: "Type", w: 1.3, a: "left" }, { h: "Buyers", w: 0.8 }, { h: "Revenue", w: 1.1 }, { h: "Share", w: 1.3 }],
-            [...D.offers.map((o): Cell[] => [o.name, o.label, nf(o.buyers, 1), m(o.revenue), pct(o.share)]), ["Total", "", nf(R.orders, 1), m(R.rev), R.rev ? "100%" : "–"]],
+            [...D.offers.map((o): Cell[] => [o.name, o.label, people(o.buyers), m(o.revenue), pct(o.share)]), ["Total", "", people(R.orders), m(R.rev), R.rev ? "100%" : "–"]],
             { total: true },
           );
           // share bars in the Share column
@@ -692,11 +709,11 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
             ink(C.muted);
             doc.text(pdfText(`Currently planned: ${m(R.rev)} per month (${pct(R.rev / G.target)} of target). Needed at today's conversion rates and costs:`), x + 1, yy + 8);
             yy += 11;
-            yy += table(x, yy, w, [{ h: "Period", w: 1.1, a: "left" }, { h: "Revenue", w: 1.2 }, { h: "Visitors", w: 1.1 }, { h: "Ad spend", w: 1.2 }, { h: "Customers", w: 1.1 }], G.required.map(([p, rev, vis, spend, cust]) => [{ t: p, b: true }, m(rev), nf(vis), m(spend), nf(cust, 1)]));
+            yy += table(x, yy, w, [{ h: "Period", w: 1.1, a: "left" }, { h: "Revenue", w: 1.2 }, { h: "Visitors", w: 1.1 }, { h: "Ad spend", w: 1.2 }, { h: "Customers", w: 1.1 }], G.required.map(([p, rev, vis, spend, cust]) => [{ t: p, b: true }, m(rev), nf(vis), m(spend), people(cust)]));
           }
           if (G.blocks.length) {
             yy += 4;
-            table(x, yy, w, [{ h: "Goal", w: 3, a: "left" }, { h: "People reaching it (per month)", w: 2 }], G.blocks.map((b) => [b.name, nf(b.people, 1)]));
+            table(x, yy, w, [{ h: "Goal", w: 3, a: "left" }, { h: "People reaching it (per month)", w: 2 }], G.blocks.map((b) => [b.name, people(b.people)]));
           }
         },
       });
@@ -706,7 +723,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
     for (const gr of G.items) {
       const g = gr.goal;
       const isMoney = g.kind === "revenue" || g.kind === "profit";
-      const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : nf(v, 1));
+      const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : people(v));
       const title = `Goal: ${g.name || gr.label}`;
       const status = `${gr.label}: ${fv(gr.current)} now, target ${fv(g.value)} (${pct(gr.progress)}).`;
       if (g.kind === "conversion") {
@@ -726,7 +743,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
         tableSection(
           title,
           [{ h: "Period", w: 1, a: "left" }, { h: "Revenue", w: 1.1 }, { h: "Profit", w: 1.1 }, { h: "Traffic", w: 1 }, { h: "Traffic cost", w: 1.1 }, { h: "Leads", w: 0.9 }, { h: "Customers", w: 1 }],
-          gr.required.map(([p, rev, profit, vis, spend, leads, cust]) => [{ t: p, b: true }, m(rev), { t: m(profit), c: signed(profit) }, nf(vis), m(spend), nf(leads, 1), nf(cust, 1)]),
+          gr.required.map(([p, rev, profit, vis, spend, leads, cust]) => [{ t: p, b: true }, m(rev), { t: m(profit), c: signed(profit) }, nf(vis), m(spend), people(leads), people(cust)]),
           { note: `${status} Needs ${nf(gr.plan?.multiplier ?? NaN, 2)}x today's traffic at today's rates.` },
         );
       }
@@ -737,7 +754,7 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
       tableSection(
         "MRR forecast",
         [{ h: "Month", w: 0.6, a: "left" }, { h: "New cust.", w: 0.9 }, { h: "Active subs", w: 0.9 }, { h: "MRR", w: 1 }, { h: "Revenue", w: 1 }, { h: "Cum. revenue", w: 1.1 }, { h: "Traffic cost", w: 1 }, { h: "Expenses", w: 1 }, { h: "Profit", w: 1 }],
-        F.rows.map((r) => [String(r.month), nf(r.newCustomers, 1), nf(r.activeSubs, 1), m(r.mrr), m(r.revenue), m(r.cumulativeRevenue), m(r.adSpend), m(r.expenses + r.followUp + r.delivery), { t: m(r.profit), c: signed(r.profit) }]),
+        F.rows.map((r) => [String(r.month), people(r.newCustomers), people(r.activeSubs), m(r.mrr), m(r.revenue), m(r.cumulativeRevenue), m(r.adSpend), m(r.expenses + r.followUp + r.delivery), { t: m(r.profit), c: signed(r.profit) }]),
         { full: true, note: "Subscriptions renew monthly with churn of 1 / average stay. Expenses include follow-up, delivery and fixed costs." },
       );
 

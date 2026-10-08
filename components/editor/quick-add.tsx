@@ -6,12 +6,14 @@ import { useReactFlow } from "@xyflow/react";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icon";
-import { CATCOLOR, LIB_GROUPS, typeOf, type LibGroup } from "@/lib/catalog";
+import { CATCOLOR, groupColor, LIB_GROUPS, typeOf, type LibGroup } from "@/lib/catalog";
 import { addConnectedNode, addNode, canFollowType, canInsertType, closeQuickAdd, insertStepOnEdge, openQuickAdd, useEditor } from "@/lib/editor/store";
 import { BY_KEY, ITEMS, searchLibrary, type LibItem } from "@/lib/library";
 import { useBand } from "@/lib/use-band";
 import { BlockTile } from "./block-visual";
 import { FAV_KEY, markUsed, RECENT_KEY, useList } from "./library-lists";
+import { searchCommands, type Command } from "@/lib/editor/commands";
+import { kbd } from "@/lib/platform";
 
 /** "Insert step on line": open Quick Add next to the connection's label. */
 export function openInsertStep(edgeId: string) {
@@ -30,7 +32,9 @@ export function QuickAdd() {
 
 interface Row {
   key: string;
-  item: LibItem;
+  item?: LibItem;
+  /** A command from the registry (free placement only), run instead of adding a block. */
+  cmd?: Command;
   section: string;
   /** Client product: preset params and name. */
   product?: { name: string; p: Record<string, unknown> };
@@ -56,7 +60,11 @@ function QuickAddBox() {
   const valid = (it: LibItem) => (context === "connect" ? canFollowType(it.payload.type) : context === "insert" ? canInsertType(it.payload.type) : true);
   const rows = useMemo<Row[]>(() => {
     const ok = (it: LibItem) => valid(it) && (!group || it.group === group);
-    if (s) return searchLibrary(s).filter(ok).slice(0, phone ? 20 : 12).map((item) => ({ key: item.key, item, section: "Results" }));
+    if (s) {
+      const blocks = searchLibrary(s).filter(ok).slice(0, phone ? 20 : 12).map((item) => ({ key: item.key, item, section: "Results" }));
+      const cmds = context === "free" && !group ? searchCommands(s).slice(0, 4).map((cmd) => ({ key: `cmd-${cmd.id}`, cmd, section: "Commands" })) : [];
+      return [...blocks, ...cmds];
+    }
     const out: Row[] = [];
     const seen = new Set<string>();
     const push = (item: LibItem | undefined, section: string, product?: Row["product"]) => {
@@ -77,6 +85,12 @@ function QuickAddBox() {
   const pick = (k: number) => {
     const r = rows[k];
     if (!r) return;
+    if (r.cmd) {
+      closeQuickAdd();
+      r.cmd.run();
+      return;
+    }
+    if (!r.item) return;
     const payload = { ...r.item.payload, ...(r.product ? { p: r.product.p, name: r.product.name } : {}) };
     if (q.from) addConnectedNode(q.from, payload.type, q.fx, q.fy, payload);
     else if (q.edge) insertStepOnEdge(q.edge, payload.type, payload);
@@ -244,7 +258,7 @@ function QuickAddBox() {
         </button>
         {(Object.keys(LIB_GROUPS) as LibGroup[]).map((g) => (
           <button key={g} type="button" aria-pressed={group === g} onClick={() => (setGroup(group === g ? "" : g), setI(0))}>
-            <i style={{ background: CATCOLOR[g === "comms" || g === "sales" ? "action" : g] }} aria-hidden="true" />
+            <i style={{ background: CATCOLOR[groupColor(g)] }} aria-hidden="true" />
             {LIB_GROUPS[g]}
           </button>
         ))}
@@ -269,9 +283,23 @@ function QuickAddBox() {
                   pick(k);
                 }}
               >
-                <BlockTile type={r.item.payload.type} icon={r.item.icon} size={13} />
-                <span className="qn">{r.product ? r.product.name : r.item.label}</span>
-                <small>{r.product ? typeOf(r.item.payload.type).label : LIB_GROUPS[r.item.group]}</small>
+                {r.cmd ? (
+                  <>
+                    <span className="qcmd" aria-hidden="true">
+                      <Icon name={r.cmd.icon ?? "zap"} size={13} />
+                    </span>
+                    <span className="qn">{r.cmd.label}</span>
+                    <small>{r.cmd.shortcut ? kbd(r.cmd.shortcut) : "Command"}</small>
+                  </>
+                ) : (
+                  r.item && (
+                    <>
+                      <BlockTile type={r.item.payload.type} icon={r.item.icon} size={13} artKey={r.item.key} />
+                      <span className="qn">{r.product ? r.product.name : r.item.label}</span>
+                      <small>{r.product ? typeOf(r.item.payload.type).label : LIB_GROUPS[r.item.group]}</small>
+                    </>
+                  )
+                )}
               </li>
             </Fragment>
           );

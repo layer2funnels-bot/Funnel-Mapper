@@ -17,6 +17,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
   const nodes = useEditor((s) => s.nodes);
   const R = useEditor((s) => s.R);
   const cur = useEditor((s) => s.settings.currency);
+  const basis = useEditor((s) => s.settings.basis);
   const hideNums = useEditor((s) => s.settings.hideNumbers);
   const showNums = useEditor((s) => s.opts.nums);
   const period = useEditor((s) => s.opts.period);
@@ -70,9 +71,11 @@ export function Presenter({ onExit }: { onExit: () => void }) {
   const total = stages.length;
   const members = st ? new Set(st.ids) : null;
   const obj = picked && (!members || members.has(picked.id)) ? picked : null;
+  const prevName = i - 1 >= 0 && i - 1 < total ? stages[i - 1].name : i === 0 ? "Overview" : i >= total ? stages[total - 1]?.name : "";
+
   return (
     <div
-      className="fm-present-card"
+      className="fm-present-ui"
       role="region"
       aria-label="Presentation"
       aria-live="polite"
@@ -86,64 +89,61 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(at.current + (dx < 0 ? 1 : -1));
       }}
     >
-      <nav className="fp-progress" aria-label="Presentation stages">
-        <ol>
-          {stages.map((s, k) => (
-            <li key={s.key}>
-              <button type="button" aria-current={i === k ? "step" : undefined} className={k < i ? "done" : undefined} onClick={() => go(k)}>
-                <i aria-hidden="true" />
-                <span>{s.name}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-        <span className="sr-only" role="status" aria-live="polite">
-          {i < 0 ? "Overview" : `Stage ${Math.min(total, i + 1)} of ${total}: ${st?.name ?? ""}`}
-        </span>
-      </nav>
-      {st ? (
-        <>
-          <div className="fp-kicker">
-            Stage {i + 1} of {total}
-          </div>
-          <h2 className="fp-title">{st.name}</h2>
-          {nums ? <div className="fp-numbers">{st.totals.text || "No data yet"}</div> : <div className="fp-numbers muted">{st.ids.length} {st.ids.length === 1 ? "step" : "steps"}</div>}
-          {obj && (
-            <div className="fp-obj">
-              <b>{obj.name}</b> <span className="text-muted">· {typeOf(obj.type).label}</span>
-              <div className="text-muted">{subLabel(obj, cur)}</div>
-              {nums && <div>{nodeStats(obj, R, cur, periodFactor(period)).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
+      <header className="fp-head">
+        <div>
+          <div className="fp-kicker">{st ? `Stage ${i + 1} of ${total}` : done ? "The result" : "Overview"}</div>
+          <h2 className="fp-title">{st ? st.name : done ? (nums ? `${money(R.rev, cur)} revenue · ${money(R.profit, cur)} profit` : "That’s the whole journey") : "The funnel at a glance"}</h2>
+          <p className="fp-sub">
+            {st
+              ? nums
+                ? st.totals.text || "No data yet"
+                : `${st.ids.length} ${st.ids.length === 1 ? "step" : "steps"}`
+              : done
+                ? nums
+                  ? `${nf(R.traffic)} visitors → ${nf(R.cust, 1)} customers (${pct(R.conv)}) · ROAS ${ratio(R.roas)}`
+                  : ""
+                : `${total} ${total === 1 ? "stage" : "stages"}: ${stages.map((s) => s.name).join(" → ")}. Use → / ← or swipe.`}
+          </p>
+        </div>
+        {nums && (
+          <dl className="fp-stats">
+            <div>
+              <dt>Customers</dt>
+              <dd>{nf(R.cust)}</dd>
             </div>
-          )}
-          {!obj && <p className="fp-hint">Click a block to see its own numbers.</p>}
-        </>
-      ) : done ? (
-        <>
-          <div className="fp-kicker">The result</div>
-          <h2 className="fp-title">{nums ? `${money(R.rev, cur)} revenue · ${money(R.profit, cur)} profit` : "That’s the whole journey"}</h2>
-          {nums && (
-            <div className="fp-numbers">
-              {nf(R.traffic)} visitors → {nf(R.cust, 1)} customers ({pct(R.conv)}) · ROAS {ratio(R.roas)}
+            <div>
+              <dt>Revenue / mo</dt>
+              <dd>{money(R.rev, cur)}</dd>
             </div>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="fp-kicker">Overview</div>
-          <h2 className="fp-title">The funnel at a glance</h2>
-          <div className="fp-numbers muted">
-            {total} {total === 1 ? "stage" : "stages"}: {stages.map((s) => s.name).join(" → ")}. Use → / ← or swipe.
-          </div>
-        </>
+          </dl>
+        )}
+      </header>
+      {st && obj && (
+        <div className="fp-obj">
+          <b>{obj.name}</b> <span className="text-muted">· {typeOf(obj.type).label}</span>
+          <div className="text-muted">{subLabel(obj, cur)}</div>
+          {nums && <div>{nodeStats(obj, R, cur, periodFactor(period), basis).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
+        </div>
       )}
-      <div className="fp-actions">
+      <footer className="fp-bar">
         <button type="button" className="btn" onClick={() => go(i - 1)} disabled={i < 0} aria-label="Previous stage" title="Previous stage">
-          <Icon name="chevronLeft" />
+          <Icon name="chevronLeft" size={14} /> <span className="fm-hide-xs">{prevName}</span>
         </button>
-        <button type="button" className="btn primary" onClick={() => go(i + 1)} disabled={done} aria-label="Next stage" title="Next stage">
-          Next <Icon name="chevronRight" />
-        </button>
-        <span className="flex-1" />
+        <nav className="fp-progress" aria-label="Presentation stages">
+          <ol>
+            {stages.map((s, k) => (
+              <li key={s.key}>
+                <button type="button" aria-current={i === k ? "step" : undefined} className={k < i ? "done" : undefined} onClick={() => go(k)} title={s.name}>
+                  <i aria-hidden="true" />
+                  <span className="sr-only">{s.name}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <span className="sr-only" role="status" aria-live="polite">
+            {i < 0 ? "Overview" : `Stage ${Math.min(total, i + 1)} of ${total}: ${st?.name ?? ""}`}
+          </span>
+        </nav>
         {!hideNums && (
           <div className="seg" role="group" aria-label="Map detail">
             <button type="button" aria-pressed={!showNums} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
@@ -154,10 +154,13 @@ export function Presenter({ onExit }: { onExit: () => void }) {
             </button>
           </div>
         )}
-        <button type="button" className="btn" onClick={onExit}>
-          Exit
+        <button type="button" className="btn primary" onClick={() => (done ? onExit() : go(i + 1))} aria-label={done ? "Finish" : "Next stage"} title={done ? "Finish" : "Next stage"}>
+          <span className="fm-hide-xs">{done ? "Finish" : i + 1 >= total ? "Finish" : "Next"}</span> <Icon name="chevronRight" size={14} />
         </button>
-      </div>
+        <button type="button" className="btn icon ghost" onClick={onExit} aria-label="Exit presentation" title="Exit (Esc)">
+          <Icon name="close" size={16} />
+        </button>
+      </footer>
     </div>
   );
 }

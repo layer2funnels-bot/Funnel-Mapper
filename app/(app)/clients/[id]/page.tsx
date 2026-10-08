@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TrashedNotice } from "@/components/trashed-notice";
 import { notFound } from "next/navigation";
 import { ClientForm } from "@/components/client-form";
 import { Icon } from "@/components/icon";
 import { ImportFunnelButton } from "@/components/import-funnel";
 import { NewFunnelButton } from "@/components/new-funnel-dialog";
 import { StatusPill } from "@/components/status-pill";
+import { money, ratio } from "@/lib/format";
 import { pricingSummary } from "@/lib/pricing";
 import { templateOptions } from "@/lib/queries";
 import { requireUser } from "@/lib/supabase/server";
@@ -29,12 +31,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: client }, { data: funnelRows }, { data: allClients }, tpls, { data: products }] = await Promise.all([
     sb.from("clients").select("*").eq("id", id).maybeSingle(),
-    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, niche").order("name"),
+    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).is("deleted_at", null).order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, niche").is("deleted_at", null).order("name"),
     templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
     sb.from("products").select("*").or(`client_id.eq.${id},client_id.is.null`).order("name"),
   ]);
   if (!client) notFound();
+  if (client.deleted_at) return <TrashedNotice kind="client" id={client.id} name={client.name} canEdit={canEdit} />;
   // A client can have hundreds of funnels. Each card draws its whole map, so the page shows the most recently updated ones and loads
   // the maps (the heavy part) only for those, unless asked for all of them.
   const PAGE = 24;
@@ -43,45 +46,54 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const live = rows.filter((f) => f.status !== "archived"),
     archivedRows = rows.filter((f) => f.status === "archived");
   const picked = showAll ? rows : [...live.slice(0, PAGE), ...archivedRows.slice(0, PAGE)];
-  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
+  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id).is("deleted_at", null) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
   const { data: graphRows } = picked.length ? await graphQ : { data: [] as { id: string; graph: unknown }[] };
   const graphs = new Map((graphRows ?? []).map((g) => [g.id, g.graph]));
   const funnels = picked.map((f) => ({ ...f, graph: graphs.get(f.id) ?? null }));
   const hiddenFunnels = showAll ? 0 : Math.max(0, live.length - PAGE) + Math.max(0, archivedRows.length - PAGE);
   const update = updateClientAction.bind(null, client.id);
+  // planned figures across this client's live funnels (saved summaries, per month)
+  const sums = rows.filter((f) => f.status !== "archived").map((f) => (f.summary ?? {}) as { rev?: number; profit?: number; roas?: number });
+  const sumRev = sums.reduce((a, x) => a + (x.rev ?? 0), 0);
+  const sumProfit = sums.reduce((a, x) => a + (x.profit ?? 0), 0);
+  const bestRoas = Math.max(0, ...sums.map((x) => (Number.isFinite(x.roas) ? (x.roas as number) : 0)));
   const niches = [...new Set((allClients ?? []).map((c) => c.niche).filter(Boolean))];
   return (
     <>
-      <Link href="/clients" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-brand">
-        <Icon name="back" size={16} /> Clients
-      </Link>
-      <header className="mb-6 flex flex-wrap items-center gap-4">
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-1.5 text-[13px] text-muted">
+        <Link href="/clients" className="text-muted no-underline hover:text-ink">
+          Clients
+        </Link>
+        <Icon name="chevronRight" size={12} />
+        <span>{client.name}</span>
+      </nav>
+      <header className="mb-6 flex flex-wrap items-center gap-5">
         {client.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={client.logo_url} alt={`${client.name} logo`} className="h-14 w-14 rounded-2xl border border-line bg-white object-contain" />
+          <img src={client.logo_url} alt={`${client.name} logo`} className="h-16 w-16 rounded-2xl border border-line bg-white object-contain" />
         ) : (
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft font-display text-2xl font-bold text-brand">{client.name.slice(0, 1).toUpperCase()}</span>
+          <span className="grid h-16 w-16 place-items-center rounded-2xl bg-slate-50 font-display text-[22px] font-bold tracking-tight text-[#0b1220]">
+            {client.name
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((w: string) => w[0]?.toUpperCase())
+              .join("")}
+          </span>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 font-display text-[28px] leading-tight font-bold tracking-tight">
+          <h1 className="flex flex-wrap items-center gap-3 font-display text-[32px] leading-tight font-semibold tracking-[-0.02em]">
             {client.name} <StatusPill status={client.status} />
-            {client.archived_at && <span className="pill st-past">Archived</span>}
+            {client.archived_at && <span className="stp"><i style={{ background: "#64748b" }} />Archived</span>}
           </h1>
-          <p className="text-sm text-muted">
-            {[client.business_name, client.niche, client.country].filter(Boolean).join(" · ") || "No details yet"}
-            {pricingSummary(client, client.currency) && <> · {pricingSummary(client, client.currency)}</>}
-          </p>
-          {client.tags.length > 0 && (
-            <p className="mt-1 flex flex-wrap gap-1">
-              {client.tags.map((t) => (
-                <span key={t} className="pill bg-brand-soft text-brand">
-                  #{t}
-                </span>
-              ))}
-            </p>
-          )}
+          <p className="mt-1 text-sm text-muted">{[client.business_name, client.niche, client.country, client.email].filter(Boolean).join(" · ") || "No details yet"}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {pricingSummary(client, client.currency) && (
+          <div className="text-right">
+            <div className="text-xs text-muted">Pricing</div>
+            <div className="font-display text-[22px] font-semibold tracking-tight">{pricingSummary(client, client.currency)}</div>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
           {client.website && (
             <a className="btn" href={client.website} target="_blank" rel="noreferrer">
               <Icon name="link" /> Website
@@ -106,12 +118,61 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
             label: "Funnels",
             count: rows.length,
             content: (
-              <section aria-labelledby="funnels-h">
+              <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <section aria-labelledby="funnels-h" className="min-w-0">
                 <h2 id="funnels-h" className="sr-only">
                   Funnels
                 </h2>
-                <FunnelList funnels={funnels} currency={client.currency} canEdit={canEdit} hidden={hiddenFunnels} total={rows.length} allHref={`/clients/${client.id}?tab=funnels&all=1`} />
+                <FunnelList funnels={funnels} currency={client.currency} canEdit={canEdit} hidden={hiddenFunnels} total={rows.length} allHref={`/clients/${client.id}?tab=funnels&all=1`} newCard={<NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} className="fm-newcard" label="New funnel from a template" />} />
               </section>
+              <aside className="min-w-0 space-y-8">
+                <section aria-labelledby="kn-h">
+                  <h2 id="kn-h" className="mb-3 font-display text-[17px] font-semibold">
+                    Key numbers
+                  </h2>
+                  <dl className="fm-kn">
+                    <div>
+                      <dt>Planned revenue</dt>
+                      <dd>{money(sumRev, client.currency)} / mo</dd>
+                    </div>
+                    <div>
+                      <dt>Planned profit</dt>
+                      <dd className={sumProfit >= 0 ? "pos" : "neg"}>{money(sumProfit, client.currency)} / mo</dd>
+                    </div>
+                    <div>
+                      <dt>Best ROAS</dt>
+                      <dd>{bestRoas ? ratio(bestRoas) : "–"}</dd>
+                    </div>
+                    <div>
+                      <dt>Client since</dt>
+                      <dd>{new Date(client.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</dd>
+                    </div>
+                  </dl>
+                </section>
+                <section aria-labelledby="nt-h">
+                  <h2 id="nt-h" className="mb-3 font-display text-[17px] font-semibold">
+                    Notes
+                  </h2>
+                  <fieldset disabled={!canEdit} className="m-0 min-w-0 border-0 p-0">
+                    <ClientNotes id={client.id} notes={client.notes} />
+                  </fieldset>
+                </section>
+                {client.tags.length > 0 && (
+                  <section aria-labelledby="tg-h">
+                    <h2 id="tg-h" className="mb-3 font-display text-[17px] font-semibold">
+                      Tags
+                    </h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      {client.tags.map((t: string) => (
+                        <span key={t} className="fm-tagchip">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </aside>
+              </div>
             ),
           },
           { key: "products", label: "Products", count: products?.length ?? 0, content: <ProductLibrary clientId={client.id} products={products ?? []} currency={client.currency} readOnly={!canEdit} /> },

@@ -53,7 +53,7 @@ test.describe("reports / insights", () => {
     // scenarios: presets from the map's Scenarios tab, compared in Reports with deltas
     await page.getByRole("button", { name: "Map", exact: true }).click();
     await page.getByRole("tab", { name: "Scenarios" }).click();
-    await page.getByRole("button", { name: "Add conservative / expected / best case", exact: true }).click();
+    await page.getByRole("button", { name: "Add conservative and best case", exact: true }).click();
     await page.getByRole("button", { name: "Duplicate Best case" }).click();
     await expect(page.getByLabel("Scenario name").last()).toHaveValue("Best case (copy)");
     await page.getByRole("button", { name: "Reports → Scenario comparison" }).click();
@@ -74,8 +74,7 @@ test.describe("reports / insights", () => {
     await main.getByLabel("Reinvest (% of profit)").fill("0");
     await expect(main.getByText("Pick how much profit to reinvest")).toBeVisible();
     await page.locator(".fm-rnav").getByRole("button", { name: "Overview" }).click();
-    await main.getByLabel("Scenario for these numbers").selectOption("base");
-    await expect(main).toContainText("Numbers for As mapped");
+    await expect(main).toContainText("Numbers for Baseline (current map)");
   });
 });
 
@@ -175,7 +174,7 @@ test.describe("roles and clients", () => {
     await expect(page.getByRole("button", { name: "New funnel" })).toHaveCount(0);
     await page.getByRole("tab", { name: "Details" }).click();
     await expect(page.getByRole("button", { name: "Save details" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Delete client/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Move client to Trash/ })).toHaveCount(0);
     // the editor is view-only: no share, no editing, but reports and analytics work
     await page.goto("/funnels/20000000-0000-4000-8000-000000000002");
     await expect(page.locator(".fm-saved")).toHaveText("View only");

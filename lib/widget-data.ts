@@ -1,12 +1,12 @@
 // Widgets: live numbers on the map. A widget is a canvas element (`type: "widget"`, stored in the graph like any other
 // annotation, so it needs no table). It only READS results from the engine; nothing here calculates a funnel.
 //   scope   funnel (the whole result `R`), frame (the steps inside a frame) or selection (the steps it was made for)
-//   display number | trend (number + Actual vs Plan) | chart (monthly projection)
+//   display number | trend (number + Actual vs Plan) | chart (monthly projection) | path (conversion along the main path)
 //   metrics up to 4 of WIDGET_METRICS
 // Scoped (frame / selection) figures add up the same per-step results `compute()` adds up for the whole funnel.
 import { baseOf, isAnnot, typeOf, WIDGET_SIZES, type NodeParams } from "./catalog";
 import { frameMembersOf } from "./geometry";
-import { money, nf, pct, ratio } from "./format";
+import { money, pct, ratio, people } from "./format";
 import { project, num, type ActualRow, type FunnelResult, type GraphLike } from "./funnel-math";
 import { goalCurrent } from "./report-data";
 import type { FunnelNode, Goal } from "./graph";
@@ -26,7 +26,7 @@ export type WidgetMetric = (typeof WIDGET_METRICS)[number][0];
 export type MetricKind = (typeof WIDGET_METRICS)[number][2];
 export const MAX_WIDGET_METRICS = 4;
 export type WidgetScope = "funnel" | "frame" | "selection";
-export type WidgetDisplay = "number" | "trend" | "chart";
+export type WidgetDisplay = "number" | "trend" | "chart" | "path";
 export type WidgetSize = keyof typeof WIDGET_SIZES;
 export type TrendPeriod = "week" | "month" | "quarter" | "range";
 
@@ -53,7 +53,7 @@ export function widgetConfig(p: NodeParams): WidgetConfig {
     scope: p.scope === "frame" || p.scope === "selection" ? p.scope : "funnel",
     frameId: typeof p.frameId === "string" ? p.frameId : undefined,
     nodeIds: Array.isArray(p.nodeIds) ? p.nodeIds.filter((x): x is string => typeof x === "string") : undefined,
-    display: p.display === "trend" || p.display === "chart" ? p.display : "number",
+    display: p.display === "trend" || p.display === "chart" || p.display === "path" ? p.display : "number",
     metrics: metrics.length ? metrics : ["revenue"],
     size: p.wsize === "S" || p.wsize === "L" ? p.wsize : "M",
     trend: p.trend === "week" || p.trend === "quarter" || p.trend === "range" ? p.trend : "month",
@@ -172,6 +172,42 @@ export function chartSeries(metric: WidgetMetric, g: GraphLike, s: Parameters<ty
   return series.map((v) => v * k);
 }
 
+/**
+ * Conversion path: the funnel's main path as the engine ran it. From the source that sends the most people, follow the
+ * connection that carries the most people at every step (no new maths: people and flows are the engine's own).
+ */
+export interface PathStep {
+  id: string;
+  name: string;
+  /** People reaching the step (visits for a source). */
+  inn: number;
+  /** People continuing from the step. */
+  out: number;
+  /** Share of the people reaching it who continue (NaN for a source). */
+  rate: number;
+}
+export function conversionPath(nodes: FunnelNode[], edges: { id: string; from: string; to: string }[], R: FunnelResult, members: FunnelNode[] | null, max = 6): PathStep[] {
+  const allowed = members ? new Set(members.map((n) => n.id)) : null;
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const ok = (id: string) => !!byId.get(id) && !isAnnot(byId.get(id)!.type) && (!allowed || allowed.has(id));
+  const starts = nodes.filter((n) => ok(n.id) && (typeOf(n.type)?.cat === "traffic" || (allowed && !edges.some((e) => e.to === n.id && allowed.has(e.from)))));
+  let cur: FunnelNode | undefined = starts.sort((a, b) => (R.N[b.id]?.out ?? 0) - (R.N[a.id]?.out ?? 0))[0];
+  const out: PathStep[] = [];
+  const seen = new Set<string>();
+  while (cur && out.length < max && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    const r = R.N[cur.id];
+    const src = typeOf(cur.type)?.cat === "traffic";
+    const inn = src ? (r?.out ?? 0) : (r?.inflow ?? 0);
+    out.push({ id: cur.id, name: cur.name, inn, out: r?.out ?? 0, rate: src || !inn ? NaN : (r?.out ?? 0) / inn });
+    const next = edges
+      .filter((e) => e.from === cur!.id && ok(e.to))
+      .sort((a, b) => (R.flows[b.id] ?? 0) - (R.flows[a.id] ?? 0))[0];
+    cur = next && (R.flows[next.id] ?? 0) > 0 ? byId.get(next.to) : undefined;
+  }
+  return out;
+}
+
 /* ---------------- trends: Actual vs Plan ---------------- */
 export const DAYS_PER_MONTH = 30.44; // planned numbers are per month
 
@@ -261,6 +297,6 @@ export function formatMetricValue(v: Pick<MetricValue, "kind" | "value">, cur: s
   if (v.kind === "money") return money(v.value, cur);
   if (v.kind === "ratio") return ratio(v.value);
   if (v.kind === "pct") return pct(v.value);
-  return nf(v.value, 1);
+  return people(v.value);
 }
 export { num };

@@ -6,9 +6,11 @@ import { DAYS_PER_PERIOD } from "@/lib/report-data";
 import { planVsActual, stepRows, type ActualRow } from "@/lib/funnel-math";
 import type { ActualRowDb } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { useEditor } from "@/lib/editor/store";
+import { setActuals, useEditor } from "@/lib/editor/store";
 import { actualsCsv, fileName } from "@/lib/export";
 import { download } from "./exporters";
+import { ActualsEntry } from "./actuals-entry";
+import { MonthCalendar } from "./month-calendar";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 function lastMonth() {
@@ -36,12 +38,16 @@ export function Actuals() {
   const [range, setRange] = useState(lastMonth);
   const [draft, setDraft] = useState<Draft>({});
   const [saving, setSaving] = useState(false);
+  const [entry, setEntry] = useState(false);
+  const [cal, setCal] = useState(false);
   const dlg = useRef<HTMLDialogElement>(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabaseBrowser().from("funnel_actuals").select("*").eq("funnel_id", funnelId).order("period_start", { ascending: false });
     if (error) setErr(error.message);
     setRows(data ?? []);
+    // keep the map's Actual mode and Trend widgets in step with what was just saved
+    if (!error) setActuals(data ?? []);
     setLoading(false);
   }, [funnelId]);
   useEffect(() => {
@@ -109,7 +115,34 @@ export function Actuals() {
 
   return (
     <>
-      <p className="sub">Enter real numbers for a date range and compare them with the plan. Planned numbers are per month and scaled to the range ({nf(scale, 2)}×).</p>
+      <p className="sub">Enter real numbers by month or week, or for any date range, and compare them with the plan. Planned numbers are per month and scaled to the range ({nf(scale, 2)}×).</p>
+      {!ro && (
+        <button type="button" className="btn primary mb-3 w-full" onClick={() => setEntry(true)}>
+          <Icon name="edit" /> Type in or import CSV
+        </button>
+      )}
+      <div className="mb-2 flex flex-wrap gap-1" role="group" aria-label="Date range">
+        {(
+          [
+            ["Today", () => ({ start: iso(new Date()), end: iso(new Date()) })],
+            ["This month", () => ({ start: iso(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))), end: iso(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0))) })],
+            ["Last month", lastMonth],
+            ["Last 30 days", () => ({ start: iso(new Date(new Date().getTime() - 29 * 86400000)), end: iso(new Date()) })],
+          ] as [string, () => { start: string; end: string }][]
+        ).map(([l, f]) => {
+          // eslint-disable-next-line react-hooks/purity -- presets are relative to today
+          const r = f();
+          return (
+            <button key={l} type="button" className="btn sm" aria-pressed={r.start === range.start && r.end === range.end} onClick={() => setRange(r)}>
+              {l}
+            </button>
+          );
+        })}
+        <button type="button" className="btn sm" aria-expanded={cal} onClick={() => setCal((v) => !v)}>
+          <Icon name="calendar" size={14} /> Custom
+        </button>
+      </div>
+      {cal && <MonthCalendar range={range} marked={rows.map((r) => ({ start: r.period_start, end: r.period_end }))} onPick={(r) => setRange(r)} />}
       <div className="row2">
         <div className="field">
           <label htmlFor="act-start">From</label>
@@ -203,6 +236,16 @@ export function Actuals() {
         </>
       )}
 
+      {entry && <ActualsEntry rows={rows} onSaved={load} onClose={() => setEntry(false)} />}
+      {inRange.length > 0 && (
+        <p className="sub mt-2">
+          <span className="fm-tag actual" title="Entered or imported numbers">
+            Actual
+          </span>{" "}
+          {fmtDate(range.start)} – {fmtDate(range.end)} · source:{" "}
+          {[...new Set(inRange.map((r) => (r.source === "csv" ? `CSV (${r.source_ref ?? "file"})` : "typed")))].join(", ")}
+        </p>
+      )}
       <dialog ref={dlg} className="modal" style={{ maxWidth: 860 }} aria-labelledby="act-title">
         <h3 id="act-title">
           Actuals: {fmtDate(range.start)} – {fmtDate(range.end)}

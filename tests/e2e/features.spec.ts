@@ -165,9 +165,9 @@ test.describe("reports and planning tools", () => {
     await expect(page.locator(".statbox", { hasText: "Payback" })).toContainText("periods");
     // scenarios
     await page.getByRole("tab", { name: "Scenarios" }).click();
-    await page.getByRole("button", { name: "Add conservative / expected / best case", exact: true }).click();
+    await page.getByRole("button", { name: "Add conservative and best case", exact: true }).click();
     const table = page.getByRole("table", { name: "Scenario comparison" });
-    await expect(table.getByRole("columnheader")).toHaveCount(5);
+    await expect(table.getByRole("columnheader")).toHaveCount(4);
     await expect(table.getByRole("row", { name: /Profit/ })).toBeVisible();
     // forecast
     await page.getByRole("tab", { name: "Forecast" }).click();

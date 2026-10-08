@@ -1,25 +1,34 @@
 "use client";
 import "@xyflow/react/dist/base.css";
-import { Background, BackgroundVariant, MiniMap, ReactFlow, SelectionMode, useReactFlow, type ConnectionLineComponentProps, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
+import { Background, BackgroundVariant, ConnectionMode, MiniMap, ReactFlow, SelectionMode, useReactFlow, type ConnectionLineComponentProps, type Connection, type Edge, type Node, type NodeChange, type EdgeChange, type FinalConnectionState } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { CATDARK, SIZED_TYPES, WIDTH_TYPES, isAnnot, typeOf } from "@/lib/catalog";
-import { addNode, applyEyedropper, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
+import { CATDARK, SIZED_TYPES, WIDTH_TYPES, fourPorts, isAnnot, portsFor, typeOf } from "@/lib/catalog";
+import { SIDES, type Side } from "@/lib/graph";
+import { sidesOf } from "@/lib/editor/labels";
+import { addNode, applyEyedropper, openLineMenu, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
 const OWN_TYPES = new Set(["note", "label", "frame", "shape", "image", "checklist", "link", "widget"]);
 const rfType = (t: string) => (OWN_TYPES.has(t) ? t : "block");
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+const isSide = (h: string | null | undefined): h is Side => !!h && (SIDES as readonly string[]).includes(h);
+/** Who a new line carries, from the handle it was drawn from: the fixed No / B port, or a four-port block's bottom side (the old "didn't convert" habit); Yes otherwise. */
+const portFrom = (fromType: string | undefined, handle: string | null | undefined): "main" | "alt" => {
+  if (handle === "alt") return "alt";
+  return handle === "bottom" && !!fromType && portsFor(fromType).hasAlt ? "alt" : "main";
+};
 
 export const DND_MIME = "application/x-funnel-block";
 
 /** The line being dragged off a port: Emerald while it can land, amber when the block under it can't take people. */
 function ConnectionLine({ fromX, fromY, toX, toY, fromPosition, connectionStatus }: ConnectionLineComponentProps) {
   const bad = connectionStatus === "invalid";
-  const alt = fromPosition === "bottom";
-  const dx = Math.max(40, Math.abs(toX - fromX) / 2);
-  const d = alt ? `M ${fromX} ${fromY} C ${fromX} ${fromY + 60}, ${toX - dx} ${toY}, ${toX} ${toY}` : `M ${fromX} ${fromY} C ${fromX + dx} ${fromY}, ${toX - dx} ${toY}, ${toX} ${toY}`;
+  const dx = Math.max(40, Math.abs(toX - fromX) / 2),
+    dy = Math.max(40, Math.abs(toY - fromY) / 2);
+  const c1 = fromPosition === "bottom" ? [fromX, fromY + Math.max(60, dy)] : fromPosition === "top" ? [fromX, fromY - Math.max(60, dy)] : fromPosition === "left" ? [fromX - dx, fromY] : [fromX + dx, fromY];
+  const d = `M ${fromX} ${fromY} C ${c1[0]} ${c1[1]}, ${toX - dx} ${toY}, ${toX} ${toY}`;
   const c = bad ? "var(--attention)" : "var(--brand)";
   return (
     <g className="fm-connline" data-invalid={bad || undefined}>
@@ -73,16 +82,22 @@ export function Canvas() {
     const B = Object.fromEntries(nodes.map((n) => [n.id, n]));
     return edges
       .filter((e) => B[e.from] && B[e.to])
-      .map((e) => ({
-        id: e.id,
-        source: e.from,
-        target: e.to,
-        sourceHandle: e.port === "alt" ? "alt" : "main",
-        targetHandle: "in",
-        type: "flow",
-        selected: selEdge === e.id,
-        data: { port: e.port, fromType: B[e.from]?.type, from: e.from, to: e.to, share: e.share, s: e.s },
-      }));
+      .map((e) => {
+        // four-port blocks use the stored sides; Yes/No logic keeps its fixed main / alt ports and its left input
+        const [sh, th] = sidesOf(e);
+        const fromFour = fourPorts(B[e.from].type),
+          toFour = fourPorts(B[e.to].type);
+        return {
+          id: e.id,
+          source: e.from,
+          target: e.to,
+          sourceHandle: fromFour ? sh : e.port === "alt" ? "alt" : "main",
+          targetHandle: toFour ? th : "in",
+          type: "flow",
+          selected: selEdge === e.id,
+          data: { port: e.port, fromType: B[e.from]?.type, from: e.from, to: e.to, share: e.share, s: e.s },
+        };
+      });
   }, [edges, nodes, selEdge]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -152,28 +167,48 @@ export function Canvas() {
     for (const c of changes) if (c.type === "select" && !c.selected && useEditor.getState().selEdge === c.id) useEditor.setState({ selEdge: null });
   }, []);
 
-  const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, c.sourceHandle === "alt" ? "alt" : "main"), []);
-  const onConnect = useCallback((c: Connection) => connect(c.source, c.sourceHandle === "alt" ? "alt" : "main", c.target), []);
+  const typeOfId = (id: string) => useEditor.getState().nodes.find((n) => n.id === id)?.type;
+  const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, portFrom(typeOfId(c.source), c.sourceHandle)), []);
+  // the line just made by onConnect: onConnectEnd (which knows the pointer) opens its meaning menu there
+  const made = useRef<string | null>(null);
+  const onConnect = useCallback((c: Connection) => {
+    const fromType = typeOfId(c.source);
+    made.current = connect(c.source, portFrom(fromType, c.sourceHandle), c.target, { sh: isSide(c.sourceHandle) ? c.sourceHandle : undefined, th: isSide(c.targetHandle) ? c.targetHandle : undefined });
+  }, []);
   // Like the prototype: dropping a connection anywhere on a block (not just its input dot) connects to it.
   const onConnectEnd = useCallback(
     (ev: MouseEvent | TouchEvent, state: FinalConnectionState) => {
-      if (state.isValid || !state.fromNode || state.fromHandle?.type !== "source") return;
       const pt = "changedTouches" in ev ? ev.changedTouches[0] : ev;
-      const port = state.fromHandle.id === "alt" ? "alt" : "main";
+      const box = (document.querySelector(".fm-stage") as HTMLElement | null)?.getBoundingClientRect();
+      // a line from a block that can lead to "No": ask what the line means, right where it was released
+      const lineMenu = (id: string | null) => {
+        const st = useEditor.getState();
+        const e = id ? st.edges.find((x) => x.id === id) : undefined;
+        const from = e && st.nodes.find((n) => n.id === e.from);
+        if (e && from && fourPorts(from.type) && portsFor(from.type).hasAlt && box) openLineMenu({ id: e.id, sx: pt.clientX - box.left, sy: pt.clientY - box.top });
+      };
+      if (state.isValid) {
+        lineMenu(made.current);
+        made.current = null;
+        return;
+      }
+      if (!state.fromNode || state.fromHandle?.type !== "source") return;
+      const fromType = typeOfId(state.fromNode.id);
+      const port = portFrom(fromType, state.fromHandle.id);
+      const sh = isSide(state.fromHandle.id) ? state.fromHandle.id : undefined;
       const hit = document.elementFromPoint(pt.clientX, pt.clientY);
       const target = hit?.closest(".react-flow__node")?.getAttribute("data-id");
       if (target) {
         // released on an existing block: connect directly (no Quick Add), or say why not
-        if (canConnect(state.fromNode.id, target, port)) connect(state.fromNode.id, port, target);
+        if (canConnect(state.fromNode.id, target, port)) lineMenu(connect(state.fromNode.id, port, target, { sh }));
         else if (target !== state.fromNode.id) showToast("That block can’t take people from here");
         return;
       }
       // released on empty canvas: Quick Add at the endpoint, already wired to the port it came from
       if (!hit?.closest(".react-flow__pane") || useEditor.getState().readOnly) return;
-      const box = (document.querySelector(".fm-stage") as HTMLElement | null)?.getBoundingClientRect();
       if (!box) return;
       const at = rf.screenToFlowPosition({ x: pt.clientX, y: pt.clientY });
-      openQuickAdd({ sx: pt.clientX - box.left, sy: pt.clientY - box.top, fx: at.x, fy: at.y, from: { id: state.fromNode.id, port } });
+      openQuickAdd({ sx: pt.clientX - box.left, sy: pt.clientY - box.top, fx: at.x, fy: at.y, from: { id: state.fromNode.id, port, sh } });
     },
     [rf],
   );
@@ -234,6 +269,7 @@ export function Canvas() {
 
   return (
     <ReactFlow
+      proOptions={{ hideAttribution: true }}
       nodes={rfNodes}
       edges={rfEdges}
       nodeTypes={nodeTypes}
@@ -279,7 +315,11 @@ export function Canvas() {
         openMenu({ kind: "pane", x: ev.clientX, y: ev.clientY, fx: at.x, fy: at.y });
       }}
       onConnect={onConnect}
-      onConnectEnd={onConnectEnd}
+      onConnectStart={() => document.querySelector(".fm-stage")?.classList.add("fm-connecting")}
+      onConnectEnd={(ev, st) => {
+        document.querySelector(".fm-stage")?.classList.remove("fm-connecting");
+        onConnectEnd(ev, st);
+      }}
       isValidConnection={isValidConnection}
       onPaneClick={() => clearSelection()}
       onDoubleClick={(e) => {
@@ -317,6 +357,7 @@ export function Canvas() {
       elementsSelectable
       zoomOnDoubleClick={false}
       connectionRadius={30}
+      connectionMode={ConnectionMode.Loose}
       connectionLineComponent={ConnectionLine}
       attributionPosition="bottom-center"
       aria-label="Funnel canvas"

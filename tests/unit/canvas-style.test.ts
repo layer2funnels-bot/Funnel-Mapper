@@ -125,8 +125,8 @@ describe("styles", () => {
   it("CSS helpers", () => {
     expect(boxCss({ fill: "#000", borderW: 2, borderStyle: "dashed", radius: 4, opacity: 0.5, shadow: "none" })).toEqual({ background: "#000", borderWidth: 2, borderStyle: "dashed", borderRadius: 4, opacity: 0.5, boxShadow: "none" });
     expect(textCss({ weight: 600, italic: true, underline: true, strike: true, ls: 1.5, lh: 1.4, align: "center" }, 20)).toEqual({ fontSize: 20, fontWeight: 600, fontStyle: "italic", textDecoration: "underline line-through", letterSpacing: "1.5px", lineHeight: 1.4, textAlign: "center" });
-    expect(edgeLook({ kind: "skip" }).dash).toBe("dashed");
-    expect(edgeLook({ kind: "nodata" }).dash).toBe("dotted");
+    expect(edgeLook({ kind: "skip" }).dash).toBe("dotted");
+    expect(edgeLook({ kind: "nodata" }).dash).toBe("dashdot");
     expect(edgeLook({ kind: "skip", dash: "solid" }).dash).toBe("solid");
     expect(cleanStyle({ a: undefined, b: "" })).toBeUndefined();
   });

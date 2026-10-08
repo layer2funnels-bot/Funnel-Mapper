@@ -48,7 +48,7 @@ export const PERIODS: [string, number][] = [
 ];
 
 export interface ReportData {
-  /** As mapped (no what-if), the current view if a what-if is applied, then each saved scenario. */
+  /** Baseline (current map, no what-if), the current view if a what-if is applied, then each saved scenario. */
   scenarios: ScenarioColumn[];
   hasScenarios: boolean;
   forecast: { rows: ProjectionRow[]; months: number; growth: number; revenue: number; profit: number; mrr: number; activeSubs: number; breakEven: number | null };
@@ -177,7 +177,7 @@ const KIND_LABEL = { monthly: "Every month", per_sale: "Per order", one_time: "O
 /** Every report section, from the same results the editor shows. `R` is the editor's current result. */
 export function reportData(g: GraphLike, s: ReportSettings, R: FunnelResult): ReportData {
   const base = compute(g, { ...s, whatif: NEUTRAL });
-  const scenarios: ScenarioColumn[] = [{ name: "As mapped", R: base }];
+  const scenarios: ScenarioColumn[] = [{ name: "Baseline (current map)", R: base }];
   if (!isNeutral(s.whatif)) scenarios.push({ name: "Current what-if", R });
   s.scenarios.forEach((sc) => scenarios.push({ name: sc.name || "Scenario", R: computeScenario(g, s, sc) }));
 

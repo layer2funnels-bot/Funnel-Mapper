@@ -42,7 +42,7 @@ export async function openEditor(page: Page, id: string) {
 }
 
 export const nodes = (page: Page) => page.locator(".react-flow__node");
-export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle span", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
+export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle span, .pgo-title", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
 export const edgeLabels = (page: Page) => page.locator(".fm-elabel");
 
 /** Flow-space position of a node from React Flow's transform. */
@@ -98,4 +98,12 @@ export async function latestMail(to: string, since = 0) {
     await new Promise((res) => setTimeout(res, 500));
   }
   throw new Error(`no email for ${to}`);
+}
+
+/** Add a library block through the palette search (annotation blocks sit in a collapsed group). */
+export async function addFromPalette(page: Page, label: string) {
+  const search = page.getByPlaceholder(/^Search \d+ blocks$/);
+  await search.fill(label);
+  await page.getByRole("button", { name: `Add ${label}`, exact: true }).click();
+  await search.fill("");
 }

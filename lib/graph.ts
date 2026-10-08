@@ -68,12 +68,19 @@ export const STEP_STATUSES = [
 ] as const;
 export type StepStatus = (typeof STEP_STATUSES)[number][0];
 
+/** The four sides a connection can leave or enter a block by (V2 four ports). Geometry only; `port` keeps the meaning. */
+export const SIDES = ["top", "right", "bottom", "left"] as const;
+export type Side = (typeof SIDES)[number];
+
 export const edgeSchema = z.object({
   id: z.string().min(1),
   from: z.string(),
   to: z.string(),
   share: finite.default(100),
   port: z.enum(["main", "alt"]).default("main"),
+  /** Side it leaves the source by / enters the target by. Absent on older maps: right (or bottom for "alt") into left. */
+  sh: z.enum(SIDES).optional(),
+  th: z.enum(SIDES).optional(),
   /** Visual style (lib/style.ts EdgeStyle). */
   s: z.record(z.string(), z.unknown()).optional(),
 });
@@ -111,8 +118,11 @@ export interface FunnelEdge {
   to: string;
   /** Percentage (0–100) of the source group sent this way. */
   share: number;
-  /** main = converted / Yes / A (right port); alt = didn't convert / No / B (bottom port). */
+  /** main = converted / Yes / A; alt = didn't convert / No / B. The maths read only this (never the side). */
   port: "main" | "alt";
+  /** Sides of the four ports the line uses (geometry only). */
+  sh?: Side;
+  th?: Side;
   s?: EdgeStyle;
 }
 export interface Viewport {
@@ -146,6 +156,8 @@ export const whatifSchema = z.object({
   cost: finite.default(1),
 });
 export type WhatIf = z.infer<typeof whatifSchema>;
+
+const isNeutral = (w: WhatIf) => w.traffic === 1 && w.conv === 1 && w.price === 1 && w.cost === 1;
 
 export const SCENARIO_KINDS = ["conservative", "expected", "best", "custom"] as const;
 export const scenarioSchema = z.object({
@@ -189,7 +201,12 @@ export const settingsSchema = z.object({
   target: finite.default(0),
   currency: z.string().default("GBP").transform((c) => currencyFromSymbol(c)),
   expenses: z.array(expenseSchema).default([]),
-  scenarios: z.array(scenarioSchema).default([]),
+  // Owner decision (V2): Baseline is the current map, so an "Expected" scenario that equals the map is merged into it.
+  // One with its own assumptions stays as a real scenario.
+  scenarios: z
+    .array(scenarioSchema)
+    .default([])
+    .transform((list) => list.filter((sc) => !(isNeutral(sc.whatif) && sc.fixed == null && (sc.kind === "expected" || sc.name.trim().toLowerCase() === "expected")))),
   projection: projectionSchema.default({ months: 12, growth: 0 }),
   /** Hide numbers on the public share page. */
   hideNumbers: z.boolean().default(false),

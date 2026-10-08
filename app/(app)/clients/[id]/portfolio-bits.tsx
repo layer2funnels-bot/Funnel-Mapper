@@ -8,8 +8,13 @@ import { LogoUpload } from "@/components/logo-upload";
 import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, ratio } from "@/lib/format";
+import { Menu } from "@/components/menu";
+import { typeOf } from "@/lib/catalog";
+import { parseGraph } from "@/lib/graph";
+import { healthChecks } from "@/lib/health";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
-import { archiveClientAction, deleteClientAction, deleteFunnelAction, duplicateFunnelAction, setFunnelStatusAction, updateClientFields } from "../../actions";
+import { archiveClientAction, duplicateFunnelAction, setFunnelStatusAction, trashClientAction, trashFunnelAction, updateClientFields } from "../../actions";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export function ClientLogo({ id, url }: { id: string; url: string | null }) {
   const [u, setU] = useState(url);
@@ -70,37 +75,66 @@ export function ArchiveClient({ id, archived }: { id: string; archived: boolean 
 
 export function DeleteClient({ id, name, funnels }: { id: string; name: string; funnels: number }) {
   const [pending, start] = useTransition();
+  const [dialog, ask] = useConfirm();
   return (
     <section className="card p-5">
-      <h2 className="mb-2 font-display text-lg font-bold">Danger zone</h2>
-      <p className="mb-3 text-sm text-muted">Deleting a client also deletes their {funnels} funnel{funnels === 1 ? "" : "s"}, versions, actuals and share links.</p>
+      <h2 className="mb-2 font-display text-lg font-bold">Move to Trash</h2>
+      <p className="mb-3 text-sm text-muted">
+        The client and their {funnels} funnel{funnels === 1 ? "" : "s"} go to Trash, where they stay until someone restores them or deletes them forever. Share links stop working while they are in Trash.
+      </p>
       <button
         type="button"
         className="btn danger"
         disabled={pending}
-        onClick={() => {
-          if (confirm(`Delete “${name}” and all their funnels? This can’t be undone.`)) start(() => deleteClientAction(id));
+        onClick={async () => {
+          const ok = await ask({
+            title: "Move this client to Trash?",
+            body: (
+              <p>
+                “{name}” and their {funnels} funnel{funnels === 1 ? "" : "s"} move to Trash. Nothing is lost: you can restore them from Trash at any time.
+              </p>
+            ),
+            confirm: "Move to Trash",
+            typeToConfirm: name,
+          });
+          if (ok) start(() => trashClientAction(id));
         }}
       >
-        <Icon name="trash" /> Delete client
+        <Icon name="trash" /> Move client to Trash
       </button>
+      {dialog}
     </section>
   );
 }
 
 type FunnelItem = { id: string; name: string; description: string; status: string; summary: unknown; settings: unknown; graph: unknown; thumbnail_url: string | null; updated_at: string };
 
-export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, total = funnels.length, allHref }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean; hidden?: number; total?: number; allHref?: string }) {
-  const [showArchived, setShowArchived] = useState(false);
-  const archived = funnels.filter((f) => f.status === "archived").length;
-  const list = funnels.filter((f) => showArchived || f.status !== "archived");
+const FILTERS: [string, string][] = [
+  ["all", "All"],
+  ["live", "Live"],
+  ["draft", "Draft"],
+  ["archived", "Archived"],
+];
+
+export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, total = funnels.length, allHref, newCard }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean; hidden?: number; total?: number; allHref?: string; newCard?: React.ReactNode }) {
+  const [filter, setFilter] = useState("all");
+  const count = (k: string) => (k === "all" ? funnels.filter((f) => f.status !== "archived").length : funnels.filter((f) => f.status === k).length);
+  const list = funnels.filter((f) => (filter === "all" ? f.status !== "archived" : f.status === filter));
   if (!funnels.length) return <div className="card px-6 py-12 text-center text-sm text-muted">{canEdit ? "No funnels yet. Use “New funnel” to start from a template or a blank canvas." : "No funnels yet."}</div>;
   return (
     <>
-      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Funnels">
+      <div className="mb-4 flex flex-wrap gap-1.5" role="group" aria-label="Filter funnels">
+        {FILTERS.map(([k, l]) => (
+          <button key={k} type="button" className="fm-chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>
+            {l} <b>{count(k)}</b>
+          </button>
+        ))}
+      </div>
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Funnels">
         {list.map((f) => (
           <FunnelCard key={f.id} f={f} canEdit={canEdit} currency={(f.settings as { currency?: string })?.currency ?? currency} />
         ))}
+        {canEdit && newCard && filter === "all" && <li className="min-h-[200px]">{newCard}</li>}
       </ul>
       {hidden > 0 && allHref && (
         <p className="mt-4 text-sm text-muted">
@@ -110,91 +144,101 @@ export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, tota
           </Link>
         </p>
       )}
-      {archived > 0 && (
-        <button type="button" className="btn ghost mt-3" onClick={() => setShowArchived((s) => !s)}>
-          <Icon name="archive" /> {showArchived ? "Hide" : "Show"} {archived} archived
-        </button>
-      )}
     </>
   );
 }
 
 function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string; canEdit: boolean }) {
   const [pending, start] = useTransition();
+  const [dialog, ask] = useConfirm();
   const s = (f.summary ?? {}) as Partial<FunnelSummary>;
+  const graph = parseGraph(f.graph);
+  const blocks = graph.nodes.filter((n) => typeOf(n.type)?.cat !== "annot").length;
+  const checks = healthChecks(graph).length;
+  const scenarios = ((f.settings as { scenarios?: unknown[] })?.scenarios?.length ?? 0) + 1;
+  const dim = f.status === "archived";
   return (
-    <li className={`card flex flex-col overflow-hidden ${pending ? "opacity-60" : ""}`}>
-      <Link href={`/funnels/${f.id}`} className="block border-b border-line" aria-label={`Open ${f.name}`}>
+    <li className={`fm-pcard${dim ? " dim" : ""}${pending ? " busy" : ""}`}>
+      <Link href={`/funnels/${f.id}`} className="fm-fthumb" aria-label={`Open ${f.name}`}>
         {/* live map thumbnail: always current, works in light and dark */}
-        <GraphThumb graph={f.graph} className="h-[150px] w-full" />
+        <GraphThumb graph={f.graph} settings={f.settings} name={f.name} archived={dim} className="h-[118px] w-full" />
+        <span className="fm-fchip">{blocks} blocks</span>
       </Link>
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-start gap-2">
-          <Link href={`/funnels/${f.id}`} className="min-w-0 flex-1 font-display text-[17px] leading-snug font-bold text-ink hover:text-brand">
-            {f.name}
-          </Link>
-          <StatusPill status={f.status} />
-        </div>
-        <dl className="grid grid-cols-4 gap-2 rounded-xl bg-bg px-3 py-2 text-xs text-muted">
-          <div>
-            <dt>Revenue</dt>
-            <dd className="font-display text-[14px] font-bold text-ink">{money(s.rev, currency)}</dd>
-          </div>
-          <div>
-            <dt>Profit</dt>
-            <dd className={`font-display text-[14px] font-bold ${(s.profit ?? 0) >= 0 ? "pos" : "neg"}`}>{money(s.profit, currency)}</dd>
-          </div>
-          <div>
-            <dt>ROAS</dt>
-            <dd className="font-display text-[14px] font-bold text-ink">{ratio(s.roas)}</dd>
-          </div>
-          <div>
-            <dt>CPA</dt>
-            <dd className="font-display text-[14px] font-bold text-ink">{money(s.cpa, currency)}</dd>
-          </div>
-        </dl>
-        <div className="mt-auto flex flex-wrap items-center gap-2">
-          <span className="mr-auto text-xs text-muted">Updated <TimeAgo iso={f.updated_at} /></span>
-          <Link href={`/funnels/${f.id}?view=reports`} className="btn sm" aria-label={`Reports for ${f.name}`} title="Reports">
-            <Icon name="chart" size={16} />
-            <span className="sr-only md:not-sr-only">Reports</span>
-          </Link>
-          {canEdit && (
-          <>
-          <label className="sr-only" htmlFor={`st-${f.id}`}>
-            Status
-          </label>
-          <select id={`st-${f.id}`} className="input min-h-[30px]! w-auto py-1! text-[13px]" value={f.status} disabled={pending} onChange={(e) => start(() => setFunnelStatusAction(f.id, e.target.value))}>
-            {FUNNEL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="btn sm icon" title="Duplicate" aria-label={`Duplicate ${f.name}`} disabled={pending} onClick={() => start(() => duplicateFunnelAction(f.id))}>
-            <Icon name="copy" size={16} />
-          </button>
-          {f.status !== "archived" && (
-            <button type="button" className="btn sm icon" title="Archive" aria-label={`Archive ${f.name}`} disabled={pending} onClick={() => start(() => setFunnelStatusAction(f.id, "archived"))}>
-              <Icon name="archive" size={16} />
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn sm icon danger"
-            title="Delete"
-            aria-label={`Delete ${f.name}`}
-            disabled={pending}
-            onClick={() => {
-              if (confirm(`Delete “${f.name}”? Versions, actuals and share links go with it. This can’t be undone.`)) start(() => deleteFunnelAction(f.id));
-            }}
-          >
-            <Icon name="trash" size={16} />
-          </button>
-          </>
-          )}
-        </div>
+      <div className="fm-frow">
+        <Link href={`/funnels/${f.id}`} className="fm-pname" title={f.name}>
+          {f.name}
+        </Link>
+        <StatusPill status={f.status} />
+        {canEdit && (
+          <Menu label={`Actions for ${f.name}`} align="right" className="btn icon ghost sm" buttonContent={<Icon name="more" size={16} />}>
+            {(close) => (
+              <>
+                <div className="menu-label">Status</div>
+                {FUNNEL_STATUSES.map((st) => (
+                  <button key={st} type="button" role="menuitemradio" aria-checked={f.status === st} disabled={pending} onClick={() => (close(), start(() => setFunnelStatusAction(f.id, st)))}>
+                    {STATUS_LABEL[st]}
+                    {f.status === st && <Icon name="check" size={14} />}
+                  </button>
+                ))}
+                <hr />
+                <button type="button" role="menuitem" disabled={pending} onClick={() => (close(), start(() => duplicateFunnelAction(f.id)))}>
+                  Duplicate
+                </button>
+                {f.status !== "archived" && (
+                  <button type="button" role="menuitem" disabled={pending} onClick={() => (close(), start(() => setFunnelStatusAction(f.id, "archived")))}>
+                    Archive
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="danger"
+                  disabled={pending}
+                  onClick={async () => {
+                    close();
+                    const ok = await ask({ title: "Move to Trash?", body: <p>“{f.name}” moves to Trash. You can restore it from Trash at any time. Its share links stop working until then.</p>, confirm: "Move to Trash" });
+                    if (ok) start(() => trashFunnelAction(f.id));
+                  }}
+                >
+                  Move to Trash
+                </button>
+              </>
+            )}
+          </Menu>
+        )}
       </div>
+      <dl className="fm-fnum">
+        <div>
+          <dt>Revenue / mo</dt>
+          <dd>{money(s.rev, currency)}</dd>
+        </div>
+        <div>
+          <dt>Profit / mo</dt>
+          <dd className={(s.profit ?? 0) >= 0 ? "pos" : "neg"}>{money(s.profit, currency)}</dd>
+        </div>
+        <div>
+          <dt>ROAS</dt>
+          <dd>{ratio(s.roas)}</dd>
+        </div>
+      </dl>
+      <div className="fm-ffoot">
+        <span>
+          {scenarios} scenario{scenarios === 1 ? "" : "s"}
+        </span>
+        {checks > 0 ? (
+          <Link href={`/funnels/${f.id}`} className="fm-health-pill warn" title="Open the funnel to see the checks">
+            <Icon name="alert" size={13} /> {checks} to fix
+          </Link>
+        ) : (
+          <span className="fm-health-pill ok">
+            <Icon name="check" size={13} /> All clear
+          </span>
+        )}
+        <Link href={`/funnels/${f.id}?view=reports`} className="fm-rep" aria-label={`Reports for ${f.name}`}>
+          Reports <Icon name="arrow" size={12} />
+        </Link>
+      </div>
+      {dialog}
     </li>
   );
 }

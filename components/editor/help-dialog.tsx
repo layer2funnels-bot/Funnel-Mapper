@@ -21,13 +21,17 @@ const KEYS: [string, string][] = [
   ["Shift+drag", "Box select"],
   ["Mod+Shift+L", "Tidy up the layout"],
   ["Mod+S", "Save a version"],
+  ["[", "Hide or show the blocks panel"],
+  ["]", "Hide or show the details panel"],
+  ["S", "Start or leave Simulate"],
+  ["Space", "Play or pause the people flow while simulating"],
   ["/", "Quick add a block (also: double-click the canvas)"],
   ["Esc", "Cancel, close, or clear the selection"],
   ["?", "This list"],
 ];
 
 const TIPS: [string, string][] = [
-  ["Build the journey", "Add a traffic source, then pages and offers. Drag from the right dot to connect people who move on; the bottom dot carries the people who don’t."],
+  ["Build the journey", "Add a traffic source, then pages and offers. Drag from any of the four side dots to connect two steps, then choose what the line means: people who continue, people who don’t, or another meaning."],
   ["Drag into empty space", "Release a connection on an empty spot and Quick Add opens there. The block you pick is placed and connected in one step."],
   ["Select to see tools", "One block: a toolbar above it, details in the panel on the right, everything in the right-click menu. Nothing selected: the panel shows the whole funnel."],
   ["Clean or Performance", "Clean shows the structure. Performance adds numbers, line weight by people, stage totals and the key leak. Same map, a different layer."],

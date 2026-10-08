@@ -19,6 +19,8 @@ export interface FunnelListItem {
   profit: number | null;
   roas: number | null;
   checks: number;
+  /** Live preview of the saved map (server-rendered SVG). */
+  preview?: React.ReactNode;
   updated: string;
 }
 
@@ -43,10 +45,10 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="seg fm-scroll-x" role="group" aria-label="Funnel status">
+        <div className="fm-scroll-x flex gap-1.5" role="group" aria-label="Funnel status">
           {views.map(([k, l]) => (
-            <button key={k} type="button" aria-pressed={status === k} onClick={() => setStatus(k)}>
-              {l} <span className="text-muted">{count(k)}</span>
+            <button key={k} type="button" className="fm-chip" aria-pressed={status === k} onClick={() => setStatus(k)}>
+              {l} <b>{count(k)}</b>
             </button>
           ))}
         </div>
@@ -63,35 +65,43 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
             </option>
           ))}
         </select>
-        <button type="button" className="btn" aria-pressed={attention} onClick={() => setAttention((a) => !a)}>
+        <button type="button" className="btn sm" aria-pressed={attention} onClick={() => setAttention((a) => !a)}>
           <Icon name="alert" size={15} /> Needs attention
         </button>
-        <button type="button" className="btn" aria-pressed={recent} onClick={() => setRecent((r) => !r)}>
+        <button type="button" className="btn sm" aria-pressed={recent} onClick={() => setRecent((r) => !r)}>
           Updated this week
         </button>
       </div>
       {list.length === 0 ? (
         <div className="card px-6 py-14 text-center text-muted">{items.length ? "No funnels match those filters." : "No funnels yet. Create a client, then map their first funnel."}</div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="tbl text-sm fm-funnels">
+        <div className="overflow-x-auto">
+          <table className="tbl fm-funnels">
             <thead>
               <tr>
-                <th className="pl-4">Funnel</th>
+                <th className="pl-4 fm-c-map">
+                  <span className="sr-only">Map</span>
+                </th>
+                <th>Funnel</th>
                 <th className="fm-c-client">Client</th>
                 <th className="fm-c-status">Status</th>
                 <th className="fm-c-scen">Scenario</th>
-                <th className="r">Revenue</th>
-                <th className="r fm-c-profit">Profit</th>
+                <th className="r">Revenue / mo</th>
+                <th className="r fm-c-profit">Profit / mo</th>
                 <th className="r fm-c-roas">ROAS</th>
-                <th>Health</th>
+                <th>Checks</th>
                 <th className="r pr-4 fm-c-upd">Updated</th>
               </tr>
             </thead>
             <tbody>
               {list.map((f) => (
                 <tr key={f.id}>
-                  <td className="pl-4">
+                  <td className="pl-4 fm-c-map">
+                    <Link href={`/funnels/${f.id}`} className="fm-rowprev" tabIndex={-1} aria-hidden="true">
+                      {f.preview}
+                    </Link>
+                  </td>
+                  <td>
                     <Link href={`/funnels/${f.id}`} className="block max-w-[260px] truncate font-bold text-ink hover:text-brand" title={f.name}>
                       {f.name}
                     </Link>
@@ -114,11 +124,11 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
                   <td>
                     {f.checks > 0 ? (
                       <Link href={`/funnels/${f.id}`} className="fm-health-pill warn" title="Open the funnel to see the checks">
-                        <Icon name="alert" size={13} /> {f.checks}<span className="fm-hp-label"> {f.checks === 1 ? "check" : "checks"}</span>
+                        <Icon name="alert" size={13} /> {f.checks}<span className="fm-hp-label"> to fix</span>
                       </Link>
                     ) : (
                       <span className="fm-health-pill ok">
-                        <Icon name="check" size={13} aria-hidden="true" /> <span className="fm-hp-label">Healthy</span>
+                        <Icon name="check" size={13} aria-hidden="true" /> <span className="fm-hp-label">All clear</span>
                       </span>
                     )}
                   </td>

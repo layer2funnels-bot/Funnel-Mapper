@@ -9,6 +9,7 @@ import { isAnnot, retypeTargets } from "@/lib/catalog";
 import { kbd } from "@/lib/platform";
 import { copyStyle, deleteSelection, duplicateSelection, flipEdge, heightOf, openMenu, openTypePicker, pasteStyle, selectNodes, setEdgeStyle, setInspTab, setLocked, setOpt, showToast, updateParams, useEditor, widthOf, wrapInFrame, type InspTab } from "@/lib/editor/store";
 import { openInsertStep } from "./quick-add";
+import { openQuickAdd } from "@/lib/editor/store";
 import { Tip } from "./tip";
 
 const openInspector = (tab?: InspTab) => {
@@ -98,18 +99,40 @@ export function FloatingToolbar() {
       )}
       {kind === "block" && n && n.type !== "widget" && (
         <>
-          <button type="button" className="tab" onClick={() => openInspector("style")}>
-            Style
-          </button>
-          {n.type !== "checklist" && !useEditor.getState().shared && (
-            <button type="button" className="tab" onClick={() => openInspector("plan")}>
-              Plan
+          {/* V2 "Editor-block": colour, copy / paste style, next step, then plan, lock, duplicate, more */}
+          <Tip label="Style">
+            <button type="button" className="sw" aria-label="Style" onClick={() => openInspector("style")}>
+              <i style={{ background: n.s?.fill || "transparent", borderColor: n.s?.border || "var(--attention)" }} aria-hidden="true" />
+              <Icon name="chevronDown" size={12} />
             </button>
+          </Tip>
+          <Tip label={`Copy style (${kbd("Mod+Alt+C")})`}>
+            <button type="button" aria-label="Copy style" onClick={() => copyStyle(n.id)}>
+              <Icon name="paint" size={16} />
+            </button>
+          </Tip>
+          {!ro && (
+            <Tip label={`Paste style (${kbd("Mod+Alt+V")})`}>
+              <button type="button" aria-label="Paste style" disabled={!styleClip} onClick={() => pasteStyle([n.id])}>
+                <Icon name="pipette" size={16} />
+              </button>
+            </Tip>
           )}
-          {flow && (
-            <button type="button" className="tab" onClick={() => openInspector("analytics")}>
-              Analytics
-            </button>
+          {!ro && flow && n.type !== "label" && (
+            <>
+              <i className="vr" />
+              <button
+                type="button"
+                className="next"
+                onClick={() => {
+                  const x = n.x + widthOf(n) + 80,
+                    y = n.y;
+                  openQuickAdd({ sx: x * vp.zoom + vp.x, sy: y * vp.zoom + vp.y, fx: x, fy: y, from: { id: n.id, port: "main" } });
+                }}
+              >
+                <Icon name="plus" size={16} /> Add next step
+              </button>
+            </>
           )}
           <i className="vr" />
           {!ro && flow && retypeTargets(n.type).length > 0 && (
@@ -119,15 +142,17 @@ export function FloatingToolbar() {
               </button>
             </Tip>
           )}
-          <Tip label={`Copy style (${kbd("Mod+Alt+C")})`}>
-            <button type="button" aria-label="Copy style" onClick={() => copyStyle(n.id)}>
-              <Icon name="paint" size={16} />
-            </button>
-          </Tip>
-          {!ro && styleClip && (
-            <Tip label={`Paste style (${kbd("Mod+Alt+V")})`}>
-              <button type="button" aria-label="Paste style" onClick={() => pasteStyle([n.id])}>
-                <Icon name="pipette" size={16} />
+          {n.type !== "checklist" && !useEditor.getState().shared && (
+            <Tip label="Plan: notes, checklist, forecast">
+              <button type="button" aria-label="Plan" onClick={() => openInspector("plan")}>
+                <Icon name="file" size={16} />
+              </button>
+            </Tip>
+          )}
+          {!ro && (
+            <Tip label={n.locked ? `Unlock (${kbd("Mod+Alt+L")})` : `Lock (${kbd("Mod+Alt+L")})`}>
+              <button type="button" aria-label={n.locked ? "Unlock" : "Lock"} onClick={() => (selectNodes([n.id]), setLocked(!n.locked))}>
+                <Icon name={n.locked ? "unlock" : "lock"} size={16} />
               </button>
             </Tip>
           )}

@@ -2,19 +2,21 @@
 import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
 import { memo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
-import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
+import { baseOf, blockH, CATCOLOR, fourPorts, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
+import { FAMILIES, hasSplitBar, typeCaption, visualOf, windowKeyOf } from "@/lib/block-visuals";
+import { WINDOWS } from "@/lib/design-tiles";
 import { brandMarkOf } from "@/lib/brand-marks";
-import { lostDots, stepDelta } from "@/lib/simulate";
+import { assumptionChanges, lostDots, stepDelta } from "@/lib/simulate";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { SimChip } from "./simulate";
-import { BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { BlockArtImg, BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { artOf } from "@/lib/block-art";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor } from "@/lib/editor/store";
-import { frameTotals, nodeStats, perfLine, subLabel } from "@/lib/editor/labels";
+import { frameTotals, leaveText, nodeRow, perfLine, subLabel } from "@/lib/editor/labels";
 import { goalCurrent } from "@/lib/report-data";
-import { nf } from "@/lib/format";
+import { money, nf, people as ppl, peopleExact, perSuffix } from "@/lib/format";
 import { periodFactor } from "@/lib/funnel-math";
 import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
@@ -115,8 +117,11 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
   const R = useEditor(shownR);
   const cur = useEditor((s) => s.settings.currency);
+  const basis = useEditor((s) => s.settings.basis);
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const leak = useEditor((s) => s.keyLeak === id && s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
+  // F9: "615 leave here" on the key leak, and on the selected step, when no line carries those people on
+  const leaves = useEditor((s) => (leak || (selected && s.opts.nums && !s.settings.hideNumbers) ? leaveText(s.nodes.find((x) => x.id === id)!, shownR(s), s.edges.some((e) => e.from === id && e.port === "alt"), periodFactor(s.opts.period)) : null));
   const perf = useEditor((s) => s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
   const band = useEditor((s) => zoomBand(s.view.k));
   const renaming = useEditor((s) => s.renaming === id);
@@ -133,16 +138,22 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   if (!n) return null;
   const T = typeOf(n.type);
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
+  const four = fourPorts(n.type);
   const logic = T.cat === "logic";
   const cc = CATCOLOR[T.color ?? T.cat];
   const V = visualOf(n.type),
     F = FAMILIES[V.family];
   const k = periodFactor(period);
-  const stats = nodeStats(n, R, cur, k);
-  const pl = perf ? perfLine(n, R, cur, k) : null;
+  const row = nodeRow(n, R, cur, k);
+  const pl = perf ? perfLine(n, R, cur, k, basis) : null;
+  const rN = R.N[n.id];
+  const exact = rN ? (T.cat === "traffic" ? `${peopleExact(rN.out * k)} visits` : `${peopleExact(rN.inflow * k)} arrive · ${peopleExact(rN.out * k)} continue`) : undefined;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
   const sd = simBase && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, simBase.R) : null;
+  // the assumptions changed on this block while simulating (amber Δ with "was → now" on hover)
+  const baseNode = simBase ? simBase.nodes.find((b) => b.id === id) : undefined;
+  const changed = baseNode && !simBefore ? assumptionChanges([n], [baseNode]) : [];
   const tone = sd?.changed ? (sd.dRev ? (sd.dRev > 0 ? "up" : "down") : sd.dOut ? (sd.dOut > 0 ? "up" : "down") : null) : null;
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
@@ -151,44 +162,113 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
-      {hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />}
+      {four ? (
+        // V2: four identical ports (hidden at rest; shown on hover, selection and while connecting). The line's meaning is chosen on the line.
+        <>
+          <Handle type="source" position={Position.Top} id="top" className="fm-port side top" title="Drag to connect" />
+          <Handle type="source" position={Position.Right} id="right" className="fm-port side right" title="Drag to connect" />
+          <Handle type="source" position={Position.Bottom} id="bottom" className="fm-port side bottom" title={hasAlt ? "Drag to connect (from here: people who leave)" : "Drag to connect"} />
+          <Handle type="source" position={Position.Left} id="left" className="fm-port side left" title="Drag to connect" />
+        </>
+      ) : (
+        hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />
+      )}
       <LockBadge n={n} />
+      {changed.length > 0 && (
+        <span className="fm-delta" title={changed.map((c) => `${c.label} ${nf(c.was, 2)} → ${nf(c.now, 2)}`).join(" · ")} role="img" aria-label={`Changed in this simulation: ${changed.map((c) => `${c.label} ${nf(c.was, 2)} to ${nf(c.now, 2)}`).join(", ")}`}>
+          Δ
+        </span>
+      )}
       {leak && (
         <span className="fm-leak" title="Key leak: the step that loses the most people">
-          Key leak
+          Key leak{leaves ? ` · ${leaves}` : ""}
         </span>
       )}
-      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} />}
+      {!leak && leaves && <span className="fm-leak quiet">{leaves}</span>}
       {F.price && <span className="fm-price">{priceTab(n, cur)}</span>}
+      {(V.family === "page" || V.family === "offer") && V.wireframe ? (
+        // V2 page / offer object (196 × 112): the page window, name and numbers, then a type caption with the status dot
+        <div className="pgo">
+          <div className="pgo-top">
+            <WireframeStrip kind={V.wireframe} accent={cc} win={WINDOWS[windowKeyOf(n.type)]} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />
+            <div className="pgo-info">
+              {renaming ? <RenameInput id={n.id} value={n.name} /> : <span className="pgo-title" style={textCss(n.s)}>{n.name}</span>}
+              <div className="pgo-m" title={nodata ? undefined : exact}>
+                {nodata ? (
+                  <span className="pgo-l nodata">No data yet</span>
+                ) : V.family === "offer" ? (
+                  <>
+                    <span className="pgo-l">
+                      <strong>{ppl((rN?.out ?? 0) * k)}</strong> buy
+                    </span>
+                    <span className="pgo-r">
+                      {money(((rN?.rev ?? 0) * k), cur)}
+                      <small>
+                        {perSuffix(k)}
+                        {basis === "ltv" ? " LTV" : ""}
+                      </small>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="pgo-l">
+                      {ppl((rN?.inflow ?? 0) * k)} → <strong>{ppl((rN?.out ?? 0) * k)}</strong>
+                    </span>
+                    <span className="pgo-r">{nf((rN && rN.inflow > 0 ? Math.min(1, rN.out / rN.inflow) : 0) * 100)}%</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="pgo-cap">
+            <span className="pgo-ty" style={{ color: cc }}>
+              <span className="pgo-ic" style={{ background: cc }}>
+                <Icon name={(n.s?.icon as IconName) || T.icon} size={9} />
+              </span>
+              {typeCaption(n.type)}
+            </span>
+            {!shared && <StatusDot status={n.status} />}
+            {internal && (
+              <span className="fm-nnote" title="Has internal notes (Plan tab)">
+                <Icon name="note" size={11} />
+              </span>
+            )}
+            {tasks.length > 0 && (
+              <span className="fm-ntasks" title="Checklist">
+                ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />}
       {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
-        <span className="fm-nicon">
-          {brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}
-        </span>
+        {artOf(n.type) && !n.s?.icon ? (
+          <span className="fm-nicon art">
+            <BlockArtImg k={n.type} />
+          </span>
+        ) : (
+          <span className="fm-nicon">{brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}</span>
+        )}
         <div className="fm-ntitle">
           {renaming ? <RenameInput id={n.id} value={n.name} /> : <span style={textCss(n.s)}>{n.name}</span>}
-          {pl ? (
-            <small className="fm-perf-line">
-              <b>{pl.headline}</b> {pl.caption}
-            </small>
-          ) : (
-            <small>{sub}</small>
-          )}
+          <small>{sub}</small>
         </div>
       </div>
-      {hasSplitBar(n.type) && <SplitBar pct={Number(n.p.pct) || 0} test={baseOf(n.type) === "split"} />}
-      {pl && pl.ratio != null && (
-        <div className="fm-conv" aria-hidden="true">
-          <i style={{ width: `${pl.ratio * 100}%` }} />
-          {sd?.changed && sd.was?.ratio != null && <b className="base" style={{ left: `${sd.was.ratio * 100}%` }} />}
-        </div>
-      )}
-      {V.family === "goal" && <GoalBar n={n} />}
-      <div className="fm-nstats">
+      <div className={`fm-nstats${pl && !nodata ? " perf" : ""}`} title={nodata ? undefined : exact}>
         {nodata ? (
           <span className="fm-nodata">No data yet</span>
+        ) : pl ? (
+          <span className="fm-perf-line">
+            <b>{pl.headline}</b> <span>{pl.caption}</span>
+          </span>
         ) : (
-          stats.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))
+          <>
+            <span className="l">{row.l.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}</span>
+            {row.r && <span className="r">{row.r.map((s, i) => (s.b ? <b key={i}>{s.t}</b> : <span key={i}>{s.t}</span>))}</span>}
+          </>
         )}
         {internal && (
           <span className="fm-nnote" title="Has internal notes (Plan tab)">
@@ -201,6 +281,16 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           </span>
         )}
       </div>
+      {hasSplitBar(n.type) && <SplitBar pct={Number(n.p.pct) || 0} test={baseOf(n.type) === "split"} />}
+      {pl && pl.ratio != null && (
+        <div className="fm-conv" aria-hidden="true">
+          <i style={{ width: `${pl.ratio * 100}%` }} />
+          {sd?.changed && sd.was?.ratio != null && <b className="base" style={{ left: `${sd.was.ratio * 100}%` }} />}
+        </div>
+      )}
+      {V.family === "goal" && <GoalBar n={n} />}
+        </>
+      )}
       {sd && <SimChip d={sd} k={k} cur={cur} source={T.cat === "traffic"} />}
       {playing && !calm && perf && T.cat !== "traffic" && !altWired && !nodata && (
         <span className="fm-lostfx" aria-hidden="true">
@@ -209,8 +299,8 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           ))}
         </span>
       )}
-      {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
-      {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
+      {!four && hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
+      {!four && hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
       {labels && (
         <span className="fm-plabel out" aria-hidden="true">
           {labels[0]}

@@ -1,16 +1,16 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
 import { brandMarkOf } from "./brand-marks";
-import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
-import { money, nf } from "./format";
+import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, fourPorts, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
+import { money, nf, people } from "./format";
 import { num, periodFactor, stepRows, type FunnelResult } from "./funnel-math";
-import type { FunnelEdge, FunnelNode, Goal } from "./graph";
+import type { FunnelEdge, FunnelNode, Goal, Side } from "./graph";
 import { ICONS, type IconName } from "./icons";
-import { edgeConversion, edgePath, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
+import { edgeConversion, edgePath, sidesOf, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
 import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type Wireframe } from "./block-visuals";
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 import { goalCurrent } from "./report-data";
-import { formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
+import { conversionPath, formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -116,6 +116,8 @@ const approxMeasure: Measure = (t, size, weight) => t.length * size * (weight >=
 
 export interface MapSvgOptions {
   currency: string;
+  /** Revenue basis: money on blocks carries the LTV tag when it is "ltv". */
+  basis?: "first" | "ltv";
   nums: boolean;
   palette?: SvgPalette;
   /** Rendered height/width of an element (the editor passes its measured sizes). */
@@ -132,6 +134,8 @@ export interface MapSvgOptions {
   goals?: Goal[];
   /** Page screenshots as data URLs, by node id (drawn instead of the semantic wireframe). */
   shots?: Record<string, string>;
+  /** Owner block artwork as data URLs, by block type (lib/block-art.ts): drawn in place of the family tile. */
+  art?: Record<string, string>;
   /** Engine-backed extras for widgets (the 12-month series for Chart widgets, MRR detail); the editor passes them, nothing is calculated here. */
   widgetData?: {
     series: (metric: WidgetMetric, value: number) => number[];
@@ -319,12 +323,13 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
 
   /* connections (React Flow draws them under the elements) */
   const maxF = Math.max(1, ...Object.values(R.flows));
-  const portXY = (n: FunnelNode, port: "in" | "out" | "alt"): [number, number] => {
+  const sideXY = (n: FunnelNode, side: Side): [number, number] => {
     // handle centres sit 9px outside the block edge (editor.css .fm-port), React Flow anchors on the outer side
     const w = nodeW(n.type),
       h = blockH(n.type);
-    if (port === "in") return [n.x - 9, n.y + h / 2];
-    if (port === "alt") return [n.x + w / 2, n.y + h + 9];
+    if (side === "left") return [n.x - 9, n.y + h / 2];
+    if (side === "bottom") return [n.x + w / 2, n.y + h + 9];
+    if (side === "top") return [n.x + w / 2, n.y - 9];
     return [n.x + w + 9, n.y + h / 2];
   };
   let edges = "",
@@ -334,10 +339,14 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       b = B[e.to];
     if (!a || !b) return;
     const port = e.port === "alt" ? "alt" : "main";
-    const [sx, sy] = portXY(a, port === "alt" ? "alt" : "out"),
-      [tx, ty] = portXY(b, "in");
+    // Yes/No logic keeps its fixed ports; every other block uses the side the line was drawn from / to
+    const [sp, tp] = sidesOf(e);
+    const s1: Side = fourPorts(a.type) ? sp : port === "alt" ? "bottom" : "right",
+      t1: Side = fourPorts(b.type) ? tp : "left";
+    const [sx, sy] = sideXY(a, s1),
+      [tx, ty] = sideXY(b, t1);
     const L = edgeLook(e.s);
-    const [d, mx, my] = edgePath(L, port, sx, sy, tx, ty);
+    const [d, mx, my] = edgePath(L, port, sx, sy, tx, ty, s1, t1);
     const flow = R.flows[e.id] || 0;
     const w = L.width ?? (opts.thick ? 2 + 6 * Math.sqrt(flow / maxF) : 2);
     const color = L.color ?? (L.kind === "nodata" ? P.muted : port === "alt" ? P.alt : P.edge);
@@ -514,8 +523,9 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       const dims = WIDGET_SIZES[cfg.size];
       const vals = widgetValues(cfg, g.nodes, R, opts.goals ?? []);
       const { members, invalid } = widgetMembers(cfg, g.nodes);
-      const shown = (cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals);
-      const rows = Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
+      const path = cfg.display === "path" && !invalid ? conversionPath(g.nodes, g.edges, R, members, cfg.size === "S" ? 3 : cfg.size === "M" ? 4 : 6) : [];
+      const shown = path.length ? [] : cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals;
+      const rows = path.length ? Math.ceil((path.length * 20) / 44) : Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
       // the same extras as the card on the canvas: MRR detail and, for the Chart display, the 12-month line
       const mrrV = shown.find((v) => v.metric === "mrr");
       const mrrLine = mrrV && cfg.size !== "S" && opts.widgetData ? opts.widgetData.mrr(members) : null;
@@ -535,8 +545,15 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
         o += `<text x="${n2(x)}" y="${n2(y + 10)}" font-size="11.5" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(v.label)}</text>`;
         o += `<text x="${n2(x)}" y="${n2(y + 32)}" font-size="${cfg.size === "L" ? 22 : 20}" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(formatMetricValue(v, opts.currency), cw, 20, 700, F.display, measure))}</text>`;
       });
+      path.forEach((st, i) => {
+        const y = n.y + 42 + i * 20;
+        const v = i === 0 ? `${nf(st.out)} in` : Number.isFinite(st.rate) ? `${nf(st.rate * 100, 1)}%` : "–";
+        const vw = measure(v, 12, 700, F.display);
+        o += `<text x="${n2(n.x + 12)}" y="${n2(y)}" font-size="12" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(ellipsis(st.name, w - 36 - vw, 12, 400, F.sans, measure))}</text>`;
+        o += `<text x="${n2(n.x + w - 12)}" y="${n2(y)}" text-anchor="end" font-size="12" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(v)}</text>`;
+      });
       const below = n.y + 28 + rows * 44;
-      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${nf(mrrLine.subscribers, 1)} subscribers`)}</text>`;
+      if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${people(mrrLine.subscribers)} subscribers`)}</text>`;
       if (series.length > 1) {
         const x0 = n.x + 12,
           x1 = n.x + w - 12,
@@ -590,7 +607,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
     const parts: { k: string; h: number }[] = [{ k: "head", h: CARD.head }];
     if (F2.strip && V.wireframe) parts.push({ k: "strip", h: CARD.strip });
     if (hasSplitBar(n.type)) parts.push({ k: "split", h: CARD.bar });
-    const PL = perf ? perfLine(n, R, opts.currency) : null;
+    const PL = perf ? perfLine(n, R, opts.currency, 1, opts.basis) : null;
     if (PL && PL.ratio != null) parts.push({ k: "conv", h: CARD.bar });
     const goal = V.family === "goal" ? (opts.goals ?? []).find((g) => g.nodeId === n.id && g.value > 0) : undefined;
     if (goal) parts.push({ k: "goal", h: CARD.goalBar });
@@ -610,11 +627,15 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       tcx = innerL + ts / 2;
     const tint = V.brand ?? c;
     const ink = V.brand ? "#FFFFFF" : P.catInk;
-    if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
+    const artUrl = s?.icon ? undefined : opts.art?.[n.type];
+    if (artUrl) o += `<image href="${esc(artUrl)}" x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" preserveAspectRatio="xMidYMid meet"/>`;
+    else if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
     else if (G.tile === "diamond") o += `<rect x="${n2(tcx - ts * 0.41)}" y="${n2(tcy - ts * 0.41)}" width="${n2(ts * 0.82)}" height="${n2(ts * 0.82)}" rx="${G.tileR}" fill="${tint}" transform="rotate(45 ${n2(tcx)} ${n2(tcy)})"/>`;
     else o += `<rect x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" rx="${G.tileR}" fill="${tint}"/>`;
     const mark = s?.icon ? undefined : brandMarkOf(n.type);
-    if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
+    if (artUrl) {
+      // the artwork carries its own glyph
+    } else if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
     else {
       const icon = ICONS[(s?.icon as IconName) || T.icon] ?? ICONS.page;
       o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
@@ -683,7 +704,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       else {
         let full = "",
           tsp = "";
-        for (const sg of nodeStats(n, R, opts.currency)) {
+        for (const sg of nodeStats(n, R, opts.currency, 1, opts.basis)) {
           const room = innerW - measure(full, 12, 400, F.sans);
           const t = measure(sg.t, 12, sg.b ? 700 : 400, F.sans) <= room ? sg.t : ellipsis(sg.t, room, 12, sg.b ? 700 : 400, F.sans, measure);
           full += t;

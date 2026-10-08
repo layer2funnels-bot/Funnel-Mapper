@@ -33,7 +33,7 @@ describe("PDF report data comes from the authoritative engine", () => {
     const { graph, settings } = golden();
     const R = compute(graph, settings);
     const D = reportData(graph, settings, R);
-    expect(D.scenarios.map((c) => c.name)).toEqual(["As mapped", "Conservative", "Optimistic"]);
+    expect(D.scenarios.map((c) => c.name)).toEqual(["Baseline (current map)", "Conservative", "Optimistic"]);
     expect(D.scenarios[0].R.cust).toBeCloseTo(89.1, 6);
     expect(D.scenarios[0].R.rev).toBeCloseTo(6032.11, 2);
     expect(D.scenarios[0].R.roas).toBeCloseTo(13.4, 2);
@@ -156,7 +156,7 @@ describe("map SVG export keeps the canvas elements and styles", () => {
     expect(svg).toContain(">Cold<");
     expect(svg).toContain(">1,000<");
     expect(svg).toContain(">No data<");
-    expect(svg).toMatch(/stroke-dasharray="2 5" opacity="0.7"/);
+    expect(svg).toMatch(/stroke-dasharray="9 4 2 4" opacity="0.7"/);
   });
 
   it("applies block and text styles", () => {
@@ -228,7 +228,7 @@ describe("V1 completion: report data, CSV and map export additions", () => {
     const { graph, settings } = golden();
     const R = compute(graph, settings);
     const csv = stepsCsv(graph, R, reportData(graph, settings, R).scenarios);
-    expect(csv).toContain('"Scenario comparison","As mapped","Conservative","Optimistic"');
+    expect(csv).toContain('"Scenario comparison","Baseline (current map)","Conservative","Optimistic"');
     expect(csv).toContain(`"Revenue","${R.rev.toFixed(2)}"`);
     const cons = computeScenario(graph, settings, settings.scenarios[0]);
     expect(csv).toContain(`"Profit","${compute(graph, { ...settings, whatif: { traffic: 1, conv: 1, price: 1, cost: 1 } }).profit.toFixed(2)}","${cons.profit.toFixed(2)}"`);

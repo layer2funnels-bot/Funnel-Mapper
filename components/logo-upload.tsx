@@ -1,7 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
 import { Icon } from "./icon";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { useSignedUrl } from "./signed-image";
 
 /**
@@ -15,22 +14,24 @@ export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logo
   const isPrivate = bucket === "screenshots";
   const signed = useSignedUrl("screenshots", isPrivate ? url : null);
   const preview = isPrivate ? signed : url;
+  const [done, setDone] = useState("");
   async function pick(f: File) {
     setErr("");
-    if (f.size > (bucket === "logos" ? 2 : 5) * 1024 * 1024) return setErr(`${label} must be under ${bucket === "logos" ? 2 : 5} MB`);
+    setDone("");
+    if (f.size > 25 * 1024 * 1024) return setErr(`${label} must be under 25 MB`);
     if (!(bucket === "logos" ? /^image\/(png|jpe?g|webp|svg\+xml|gif)$/ : /^image\/(png|jpe?g|webp)$/).test(f.type)) return setErr(bucket === "logos" ? "Use a PNG, JPG, WebP, SVG or GIF" : "Use a PNG, JPG or WebP");
     setBusy(true);
     try {
-      const sb = supabaseBrowser();
-      const {
-        data: { user },
-      } = await sb.auth.getUser();
-      if (!user) throw new Error("Not signed in");
-      const ext = f.name.split(".").pop()?.toLowerCase() || "png";
-      const path = `${user.id}/${name}-${Date.now()}.${ext}`;
-      const { error } = await sb.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type, cacheControl: "3600" });
-      if (error) throw error;
-      await onChange(isPrivate ? path : sb.storage.from(bucket).getPublicUrl(path).data.publicUrl);
+      // V2 F7: the server optimises every image to under 100 KB (WebP) before storing it
+      const fd = new FormData();
+      fd.set("file", f);
+      fd.set("target", isPrivate ? "shot" : "logo");
+      fd.set("name", name.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 80) || "image");
+      const res = await fetch("/api/image", { method: "POST", body: fd });
+      const out = (await res.json().catch(() => ({}))) as { path?: string; url?: string | null; line?: string; message?: string };
+      if (!res.ok || !out.path) throw new Error(out.message || "Upload failed");
+      await onChange(isPrivate ? out.path : out.url!);
+      setDone(out.line ?? "");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -49,7 +50,7 @@ export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logo
       </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn sm" onClick={() => input.current?.click()} disabled={busy}>
-          {busy ? "Uploading…" : url ? `Change ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
+          {busy ? "Optimising…" : url ? `Change ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
         </button>
         {url && (
           <button type="button" className="btn sm danger" onClick={() => onChange(null)} disabled={busy}>
@@ -57,6 +58,11 @@ export function LogoUpload({ url, name, onChange, label = "Logo", bucket = "logo
           </button>
         )}
         <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden aria-label={`Upload ${label}`} onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+        {done && !err && (
+          <p role="status" className="w-full text-sm text-muted">
+            {done}
+          </p>
+        )}
         {err && (
           <p role="alert" className="w-full text-sm text-bad">
             {err}

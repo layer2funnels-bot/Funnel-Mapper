@@ -69,8 +69,9 @@ export function Seg<T extends string>({ label, value, options, onChange }: { lab
   );
 }
 
-export function StatBox({ items }: { items: [string, React.ReactNode][] }) {
-  return (
+/** A row of figures (V2: label above a Bricolage value). With `title` it becomes a titled section ("Flow this month"). */
+export function StatBox({ items, title, children }: { items: [string, React.ReactNode][]; title?: string; children?: React.ReactNode }) {
+  const box = (
     <div className="statbox" aria-live="polite">
       {items.map(([a, b]) => (
         <div key={a}>
@@ -79,5 +80,15 @@ export function StatBox({ items }: { items: [string, React.ReactNode][] }) {
         </div>
       ))}
     </div>
+  );
+  if (!title) return box;
+  return (
+    <section className="fm-flowsec">
+      <div className="fm-sh">
+        <h4>{title}</h4>
+      </div>
+      {box}
+      {children}
+    </section>
   );
 }

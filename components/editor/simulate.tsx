@@ -4,7 +4,7 @@
 // baseline run taken when simulating started — see lib/simulate.ts.
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { money, nf, ratio, sym } from "@/lib/format";
+import { money, nf, ratio, sym, people } from "@/lib/format";
 import { num } from "@/lib/funnel-math";
 import {
   assumptionChanges,
@@ -30,10 +30,10 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useFocusBlock } from "./focus";
 import { NumInput } from "./fields";
 
-const fmt: Record<TotalDelta["key"], (v: number, cur: string) => string> = {
+export const fmtTotal: Record<TotalDelta["key"], (v: number, cur: string) => string> = {
   traffic: (v) => nf(v),
-  leads: (v) => nf(v, 1),
-  cust: (v) => nf(v, 1),
+  leads: (v) => people(v),
+  cust: (v) => people(v),
   rev: (v, c) => money(v, c),
   spend: (v, c) => money(v, c),
   profit: (v, c) => money(v, c),
@@ -53,7 +53,7 @@ export function DeltaChip({
 }) {
   if (t.tone === "same")
     return <span className="fm-dchip same">{compact ? "–" : "No change"}</span>;
-  const abs = fmt[t.key](Math.abs(t.delta), cur);
+  const abs = fmtTotal[t.key](Math.abs(t.delta), cur);
   const sign = t.delta > 0 ? "+" : "−";
   const p =
     t.pct != null
@@ -62,7 +62,7 @@ export function DeltaChip({
   return (
     <span
       className={`fm-dchip ${t.tone}`}
-      title={`was ${fmt[t.key](t.was, cur)}`}
+      title={`was ${fmtTotal[t.key](t.was, cur)}`}
     >
       <span aria-hidden="true">{t.delta > 0 ? "▲" : "▼"}</span> {sign}
       {abs}
@@ -297,7 +297,7 @@ export function SimulatePanel() {
             .map((t) => (
               <div key={t.key}>
                 <span>{t.label}</span>
-                <b>{fmt[t.key](t.value, cur)}</b>
+                <b>{fmtTotal[t.key](t.value, cur)}</b>
                 <DeltaChip t={t} cur={cur} compact />
               </div>
             ))}
@@ -333,7 +333,7 @@ export function SimulatePanel() {
               <div key={t.key}>
                 <dt>{t.label}</dt>
                 <dd>
-                  <b>{fmt[t.key](t.value, cur)}</b>
+                  <b>{fmtTotal[t.key](t.value, cur)}</b>
                   <DeltaChip t={t} cur={cur} />
                 </dd>
               </div>
@@ -349,9 +349,9 @@ export function SimulatePanel() {
             >
               {leakNode.name}
             </button>{" "}
-            loses {nf(leakNow, 1)} people
+            loses {people(leakNow)} people
             {leakWas != null && Math.abs(leakNow - leakWas) > 1e-9
-              ? ` (was ${nf(leakWas, 1)})`
+              ? ` (was ${people(leakWas)})`
               : ""}
             {baseLeak && baseLeak !== leak
               ? ", a different step than before"
@@ -430,12 +430,12 @@ export function SimulatePanel() {
                   <span className="d">
                     <span className={m.d.dInflow >= 0 ? "pos" : "neg"}>
                       {m.d.dInflow >= 0 ? "+" : "−"}
-                      {nf(Math.abs(m.d.dInflow), 1)} people
+                      {people(Math.abs(m.d.dInflow))} people
                     </span>
                     {Math.abs(m.d.dLost) > 1e-9 && (
                       <span className={m.d.dLost > 0 ? "neg" : "pos"}>
                         {m.d.dLost > 0 ? "+" : "−"}
-                        {nf(Math.abs(m.d.dLost), 1)} lost
+                        {people(Math.abs(m.d.dLost))} lost
                       </span>
                     )}
                     {Math.abs(m.d.dRev) > 0.005 && (
@@ -541,16 +541,16 @@ export function SimChip({
   source: boolean;
 }) {
   if (!d.changed) return null;
-  const people = source ? d.dOut : d.dInflow;
+  const dp = source ? d.dOut : d.dInflow;
   const bits: { text: string; tone: "good" | "bad" | "neutral" }[] = [];
-  if (!same(people, 0))
+  if (!same(dp, 0))
     bits.push({
-      text: `${people > 0 ? "▲ +" : "▼ −"}${nf(Math.abs(people) * k, 1)} ${source ? "visits" : "in"}`,
-      tone: people > 0 ? "good" : "bad",
+      text: `${dp > 0 ? "▲ +" : "▼ −"}${people(Math.abs(dp) * k)} ${source ? "visits" : "in"}`,
+      tone: dp > 0 ? "good" : "bad",
     });
   if (!source && !same(d.dLost, 0))
     bits.push({
-      text: `${d.dLost > 0 ? "+" : "−"}${nf(Math.abs(d.dLost) * k, 1)} lost`,
+      text: `${d.dLost > 0 ? "+" : "−"}${people(Math.abs(d.dLost) * k)} lost`,
       tone: d.dLost > 0 ? "bad" : "good",
     });
   if (!same(d.dRev, 0))

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { typeOf } from "@/lib/catalog";
-import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
+import { money, moneyShort, nf, pct, ratio, people } from "@/lib/format";
 import { compute, computeScenario, periodFactor, periodNumbers, type FunnelResult, type PeriodKey } from "@/lib/funnel-math";
 import { GOAL_KINDS, GOAL_PERIODS, STEP_STATUSES, type FunnelSettings, type Goal, type StepStatus } from "@/lib/graph";
 import { monthlyPlanVsActual, reportData, statusReport, type GoalReport } from "@/lib/report-data";
@@ -78,7 +78,8 @@ export function ReportsView({ onExportPdf }: { onExportPdf?: () => void }) {
   const R = useMemo(() => (snapOk === "current" ? Rnow : compute(g, s)), [snapOk, Rnow, g, s]);
   const data = useMemo(() => reportData(g, s, R), [g, s, R]);
   const hasFlow = nodes.some((n) => typeOf(n.type) && typeOf(n.type).cat !== "annot");
-  const snapName = snapOk === "current" ? "Current map" : snapOk === "base" ? "As mapped" : (settings.scenarios.find((x) => x.id === snapOk)?.name ?? "Scenario");
+  const hasWhatif = !!settings.whatif && JSON.stringify(settings.whatif) !== JSON.stringify(NEUTRAL);
+  const snapName = snapOk === "current" ? (hasWhatif ? "Map with what-if" : "Baseline (current map)") : snapOk === "base" ? "Baseline (current map)" : (settings.scenarios.find((x) => x.id === snapOk)?.name ?? "Scenario");
   const title = REPORT_SECTIONS.find(([k]) => k === section)?.[1] ?? "Reports";
   return (
     <div className="fm-reports">
@@ -118,7 +119,10 @@ export function ReportsView({ onExportPdf }: { onExportPdf?: () => void }) {
           <div>
             <h1 id="fm-rtitle">{title}</h1>
             <p className="sub">
-              Numbers for <b>{snapName}</b>, per month unless stated. Same engine as the map, the KPI bar and the PDF report.
+              <span className="fm-tag plan" title="Modelled numbers from the map">
+                Plan
+              </span>{" "}
+              Numbers for <b>{snapName}</b>, per month unless stated · {settings.currency} · Basis: {settings.basis === "ltv" ? "lifetime value" : "first payment"}. Same engine as the map, the KPI strip and the PDF report.
             </p>
           </div>
           {onExportPdf && (
@@ -130,8 +134,8 @@ export function ReportsView({ onExportPdf }: { onExportPdf?: () => void }) {
             <label className="fm-rsnap">
               <span>Scenario</span>
               <select className="input" value={snapOk} onChange={(e) => setSnap(e.target.value)} aria-label="Scenario for these numbers">
-                <option value="current">Current map{settings.whatif && JSON.stringify(settings.whatif) !== JSON.stringify(NEUTRAL) ? " (with what-if)" : ""}</option>
-                <option value="base">As mapped (no what-if)</option>
+                <option value="current">{hasWhatif ? "Map with what-if" : "Baseline (current map)"}</option>
+                {hasWhatif && <option value="base">Baseline (current map, no what-if)</option>}
                 {settings.scenarios.map((sc) => (
                   <option key={sc.id} value={sc.id}>
                     {sc.name || "Scenario"}
@@ -283,8 +287,7 @@ function Overview({ data, R, onSection }: SP) {
   };
   return (
     <>
-      <div className="fm-rtitle-row">
-        <h3 className="fm-rh">Project summary</h3>
+      <div className="fm-rtitle-row fm-rpersel">
         <div className="seg" role="group" aria-label="Period">
           <button type="button" aria-pressed={per === "month"} onClick={() => setPer("month")}>
             This month
@@ -294,28 +297,15 @@ function Overview({ data, R, onSection }: SP) {
           </button>
         </div>
       </div>
+      <h3 className="sr-only">Project summary</h3>
       <Kpis
         items={[
           ["Traffic", nf(A.people), `${nf(other.people)} ${otherLabel}`, "sources"],
-          ["Leads", nf(A.leads, 1), `${nf(other.leads)} ${otherLabel}`, "data"],
-          ["Customers", nf(A.customers, 1), `${nf(other.customers)} ${otherLabel}`, "offers"],
+          ["Leads", people(A.leads), `${nf(other.leads)} ${otherLabel}`, "data"],
+          ["Customers", people(A.customers), `${nf(other.customers)} ${otherLabel}`, "offers"],
           ["Revenue", m(A.revenue), `${ms(other.revenue)} ${otherLabel}`, "forecast"],
           ["Profit", <span key="p" className={cls(A.profit)}>{m(A.profit)}</span>, `${ms(other.profit)} ${otherLabel}`, "expenses"],
-          ["ROAS", ratio(R.roas), "Revenue ÷ ad spend", "sources"],
-        ]}
-        onSection={onSection}
-      />
-      <h3 className="fm-rh">Unit economics</h3>
-      <Kpis
-        items={[
-          ["CPC", m(R.cpc), "Ad spend ÷ paid visitors"],
-          ["CPL", m(R.cpl), "Ad spend ÷ leads"],
-          ["CPA", m(R.cpa), "Ad spend ÷ new customers"],
-          ["AOV", m(R.aov), "Revenue ÷ new customers"],
-          ["LTV / customer", m(R.ltvc), "Lifetime revenue ÷ new customers", "forecast"],
-          ["MRR", m(R.mrr), "From subscriptions", "mrr"],
-          ["ROI", pct(R.roi), "Profit ÷ all costs", "expenses"],
-          ["Conversion", pct(R.conv), "New customers ÷ visitors"],
+          ["ROAS", ratio(R.roas), `on ${m(R.spend)} ad spend`, "sources"],
         ]}
         onSection={onSection}
       />
@@ -337,7 +327,7 @@ function Overview({ data, R, onSection }: SP) {
           <div>
             <b>Key leak: {L.name}</b>
             <p>
-              {nf(L.lost, 1)} of {nf(L.inn, 1)} people ({pct(L.dropPct)}) don’t move on at this {L.label.toLowerCase()} each month. Converting 10% better here adds about <b>{m(L.revenueGain)}</b> revenue and{" "}
+              {people(L.lost)} of {people(L.inn)} people ({pct(L.dropPct)}) don’t move on at this {L.label.toLowerCase()} each month. Converting 10% better here adds about <b>{m(L.revenueGain)}</b> revenue and{" "}
               <b>{m(L.profitGain)}</b> profit a month.
             </p>
             <div className="fm-rcallout-actions">
@@ -351,7 +341,9 @@ function Overview({ data, R, onSection }: SP) {
           </div>
         </div>
       )}
-      <div className="fm-rgrid">
+      <div className="fm-rsplit">
+        <div className="min-w-0 space-y-8">
+        <div className="fm-rgrid fm-rstack">
         <TimeChart
           title={`Revenue and profit, ${f.months} months`}
           data={f.rows}
@@ -362,13 +354,39 @@ function Overview({ data, R, onSection }: SP) {
           fmt={ms}
           zero
         />
-        <BarsChart title="People lost per step (click a bar to find it on the map)" data={data.leaks.slice(0, 8).map((x) => ({ id: x.id, name: x.name, value: x.lost }))} fmt={(v) => nf(v, 1)} color="var(--chart-2)" onPick={focus} />
+        <BarsChart title="People lost per step (click a bar to find it on the map)" data={data.leaks.slice(0, 8).map((x) => ({ id: x.id, name: x.name, value: x.lost }))} fmt={(v) => people(v)} color="var(--chart-2)" onPick={focus} />
+        </div>
+        </div>
+        <section aria-labelledby="ue-h" className="min-w-0">
+          <h3 id="ue-h" className="fm-rh">
+            Unit economics
+          </h3>
+          <dl className="fm-kn">
+            {(
+              [
+                ["CPC", m(R.cpc)],
+                ["CPL", m(R.cpl)],
+                ["CPA", m(R.cpa)],
+                ["AOV", m(R.aov)],
+                ["LTV / customer", m(R.ltvc)],
+                ["MRR", m(R.mrr)],
+                ["ROI", pct(R.roi)],
+                ["Conversion", pct(R.conv)],
+              ] as [string, string][]
+            ).map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       </div>
       <Table
         caption="People lost per step"
         head={["Step", "Type", "People in", "Lost", "Drop-off", ""]}
         text={[1, 5]}
-        rows={data.leaks.slice(0, 8).map((x) => [x.name, x.label, nf(x.inn, 1), nf(x.lost, 1), pct(x.dropPct), <button key="b" type="button" className="link" onClick={() => focus(x.id)}>Show on map</button>])}
+        rows={data.leaks.slice(0, 8).map((x) => [x.name, x.label, people(x.inn), people(x.lost), pct(x.dropPct), <button key="b" type="button" className="link" onClick={() => focus(x.id)}>Show on map</button>])}
       />
       <p className="sub">
         Forecast settings and more charts: <button type="button" className="link" onClick={() => onSection("forecast")}>Revenue & profit forecast</button> · Every step:{" "}
@@ -424,9 +442,9 @@ function FunnelData({ R, s }: SP) {
           return [
             n.name,
             T.label,
-            nf(inn, 1),
+            people(inn),
             T.cat === "traffic" ? "–" : pct(inn ? r.out / inn : NaN),
-            nf(r.out, 1),
+            people(r.out),
             T.cat === "offer" ? m(r.rev) : "",
             r.spend + r.cost + r.cogs ? m(r.spend + r.cost + r.cogs) : "",
             <span key="s" className="text-muted">{T.cat === "traffic" ? "–" : srcOf(n.id)}</span>,
@@ -443,7 +461,7 @@ function FunnelData({ R, s }: SP) {
             ),
           ];
         })}
-        foot={["Total", "", nf(R.traffic), pct(R.conv), `${nf(R.cust, 1)} customers · ${nf(R.orders, 1)} orders`, m(R.rev), m(R.costs - R.fixed - R.perSale), "", ""]}
+        foot={["Total", "", nf(R.traffic), pct(R.conv), `${people(R.cust)} customers · ${people(R.orders)} orders`, m(R.rev), m(R.costs - R.fixed - R.perSale), "", ""]}
       />
       <p className="sub">The cost column is ad spend, follow-up costs, delivery and affiliate commission per step. Fixed costs and expenses are in Expenses.</p>
     </>
@@ -469,8 +487,8 @@ function Sources({ data, R }: SP) {
       <Table
         caption="Traffic sources"
         head={["Source", "Visitors", "Share of traffic", "Customers", "Revenue", "Ad spend", "CPA", "ROAS"]}
-        rows={rows.map((x) => [x.name, nf(x.traffic), pct(R.traffic ? x.traffic / R.traffic : NaN), nf(x.cust, 1), m(x.rev), x.spend ? m(x.spend) : "free", x.spend ? m(x.cpa) : "–", x.spend ? ratio(x.roas) : "–"])}
-        foot={["All sources", nf(R.traffic), "100%", nf(R.cust, 1), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)]}
+        rows={rows.map((x) => [x.name, nf(x.traffic), pct(R.traffic ? x.traffic / R.traffic : NaN), people(x.cust), m(x.rev), x.spend ? m(x.spend) : "free", x.spend ? m(x.cpa) : "–", x.spend ? ratio(x.roas) : "–"])}
+        foot={["All sources", nf(R.traffic), "100%", people(R.cust), m(R.rev), m(R.spend), m(R.cpa), ratio(R.roas)]}
       />
       <p className="sub">Each row is what that source brings in on its own, through the same funnel.</p>
     </>
@@ -489,8 +507,8 @@ function Offers({ data, R }: SP) {
         caption="Offer and product revenue"
         text={[1]}
         head={["Offer", "Type", "Buyers", "Revenue", "Share of revenue", "MRR"]}
-        rows={rows.map((x) => [x.name, x.label, nf(x.buyers, 1), m(x.revenue), pct(x.share), R.N[x.id]?.mrr ? m(R.N[x.id].mrr) : "–"])}
-        foot={["All offers", "", nf(R.orders, 1), m(R.rev), "100%", m(R.mrr)]}
+        rows={rows.map((x) => [x.name, x.label, people(x.buyers), m(x.revenue), pct(x.share), R.N[x.id]?.mrr ? m(R.N[x.id].mrr) : "–"])}
+        foot={["All offers", "", people(R.orders), m(R.rev), "100%", m(R.mrr)]}
       />
     </>
   );
@@ -539,15 +557,15 @@ function Scenarios() {
   const cols = useMemo(() => {
     const g = { nodes, edges };
     const base = compute(g, { ...settings, whatif: NEUTRAL });
-    const c: { name: string; R: FunnelResult }[] = [{ name: "As mapped", R: base }];
+    const c: { name: string; R: FunnelResult }[] = [{ name: "Baseline (current map)", R: base }];
     if (JSON.stringify(settings.whatif) !== JSON.stringify(NEUTRAL)) c.push({ name: "Current what-if", R: Rnow });
     settings.scenarios.forEach((sc) => c.push({ name: sc.name || "Scenario", R: computeScenario(g, settings, sc) }));
     return c;
   }, [nodes, edges, settings, Rnow]);
   const metrics: [string, (r: FunnelResult) => number, (v: number) => string, boolean?][] = [
     ["Traffic", (r) => r.traffic, (v) => nf(v)],
-    ["Leads", (r) => r.leads, (v) => nf(v, 1)],
-    ["Customers", (r) => r.cust, (v) => nf(v, 1)],
+    ["Leads", (r) => r.leads, (v) => people(v)],
+    ["Customers", (r) => r.cust, (v) => people(v)],
     ["Revenue", (r) => r.rev, m],
     ["Ad spend", (r) => r.spend, m, true],
     ["Profit", (r) => r.profit, m],
@@ -571,7 +589,7 @@ function Scenarios() {
           <div>
             <b>No scenarios yet</b>
             <p>
-              Add Conservative, Expected and Best cases in the map’s{" "}
+              Add Conservative and Best case scenarios in the map’s{" "}
               <button type="button" className="link" onClick={() => setTab("scenarios")}>
                 Scenarios tab
               </button>
@@ -674,7 +692,7 @@ function Forecast({ data, R }: SP) {
         head={["Period", "People", "Leads", "Purchases", "Revenue", "Ad spend", "Other costs", "Profit", "ROI", "ROAS"]}
         rows={periods.map(([l, k]) => {
           const p = periodNumbers(R, k);
-          return [l, nf(p.people), nf(p.leads, 1), nf(p.orders, 1), m(p.revenue), m(p.adSpend), m(p.expenses), <span key="p" className={cls(p.profit)}>{m(p.profit)}</span>, pct(p.roi), ratio(p.roas)];
+          return [l, nf(p.people), people(p.leads), people(p.orders), m(p.revenue), m(p.adSpend), m(p.expenses), <span key="p" className={cls(p.profit)}>{m(p.profit)}</span>, pct(p.roi), ratio(p.roas)];
         })}
       />
       <p className="sub">The month-by-month cash table is in Month-to-month; subscriptions in MRR forecast.</p>
@@ -758,7 +776,7 @@ function Goals({ data }: SP) {
       {t.blocks.length > 0 && (
         <>
           <h3 className="fm-rh">Goal blocks on the map</h3>
-          <Table caption="Goal blocks" head={["Goal block", "People reaching it / month"]} rows={t.blocks.map((b) => [b.name, nf(b.people, 1)])} />
+          <Table caption="Goal blocks" head={["Goal block", "People reaching it / month"]} rows={t.blocks.map((b) => [b.name, people(b.people)])} />
         </>
       )}
       <p className="sub">Revenue {m(data.overview.month.revenue)} per month today.</p>
@@ -770,7 +788,7 @@ function GoalCard({ r, legacy }: { r: GoalReport; legacy?: [string, number, numb
   const { m } = useMoney();
   const g = r.goal;
   const isMoney = g.kind === "revenue" || g.kind === "profit";
-  const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : nf(v, 1));
+  const fv = (v: number) => (isMoney ? m(v) : g.kind === "conversion" ? `${nf(v, 1)}%` : people(v));
   const done = r.progress >= 1;
   const prog = Math.max(0, Math.min(1, Number.isFinite(r.progress) ? r.progress : 0));
   return (
@@ -789,7 +807,7 @@ function GoalCard({ r, legacy }: { r: GoalReport; legacy?: [string, number, numb
         <span style={{ width: `${prog * 100}%` }} />
       </div>
       {legacy ? (
-        <Table caption="Required numbers" head={["Period", "Revenue", "Visitors", "Ad spend", "Customers"]} rows={legacy.map(([p, rev, vis, spend, cust]) => [p, m(rev), nf(vis), m(spend), nf(cust, 1)])} />
+        <Table caption="Required numbers" head={["Period", "Revenue", "Visitors", "Ad spend", "Customers"]} rows={legacy.map(([p, rev, vis, spend, cust]) => [p, m(rev), nf(vis), m(spend), people(cust)])} />
       ) : g.kind === "conversion" ? (
         r.impact ? (
           <p className="sub">
@@ -804,7 +822,7 @@ function GoalCard({ r, legacy }: { r: GoalReport; legacy?: [string, number, numb
           <Table
             caption={`Required numbers for ${g.name || r.label}`}
             head={["Period", "Revenue", "Profit", "Traffic", "Traffic cost", "Leads", "Customers"]}
-            rows={r.required.map(([p, rev, profit, vis, spend, leads, cust]) => [p, m(rev), <span key="p" className={cls(profit)}>{m(profit)}</span>, nf(vis), m(spend), nf(leads, 1), nf(cust, 1)])}
+            rows={r.required.map(([p, rev, profit, vis, spend, leads, cust]) => [p, m(rev), <span key="p" className={cls(profit)}>{m(profit)}</span>, nf(vis), m(spend), people(leads), people(cust)])}
           />
         </>
       ) : (
@@ -825,22 +843,22 @@ function Mrr({ data }: SP) {
       <Kpis
         items={[
           [`MRR at month ${last.month}`, m(last.mrr)],
-          ["Active subscriptions", nf(last.activeSubs, 1)],
+          ["Active subscriptions", people(last.activeSubs)],
           ["Cumulative revenue", ms(last.cumulativeRevenue)],
           ["Cumulative profit", <span key="p" className={cls(last.cumulative)}>{ms(last.cumulative)}</span>],
         ]}
       />
       <div className="fm-rgrid">
         <TimeChart title="MRR per month" data={rows} series={[{ key: "mrr", name: "MRR", color: "var(--chart-1)" }]} fmt={ms} />
-        <TimeChart title="Active subscriptions" data={rows} series={[{ key: "activeSubs", name: "Active subscriptions", color: "var(--chart-3)" }]} fmt={(v) => nf(v, 1)} />
+        <TimeChart title="Active subscriptions" data={rows} series={[{ key: "activeSubs", name: "Active subscriptions", color: "var(--chart-3)" }]} fmt={(v) => people(v)} />
       </div>
       <Table
         caption="MRR forecast"
         head={["Month", "New customers", "Active subs", "MRR", "Revenue", "Cumulative revenue", "Traffic cost", "Business expenses", "Profit", "Cumulative profit"]}
         rows={rows.map((r) => [
           r.month,
-          nf(r.newCustomers, 1),
-          nf(r.activeSubs, 1),
+          people(r.newCustomers),
+          people(r.activeSubs),
           m(r.mrr),
           m(r.revenue),
           m(r.cumulativeRevenue),
@@ -950,7 +968,7 @@ function Monthly({ data, R }: SP) {
         rows={rows.map((r, i) => [
           r.month,
           nf(r.traffic),
-          nf(r.newCustomers, 1),
+          people(r.newCustomers),
           m(r.revenue),
           ch(r.revenue, rows[i - 1]?.revenue),
           m(r.costs),

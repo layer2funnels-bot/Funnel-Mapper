@@ -29,3 +29,30 @@ export function timeAgo(s: string) {
   if (t < 86400 * 30) return `${Math.floor(t / 86400)} d ago`;
   return fmtDate(s);
 }
+
+/**
+ * People in the main UI (V2 data trust): whole people; under 10 one decimal with "avg" so small daily rates don't
+ * read as 0. Money and percentages keep using the exact values; `peopleExact` is the hover / detail text.
+ */
+export function people(v: number): string {
+  if (!Number.isFinite(v)) return "–";
+  const a = Math.abs(v);
+  if (a > 0 && a < 10 && Math.abs(v - Math.round(v)) > 0.05) return `${nf(v, 1)} avg`;
+  return nf(Math.round(v));
+}
+export function peopleExact(v: number): string {
+  if (!Number.isFinite(v)) return "No data yet";
+  return Math.abs(v - Math.round(v)) < 1e-9 ? nf(v) : `${nf(v, 1)} · modelled average`;
+}
+/** Period suffix for a figure scaled by `k` months (lib/funnel-math PERIOD_FACTORS): "/ mo", "/ day", "/ wk", "/ yr". */
+export function perSuffix(k = 1): string {
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  if (near(k, 1)) return "/ mo";
+  if (near(k, 12 / 365)) return "/ day";
+  if (near(k, 12 / 52)) return "/ wk";
+  if (near(k, 3)) return "/ qtr";
+  if (near(k, 12)) return "/ yr";
+  return `/ ${nf((k * 365) / 12)} days`;
+}
+/** Money with its period, and the LTV tag when lifetime value is the funnel's basis: "£3,064 / mo", "£9,120 / mo LTV". */
+export const moneyPer = (v: number, cur: string, k = 1, basis?: "first" | "ltv") => `${money(v, cur)} ${perSuffix(k)}${basis === "ltv" ? " LTV" : ""}`;

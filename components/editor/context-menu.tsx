@@ -104,6 +104,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
         },
         ...(flow
           ? ([
+              { label: "Analytics", icon: "chart", run: () => (selectNodes([node.id]), setInspTab("analytics"), showInspector()) },
               { label: "Add internal note", icon: "note", disabled: ro, sep: true, run: () => (selectNodes([node.id]), setInspTab("plan"), showInspector()) },
               { label: "Set as goal", icon: "target", disabled: ro, run: () => (selectNodes([node.id]), setInspTab("analytics"), showInspector(), showToast("Set the target under “Goal for this step” in Analytics")) },
               { label: "Open in Reports", icon: "chart", run: () => (setReportFocus(node.id), setSection("data")) },
@@ -164,7 +165,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
             { label: "Vertically", run: () => align("vdist") },
           ],
         },
-        { label: "Tidy selection", icon: "sparkle", disabled: ro, run: tidySelection },
+        { label: "Tidy selection", icon: "tidy", disabled: ro, run: tidySelection },
         { label: "Wrap in frame", icon: "panelLeft", disabled: ro, run: wrapInFrame },
         { label: "Save as workspace block…", icon: "layers", disabled: ro, run: () => (setSideTab("blocks"), setTimeout(() => document.getElementById("fm-wsb-name")?.focus(), 120)) },
         ...(onWidget ? ([{ label: "Add widget for selection", icon: "chart", disabled: ro, run: () => onWidget("selection") }] as Item[]) : []),
@@ -193,7 +194,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
       ...(onWidget ? ([{ label: "Add widget", icon: "chart", disabled: ro, run: () => onWidget("funnel", at) }] as Item[]) : []),
       { label: "Paste", kbd: m("Mod+V"), icon: "copy", sep: true, disabled: ro || !clip, run: paste },
       { label: "Select all", kbd: m("Mod+A"), run: () => selectNodes(useEditor.getState().nodes.map((n) => n.id)) },
-      { label: "Tidy up", kbd: m("Mod+Shift+L"), icon: "sparkle", sep: true, disabled: ro, run: onTidy },
+      { label: "Tidy up", kbd: m("Mod+Shift+L"), icon: "tidy", sep: true, disabled: ro, run: onTidy },
       { label: "Zoom to fit", icon: "fit", run: onFit },
       { label: "Performance view", icon: "chart", run: () => (setOpt("nums", true), setOpt("thick", true)) },
       { label: "Clean view", icon: "layers", run: () => (setOpt("nums", false), setOpt("thick", false)) },

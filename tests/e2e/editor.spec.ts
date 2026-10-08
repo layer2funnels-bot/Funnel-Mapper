@@ -31,7 +31,7 @@ test.describe("funnel editor", () => {
     // dropped where the mouse was (± snapping), not at the centre
     const box = (await nodes(page).first().boundingBox())!;
     expect(box.x).toBeLessThan(stage.x);
-    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).click();
+    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).click();
     await expect(nodes(page)).toHaveCount(2);
     await expect(page.locator(".fm-insp h3")).toHaveText("Facebook ads");
   });
@@ -39,7 +39,7 @@ test.describe("funnel editor", () => {
   test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
+    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
     await page.getByRole("button", { name: "Add Landing page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
     await page.getByRole("button", { name: "Add Thank-you page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
     await page.getByRole("button", { name: "Add Email sequence", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
@@ -48,18 +48,18 @@ test.describe("funnel editor", () => {
       lp = node(page, "Landing page"),
       ty = node(page, "Thank-you page"),
       seq = node(page, "Email sequence");
-    await drag(page, await centre(page, fb.locator(".fm-port.out")), await centre(page, lp));
+    await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
     await expect(edgeLabels(page).first()).toContainText("1,000");
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
-    await drag(page, await centre(page, lp.locator(".fm-port.alt")), await centre(page, seq));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.bottom")), await centre(page, seq));
     await expect(edgeLabels(page)).toHaveCount(3);
     // landing converts 30%: 300 go right, 700 go down (labelled No)
     await expect(page.locator(".fm-elabel", { hasText: "300" })).toBeVisible();
     await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("700");
     // can't connect into a traffic source or to the same target twice
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, fb));
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, fb));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
     await expect(edgeLabels(page)).toHaveCount(3);
   });
 
@@ -71,7 +71,7 @@ test.describe("funnel editor", () => {
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await page.getByLabel("Share of them (%)").fill("50");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("360");
-    await page.getByRole("button", { name: "People who didn’t convert" }).click();
+    await page.getByRole("radio", { name: "No: people who leave" }).click();
     // now half of the 1,680 who didn't register
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("840");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("No");
@@ -79,7 +79,7 @@ test.describe("funnel editor", () => {
     await expect(edgeLabels(page)).toHaveCount(8);
     // traffic sources have no "didn't convert" path, so the option isn't offered
     await page.locator(".fm-elabel", { hasText: "2,400" }).first().click();
-    await expect(page.getByRole("button", { name: "People who didn’t convert" })).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: "No: people who leave" })).toHaveCount(0);
   });
 
   test("box select with shift-drag, then group actions", async ({ page }) => {

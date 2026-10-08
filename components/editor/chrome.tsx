@@ -2,8 +2,10 @@
 // Editor chrome pieces (V2 D2): scenario pill, Clean | Performance switch, left tool rail.
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { setOpt, setSideTab, useEditor } from "@/lib/editor/store";
-import { scenarioLabel } from "@/lib/scenario-label";
+import { setActualView, setOpt, setSideTab, showToast, useEditor } from "@/lib/editor/store";
+import { actualMonths } from "@/lib/actual-result";
+import { ensureActuals } from "./assets";
+import { BASELINE, scenarioLabel } from "@/lib/scenario-label";
 
 /** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
 export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
@@ -11,26 +13,70 @@ export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
   const list = useEditor((s) => s.settings.scenarios);
   const label = scenarioLabel({ whatif: w, scenarios: list });
   return (
-    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}`} title="Choose a scenario">
+    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}${label !== BASELINE ? " vs Baseline" : ""}`} title="Choose a scenario">
       <i aria-hidden="true" />
-      {label}
+      <span className="lbl">Scenario:</span> {label}
+      {label !== BASELINE && <span className="vs"> vs Baseline</span>}
     </button>
   );
 }
 
-/** Clean | Performance map: the two presets of the View menu's Layers, one click from the canvas. */
+/**
+ * Clean | Performance map (V2 "Editor-default"): Clean keeps the numbers on blocks and lines at one even weight; Performance
+ * adds the headline figures, conversion bars, line weight by people and the key leak. "Names only" lives in Layers.
+ */
 export function ViewSwitch() {
   const nums = useEditor((s) => s.opts.nums);
   const thick = useEditor((s) => s.opts.thick);
-  const set = (v: boolean) => (setOpt("nums", v), setOpt("thick", v));
+  const set = (perf: boolean) => (setOpt("nums", true), setOpt("thick", perf));
   return (
     <div className="seg fm-viewswitch" role="group" aria-label="Map view">
-      <button type="button" aria-pressed={!nums && !thick} onClick={() => set(false)} title="Names only">
+      <button type="button" aria-pressed={!thick} onClick={() => set(false)} title="Numbers on blocks and lines, one even weight">
         Clean
       </button>
-      <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Numbers on every block, line thickness shows traffic">
+      <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Headline numbers, conversion bars, line thickness shows traffic, key leak">
         Performance
       </button>
+    </div>
+  );
+}
+
+const monthView = (m: string) => {
+  const [y, mo] = m.split("-").map(Number);
+  const start = `${m}-01`,
+    end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+  const days = Number(end.slice(8));
+  return { start, end, label: `${new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" })} · ${days} days` };
+};
+
+/** Model | Actual (F4): Actual draws the same map with the numbers entered or imported for a month. */
+export function ActualSwitch() {
+  const view = useEditor((s) => s.actualView);
+  const rows = useEditor((s) => s.actuals);
+  const months = actualMonths(rows ?? []);
+  const toActual = async () => {
+    await ensureActuals();
+    const ms = actualMonths(useEditor.getState().actuals ?? []);
+    if (!ms.length) return showToast("No actuals yet. Add them in the funnel panel: Track › Actuals.");
+    setActualView(monthView(ms[0]));
+  };
+  return (
+    <div className="seg fm-actswitch" role="group" aria-label="Plan or actual numbers">
+      <button type="button" aria-pressed={!view} onClick={() => setActualView(null)} title="The modelled plan">
+        Model
+      </button>
+      <button type="button" aria-pressed={!!view} onClick={toActual} title="Numbers you entered or imported">
+        Actual
+      </button>
+      {view && months.length > 1 && (
+        <select className="fm-actmonth" aria-label="Month of actuals" value={view.start.slice(0, 7)} onChange={(e) => setActualView(monthView(e.target.value))}>
+          {months.map((m) => (
+            <option key={m} value={m}>
+              {monthView(m).label.split(" · ")[0]}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -59,7 +105,7 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
   const tab = useEditor((s) => s.sideTab);
   const shared = useEditor((s) => s.shared);
   // a tab button either shows its panel, or (when it already is showing) collapses the side panel
-  const pick = (t: "library" | "outline" | "blocks") => (tab === t && !sideCollapsed ? onToggleSide() : setSideTab(t));
+  const pick = (t: "library" | "outline" | "blocks" | "templates" | "math") => (tab === t && !sideCollapsed ? onToggleSide() : setSideTab(t));
   const on = (t: string) => tab === t && !sideCollapsed;
   return (
     <nav className="fm-rail" aria-label="Editor tools">
@@ -71,6 +117,16 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
           <button type="button" className={on("outline") ? "on" : ""} aria-label="Outline" title="Outline: every object on the map" aria-pressed={on("outline")} aria-controls="fm-side" onClick={() => pick("outline")}>
             <Icon name="list" />
           </button>
+          {!shared && (
+            <button type="button" className={on("templates") ? "on" : ""} aria-label="Templates" title="Templates: add one of the 13 to this map" aria-pressed={on("templates")} aria-controls="fm-side" onClick={() => pick("templates")}>
+              <Icon name="file" />
+            </button>
+          )}
+          {!shared && (
+            <button type="button" className={on("math") ? "on" : ""} aria-label="How the math works" title="How the math works: the selected step in words" aria-pressed={on("math")} aria-controls="fm-side" onClick={() => pick("math")}>
+              <Icon name="calc" />
+            </button>
+          )}
           {!shared && (
             <button type="button" className={on("blocks") ? "on" : ""} aria-label="Workspace blocks" title="Workspace blocks: saved groups of blocks" aria-pressed={on("blocks")} aria-controls="fm-side" onClick={() => pick("blocks")}>
               <Icon name="layers" />

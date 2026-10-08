@@ -6714,7 +6714,7 @@ dialog.fm-sharedlg {
   min-width: 28px;
   padding: 0 6px;
   border-radius: 6px;
-  color: #cbd5e1;
+  color: var(--ink);
   font-size: 12px;
   display: inline-flex;
   align-items: center;
@@ -7328,7 +7328,6 @@ dialog.fm-sharedlg > p {
 :root[data-theme="light"] .pgo-ty {
   color: color-mix(in srgb, var(--cc, var(--ink)) 45%, #0f172a);
 }
-:root[data-theme="light"] .text-brand,
-:root[data-theme="light"] .fm-moredetails > summary {
-  color: var(--brand-light);
+:root[data-theme="light"] .fm-dchip.bad {
+  color: #9a3412; /* the leak orange is a fill; as text on white it is darkened */
 }

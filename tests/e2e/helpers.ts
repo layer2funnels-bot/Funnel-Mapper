@@ -112,6 +112,12 @@ export async function addFromPalette(page: Page, label: string) {
 export async function startSimulate(page: Page) {
   const rail = page.getByRole("button", { name: "Simulate", exact: true });
   if (await rail.isVisible().catch(() => false)) return rail.click();
-  await page.getByRole("tab", { name: "Simulate", exact: true }).click();
-  await page.getByRole("button", { name: "Simulate on the map" }).click();
+  const tab = page.getByRole("tab", { name: "Simulate", exact: true });
+  if (await tab.isVisible().catch(() => false)) {
+    await tab.click();
+    return page.getByRole("button", { name: "Simulate on the map" }).click();
+  }
+  // a block is selected, so the panel shows its tabs: the S shortcut starts Simulate from the map
+  await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
+  await page.keyboard.press("s");
 }

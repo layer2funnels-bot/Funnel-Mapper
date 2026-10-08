@@ -609,7 +609,7 @@ button {
     margin: 0 0 12px;
     font-size: 20px;
     font-weight: 700;
-    color: var(--brand);
+    color: var(--brand-light);
   }
 }
 
@@ -1647,4 +1647,10 @@ dialog.fm-sheetdlg > .body {
 }
 .fm-roles dd {
   margin: 2px 0 0;
+}
+
+/* Light theme: Emerald as text is the darker --brand-light (5.1:1); the fill colour is unchanged */
+:root[data-theme="light"] .text-brand,
+:root[data-theme="light"] .fm-moredetails > summary {
+  color: var(--brand-light);
 }

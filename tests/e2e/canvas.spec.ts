@@ -65,7 +65,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     await page.getByRole("button", { name: "Lock", exact: true }).first().click();
     await expect(box.locator(".fm-lock")).toBeVisible();
     const before = await pos(page, target.id);
-    const c = await centre(page, box.locator(".fm-ntitle"));
+    const c = await centre(page, box.locator(".fm-ntitle, .pgo-title"));
     await drag(page, c, { x: c.x + 150, y: c.y + 80 });
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Delete");
@@ -147,7 +147,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     await page.getByLabel("Text inside").fill("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toContainText("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toHaveCSS("border-radius", "50%");
-    await page.getByRole("button", { name: "Add Image / logo", exact: true }).click();
+    await addFromPalette(page, "Image / logo");
     await expect(page.locator(".fm-image.empty")).toBeVisible();
     // 2×2 PNG
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYGD4z8DAwMDAwAAADwABRe/1oQAAAABJRU5ErkJggg==", "base64");

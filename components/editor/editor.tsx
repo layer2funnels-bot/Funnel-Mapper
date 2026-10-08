@@ -56,7 +56,7 @@ import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
-import { EditorRail, LayersMenu, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
+import { ActualSwitch, EditorRail, LayersMenu, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
 import { Outline } from "./outline";
 import { WorkspaceBlocks } from "./workspace-blocks";
 import { CommentsPanel } from "./comments";
@@ -211,6 +211,7 @@ function EditorInner(props: EditorProps) {
   const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
   const simOn = useEditor((s) => !!s.simBase);
   const simBefore = useEditor((s) => s.simBefore);
+  const actualView = useEditor((s) => s.actualView);
   const toggleSim = () => {
     if (simOn) return stopSim();
     startSim();
@@ -990,6 +991,7 @@ function EditorInner(props: EditorProps) {
               </button>
             )}
             <ViewSwitch />
+            {!sharedView && <ActualSwitch />}
             <LayersMenu />
             {!readOnly && !sharedView && hasNodes && (
               <button type="button" className="btn fm-simbtn fm-hide-phone" aria-pressed={simOn} onClick={toggleSim} title="Simulate: change assumptions and watch the funnel update">
@@ -1002,6 +1004,11 @@ function EditorInner(props: EditorProps) {
         {simBefore && !reports && (
           <div className="fm-before-badge" role="status">
             Before your changes
+          </div>
+        )}
+        {actualView && !reports && (
+          <div className="fm-before-badge actual" role="status">
+            <span className="fm-tag actual">Actual</span> {actualView.label}
           </div>
         )}
         {ready && !reports && <FloatingToolbar />}

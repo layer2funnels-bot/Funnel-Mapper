@@ -44,13 +44,13 @@ isOneToOne: false
                   ]
                 },"funnel_actuals": {
                   Row: {
-                    "conversions": number | null,"created_at": string,"funnel_id": string,"id": string,"node_id": string,"owner_id": string,"period_end": string,"period_start": string,"revenue": number | null,"spend": number | null,"visitors": number | null,"workspace_id": string
+                    "conversions": number | null,"created_at": string,"funnel_id": string,"id": string,"node_id": string,"owner_id": string,"period_end": string,"period_start": string,"revenue": number | null,"source": string,"source_ref": string | null,"spend": number | null,"updated_at": string,"visitors": number | null,"workspace_id": string
                   }
                   Insert: {
-                    "conversions"?: number | null,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id": string,"owner_id"?: string,"period_end": string,"period_start": string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null,"workspace_id"?: string
+                    "conversions"?: number | null,"created_at"?: string,"funnel_id": string,"id"?: string,"node_id": string,"owner_id"?: string,"period_end": string,"period_start": string,"revenue"?: number | null,"source"?: string,"source_ref"?: string | null,"spend"?: number | null,"updated_at"?: string,"visitors"?: number | null,"workspace_id"?: string
                   }
                   Update: {
-                    "conversions"?: number | null,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string,"owner_id"?: string,"period_end"?: string,"period_start"?: string,"revenue"?: number | null,"spend"?: number | null,"visitors"?: number | null,"workspace_id"?: string
+                    "conversions"?: number | null,"created_at"?: string,"funnel_id"?: string,"id"?: string,"node_id"?: string,"owner_id"?: string,"period_end"?: string,"period_start"?: string,"revenue"?: number | null,"source"?: string,"source_ref"?: string | null,"spend"?: number | null,"updated_at"?: string,"visitors"?: number | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {

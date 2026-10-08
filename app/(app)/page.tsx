@@ -9,28 +9,35 @@ import { money, moneyShort, ratio, timeAgo } from "@/lib/format";
 import { parseGraph } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
 import { monthlyValue } from "@/lib/pricing";
+import { byCurrencyRows, homeRange } from "@/lib/home-range";
+import { HomeRangePicker } from "@/components/home-range-picker";
 import { requireUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-/** Sums a value per currency and renders "£12.3k + $4k". */
-function byCurrency(rows: { cur: string; v: number }[]) {
-  const m = new Map<string, number>();
-  rows.forEach((r) => m.set(r.cur, (m.get(r.cur) ?? 0) + (Number.isFinite(r.v) ? r.v : 0)));
-  if (!m.size) return money(0);
-  return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([c, v]) => moneyShort(v, c)).join(" + ");
+/** Money per currency, one row each (V2: never added across currencies). */
+function byCurrency(rows: { cur: string; v: number }[], fallback = "GBP") {
+  const list = byCurrencyRows(rows);
+  if (!list.length) return money(0, fallback);
+  return (
+    <span className="fm-curlist">
+      {list.map((r) => (
+        <span key={r.cur} className="block">
+          {moneyShort(r.v, r.cur)}
+        </span>
+      ))}
+    </span>
+  );
 }
-
-const RANGES = [
-  ["month", "This month", 1],
-  ["year", "Year", 12],
-] as const;
+const byCurrencyText = (rows: { cur: string; v: number }[]) => byCurrencyRows(rows).map((r) => moneyShort(r.v, r.cur)).join(" · ") || "–";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const { sb, profile, workspace } = await requireUser();
   const sp = await searchParams;
-  const range = RANGES.find(([k]) => k === (Array.isArray(sp.range) ? sp.range[0] : sp.range)) ?? RANGES[0];
-  const k = range[2];
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const range = homeRange(one(sp.range), one(sp.from), one(sp.to));
+  // plan figures are per month: a range multiplies them by its number of months
+  const k = range.months;
   const [{ data: clients }, { data: funnels }] = await Promise.all([
     // archived clients (and their funnels) are out of the active portfolio
     sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).is("deleted_at", null).order("name"),
@@ -39,6 +46,9 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const cl = clients ?? [];
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));
   const fs = (funnels ?? []).filter((f) => clientById[f.client_id] && f.status !== "archived");
+  // recorded actuals in the range (whole periods inside it), for live funnels
+  const liveIds = fs.filter((f) => f.status === "live").map((f) => f.id);
+  const { data: acts } = liveIds.length ? await sb.from("funnel_actuals").select("funnel_id, revenue, spend, period_start, period_end").in("funnel_id", liveIds).gte("period_start", range.start).lte("period_end", range.end) : { data: [] as { funnel_id: string; revenue: number | null; spend: number | null }[] };
   const curOf = (f: (typeof fs)[number]) => ((f.settings as { currency?: string })?.currency ?? clientById[f.client_id]?.currency ?? workspace.default_currency);
   const sum = (f: (typeof fs)[number]) => (f.summary ?? {}) as Partial<FunnelSummary>;
   const active = cl.filter((c) => c.status === "active");
@@ -60,23 +70,30 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   return (
     <div className="mx-auto max-w-[1280px]">
       <PageHeader title={`${greet}${first ? `, ${first}` : ""}`} sub={`${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${workspace.agency_name || "Layer2Funnels"} at a glance.`}>
-        <div className="seg" role="group" aria-label="Period">
-          {RANGES.map(([key, label]) => (
-            <Link key={key} href={key === "month" ? "/" : `/?range=${key}`} aria-pressed={range[0] === key} className="no-underline" role="button" scroll={false}>
-              {label}
-            </Link>
-          ))}
-        </div>
+        <HomeRangePicker current={range.key} label={range.label} from={range.from} to={range.to} />
       </PageHeader>
 
       <section aria-label="Totals" className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Active clients" value={active.length} hint={`${pipeline.length} in the pipeline · ${cl.length} total`} />
         <Stat label="Live funnels" value={live.length} hint={`${proposed.length} proposed · ${fs.length} total`} />
-        <Stat label={`Planned revenue (live funnels)${k > 1 ? " · a year" : " · a month"}`} value={byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })))} hint={`Profit ${byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}`} />
         <Stat
-          label={`Agency MRR${k > 1 ? " · a year" : ""}`}
-          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })))}
-          hint={`Client funnel MRR ${byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).mrr ?? 0) * k })))}`}
+          label={`Planned revenue · ${range.label}`}
+          value={byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })), workspace.default_currency)}
+          hint={
+            <>
+              <span className="fm-tag plan">Plan</span> live funnels · {k === 1 ? "1 month" : `${k} months`} · profit {byCurrencyText(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}
+              {(acts ?? []).length > 0 && (
+                <span className="mt-1 block">
+                  <span className="fm-tag actual">Actual</span> recorded {byCurrencyText((acts ?? []).map((a) => ({ cur: curOf(fs.find((f) => f.id === a.funnel_id)!), v: Number(a.revenue ?? 0) })))}
+                </span>
+              )}
+            </>
+          }
+        />
+        <Stat
+          label={`Agency fees · ${range.label}`}
+          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })), workspace.default_currency)}
+          hint={`Agency MRR ${byCurrencyText(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })))} / mo · client funnel MRR ${byCurrencyText(live.map((f) => ({ cur: curOf(f), v: sum(f).mrr ?? 0 })))} / mo`}
         />
       </section>
 
@@ -95,7 +112,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                 {clientById[latest.client_id]?.name} · <StatusPill status={latest.status} /> · edited {timeAgo(latest.updated_at)}
               </p>
               <p className="text-sm">
-                {sum(latest).rev == null ? <span className="text-muted">No data yet</span> : <>Plans {money(sum(latest).rev, curOf(latest))} revenue · ROAS {ratio(sum(latest).roas)}</>}
+                {sum(latest).rev == null ? <span className="text-muted">No data yet</span> : <>Plans {money(sum(latest).rev, curOf(latest))} revenue / mo · ROAS {ratio(sum(latest).roas)}</>}
               </p>
               <div className="mt-2 flex gap-2">
                 <Link href={`/funnels/${latest.id}`} className="btn primary sm">
@@ -136,7 +153,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                         <span className="truncate text-[13px] text-muted">{clientById[f.client_id]?.name}</span>
                         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-muted">
                           <StatusPill status={f.status} />
-                          <span>{money(sum(f).rev, curOf(f))}</span>
+                          <span>{money(sum(f).rev, curOf(f))} / mo</span>
                         </div>
                       </div>
                     </Link>

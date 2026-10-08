@@ -2,7 +2,9 @@
 // Editor chrome pieces (V2 D2): scenario pill, Clean | Performance switch, left tool rail.
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { setOpt, setSideTab, useEditor } from "@/lib/editor/store";
+import { setActualView, setOpt, setSideTab, showToast, useEditor } from "@/lib/editor/store";
+import { actualMonths } from "@/lib/actual-result";
+import { ensureActuals } from "./assets";
 import { BASELINE, scenarioLabel } from "@/lib/scenario-label";
 
 /** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
@@ -32,6 +34,46 @@ export function ViewSwitch() {
       <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Numbers on every block, line thickness shows traffic">
         Performance
       </button>
+    </div>
+  );
+}
+
+const monthView = (m: string) => {
+  const [y, mo] = m.split("-").map(Number);
+  const start = `${m}-01`,
+    end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+  const days = Number(end.slice(8));
+  return { start, end, label: `${new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" })} · ${days} days` };
+};
+
+/** Model | Actual (F4): Actual draws the same map with the numbers entered or imported for a month. */
+export function ActualSwitch() {
+  const view = useEditor((s) => s.actualView);
+  const rows = useEditor((s) => s.actuals);
+  const months = actualMonths(rows ?? []);
+  const toActual = async () => {
+    await ensureActuals();
+    const ms = actualMonths(useEditor.getState().actuals ?? []);
+    if (!ms.length) return showToast("No actuals yet. Add them in the funnel panel: Track › Actuals.");
+    setActualView(monthView(ms[0]));
+  };
+  return (
+    <div className="seg fm-actswitch" role="group" aria-label="Plan or actual numbers">
+      <button type="button" aria-pressed={!view} onClick={() => setActualView(null)} title="The modelled plan">
+        Model
+      </button>
+      <button type="button" aria-pressed={!!view} onClick={toActual} title="Numbers you entered or imported">
+        Actual
+      </button>
+      {view && months.length > 1 && (
+        <select className="fm-actmonth" aria-label="Month of actuals" value={view.start.slice(0, 7)} onChange={(e) => setActualView(monthView(e.target.value))}>
+          {months.map((m) => (
+            <option key={m} value={m}>
+              {monthView(m).label.split(" · ")[0]}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }

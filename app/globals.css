@@ -868,3 +868,84 @@ button {
 .btn.danger-solid:hover:not(:disabled) {
   filter: brightness(1.08);
 }
+
+/* Home date range (F5) */
+.fm-rangepop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  width: 280px;
+  padding: 10px;
+  box-shadow: var(--shadow);
+}
+.fm-rangeopt {
+  text-align: left;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+}
+.fm-rangeopt:hover {
+  background: var(--panel2);
+}
+.fm-rangeopt[aria-pressed="true"] {
+  background: var(--brand-soft);
+  font-weight: 700;
+}
+.fm-monthgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.fm-monthgrid button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+.fm-monthgrid button.in {
+  background: var(--brand-soft);
+}
+.fm-monthgrid button[aria-pressed="true"] {
+  border-color: var(--brand);
+  font-weight: 700;
+}
+.fm-curlist {
+  display: block;
+}
+@media (pointer: coarse) {
+  .fm-rangeopt,
+  .fm-monthgrid button {
+    min-height: 44px;
+  }
+}
+/* Plan / Forecast / Actual tags outside the editor (same look as editor.css) */
+.fm-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+.fm-tag.plan {
+  border: 1px solid var(--edge);
+  color: var(--muted);
+}
+.fm-tag.forecast {
+  border: 1px dashed var(--edge);
+  color: var(--muted);
+}
+.fm-tag.actual {
+  background: var(--brand);
+  color: var(--brand-ink);
+}

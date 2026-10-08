@@ -135,3 +135,35 @@ test.describe("templates", () => {
     await expect(page.locator(".react-flow__node-frame")).toHaveCount(0);
   });
 });
+
+test.describe("actuals", () => {
+  test("typed and CSV actuals land in the same place, bad rows are reported, and Actual mode draws them on the map", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await page.getByRole("tab", { name: "Actuals" }).click();
+    await page.getByRole("button", { name: "Type in or import CSV" }).click();
+    const dlg = page.getByRole("dialog", { name: "Actuals" });
+    await expect(dlg.getByRole("tab", { name: "Type it in" })).toHaveAttribute("aria-selected", "true");
+    // type one value in the grid (this month, people arriving at the quiz)
+    const cell = dlg.getByRole("textbox", { name: /^Quiz funnel, .*People arriving$/ }).last();
+    await cell.fill("1500");
+    await expect(dlg.getByRole("status")).toHaveText("Saved");
+    // CSV: one good row, one row for a step that isn't on the map
+    await dlg.getByRole("tab", { name: "Import CSV" }).click();
+    const month = new Date().toISOString().slice(0, 7);
+    const csv = `Month,Step,People arriving,People continuing,Revenue\n${month},Quiz funnel,1500,600,\n${month},Not a step,1,1,\n`;
+    await dlg.getByLabel("Choose CSV file").setInputFiles({ name: "sept.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+    await expect(dlg.getByText("1 row ready, 1 needs attention")).toBeVisible();
+    await expect(dlg.getByText("Row 3: there is no step called “Not a step” on this map.")).toBeVisible();
+    await dlg.getByRole("button", { name: "Import 1 row" }).click();
+    await expect(dlg.getByText(/1 value set imported from sept\.csv\. 1 row was not imported/)).toBeVisible();
+    await dlg.getByRole("button", { name: "Done" }).click();
+    // Actual mode: the map shows the recorded people, with a dated badge and an Actual tag on the strip
+    await page.getByRole("group", { name: "Plan or actual numbers" }).getByRole("button", { name: "Actual" }).click();
+    await expect(page.locator(".fm-before-badge.actual")).toContainText("Actual");
+    await expect(page.locator(".fm-kunit")).toContainText("Actual");
+    await expect(node(page, "Quiz funnel")).toContainText("1,500");
+    await page.getByRole("group", { name: "Plan or actual numbers" }).getByRole("button", { name: "Model" }).click();
+    await expect(page.locator(".fm-kunit")).toContainText("Plan");
+  });
+});

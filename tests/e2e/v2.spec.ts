@@ -190,7 +190,7 @@ test.describe("V2 pages", () => {
     await expect(table).toContainText("V2 list funnel");
     for (const v of ["All", "Live", "Proposed", "Draft", "Archived"]) await expect(page.getByRole("group", { name: "Funnel status" }).getByRole("button", { name: new RegExp(`^${v}`) })).toBeVisible();
     await page.getByRole("button", { name: "Needs attention" }).click();
-    await expect(table).toContainText("check"); // the quiz template has one open check
+    await expect(table).toContainText("to fix"); // the quiz template has one open model check
     await page.getByRole("button", { name: "Needs attention" }).click();
     await page.getByRole("group", { name: "Funnel status" }).getByRole("button", { name: /^Archived/ }).click();
     await expect(page.getByRole("cell", { name: "V2 list funnel" })).toHaveCount(0);
@@ -201,9 +201,13 @@ test.describe("V2 pages", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
     await expect(page.getByText("Pick up where you left off")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Client pipeline" })).toBeVisible();
-    await page.getByRole("button", { name: "Year", exact: true }).click().catch(() => {});
     await page.goto("/?range=year");
-    await expect(page.getByRole("region", { name: "Totals" })).toContainText("a year");
+    await expect(page.getByRole("region", { name: "Totals" })).toContainText("This year");
+    // the range picker: presets and a custom from / to month range
+    await page.getByRole("button", { name: "This year" }).click();
+    await page.getByRole("dialog", { name: "Date range" }).getByRole("button", { name: "Last 3 months" }).click();
+    await expect(page).toHaveURL(/range=3m/);
+    await expect(page.getByRole("region", { name: "Totals" })).toContainText("3 months");
     await page.goto("/templates");
     await page.getByRole("button", { name: /^Preview / }).first().click();
     const panel = page.getByRole("complementary", { name: /^Preview:/ });

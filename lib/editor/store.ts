@@ -8,6 +8,7 @@ import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Side, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
 import { knobsOf, type SimBase } from "../simulate";
+import { actualResult, actualsInRange } from "../actual-result";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
 
 export type ReportTab = "math" | "steps" | "sources" | "plan" | "costs" | "scenarios" | "forecast" | "actuals";
@@ -101,6 +102,10 @@ export interface EditorState {
   products: ClientProduct[];
   /** Actuals rows of this funnel (loaded on demand for Trend widgets). */
   actuals: ActualRowDb[] | null;
+  /** Actual mode (F4): the map draws recorded actuals for this date range instead of the plan. */
+  actualView: { start: string; end: string; label: string } | null;
+  /** The recorded numbers for `actualView`, shaped like an engine result (lib/actual-result.ts). */
+  actualR: FunnelResult | null;
   /** Left panel: block library, funnel outline or workspace blocks. */
   sideTab: "library" | "outline" | "blocks" | "templates";
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
@@ -199,6 +204,8 @@ export const useEditor = create<EditorState>(() => ({
   keyLeak: null,
   products: [],
   actuals: null,
+  actualView: null,
+  actualR: null,
   sideTab: "library",
   selectMode: false,
   stageIds: null,
@@ -298,6 +305,9 @@ function apply(patch: Partial<Pick<EditorState, "nodes" | "edges" | "settings" |
     settings = patch.settings ?? s.settings;
   const math = opts.math ?? true;
   set({ ...patch, ...(math ? recompute(nodes, edges, settings) : {}) });
+  // Actual mode redraws the recorded numbers on the edited map
+  const av = get().actualView;
+  if (av && (patch.nodes || patch.edges)) setActualView(av);
   touched();
   if (opts.discrete) commitHistory();
 }
@@ -396,6 +406,8 @@ export function closeLineMenu() {
 }
 export function setActuals(actuals: ActualRowDb[] | null) {
   set({ actuals });
+  const v = get().actualView;
+  if (v) setActualView(v);
 }
 /** Add a widget at (x, y). Scope "frame" needs the frame's id, "selection" the steps it covers. */
 export function addWidget(cfg: { scope: "funnel" | "frame" | "selection"; frameId?: string; nodeIds?: string[]; display?: "number" | "trend" | "chart"; metrics?: string[]; wsize?: "S" | "M" | "L" }, x: number, y: number) {
@@ -414,6 +426,7 @@ const takeBase = (): SimBase => {
 export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
+  if (s.actualView) set({ actualView: null, actualR: null });
   set({ simBase: takeBase(), simPlay: false, simBefore: false, panel: "simulate" });
   setOpt("nums", true);
   setOpt("thick", true);
@@ -429,7 +442,14 @@ export function setSimBefore(simBefore: boolean) {
   set({ simBefore: simBefore && !!get().simBase });
 }
 /** The results the map draws: the live run, or the baseline while "Before" is on in Simulate. */
-export const shownR = (s: Pick<EditorState, "R" | "simBase" | "simBefore">): FunnelResult => (s.simBefore && s.simBase ? s.simBase.R : s.R);
+export const shownR = (s: Pick<EditorState, "R" | "simBase" | "simBefore"> & Partial<Pick<EditorState, "actualR">>): FunnelResult => s.actualR ?? (s.simBefore && s.simBase ? s.simBase.R : s.R);
+/** Model | Actual on the map. Actual draws the recorded numbers for the range (never changes the plan or the engine). */
+export function setActualView(v: EditorState["actualView"]) {
+  const s = get();
+  if (!v) return set({ actualView: null, actualR: null });
+  const rows = actualsInRange(s.actuals ?? [], v.start, v.end);
+  set({ actualView: v, actualR: actualResult({ nodes: s.nodes, edges: s.edges }, s.settings, rows) });
+}
 /** Use the map as it is now as the new "before". */
 export function rebaseSim() {
   if (get().simBase) set({ simBase: takeBase() });

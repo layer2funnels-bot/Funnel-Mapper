@@ -55,6 +55,7 @@ export function KpiBar() {
   const warnIds = useEditor((s) => s.warnIds);
   const shared = useEditor((s) => s.shared);
   const sideOpen = useEditor((s) => !s.opts.hideSide && !s.readOnly);
+  const actual = useEditor((s) => s.actualView);
   const focus = useFocusBlock();
   const simBase = useEditor((s) => s.simBase);
   const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, t])) : null;
@@ -190,11 +191,22 @@ export function KpiBar() {
         </Pop>
       )}
       <span className="fm-kunit">
-        <span className="fm-tag plan" title="Modelled numbers from the map (the plan)">
-          Plan
-        </span>{" "}
-        per month · {cur}
-        {basis === "ltv" ? " · lifetime value" : ""}
+        {actual ? (
+          <>
+            <span className="fm-tag actual" title="Numbers entered or imported in Actuals">
+              Actual
+            </span>{" "}
+            {actual.label} · {cur}
+          </>
+        ) : (
+          <>
+            <span className="fm-tag plan" title="Modelled numbers from the map (the plan)">
+              Plan
+            </span>{" "}
+            per month · {cur}
+            {basis === "ltv" ? " · lifetime value" : ""}
+          </>
+        )}
       </span>
     </footer>
   );

@@ -15,6 +15,7 @@ const NAV: { href: string; label: string; icon: UiIconName }[] = [
   { href: "/templates", label: "Templates", icon: "layers" },
 ];
 const SETTINGS = { href: "/settings", label: "Settings", icon: "settings" as UiIconName };
+const TRASH = { href: "/trash", label: "Trash", icon: "trash" as UiIconName };
 
 const initials = (s: string) =>
   s
@@ -29,7 +30,7 @@ const initials = (s: string) =>
  * App shell navigation (V2 D1). ≥1280: 232px sidebar. 1024–1279: 64px icon rail (labels in tooltips). 640–1023: left drawer
  * from a menu button. Phone: bottom tab bar (More opens the drawer).
  */
-export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces, canCreate }: { agency: string; user: string; role: string; logo?: string | null; team: boolean; workspaceId: string; workspaces: WorkspaceOption[]; canCreate: boolean }) {
+export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces, canCreate, trash = 0 }: { agency: string; user: string; role: string; logo?: string | null; team: boolean; workspaceId: string; workspaces: WorkspaceOption[]; canCreate: boolean; trash?: number }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
@@ -44,6 +45,11 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
     >
       <Icon name={n.icon} size={17} />
       <span className="lg:max-xl:sr-only">{n.label}</span>
+      {n.href === "/trash" && trash > 0 && (
+        <span className="ml-auto text-[11.5px] text-side-muted tabular-nums lg:max-xl:sr-only" aria-label={`${trash} in Trash`}>
+          {trash}
+        </span>
+      )}
     </Link>
   );
   const quiet = "h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] text-side-muted hover:bg-side-item hover:text-side-ink lg:max-xl:justify-center lg:max-xl:px-0";
@@ -52,6 +58,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
       <WorkspaceSwitcher currentId={workspaceId} workspaces={workspaces} canCreate={canCreate} logo={logo} team={team} />
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">{NAV.map(link)}</div>
       <div className="mt-2 flex flex-col gap-0.5 border-t border-side-line pt-2">
+        {link(TRASH)}
         {link(SETTINGS)}
         <div className="flex items-center gap-2.5 px-1.5 pt-2 lg:max-xl:justify-center" title={`${user} · ${agency}`}>
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#334155] bg-side-item text-[11px] font-bold text-side-ink">{initials(user)}</span>

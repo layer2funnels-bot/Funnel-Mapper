@@ -14,7 +14,7 @@ export default async function TemplatesPage() {
   const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: templates }, { data: clients }, opts] = await Promise.all([
     sb.from("templates").select("*").order("owner_id", { nullsFirst: true }).order("created_at"),
-    sb.from("clients").select("id, name").order("name"),
+    sb.from("clients").select("id, name").is("deleted_at", null).order("name"),
     templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
   ]);
   const list = templates ?? [];

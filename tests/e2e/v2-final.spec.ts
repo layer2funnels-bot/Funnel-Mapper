@@ -47,3 +47,49 @@ test.describe("four ports and line meanings", () => {
     expect((d2!.graph as { edges: { port: string; s?: { kind?: string } }[] }).edges[0]).toMatchObject({ port: "main", s: { kind: "skip" } });
   });
 });
+
+test.describe("trash", () => {
+  test("a funnel moves to Trash with a plain question and comes back; a client asks for its name first", async ({ page }) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const { env } = await import("./helpers");
+    const sb = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
+    await sb.auth.signInWithPassword({ email: "demo@layer2funnels.test", password: "demo-password" });
+    const uid = (await sb.auth.getUser()).data.user!.id;
+    const name = `Trash client ${Date.now()}`;
+    const { data: c } = await sb.from("clients").insert({ name, owner_id: uid }).select("id").single();
+    const fname = `Trash funnel ${Date.now()}`;
+    await sb.from("funnels").insert({ client_id: c!.id, name: fname, graph: blankGraph(), settings: {} });
+
+    await page.goto(`/clients/${c!.id}`);
+    await page.getByRole("button", { name: `Move ${fname} to Trash` }).click();
+    const dlg = page.getByRole("dialog", { name: "Move to Trash?" });
+    await expect(dlg).toBeVisible();
+    await dlg.getByRole("button", { name: "Move to Trash" }).click();
+    await expect(page.getByRole("button", { name: `Move ${fname} to Trash` })).toHaveCount(0);
+
+    await page.goto("/trash");
+    const row = page.getByRole("row", { name: new RegExp(fname) });
+    await expect(row).toBeVisible();
+    await row.getByRole("button", { name: `Restore ${fname}` }).click();
+    await expect(page.getByRole("status")).toContainText("restored");
+
+    // the client: the button only turns on once its name is typed; its funnels go with it
+    await page.goto(`/clients/${c!.id}?tab=details`);
+    await page.getByRole("button", { name: "Move client to Trash" }).click();
+    const cd = page.getByRole("dialog", { name: "Move this client to Trash?" });
+    const go = cd.getByRole("button", { name: "Move to Trash" });
+    await expect(go).toBeDisabled();
+    await cd.getByLabel(`Type ${name} to confirm`).fill(name);
+    await expect(go).toBeEnabled();
+    await go.click();
+    await expect(page).toHaveURL(/\/clients\?trashed=1/);
+    await page.goto("/trash");
+    await expect(page.getByRole("row", { name: new RegExp(name) })).toContainText("with 1 funnel");
+    // delete forever asks once more and says it can't be undone
+    await page.getByRole("button", { name: `Delete ${name} forever` }).click();
+    const df = page.getByRole("dialog", { name: "Delete forever?" });
+    await expect(df).toContainText("cannot be undone");
+    await df.getByRole("button", { name: "Delete forever" }).click();
+    await expect(page.getByRole("row", { name: new RegExp(name) })).toHaveCount(0);
+  });
+});

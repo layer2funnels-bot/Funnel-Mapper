@@ -33,8 +33,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const k = range[2];
   const [{ data: clients }, { data: funnels }] = await Promise.all([
     // archived clients (and their funnels) are out of the active portfolio
-    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).order("name"),
-    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url").order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, status, currency, logo_url, pricing_model, monthly_retainer, pricing_amount, billing_frequency, hours_per_month").is("archived_at", null).is("deleted_at", null).order("name"),
+    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url").is("deleted_at", null).order("updated_at", { ascending: false }),
   ]);
   const cl = clients ?? [];
   const clientById = Object.fromEntries(cl.map((c) => [c.id, c]));

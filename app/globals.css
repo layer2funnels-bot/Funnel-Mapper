@@ -848,3 +848,23 @@ button {
   width: 100%;
   height: 100%;
 }
+
+/* delete confirmations (F6) */
+.fm-confirm {
+  width: min(460px, calc(100vw - 32px));
+}
+.fm-confirm h3.danger {
+  color: var(--bad);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn.danger-solid {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+  font-weight: 700;
+}
+.btn.danger-solid:hover:not(:disabled) {
+  filter: brightness(1.08);
+}

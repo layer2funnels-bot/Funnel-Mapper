@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Editor } from "@/components/editor/editor";
+import { TrashedNotice } from "@/components/trashed-notice";
 import type { PaletteProduct } from "@/components/editor/palette";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { requireUser } from "@/lib/supabase/server";
@@ -18,6 +19,12 @@ export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">)
   const { sb, user, workspace, canEdit } = await requireUser();
   const { data: f } = await sb.from("funnels").select("*").eq("id", id).maybeSingle();
   if (!f) notFound();
+  if (f.deleted_at)
+    return (
+      <main id="main" className="min-h-full px-4">
+        <TrashedNotice kind="funnel" id={f.id} name={f.name} canEdit={canEdit} />
+      </main>
+    );
   const [{ data: client }, { data: products }, { data: lastVersion }, { count }] = await Promise.all([
     sb.from("clients").select("id, name, logo_url, currency").eq("id", f.client_id).single(),
     sb.from("products").select("id, name, type, params").or(`client_id.eq.${f.client_id},client_id.is.null`).order("name"),

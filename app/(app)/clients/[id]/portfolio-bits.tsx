@@ -9,7 +9,8 @@ import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, ratio } from "@/lib/format";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
-import { archiveClientAction, deleteClientAction, deleteFunnelAction, duplicateFunnelAction, setFunnelStatusAction, updateClientFields } from "../../actions";
+import { archiveClientAction, duplicateFunnelAction, setFunnelStatusAction, trashClientAction, trashFunnelAction, updateClientFields } from "../../actions";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export function ClientLogo({ id, url }: { id: string; url: string | null }) {
   const [u, setU] = useState(url);
@@ -70,20 +71,34 @@ export function ArchiveClient({ id, archived }: { id: string; archived: boolean 
 
 export function DeleteClient({ id, name, funnels }: { id: string; name: string; funnels: number }) {
   const [pending, start] = useTransition();
+  const [dialog, ask] = useConfirm();
   return (
     <section className="card p-5">
-      <h2 className="mb-2 font-display text-lg font-bold">Danger zone</h2>
-      <p className="mb-3 text-sm text-muted">Deleting a client also deletes their {funnels} funnel{funnels === 1 ? "" : "s"}, versions, actuals and share links.</p>
+      <h2 className="mb-2 font-display text-lg font-bold">Move to Trash</h2>
+      <p className="mb-3 text-sm text-muted">
+        The client and their {funnels} funnel{funnels === 1 ? "" : "s"} go to Trash, where they stay until someone restores them or deletes them forever. Share links stop working while they are in Trash.
+      </p>
       <button
         type="button"
         className="btn danger"
         disabled={pending}
-        onClick={() => {
-          if (confirm(`Delete “${name}” and all their funnels? This can’t be undone.`)) start(() => deleteClientAction(id));
+        onClick={async () => {
+          const ok = await ask({
+            title: "Move this client to Trash?",
+            body: (
+              <p>
+                “{name}” and their {funnels} funnel{funnels === 1 ? "" : "s"} move to Trash. Nothing is lost: you can restore them from Trash at any time.
+              </p>
+            ),
+            confirm: "Move to Trash",
+            typeToConfirm: name,
+          });
+          if (ok) start(() => trashClientAction(id));
         }}
       >
-        <Icon name="trash" /> Delete client
+        <Icon name="trash" /> Move client to Trash
       </button>
+      {dialog}
     </section>
   );
 }
@@ -121,6 +136,7 @@ export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, tota
 
 function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string; canEdit: boolean }) {
   const [pending, start] = useTransition();
+  const [dialog, ask] = useConfirm();
   const s = (f.summary ?? {}) as Partial<FunnelSummary>;
   return (
     <li className={`card flex flex-col overflow-hidden ${pending ? "opacity-60" : ""}`}>
@@ -137,11 +153,11 @@ function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string;
         </div>
         <dl className="grid grid-cols-4 gap-2 rounded-xl bg-bg px-3 py-2 text-xs text-muted">
           <div>
-            <dt>Revenue</dt>
+            <dt>Revenue / mo</dt>
             <dd className="font-display text-[14px] font-bold text-ink">{money(s.rev, currency)}</dd>
           </div>
           <div>
-            <dt>Profit</dt>
+            <dt>Profit / mo</dt>
             <dd className={`font-display text-[14px] font-bold ${(s.profit ?? 0) >= 0 ? "pos" : "neg"}`}>{money(s.profit, currency)}</dd>
           </div>
           <div>
@@ -182,17 +198,19 @@ function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string;
           <button
             type="button"
             className="btn sm icon danger"
-            title="Delete"
-            aria-label={`Delete ${f.name}`}
+            title="Move to Trash"
+            aria-label={`Move ${f.name} to Trash`}
             disabled={pending}
-            onClick={() => {
-              if (confirm(`Delete “${f.name}”? Versions, actuals and share links go with it. This can’t be undone.`)) start(() => deleteFunnelAction(f.id));
+            onClick={async () => {
+              const ok = await ask({ title: "Move to Trash?", body: <p>“{f.name}” moves to Trash. You can restore it from Trash at any time. Its share links stop working until then.</p>, confirm: "Move to Trash" });
+              if (ok) start(() => trashFunnelAction(f.id));
             }}
           >
             <Icon name="trash" size={16} />
           </button>
           </>
           )}
+          {dialog}
         </div>
       </div>
     </li>

@@ -174,7 +174,7 @@ test.describe("roles and clients", () => {
     await expect(page.getByRole("button", { name: "New funnel" })).toHaveCount(0);
     await page.getByRole("tab", { name: "Details" }).click();
     await expect(page.getByRole("button", { name: "Save details" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Delete client/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Move client to Trash/ })).toHaveCount(0);
     // the editor is view-only: no share, no editing, but reports and analytics work
     await page.goto("/funnels/20000000-0000-4000-8000-000000000002");
     await expect(page.locator(".fm-saved")).toHaveText("View only");

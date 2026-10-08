@@ -9,8 +9,8 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
   const sp = await searchParams;
   const { sb } = await requireUser();
   const [{ data: clients }, { data: funnels }] = await Promise.all([
-    sb.from("clients").select("*").order("updated_at", { ascending: false }),
-    sb.from("funnels").select("client_id, status"),
+    sb.from("clients").select("*").is("deleted_at", null).order("updated_at", { ascending: false }),
+    sb.from("funnels").select("client_id, status").is("deleted_at", null),
   ]);
   const counts: Record<string, { total: number; live: number }> = {};
   (funnels ?? []).forEach((f) => {

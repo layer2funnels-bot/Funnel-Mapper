@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TrashedNotice } from "@/components/trashed-notice";
 import { notFound } from "next/navigation";
 import { ClientForm } from "@/components/client-form";
 import { Icon } from "@/components/icon";
@@ -29,12 +30,13 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const { sb, isTeam, canEdit } = await requireUser();
   const [{ data: client }, { data: funnelRows }, { data: allClients }, tpls, { data: products }] = await Promise.all([
     sb.from("clients").select("*").eq("id", id).maybeSingle(),
-    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, niche").order("name"),
+    sb.from("funnels").select("id, name, description, status, summary, settings, thumbnail_url, updated_at").eq("client_id", id).is("deleted_at", null).order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, niche").is("deleted_at", null).order("name"),
     templateOptions(sb, isTeam ? "Team templates" : "Your templates"),
     sb.from("products").select("*").or(`client_id.eq.${id},client_id.is.null`).order("name"),
   ]);
   if (!client) notFound();
+  if (client.deleted_at) return <TrashedNotice kind="client" id={client.id} name={client.name} canEdit={canEdit} />;
   // A client can have hundreds of funnels. Each card draws its whole map, so the page shows the most recently updated ones and loads
   // the maps (the heavy part) only for those, unless asked for all of them.
   const PAGE = 24;
@@ -43,7 +45,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   const live = rows.filter((f) => f.status !== "archived"),
     archivedRows = rows.filter((f) => f.status === "archived");
   const picked = showAll ? rows : [...live.slice(0, PAGE), ...archivedRows.slice(0, PAGE)];
-  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
+  const graphQ = showAll ? sb.from("funnels").select("id, graph").eq("client_id", id).is("deleted_at", null) : sb.from("funnels").select("id, graph").in("id", picked.map((f) => f.id));
   const { data: graphRows } = picked.length ? await graphQ : { data: [] as { id: string; graph: unknown }[] };
   const graphs = new Map((graphRows ?? []).map((g) => [g.id, g.graph]));
   const funnels = picked.map((f) => ({ ...f, graph: graphs.get(f.id) ?? null }));

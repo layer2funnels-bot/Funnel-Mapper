@@ -86,13 +86,83 @@ export async function archiveClientAction(id: string, archive: boolean) {
   revalidatePath("/");
 }
 
-export async function deleteClientAction(id: string) {
-  const { sb } = await requireEditor();
-  const { error } = await sb.from("clients").delete().eq("id", uuid.parse(id));
-  if (error) throw new Error(error.message);
+/* ---------------- trash (V2 F6): no time limit, nothing removed automatically ---------------- */
+const ADMINS_ONLY = "Only the workspace owner or an admin can delete forever. Ask one of them, or keep it in Trash.";
+function revalidateLists(clientId?: string) {
   revalidatePath("/clients");
+  revalidatePath("/funnels");
+  revalidatePath("/trash");
   revalidatePath("/");
-  redirect("/clients");
+  if (clientId) revalidatePath(`/clients/${clientId}`);
+}
+
+/** Move a client to Trash. Its funnels go with it (same moment), so restoring the client brings them back. */
+export async function trashClientAction(id: string) {
+  const { sb, user } = await requireEditor();
+  const cid = uuid.parse(id);
+  const at = new Date().toISOString();
+  const { error } = await sb.from("clients").update({ deleted_at: at, deleted_by: user.id }).eq("id", cid).is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  const { error: fErr } = await sb.from("funnels").update({ deleted_at: at, deleted_by: user.id }).eq("client_id", cid).is("deleted_at", null);
+  if (fErr) throw new Error(fErr.message);
+  revalidateLists(cid);
+  redirect("/clients?trashed=1");
+}
+
+/** Move a funnel to Trash (its share links stop working until it is restored). */
+export async function trashFunnelAction(id: string) {
+  const { sb, user } = await requireEditor();
+  const { data, error } = await sb.from("funnels").update({ deleted_at: new Date().toISOString(), deleted_by: user.id }).eq("id", uuid.parse(id)).select("client_id").single();
+  if (error) throw new Error(error.message);
+  revalidateLists(data.client_id);
+}
+
+/** Restore from Trash. A client brings back the funnels that went to Trash with it; a funnel of a client in Trash brings its client back too. */
+export async function restoreAction(kind: "client" | "funnel", id: string): Promise<ActionResult> {
+  const { sb } = await requireEditor();
+  const rid = uuid.parse(id);
+  if (kind === "client") {
+    const { data: c, error } = await sb.from("clients").select("id, deleted_at").eq("id", rid).single();
+    if (error) return { error: error.message };
+    if (c.deleted_at) await sb.from("funnels").update({ deleted_at: null, deleted_by: null }).eq("client_id", rid).eq("deleted_at", c.deleted_at);
+    const { error: e2 } = await sb.from("clients").update({ deleted_at: null, deleted_by: null }).eq("id", rid);
+    if (e2) return { error: e2.message };
+    revalidateLists(rid);
+    return { ok: true };
+  }
+  const { data: f, error } = await sb.from("funnels").update({ deleted_at: null, deleted_by: null }).eq("id", rid).select("client_id").single();
+  if (error) return { error: error.message };
+  await sb.from("clients").update({ deleted_at: null, deleted_by: null }).eq("id", f.client_id).not("deleted_at", "is", null);
+  revalidateLists(f.client_id);
+  return { ok: true };
+}
+
+/** Delete one item forever (owner / admin only; the database refuses anyone else). Only items already in Trash. */
+export async function deleteForeverAction(kind: "client" | "funnel", id: string): Promise<ActionResult> {
+  const { sb, isAdmin } = await requireEditor();
+  if (!isAdmin) return { error: ADMINS_ONLY };
+  const rid = uuid.parse(id);
+  const { error, count } = await sb
+    .from(kind === "client" ? "clients" : "funnels")
+    .delete({ count: "exact" })
+    .eq("id", rid)
+    .not("deleted_at", "is", null);
+  if (error) return { error: error.message };
+  if (!count) return { error: "That item isn’t in Trash any more." };
+  revalidateLists();
+  return { ok: true };
+}
+
+/** Empty Trash: every client and funnel in Trash in this workspace (owner / admin only). */
+export async function emptyTrashAction(): Promise<ActionResult> {
+  const { sb, isAdmin } = await requireEditor();
+  if (!isAdmin) return { error: ADMINS_ONLY };
+  const { error: fErr } = await sb.from("funnels").delete().not("deleted_at", "is", null);
+  if (fErr) return { error: fErr.message };
+  const { error } = await sb.from("clients").delete().not("deleted_at", "is", null);
+  if (error) return { error: error.message };
+  revalidateLists();
+  return { ok: true };
 }
 
 /* ---------------- funnels ---------------- */
@@ -161,14 +231,6 @@ export async function setFunnelStatusAction(id: string, status: string) {
   const { sb } = await requireEditor();
   const s = z.enum(FUNNEL_STATUSES).parse(status);
   const { data, error } = await sb.from("funnels").update({ status: s }).eq("id", uuid.parse(id)).select("client_id").single();
-  if (error) throw new Error(error.message);
-  revalidatePath(`/clients/${data.client_id}`);
-  revalidatePath("/");
-}
-
-export async function deleteFunnelAction(id: string) {
-  const { sb } = await requireEditor();
-  const { data, error } = await sb.from("funnels").delete().eq("id", uuid.parse(id)).select("client_id").single();
   if (error) throw new Error(error.message);
   revalidatePath(`/clients/${data.client_id}`);
   revalidatePath("/");
@@ -365,7 +427,7 @@ export async function createWorkspaceAction(_: ActionResult, fd: FormData): Prom
 }
 
 /* ---------------- products (reusable offers) ---------------- */
-const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick", "service", "digital", "coursep", "coaching", "membership", "oto", "bundle", "coupon", "freeoffer"] as const;
+const OFFER_TYPES = ["checkout", "product", "bump", "upsell", "downsell", "sub", "trial", "plan", "hightick", "service", "digital", "coursep", "coaching", "membership", "oto", "bundle", "coupon", "freeoffer", "onestep", "twostep", "cartoffer"] as const;
 const productSchema = z.object({
   id: z.uuid().optional(),
   client_id: z.uuid().nullable(),

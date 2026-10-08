@@ -14,8 +14,8 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
   const { sb, workspace } = await requireUser();
   const sp = await searchParams;
   const [{ data: funnels }, { data: clients }] = await Promise.all([
-    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").order("updated_at", { ascending: false }),
-    sb.from("clients").select("id, name, currency, archived_at").order("name"),
+    sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }),
+    sb.from("clients").select("id, name, currency, archived_at").is("deleted_at", null).order("name"),
   ]);
   const byClient = Object.fromEntries((clients ?? []).map((c) => [c.id, c]));
   const items: FunnelListItem[] = (funnels ?? [])

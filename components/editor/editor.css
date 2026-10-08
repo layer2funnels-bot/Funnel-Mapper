@@ -7331,3 +7331,11 @@ dialog.fm-sharedlg > p {
 :root[data-theme="light"] .fm-dchip.bad {
   color: #9a3412; /* the leak orange is a fill; as text on white it is darkened */
 }
+
+/* the funnel name field in the top bar has no border at rest, so it shows the Emerald ring when focused */
+.fm-top .fm-fname:focus,
+.fm-top .fm-fname:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+  background: var(--panel2);
+}

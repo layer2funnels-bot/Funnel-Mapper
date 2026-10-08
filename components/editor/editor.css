@@ -7339,3 +7339,27 @@ dialog.fm-sharedlg > p {
   outline-offset: 1px;
   background: var(--panel2);
 }
+
+/* touch targets in the editor chrome: 40px on tablets, 44px on phones */
+@media (max-width: 1023px) {
+  .fm-top .btn,
+  .fm-top .seg button,
+  .fm-stagebar .seg button,
+  .fm-stagebar .btn,
+  .fm-stagebar button {
+    min-height: 40px;
+  }
+  .fm-kpis select {
+    min-height: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-top .btn,
+  .fm-top .seg button,
+  .fm-stagebar .seg button,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-kpis select {
+    min-height: 44px;
+  }
+}

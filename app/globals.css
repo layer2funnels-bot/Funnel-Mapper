@@ -1656,3 +1656,31 @@ dialog.fm-sheetdlg > .body {
 :root[data-theme="light"] .fm-moredetails > summary {
   color: var(--brand-light);
 }
+
+/* Touch targets (V2 responsive checks): 44px on phones, 40px on tablets, for chips, fields and view toggles */
+@media (max-width: 1023px) {
+  .fm-chip,
+  .input,
+  select.input,
+  .seg button {
+    min-height: 40px;
+  }
+  .seg button {
+    min-width: 40px;
+  }
+  select {
+    min-height: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-chip,
+  .input,
+  select.input,
+  select,
+  .seg button {
+    min-height: 44px;
+  }
+  .seg button {
+    min-width: 44px;
+  }
+}

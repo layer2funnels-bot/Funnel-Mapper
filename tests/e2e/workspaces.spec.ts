@@ -27,7 +27,7 @@ test.describe("workspaces", () => {
     await expect(page).toHaveURL("/");
     await expect(page.getByText("Solo Studio").first()).toBeVisible();
     await page.goto("/clients");
-    await expect(page.getByRole("link", { name: /Indie Client/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Indie Client/ }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Second Indie Client/ })).toHaveCount(0);
     // a team funnel URL is simply not found
@@ -35,14 +35,15 @@ test.describe("workspaces", () => {
     expect(res!.status()).toBe(404);
     // their own funnel opens in the editor
     await openEditor(page, INDIE_FUNNEL);
-    await page.goto("/settings");
+    await page.goto("/settings#workspace");
     await expect(page.getByTestId("current-workspace")).toContainText("Private workspace");
     // their own workspace has its own team: only themselves, no Layer2Funnels people
+    await page.goto("/settings#team");
     await expect(page.getByRole("list", { name: "Team members" })).toContainText("solo@independent.test");
     await expect(page.getByRole("list", { name: "Team members" })).not.toContainText("layer2funnels");
     await expect(page.getByRole("heading", { name: "Independent accounts" })).toHaveCount(0);
     await page.goto("/templates");
-    await expect(page.getByRole("heading", { name: "Your templates" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Your templates|^Saved templates|^Team templates/ }).first()).toBeVisible();
     await ctx.close();
   });
 
@@ -58,7 +59,7 @@ test.describe("workspaces", () => {
     test.setTimeout(120_000);
     const email = `indie.${Date.now()}@example.test`;
     const since = Date.now();
-    await page.goto("/settings");
+    await page.goto("/settings#independent");
     const section = page.getByRole("region", { name: "Independent accounts" });
     await section.getByLabel("Email", { exact: true }).fill(email);
     await section.getByLabel("Name (optional)", { exact: true }).fill("Indie Person");
@@ -66,6 +67,7 @@ test.describe("workspaces", () => {
     await section.getByRole("button", { name: "Create independent account" }).click();
     await expect(section.getByText("Account created")).toBeVisible();
     // the team list doesn't gain them
+    await page.goto("/settings#team");
     await expect(page.getByRole("list", { name: "Team members" })).not.toContainText(email);
 
     const { ctx, page: indie, mail } = await acceptInvite(browser, email, since);
@@ -74,7 +76,7 @@ test.describe("workspaces", () => {
     await indie.goto("/clients");
     await expect(indie.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);
     await expect(indie.getByRole("link", { name: /Indie Client/ })).toHaveCount(0);
-    await indie.goto("/settings");
+    await indie.goto("/settings#workspace");
     await expect(indie.getByTestId("current-workspace")).toContainText("Private workspace");
     await ctx.close();
   });
@@ -82,7 +84,7 @@ test.describe("workspaces", () => {
   test("private sign-up link: unknown codes 404; the real one creates an independent workspace", async ({ page, browser }) => {
     test.setTimeout(120_000);
     // admins see the link in Settings
-    await page.goto("/settings");
+    await page.goto("/settings#independent");
     const link = await page.getByTestId("join-url").innerText();
     const path = new URL(link).pathname;
 
@@ -133,7 +135,7 @@ test.describe("invite links and workspace identity", () => {
       await page.getByLabel("Confirm password").fill("fragment-pass-1");
       await page.getByRole("button", { name: "Save password" }).click();
       await expect(page).toHaveURL("/");
-      await page.goto("/settings");
+      await page.goto("/settings#workspace");
       await expect(page.getByTestId("current-workspace")).toContainText("Layer2Funnels team workspace");
       await page.goto("/clients");
       await expect(page.getByRole("link", { name: /Sam Carter/ })).toBeVisible();
@@ -143,12 +145,12 @@ test.describe("invite links and workspace identity", () => {
   }
 
   test("settings and sidebar show the current workspace", async ({ page, browser }) => {
-    await page.goto("/settings");
+    await page.goto("/settings#workspace");
     await expect(page.getByTestId("current-workspace")).toContainText("Layer2Funnels team workspace");
     await expect(page.getByTestId("workspace-kind").first()).toContainText("Team workspace");
     const { ctx, page: solo } = await signIn(browser, "solo@independent.test");
     await expect(solo).toHaveURL("/");
-    await solo.goto("/settings");
+    await solo.goto("/settings#workspace");
     await expect(solo.getByTestId("current-workspace")).toContainText("Private workspace");
     await expect(solo.getByTestId("current-workspace")).not.toContainText("Layer2Funnels");
     await expect(solo.getByTestId("workspace-kind").first()).toContainText("Private workspace");
@@ -172,8 +174,9 @@ test.describe("multiple workspaces", () => {
       // a brand-new workspace has its own (empty) data and only its creator as a member
       await page.goto("/clients");
       await expect(page.getByRole("link", { name: /Indie Client/ })).toHaveCount(0);
-      await page.goto("/settings");
+      await page.goto("/settings#workspace");
       await expect(page.getByTestId("current-workspace")).toContainText(name);
+      await page.goto("/settings#team");
       await expect(page.getByRole("list", { name: "Team members" }).getByRole("listitem")).toHaveCount(1);
       // switch back: the original workspace's data again
       const m2 = page.getByTestId("workspace-switcher").first();
@@ -181,7 +184,7 @@ test.describe("multiple workspaces", () => {
       await m2.getByRole("button", { name: /Solo Studio/ }).click();
       await expect(page.getByTestId("workspace-switcher").first()).toContainText("Solo Studio");
       await page.goto("/clients");
-      await expect(page.getByRole("link", { name: /Indie Client/ })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Indie Client/ }).first()).toBeVisible();
     } finally {
       await ctx.close();
       const { data } = await svc.from("workspaces").select("id").eq("agency_name", name);
@@ -211,7 +214,7 @@ test.describe("editor panels", () => {
     const w0 = (await stage.boundingBox())!.width;
     const edges = await page.locator(".react-flow__edge").count();
 
-    await page.getByRole("button", { name: "Collapse block library" }).click();
+    await page.getByRole("button", { name: "Collapse block library" }).first().click();
     await expect(page.locator("#fm-side")).toBeHidden();
     await expect.poll(async () => (await stage.boundingBox())!.width).toBeGreaterThan(w0 + 200);
     await page.getByRole("button", { name: "Collapse details panel" }).click();
@@ -252,8 +255,8 @@ test.describe("editor panels", () => {
     await page.setViewportSize({ width: 900, height: 1000 });
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await expect(page.getByRole("button", { name: "Collapse block library" })).toBeHidden();
-    await expect(page.getByRole("button", { name: "Collapse details panel" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Collapse block library" })).not.toBeInViewport(); // the drawer is closed
+    await expect(page.getByRole("button", { name: "Collapse details panel" })).not.toBeInViewport();
     await page.getByRole("button", { name: "Show building blocks" }).click();
     await expect(page.locator("#fm-side")).toBeInViewport();
   });

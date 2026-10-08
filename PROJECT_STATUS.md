@@ -12,6 +12,23 @@ Status keys: **PASS** works and is tested · **PARTIAL** exists but falls short 
 - Added: `npm run check:files` (CI), public `/api/version` (checked by the Preview smoke test), LF line endings via `.gitattributes`.
 - Not changed: Vercel settings, domains, Supabase projects, migrations. `workspace_assets` is still unapplied on Demo per the 7 Oct inspection; verify before any migration.
 
+## Deployment status (8 Oct 2026)
+
+- Production (`mapper.layer2funnels.com`, `/api/version`) serves `main` after PRs #20, #21 and #22: the V2 design conversion, the block-delete crash fix, light-theme contrast, unique form ids and the funnel-name focus ring.
+- Migrations applied to the production Supabase project `arwedmqmxrxllytzriat` on 8 Oct with the owner's approval, all additive (no drops, no data deleted): `signup_cleanup`, `workspace_assets`, `trash`, `actuals_source`, `image_limit`. Verified afterwards: `deleted_at` on clients and funnels, `funnel_actuals.source`, `workspace_assets`, and the 100 KB limit on the logos / screenshots / thumbnails buckets.
+- Vercel is Git-connected (project `funnel-mapper-demo`); previews build per push. No second Vercel or Supabase project was created. The empty project `kyhlhacbmlbkiibvpsel` is untouched.
+- Not verified on production: signed-in flows (no production credentials are available to the agent). Signed-in behaviour was verified locally against a production build.
+
+## V2 design conversion (8 Oct 2026)
+
+Converted against `reference/ project/*.dc.html` (boards are visual specs, rendered at 1440 wide).
+
+- **Done:** editor chrome, library (170 blocks, 6 widgets, page/offer windows), objects at every zoom, right panel (Model / Simulate / Track, block tabs, connection, multi-select), floating toolbar and menus, Reports, Share, shared view, presentation, Home, Clients, Client, Funnels, Templates, Settings (one section at a time), New client sheet, light theme, phone top bar, touch targets (40px tablet, 44px phone).
+- **Found and fixed by the E2E run:** editor crash when deleting a block (live on production until PR #21), invisible inline rename on pages and offers at the far zoom, no mouse control to collapse the right panel, Settings showing every section at once, duplicate DOM ids from a second client form, light-theme contrast (Emerald text, leak chips, toolbar, primary button hover), invalid `aria-pressed` on tabs.
+- **Decision for the owner:** the shared client link has no details panel (matches the Shared-view board), so a client with numbers cannot open the Forecast tab. The E2E test was changed to match.
+- **Known gaps:** action diamond shapes, message capsules and some goal-capsule details; the Trash page, States and V2-appearance picker boards were not compared; responsive pass done for 1280, 1024 and 390 only (768 and 430 not compared to the R-* boards); non-desktop Playwright projects were not run.
+- **Tests:** unit 263 pass; lint, typecheck, build and file-integrity pass. Desktop E2E: many tests were updated for the V2 UI; see the latest run result in the pull request.
+
 ## A. Executive summary
 
 **Final V1 completion (3 Oct 2026, branch `claude/funnel-mapper-v1-completion-5r8743`).** Every in-scope V1 requirement of

@@ -14,7 +14,7 @@ test.describe("reports / insights", () => {
     await expect(main.getByRole("heading", { name: "Overview" })).toBeVisible();
     // golden quiz funnel (MASTER_HANDOFF §14): the report agrees with the engine and the KPI bar
     await expect(main.locator(".fm-rkpis").first()).toContainText("£6,032");
-    await expect(main.locator(".fm-rkpis").first()).toContainText("89.1");
+    await expect(main.locator(".fm-rkpis").first()).toContainText(/Customers\s*89\b/);
     await expect(main.locator(".fm-rkpis").first()).toContainText("13.4x");
     await expect(main).toContainText("Key leak: Quiz funnel");
     for (const name of ["Funnel data", "Traffic sources", "Offers & products", "Expenses", "Scenario comparison", "Revenue & profit forecast", "Goals & required numbers", "MRR forecast", "Month-to-month", "Traffic reinvestment", "Published status"]) {

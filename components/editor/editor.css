@@ -7339,3 +7339,121 @@ dialog.fm-sharedlg > p {
   outline-offset: 1px;
   background: var(--panel2);
 }
+
+/* touch targets in the editor chrome: 40px on tablets, 44px on phones */
+@media (max-width: 1023px) {
+  .fm-top .btn,
+  .fm-top .seg button,
+  .fm-stagebar .seg button,
+  .fm-stagebar .btn,
+  .fm-stagebar button {
+    min-height: 40px;
+  }
+  .fm-kpis select {
+    min-height: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-top .btn,
+  .fm-top .seg button,
+  .fm-stagebar .seg button,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-kpis select {
+    min-height: 44px;
+  }
+}
+
+/* touch targets, second pass: fixed heights in the older rules need height:auto to let the minimum win */
+@media (max-width: 1023px) {
+  .fm-top .btn,
+  .fm-top .fm-cbtn,
+  .fm-top .btn.tidy,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-ftb button,
+  .fm-kpis select,
+  .fm-insp select,
+  .fm-scen {
+    height: auto;
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-top .btn,
+  .fm-top .fm-cbtn,
+  .fm-stagebar .btn,
+  .fm-stagebar button,
+  .fm-kpis select,
+  .fm-insp select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* touch targets, third pass: every button and select in the editor shell meets the minimum, whatever older rule fixed its height */
+@media (max-width: 1023px) {
+  .fm-editor header button,
+  .fm-editor header a.btn,
+  .fm-editor header select,
+  .fm-layers > .btn,
+  .fm-libbtn,
+  .fm-rmain select,
+  .fm-editor .fm-kpis select,
+  .fm-editor .fm-insp select {
+    height: auto !important;
+    min-height: 40px !important;
+    min-width: 40px !important;
+  }
+}
+@media (max-width: 767px) {
+  .fm-editor header button,
+  .fm-editor header a.btn,
+  .fm-editor header select,
+  .fm-layers > .btn,
+  .fm-libbtn,
+  .fm-rmain select,
+  .fm-editor .fm-kpis select,
+  .fm-editor .fm-insp select {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}
+
+/* renaming a page or offer at the far zoom: the name field must be visible while it is being edited */
+.fm-node.zb-far.fam-page .pgo-info:has(.fm-rename),
+.fm-node.zb-far.fam-offer .pgo-info:has(.fm-rename) {
+  display: block !important;
+  min-width: 120px;
+}
+
+/* collapse button of the right panel (desktop): small, top right, clear of the panel headers */
+@media (min-width: 1024px) {
+  .fm-insp {
+    position: relative;
+  }
+}
+.fm-icollapse {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fm-icollapse:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+.fm-insp > .fm-scopehead,
+.fm-insp > header {
+  padding-right: 44px;
+}

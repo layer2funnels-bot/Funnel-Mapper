@@ -88,7 +88,7 @@ test.describe("Quick Add adapts to the screen", () => {
     await expect(quick.getByText("Recent")).toBeVisible();
     // the categories are reachable with Tab, and focus moving inside the box does not close it
     await page.keyboard.press("Tab");
-    await expect(quick.getByRole("button", { name: "All" })).toBeFocused();
+    await expect(quick.getByRole("button", { name: "All", exact: true })).toBeFocused();
     await expect(quick).toBeVisible();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter"); // first category chip

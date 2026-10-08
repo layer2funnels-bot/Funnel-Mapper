@@ -63,7 +63,7 @@ test.describe("Widgets", () => {
     await expect(get("wa")).toContainText("60.3%");
     await expect(get("wa")).toContainText("Month 12");
     await expect(get("wa")).toContainText("subscribers");
-    await expect(get("wa")).toContainText("89.1"); // customers
+    await expect(get("wa")).toContainText(/Customers \/ mo\s*89/); // customers (whole people)
     await expect(get("wa")).toContainText("3.6%"); // conversion
     // Trend with no actuals says so rather than showing a made-up comparison
     await expect(get("wb")).toContainText("no actuals yet");

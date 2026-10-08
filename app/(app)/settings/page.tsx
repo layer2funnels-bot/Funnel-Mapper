@@ -32,14 +32,14 @@ export default async function SettingsPage() {
       <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-10">
       <SettingsNav sections={sections} />
       <div id="fm-settings" data-pane="profile" className="fm-panes min-w-0">
-      <section id="profile" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="profile-h">
+      <section id="profile" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="profile-h">
         <h2 id="profile-h" className="mb-4 font-display text-lg font-bold">
           Your profile
         </h2>
         <ProfileForm fullName={profile.full_name} email={user.email ?? ""} role={role} />
       </section>
 
-      <section id="workspace" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="brand-h">
+      <section id="workspace" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="brand-h">
         <h2 id="brand-h" className="mb-1 font-display text-lg font-bold">
           Workspace
         </h2>
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      <section id="team" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="team-h">
+      <section id="team" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="team-h">
           <h2 id="team-h" className="mb-1 font-display text-lg font-bold">
             Team
           </h2>
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
       </section>
 
       {isTeam && isOwner && (
-        <section id="independent" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="indep-h">
+        <section id="independent" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="indep-h">
           <h2 id="indep-h" className="mb-1 font-display text-lg font-bold">
             Independent accounts
           </h2>
@@ -125,7 +125,7 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      <section id="appearance" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="look-h">
+      <section id="appearance" className="fm-pane card mb-6 scroll-mt-24 p-6" aria-labelledby="look-h">
         <h2 id="look-h" className="mb-1 font-display text-lg font-bold">
           Appearance
         </h2>

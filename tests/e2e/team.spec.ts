@@ -11,9 +11,11 @@ test.describe("team workspace", () => {
     await expect(page).toHaveURL("/");
     await page.goto("/clients");
     await expect(page.getByRole("link", { name: /Sam Carter/ })).toBeVisible();
-    await page.goto("/settings");
+    await page.goto("/settings#team");
     await expect(page.getByRole("list", { name: "Team members" })).toContainText("demo@layer2funnels.test");
+    await page.goto("/settings#workspace");
     await expect(page.getByText("Only admins can change it.")).toBeVisible();
+    await page.goto("/settings#team");
     await expect(page.getByRole("button", { name: "Deactivate" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Send invite" })).toHaveCount(0);
     await ctx.close();
@@ -31,7 +33,7 @@ test.describe("team workspace", () => {
   test("admin invites a teammate, who accepts and gets in; admin can deactivate and reactivate", async ({ page, browser }) => {
     test.setTimeout(120_000);
     const email = `new.${Date.now()}@layer2funnels.test`;
-    await page.goto("/settings");
+    await page.goto("/settings#team");
     const team = page.getByRole("region", { name: "Team" });
     await team.getByLabel("Email", { exact: true }).fill(email);
     await team.getByLabel("Name (optional)").fill("New Teammate");
@@ -76,7 +78,7 @@ test.describe("team workspace", () => {
     const c = await svc.from("clients").insert({ name: `Leaver client ${Date.now()}`, owner_id: id }).select("id").single();
     expect(c.error).toBeNull();
 
-    await page.goto("/settings");
+    await page.goto("/settings#team");
     const row = page.getByRole("listitem").filter({ hasText: email });
     page.once("dialog", (d) => d.accept());
     await row.getByRole("button", { name: "Remove" }).click();

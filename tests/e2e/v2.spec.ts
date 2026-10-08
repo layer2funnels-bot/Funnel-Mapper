@@ -18,8 +18,8 @@ test.describe("V2 editor interactions", () => {
     const box = (await tb.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(stage.x);
     expect(box.x + box.width).toBeLessThanOrEqual(stage.x + stage.width + 1);
-    await tb.getByRole("button", { name: "Analytics", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "Analytics" })).toHaveAttribute("aria-selected", "true");
+    await tb.getByRole("button", { name: "Plan", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Plan" })).toHaveAttribute("aria-selected", "true");
     await tb.getByRole("button", { name: "Style", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Style" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: "Details" }).click();
@@ -122,13 +122,13 @@ test.describe("V2 editor interactions", () => {
     // one undo goes back to the quiz
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 600 } });
     await page.keyboard.press(`${mod}+z`);
-    await expect(node(page, "Quiz funnel").locator(".fm-ntitle small")).not.toContainText("Survey");
+    await expect(node(page, "Quiz funnel").locator(".pgo-cap, .fm-ntitle small").first()).not.toContainText("Survey");
   });
 
   test("Wait: duration + unit, live label, invalid state, no analytics", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Wait / delay", exact: true }).click();
+    await (await paletteItem(page, "Wait / delay")).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.getByRole("tab", { name: "Analytics" })).toBeDisabled();
     await page.getByLabel("Wait for").fill("2");
@@ -213,7 +213,7 @@ test.describe("V2 pages", () => {
     const panel = page.getByRole("complementary", { name: /^Preview:/ });
     await expect(panel).toBeVisible();
     await expect(panel.getByRole("button", { name: "Use template" })).toBeVisible();
-    await expect(panel.getByRole("button", { name: "Use for client" })).toBeVisible();
+    await expect(panel.getByLabel("Client for this template")).toBeVisible();
     await page.goto("/settings");
     const nav = page.getByRole("navigation", { name: "Settings sections" });
     await expect(nav.getByRole("link", { name: "Team" })).toBeVisible();
@@ -317,10 +317,11 @@ test.describe("V2 finishing pass", () => {
   test("platform blocks carry their brand mark on the map and in the library; others keep their icon", async ({ page }) => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark")).toHaveCount(1);
+    // V2: platform blocks use the owner's brand art on the map; pages and offers keep their window
+    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark, .fm-nicon img")).toHaveCount(1);
     await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
     await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
-    await expect(page.locator(".fm-pal .pi.brand svg.fm-bmark").first()).toBeVisible();
+    await expect(page.locator(".fm-sb-t svg.fm-bmark, .fm-sb-t img").first()).toBeVisible();
   });
 
   test("tooltips: icon-only buttons name themselves on hover; loading states announce themselves", async ({ page }) => {
@@ -360,7 +361,7 @@ test.describe("V2 Simulate", () => {
     // 20% fewer conversions
     await panel.getByLabel("Conversion rates").fill("0.8");
     // headline numbers moved against the baseline (the KPI strip and the panel agree, both from the engine)
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(kpis.locator(".fm-dchip.bad").first()).toBeVisible();
     const key = panel.getByRole("group", { name: "Revenue, profit and ROAS" });
     await expect(key.locator(".fm-dchip.bad")).toHaveCount(3); // revenue, profit and ROAS all fell
@@ -420,7 +421,7 @@ test.describe("V2 Simulate", () => {
     await panel.getByRole("button", { name: "Done" }).click();
     await expect(page.getByLabel("Simulate", { exact: true })).toHaveCount(0);
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
-    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText("£6,032");
+    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText(/Revenue\s*£6,032/);
     // view-only editors don't get Simulate
     await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByLabel("View only (lock editing)").check();
@@ -470,7 +471,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await panel.getByLabel("Conversion rates").fill("0.8");
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(node(page, "Paid membership")).not.toContainText("£4,199");
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
     // Before: the golden numbers everywhere, no change chips, a badge on the canvas
@@ -482,7 +483,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     await expect(page.locator(".fm-before-badge")).toBeVisible();
     // and After brings the changes back
     await panel.getByRole("button", { name: "After", exact: true }).click();
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(page.locator(".fm-before-badge")).toHaveCount(0);
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
     // the funnel itself was never changed by looking at Before
@@ -523,8 +524,10 @@ test.describe("V2 QA regressions", () => {
     const p = await ctx.newPage();
     await p.goto(`/s/${link.data!.token}`);
     await expect(p.locator(".react-flow__node").first()).toBeVisible();
-    await expect(p.getByRole("tab", { name: "Forecast" })).toBeVisible();
+    // V2 shared view: the map and the KPI strip; the team's Actuals are never part of it
+    await expect(p.getByRole("contentinfo", { name: "Funnel numbers" })).toBeVisible();
     await expect(p.getByRole("tab", { name: "Actuals" })).toHaveCount(0);
+    expect(await p.locator("body").innerText()).not.toMatch(/Actuals/);
     await ctx.close();
   });
 
@@ -534,7 +537,7 @@ test.describe("V2 QA regressions", () => {
     const p = await ctx.newPage();
     await p.goto(`/funnels/${id}`);
     await expect(p.locator(".fm-editor")).toBeVisible();
-    await p.getByRole("button", { name: "More" }).click();
+    await p.getByRole("button", { name: "More", exact: true }).click();
     for (const name of ["Present", "Version history", "Simulate…", "Tidy up"]) await expect(p.getByRole("menuitem", { name, exact: true }), name).toHaveCount(1);
     await p.keyboard.press("Escape");
     // a wide table does not fit a phone: cards unless the person chose otherwise

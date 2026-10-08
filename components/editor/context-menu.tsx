@@ -104,6 +104,7 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
         },
         ...(flow
           ? ([
+              { label: "Analytics", icon: "chart", run: () => (selectNodes([node.id]), setInspTab("analytics"), showInspector()) },
               { label: "Add internal note", icon: "note", disabled: ro, sep: true, run: () => (selectNodes([node.id]), setInspTab("plan"), showInspector()) },
               { label: "Set as goal", icon: "target", disabled: ro, run: () => (selectNodes([node.id]), setInspTab("analytics"), showInspector(), showToast("Set the target under “Goal for this step” in Analytics")) },
               { label: "Open in Reports", icon: "chart", run: () => (setReportFocus(node.id), setSection("data")) },

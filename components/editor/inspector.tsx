@@ -95,8 +95,8 @@ function Actions({ ro, n }: { ro: boolean; n: FunnelNode }) {
 
 const STATUS_PILL: Record<StepStatus, string> = { planned: "Planned", building: "In progress", done: "Live" };
 
-/** Scope header: "← Funnel" back link, then the block's name alone on the first line, type + build status on the second. */
-function ScopeHeader({ title, sub, status, locked }: { title: string; sub: string; status?: StepStatus; locked?: boolean }) {
+/** Scope header: "← Funnel" back link, then the block's name alone on the first line, type and the build-status select on the second. */
+function ScopeHeader({ title, sub, status, locked, onStatus }: { title: string; sub: string; status?: StepStatus; locked?: boolean; onStatus?: (s: StepStatus) => void }) {
   return (
     <header className="fm-scopehead">
       <button type="button" className="fm-back" onClick={clearSelection}>
@@ -105,7 +105,22 @@ function ScopeHeader({ title, sub, status, locked }: { title: string; sub: strin
       <h3 title={title}>{title}</h3>
       <p className="sub">
         <span>{sub}</span>
-        {status && <span className={`fm-pill ${status}`}>{STATUS_PILL[status]}</span>}
+        {status && onStatus ? (
+          <label className={`fm-pillsel ${status}`} title="Build status: planned, in progress or live (shown in Reports → Published status)">
+            <span className="sr-only">Build status</span>
+            <i aria-hidden="true" />
+            <select value={status} onChange={(e) => onStatus(e.target.value as StepStatus)}>
+              {STEP_STATUSES.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <Icon name="chevronDown" size={12} />
+          </label>
+        ) : (
+          status && <span className={`fm-pill ${status}`}>{STATUS_PILL[status]}</span>
+        )}
         {locked && <span className="fm-pill lock">Locked</span>}
       </p>
     </header>
@@ -130,7 +145,7 @@ function NodeInspector({ n }: { n: FunnelNode }) {
   const choose = setInspTab;
   return (
     <>
-      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} />
+      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} onStatus={ro || n.locked ? undefined : (v) => updateNode(n.id, { status: v })} />
       <div className="fm-insp-tabs" role="tablist" aria-label="Element panels">
         {tabs.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => choose(k)}>
@@ -312,21 +327,8 @@ function NodeDetails({ n }: { n: FunnelNode }) {
           {T.cat === "offer" && <OfferFields n={n} C={C} />}
 
           {baseOf(n.type) === "goal" && !shared && <TextField label="What counts as done (internal)" value={n.desc ?? ""} placeholder="e.g. Booked a call" onChange={(v) => updateNode(n.id, { desc: v })} />}
-          {!shared && (
-            <Field label="Build status" help="Track which steps are planned, in progress or live. Shown in Reports → Published status.">
-              {(id) => (
-                <select id={id} className="input" value={n.status ?? "planned"} onChange={(e) => updateNode(n.id, { status: e.target.value as StepStatus })}>
-                  {STEP_STATUSES.map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Field>
-          )}
           <NodeStats n={n} />
-          {baseOf(n.type) !== "goal" && !shared && <InternalNotes n={n} />}
+          {flowish(n) && <Paths n={n} />}
         </>
       )}
       <Actions ro={ro} n={n} />
@@ -534,6 +536,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
   if (T.cat === "traffic")
     return (
       <StatBox
+        title="This month"
         items={[
           ["Visitors", nf(r.out)],
           ["Spend", m(r.spend)],
@@ -545,6 +548,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
     const v = offerVals(n, wp);
     return (
       <StatBox
+        title="This month"
         items={[
           ["Reaching offer", people(r.inflow)],
           ["Buying", people(r.out)],
@@ -566,6 +570,7 @@ function NodeStats({ n }: { n: FunnelNode }) {
     no = T.ports?.[1] ?? "Dropping off";
   return (
     <StatBox
+      title="Flow this month"
       items={[
         ["Arriving", people(r.inflow)],
         [yes, people(r.out)],
@@ -573,6 +578,48 @@ function NodeStats({ n }: { n: FunnelNode }) {
         ...(T.cat === "action" ? ([["Cost", m(r.cost)]] as [string, string][]) : []),
       ]}
     />
+  );
+}
+
+const flowish = (n: FunnelNode) => !isAnnot(n.type) && n.type !== "widget";
+
+/** Where this block's people go: one line per exit ("Yes → Monthly coaching"), and the exits that aren't connected yet. */
+function Paths({ n }: { n: FunnelNode }) {
+  const T = typeOf(n.type);
+  const edges = useEditor((s) => s.edges);
+  const nodes = useEditor((s) => s.nodes);
+  const [yes, no] = T.ports ?? ["Yes", "No"];
+  const { hasAlt } = portsFor(n.type);
+  const out = edges.filter((e) => e.from === n.id);
+  const to = (e: FunnelEdge) => nodes.find((x) => x.id === e.to)?.name ?? "Unknown step";
+  const rows: { key: string; label: string; alt: boolean; targets: FunnelEdge[] }[] = [
+    { key: "main", label: T.cat === "traffic" ? "Sends people to" : yes, alt: false, targets: out.filter((e) => e.port !== "alt") },
+    ...(hasAlt ? [{ key: "alt", label: no, alt: true, targets: out.filter((e) => e.port === "alt") }] : []),
+  ];
+  return (
+    <section className="fm-flowsec">
+      <div className="fm-sh">
+        <h4>Paths</h4>
+      </div>
+      {rows.map((r) => (
+        <div className="fm-path" key={r.key}>
+          <span className={r.alt ? "no" : "yes"}>
+            {r.label} <Icon name="arrow" size={12} />
+          </span>
+          {r.targets.length ? (
+            <span className="to">
+              {r.targets.map((e) => (
+                <button key={e.id} type="button" onClick={() => selectNodes([e.to])} title="Select this step">
+                  {to(e)}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <span className="none">Not connected</span>
+          )}
+        </div>
+      ))}
+    </section>
   );
 }
 

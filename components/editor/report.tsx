@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { money, nf, pct, ratio, sym, people } from "@/lib/format";
+import type { IconName, UiIconName } from "@/lib/icons";
+import { money, nf, pct, perSuffix, ratio, sym, people } from "@/lib/format";
 import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
 import { healthChecks, performanceChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
@@ -11,8 +12,6 @@ import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
 import { formulaFor, type FigureKey } from "@/lib/math-explain";
-import { Finding } from "@/components/finding";
-import { leakFinding } from "@/lib/findings";
 
 /** Funnel scope (nothing selected): three groups, in the order of the product loop. Tab keys are unchanged. */
 const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
@@ -41,28 +40,35 @@ const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
   },
 ];
 
+const TAB_ICON: Record<string, IconName | UiIconName> = { math: "grid", steps: "list", sources: "megaphone", costs: "wallet", plan: "sliders", scenarios: "layers", forecast: "chart", actuals: "check" };
+
 export function Report() {
   const tab = useEditor((s) => s.tab);
+  const name = useEditor((s) => s.name);
   // Planned vs actual numbers belong to the team: a share link never shows (or fetches) them
   const shared = useEditor((s) => s.shared);
   const groups = shared ? GROUPS.map((g) => ({ ...g, tabs: g.tabs.filter(([k]) => k !== "actuals") })).filter((g) => g.tabs.length) : GROUPS;
+  const group = groups.find((g) => g.tabs.some(([k]) => k === tab)) ?? groups[0];
   return (
     <>
-      <h3 className="fm-scope">Funnel</h3>
-      <div className="fm-groups" role="tablist" aria-label="Funnel tools">
+      <header className="fm-scopehead fm-fscope">
+        <span className="eyebrow">Funnel</span>
+        <h3 title={name}>{name}</h3>
+        <p className="sub">Nothing selected — click a block to edit it.</p>
+      </header>
+      <div className="seg full fm-groupseg" role="tablist" aria-label="Funnel tools">
         {groups.map((g) => (
-          <div className="fm-group" key={g.name}>
-            <span className="gname" aria-hidden="true">
-              {g.name}
-            </span>
-            <div className="gtabs">
-              {g.tabs.map(([k, l]) => (
-                <button key={k} role="tab" id={`tab-${k}`} aria-controls="rbody" aria-selected={tab === k} onClick={() => setTab(k)}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button key={g.name} type="button" role="tab" aria-selected={g.name === group.name} aria-pressed={g.name === group.name} onClick={() => setTab(g.tabs[0][0])}>
+            {g.name}
+          </button>
+        ))}
+      </div>
+      <div className="fm-subnav" role="tablist" aria-label={`${group.name} tools`}>
+        {group.tabs.map(([k, l]) => (
+          <button key={k} role="tab" id={`tab-${k}`} aria-controls="rbody" aria-selected={tab === k} onClick={() => setTab(k)}>
+            <Icon name={TAB_ICON[k]} size={14} />
+            {l}
+          </button>
         ))}
       </div>
       <div id="rbody" role="tabpanel" aria-labelledby={`tab-${tab}`}>
@@ -125,27 +131,56 @@ function MathTab() {
     ["Goal completions", people(R.goals), "People reaching Goal blocks"],
     ...(R.oneTime > 0 ? ([["Payback period", Number.isFinite(R.payback) ? `${nf(R.payback, 1)} periods` : "Never", `Time to earn back ${m(R.oneTime)} of one-time costs`]] as [string, string, string][]) : []),
   ];
+  const main = rows.filter(([a]) => ["Revenue", "Ad spend", "Other costs", "Profit"].includes(a));
+  const more = rows.filter(([a]) => !["Revenue", "Ad spend", "Other costs", "Profit"].includes(a));
+  const unit = perSuffix(1).replace("/ ", "per ").replace("per mo", "per month");
+  const line = ([a, b, c]: [string, React.ReactNode, string]) => {
+    const f = FIGURE_KEYS[a] ? formulaFor(FIGURE_KEYS[a], R, cur) : null;
+    return (
+      <div className="fm-mrow" key={a}>
+        <span className="k">
+          {a}
+          {f && (
+            <button type="button" className="fm-why" aria-expanded={why === a} aria-label={`How ${a} is worked out`} title="Show the formula" onClick={() => setWhy(why === a ? null : a)}>
+              ?
+            </button>
+          )}
+        </span>
+        <b>{b}</b>
+        {(why === a || !f) && <small>{f && why === a ? f.words : c}</small>}
+        {f && why === a && <span className="fm-whysum">{f.sum}</span>}
+      </div>
+    );
+  };
   return (
     <>
       {!shared && (
-        <section className={`fm-health${w.length ? " warn" : ""}`} aria-label="Model checks">
-          <h4>Model checks · {w.length === 0 ? "All clear" : `${w.length} to fix`}</h4>
+        <section className="fm-sec fm-checks" aria-label="Model checks">
+          <div className="fm-sh">
+            <h4>Checks · {w.length === 0 ? "All clear" : `${w.length} to fix`}</h4>
+            {w.some((c) => c.nodeId) && (
+              <button type="button" className="fm-sa" onClick={() => focus(w.find((c) => c.nodeId)!.nodeId!)}>
+                Fix in order
+              </button>
+            )}
+          </div>
           {w.length === 0 ? (
-            <p className="ok">
+            <p className="fm-ok">
               <Icon name="check" size={14} /> The map is connected and set up.
             </p>
           ) : (
-            <ul>
+            <ul className="fm-chklist">
               {w.map((c) => (
                 <li key={c.id}>
                   {c.nodeId ? (
-                    <button type="button" onClick={() => focus(c.nodeId!)} title="Select this block and zoom to it">
-                      <Icon name="alert" size={14} />
+                    <button type="button" className="fm-chkrow" onClick={() => focus(c.nodeId!)} title="Select this block and zoom to it">
+                      <i className="dot" aria-hidden="true" />
                       <span>{c.text}</span>
+                      <Icon name="chevronRight" size={14} />
                     </button>
                   ) : (
-                    <span className="plain">
-                      <Icon name="alert" size={14} />
+                    <span className="fm-chkrow plain">
+                      <i className="dot" aria-hidden="true" />
                       <span>{c.text}</span>
                     </span>
                   )}
@@ -153,21 +188,13 @@ function MathTab() {
               ))}
             </ul>
           )}
-          <h4 className="fm-health-subhead">Performance · Biggest leak</h4>
-          {performance.length === 0 ? (
-            <p className="ok"><Icon name="check" size={14} />{R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}</p>
-          ) : (
-            <div className="grid gap-2">
-              {performance.map((item) => (
-                <Finding key={item.id} f={leakFinding(item, cur)} compact actions={[{ label: "Show on map", run: () => focus(item.nodeId!) }]} />
-              ))}
-            </div>
-          )}
         </section>
       )}
-      <fieldset disabled={ro} className="m-0 border-0 p-0">
-        <div className="field">
-          <span className="lbl">Count revenue as</span>
+      <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+        <section className="fm-sec">
+          <div className="fm-sh">
+            <h4>Count revenue as</h4>
+          </div>
           <Seg
             label="Count revenue as"
             value={basis}
@@ -177,32 +204,50 @@ function MathTab() {
             ]}
             onChange={(v) => setSettings({ basis: v })}
           />
-        </div>
+        </section>
       </fieldset>
-      <div>
-        {rows.map(([a, b, c]) => {
-          const f = FIGURE_KEYS[a] ? formulaFor(FIGURE_KEYS[a], R, cur) : null;
-          return (
-            <div className="rline" key={a}>
-              <span>
-                {a}
-                {f && (
-                  <button type="button" className="fm-why" aria-expanded={why === a} aria-label={`How ${a} is worked out`} title="Show the formula" onClick={() => setWhy(why === a ? null : a)}>
-                    ?
-                  </button>
-                )}
-              </span>
-              <b>{b}</b>
-              <small>{f && why === a ? f.words : c}</small>
-              {f && why === a && <span className="fm-whysum">{f.sum}</span>}
-            </div>
-          );
-        })}
-      </div>
-      <h4>Fixed costs</h4>
-      <Field label={`Other costs per period (${sym(cur).trim()})`} help="Software, studio, staff. Included in profit and break-even numbers. Itemise them in the Costs tab.">
-        {(id) => <NumInput id={id} value={fixed} min={0} disabled={ro} onChange={(v) => setSettings({ fixed: v })} />}
-      </Field>
+      <section className="fm-sec">
+        <div className="fm-sh">
+          <h4>Money · {unit}</h4>
+          {basis === "ltv" && <span className="fm-ltv">LTV</span>}
+        </div>
+        {main.map(line)}
+        <details className="fm-more">
+          <summary>More numbers</summary>
+          {more.map(line)}
+        </details>
+      </section>
+      {!shared && (
+        <section className="fm-sec">
+          <div className="fm-sh">
+            <h4>Biggest leak</h4>
+            {performance[0]?.nodeId && (
+              <button type="button" className="fm-sa" onClick={() => focus(performance[0].nodeId!)}>
+                Locate
+              </button>
+            )}
+          </div>
+          {performance.length === 0 ? (
+            <p className="fm-ok">
+              <Icon name="check" size={14} /> {R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}
+            </p>
+          ) : (
+            performance.map((item) => (
+              <p className="fm-leakp" key={item.id}>
+                <b>{item.text}</b> — {people(item.lost)} of {people(item.inflow)} people ({pct(item.dropPct)}) {item.rank === "largest-loss" ? "don’t continue" : "don’t continue, the weakest step"}. 10% better here adds about <b>{m(item.profitGain)} / mo</b>.
+              </p>
+            ))
+          )}
+        </section>
+      )}
+      <section className="fm-sec">
+        <div className="fm-sh">
+          <h4>Fixed costs</h4>
+        </div>
+        <Field label={`Other costs per period (${sym(cur).trim()})`} help="Software, studio, staff. Included in profit and break-even numbers. Itemise them in the Costs tab.">
+          {(id) => <NumInput id={id} value={fixed} min={0} disabled={ro} onChange={(v) => setSettings({ fixed: v })} />}
+        </Field>
+      </section>
     </>
   );
 }

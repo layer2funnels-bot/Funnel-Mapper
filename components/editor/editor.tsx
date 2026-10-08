@@ -214,7 +214,15 @@ function EditorInner(props: EditorProps) {
   }, [manage, props.viewer, funnel.id]);
 
   // desktop: collapse the block library / details panel so the canvas gets the space (remembered with the view options)
-  const collapsed = { side: opts.hideSide, insp: opts.hideInsp };
+  // a client opening a share link sees the map full width; the panel (numbers, comments) opens from "Comments" and is never saved as a view option
+  const [viewerPanel, setViewerPanel] = useState(false);
+  const clientView = sharedView && !share?.canEdit;
+  const picked = useEditor((s) => s.selNodes.length > 0 || !!s.selEdge);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- picking a block on the map opens its panel for the client
+    if (clientView && picked) setViewerPanel(true);
+  }, [clientView, picked]);
+  const collapsed = { side: opts.hideSide || clientView, insp: clientView ? !viewerPanel : opts.hideInsp };
   const simOn = useEditor((s) => !!s.simBase);
   const simBefore = useEditor((s) => s.simBefore);
   const actualView = useEditor((s) => s.actualView);
@@ -623,7 +631,7 @@ function EditorInner(props: EditorProps) {
 
   const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
   const canEdit = manage || !!share?.canEdit;
-  const cls = ["fm-editor", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", sharedView && band === "phone" && hasWidgets && !reports && "fm-has-shared-wg", readOnly && "fm-readonly"].filter(Boolean).join(" ");
+  const cls = ["fm-editor", clientView && "fm-clientview", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", sharedView && band === "phone" && hasWidgets && !reports && "fm-has-shared-wg", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
   const fileMenu = (close: () => void) => (
             <>
@@ -946,9 +954,14 @@ function EditorInner(props: EditorProps) {
             )}
           </>
         )}
+        {mode === "share" && clientView && share?.allowComments && (
+          <button type="button" className="btn" aria-pressed={viewerPanel} onClick={() => (setPanel("comments"), setViewerPanel((v) => !v))}>
+            <Icon name="comment" size={15} /> <span>Comments</span>
+          </button>
+        )}
         {mode === "share" && (
           <button type="button" className="btn" onClick={() => setPresenting(true)} disabled={!hasNodes}>
-            <Icon name="play" /> <span className="fm-hide-sm">Present</span>
+            <Icon name="play" /> <span className="fm-hide-sm">{clientView ? "Walk me through" : "Present"}</span>
           </button>
         )}
         {/* below 1280: comments, history and present move into the overflow menu; on a phone it holds most of the bar */}
@@ -1106,7 +1119,7 @@ function EditorInner(props: EditorProps) {
         )}
       </section>
 
-      {collapsed.insp && !reports && (
+      {collapsed.insp && !reports && !clientView && (
         <nav className="fm-irail" aria-label="Details panel (collapsed)">
           <button type="button" aria-label="Expand details panel" title="Show details panel (])" onClick={() => togglePanel("insp", false)}>
             <Icon name="chevronLeft" size={15} />

@@ -4691,8 +4691,10 @@ dialog.fm-sharedlg {
   border-color: var(--brand);
   opacity: 1;
 }
+/* read-only: the ports are invisible but keep their place, so lines still start and end on the blocks */
 .fm-readonly .react-flow__handle.fm-port.side {
-  display: none;
+  opacity: 0 !important;
+  pointer-events: none;
 }
 @media (pointer: coarse) {
   .fm-stage .react-flow__handle.fm-port.side::after {
@@ -7196,4 +7198,55 @@ dialog.fm-sharedlg > p {
 .fm-present .fm-zoom,
 .fm-present .fm-legend {
   display: none !important;
+}
+
+/* a client's share view: the map full width, a clean header, the panel only when asked for */
+@media (min-width: 1280px) {
+  .fm-editor.fm-clientview {
+    grid-template-columns: 0 0 minmax(0, 1fr) 320px;
+  }
+  .fm-editor.fm-clientview.fm-collapse-insp {
+    grid-template-columns: 0 0 minmax(0, 1fr) 0;
+  }
+  .fm-clientview .fm-rail,
+  .fm-clientview .fm-side {
+    display: none;
+  }
+}
+.fm-clientview .fm-top {
+  height: 64px;
+  min-height: 64px;
+  padding: 0 24px;
+}
+.fm-clientview .fm-top .fm-fname {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ports of the share-logic blocks (condition, split): the design's plain hollow circle, bordered in the Yes / No colour only when it matters */
+.fm-stage .react-flow__handle.fm-port:not(.side) {
+  width: 12px;
+  height: 12px;
+  background: var(--bg);
+  border: 2px solid #64748b;
+}
+.fm-stage .react-flow__handle.fm-port.in {
+  left: -7px;
+}
+.fm-stage .react-flow__handle.fm-port.out {
+  right: -7px;
+}
+.fm-stage .react-flow__handle.fm-port.alt {
+  bottom: -7px;
+  border-color: #64748b;
+}
+.fm-stage .react-flow__handle.fm-port.out:hover,
+.fm-stage .react-flow__handle.fm-port.alt:hover {
+  background: var(--bg);
+  border-color: var(--brand);
+}
+.fm-readonly .react-flow__handle.fm-port:not(.side) {
+  opacity: 0;
 }

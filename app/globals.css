@@ -46,6 +46,7 @@
   --chart-2: #ea580c;
   --chart-3: #3b82f6;
   --chart-4: #b45309;
+  --chart-5: #34d399; /* light Emerald: second series (profit, leads) */
   --alt: var(--lost);
   --backdrop: rgba(2, 6, 23, 0.6);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -94,6 +95,7 @@
   --chart-2: #c2410c;
   --chart-3: #2563eb;
   --chart-4: #a16207;
+  --chart-5: #10b981;
   --alt: #c2410c;
   --backdrop: rgba(15, 23, 42, 0.45);
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
@@ -1686,4 +1688,43 @@ dialog.fm-sheetdlg > .body {
 }
 :root[data-theme="light"] dialog.fm-sheetdlg {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+/* menus never outgrow the screen: long ones scroll inside themselves (the Funnel and More menus had unreachable items) */
+.menu-pop {
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Templates: the preview docks from 1280px; below that it is a drawer that opens when a template is tapped */
+.fm-tplclose {
+  display: none;
+}
+@media (max-width: 1279px) {
+  .fm-tplpanel {
+    display: none;
+  }
+  .fm-tplpanel[data-open="true"] {
+    display: block;
+  }
+  .fm-tplclose {
+    display: inline-grid;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    z-index: 2;
+  }
+}
+
+/* light theme: orange text on white is darkened (the leak orange is a fill colour) */
+:root[data-theme="light"] .fm-path-no,
+:root[data-theme="light"] .fm-paths a.no,
+:root[data-theme="light"] .fm-paths .no {
+  color: #c2410c;
+}
+:root[data-theme="light"] .fm-path .no {
+  color: #c2410c;
 }

@@ -7514,3 +7514,82 @@ dialog.fm-sharedlg > p {
     overflow-x: auto;
   }
 }
+
+/* top bar, tablet and phone: touch minimums must not squeeze controls out of shape (they shrank the scenario pill to a 40px circle) */
+@media (max-width: 1023px) {
+  .fm-top .fm-scen {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 150px;
+    white-space: nowrap;
+  }
+  .fm-top .btn,
+  .fm-top .fm-modes,
+  .fm-top .fm-actswitch {
+    flex: none;
+  }
+  .fm-top .fm-crumb,
+  .fm-top .fm-crumbs .sep,
+  .fm-top .fm-av {
+    display: none;
+  }
+  .fm-top .btn.primary {
+    min-width: 40px;
+    padding-inline: 10px;
+  }
+}
+
+/* Layers popover and the context menu must open above the canvas and the details sheet */
+@media (max-width: 767px) {
+  .fm-stagebar {
+    overflow: visible;
+  }
+  .fm-ctx {
+    z-index: 90;
+  }
+  .fm-layers-pop {
+    max-width: calc(100vw - 24px);
+  }
+  .fm-layers-pop label {
+    min-height: 44px;
+  }
+  /* the Key leak card stacks: text first, then the two actions side by side */
+  .fm-rcallout > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fm-rcallout-actions {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 8px;
+  }
+  .fm-rcallout-actions .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+  /* Present: the bar fits the screen; Exit stays reachable */
+  .fm-present-ui .fp-bar {
+    overflow: hidden;
+  }
+  .fm-present-ui .fp-bar > nav {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .fm-present-ui .fp-bar .seg {
+    display: none;
+  }
+  .fm-present-ui .fp-bar > button {
+    flex: none;
+  }
+}
+
+/* tablet: the scenario pill drops its "Scenario:" prefix so the name fits */
+@media (max-width: 1023px) {
+  .fm-top .fm-scen .lbl {
+    display: none;
+  }
+  .fm-top .fm-crumbs {
+    min-width: 0;
+    overflow: hidden;
+  }
+}

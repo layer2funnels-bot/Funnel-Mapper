@@ -45,7 +45,7 @@ export function ForecastCharts({ rows, currency }: { rows: ProjectionRow[]; curr
       <Legend
         items={[
           ["Revenue", "var(--chart-1)"],
-          ["Costs", "var(--chart-2)", true],
+          ["Costs", "var(--muted)", true],
         ]}
       />
       <div className="h-[170px]">
@@ -56,7 +56,7 @@ export function ForecastCharts({ rows, currency }: { rows: ProjectionRow[]; curr
             <YAxis {...axis} width={52} tickFormatter={fmt} axisLine={false} />
             <Tooltip content={(p) => <Tip {...(p as TooltipContentProps<number, string>)} currency={currency} />} cursor={{ stroke: "var(--muted)", strokeDasharray: "3 3" }} />
             <Line type="monotone" dataKey="revenue" name="Revenue" stroke="var(--chart-1)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--panel)" }} isAnimationActive={false} />
-            <Line type="monotone" dataKey="costs" name="Costs" stroke="var(--chart-2)" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--panel)" }} isAnimationActive={false} />
+            <Line type="monotone" dataKey="costs" name="Costs" stroke="var(--muted)" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--panel)" }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>

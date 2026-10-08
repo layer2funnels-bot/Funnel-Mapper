@@ -349,7 +349,7 @@ function Overview({ data, R, onSection }: SP) {
           data={f.rows}
           series={[
             { key: "revenue", name: "Revenue", color: "var(--chart-1)" },
-            { key: "profit", name: "Profit", color: "var(--chart-3)", dashed: true },
+            { key: "profit", name: "Profit", color: "var(--chart-5)", dashed: true },
           ]}
           fmt={ms}
           zero
@@ -677,7 +677,7 @@ function Forecast({ data, R }: SP) {
         />
         <TimeChart title="Cumulative profit" data={f.rows} series={[{ key: "cumulative", name: "Cumulative profit", color: "var(--chart-1)" }]} fmt={ms} zero />
         <TimeChart title="Traffic per month" data={f.rows} series={[{ key: "traffic", name: "Visitors", color: "var(--chart-3)" }]} fmt={(v) => nf(v)} />
-        <TimeChart title="Leads per month" data={f.rows} series={[{ key: "leads", name: "Leads", color: "var(--chart-4)" }]} fmt={(v) => nf(v)} />
+        <TimeChart title="Leads per month" data={f.rows} series={[{ key: "leads", name: "Leads", color: "var(--chart-5)" }]} fmt={(v) => nf(v)} />
       </div>
       <h3 className="fm-rh">By period</h3>
       <p className="sub">
@@ -957,7 +957,7 @@ function Monthly({ data, R }: SP) {
         data={rows}
         series={[
           { key: "revenue", name: "Revenue", color: "var(--chart-1)" },
-          { key: "profit", name: "Profit", color: "var(--chart-3)", dashed: true },
+          { key: "profit", name: "Profit", color: "var(--chart-5)", dashed: true },
         ]}
         fmt={ms}
         zero

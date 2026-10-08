@@ -147,7 +147,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     await page.getByLabel("Text inside").fill("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toContainText("Big idea");
     await expect(page.locator(".fm-shape.ellipse")).toHaveCSS("border-radius", "50%");
-    await addFromPalette(page, "Image / logo");
+    await addFromPalette(page, "Image");
     await expect(page.locator(".fm-image.empty")).toBeVisible();
     // 2×2 PNG
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYGD4z8DAwMDAwAAADwABRe/1oQAAAABJRU5ErkJggg==", "base64");

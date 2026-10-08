@@ -125,7 +125,7 @@ export async function startSimulate(page: Page) {
 /** A block tile in the library: the library shows one category at a time, so search for it first. */
 export async function paletteItem(page: Page, label: string) {
   await page.getByPlaceholder(/^Search( \d+)? blocks$/).fill(label);
-  return page.getByRole("button", { name: `Add ${label}`, exact: true });
+  return page.getByRole("button", { name: `Add ${label}`, exact: true }).first();
 }
 
 const GROUP_OF: Record<string, string> = { Overview: "Model", Steps: "Model", Sources: "Model", Costs: "Model", "What-if": "Simulate", Scenarios: "Simulate", Forecast: "Track", Actuals: "Track" };

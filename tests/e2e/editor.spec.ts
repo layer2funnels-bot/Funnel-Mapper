@@ -42,12 +42,12 @@ test.describe("funnel editor", () => {
     await (await paletteItem(page, "Facebook Ads")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
     await (await paletteItem(page, "Landing page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
     await (await paletteItem(page, "Thank-you page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
-    await (await paletteItem(page, "Email sequence")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
+    await (await paletteItem(page, "SMS")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
     await expect(nodes(page)).toHaveCount(4);
     const fb = node(page, "Facebook Ads"),
       lp = node(page, "Landing page"),
       ty = node(page, "Thank-you page"),
-      seq = node(page, "Email sequence");
+      seq = node(page, "SMS");
     await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
     await expect(edgeLabels(page).first()).toContainText("1,000");

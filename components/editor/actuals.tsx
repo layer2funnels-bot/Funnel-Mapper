@@ -127,9 +127,10 @@ export function Actuals() {
             ["Today", () => ({ start: iso(new Date()), end: iso(new Date()) })],
             ["This month", () => ({ start: iso(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))), end: iso(new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 0))) })],
             ["Last month", lastMonth],
-            ["Last 30 days", () => ({ start: iso(new Date(Date.now() - 29 * 86400000)), end: iso(new Date()) })],
+            ["Last 30 days", () => ({ start: iso(new Date(new Date().getTime() - 29 * 86400000)), end: iso(new Date()) })],
           ] as [string, () => { start: string; end: string }][]
         ).map(([l, f]) => {
+          // eslint-disable-next-line react-hooks/purity -- presets are relative to today
           const r = f();
           return (
             <button key={l} type="button" className="btn sm" aria-pressed={r.start === range.start && r.end === range.end} onClick={() => setRange(r)}>

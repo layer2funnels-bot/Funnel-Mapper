@@ -67,6 +67,7 @@ test.describe("workspaces", () => {
     await section.getByRole("button", { name: "Create independent account" }).click();
     await expect(section.getByText("Account created")).toBeVisible();
     // the team list doesn't gain them
+    await page.goto("/settings#team");
     await expect(page.getByRole("list", { name: "Team members" })).not.toContainText(email);
 
     const { ctx, page: indie, mail } = await acceptInvite(browser, email, since);

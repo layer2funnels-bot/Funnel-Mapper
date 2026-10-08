@@ -321,7 +321,7 @@ test.describe("V2 finishing pass", () => {
     await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark, .fm-nicon img")).toHaveCount(1);
     await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
     await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
-    await expect(page.locator(".fm-pal .pi.brand svg.fm-bmark").first()).toBeVisible();
+    await expect(page.locator(".fm-sb-t svg.fm-bmark, .fm-sb-t img").first()).toBeVisible();
   });
 
   test("tooltips: icon-only buttons name themselves on hover; loading states announce themselves", async ({ page }) => {
@@ -537,7 +537,7 @@ test.describe("V2 QA regressions", () => {
     const p = await ctx.newPage();
     await p.goto(`/funnels/${id}`);
     await expect(p.locator(".fm-editor")).toBeVisible();
-    await p.getByRole("button", { name: "More" }).click();
+    await p.getByRole("button", { name: "More", exact: true }).click();
     for (const name of ["Present", "Version history", "Simulate…", "Tidy up"]) await expect(p.getByRole("menuitem", { name, exact: true }), name).toHaveCount(1);
     await p.keyboard.press("Escape");
     // a wide table does not fit a phone: cards unless the person chose otherwise

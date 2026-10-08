@@ -7420,3 +7420,40 @@ dialog.fm-sharedlg > p {
     min-width: 44px !important;
   }
 }
+
+/* renaming a page or offer at the far zoom: the name field must be visible while it is being edited */
+.fm-node.zb-far.fam-page .pgo-info:has(.fm-rename),
+.fm-node.zb-far.fam-offer .pgo-info:has(.fm-rename) {
+  display: block !important;
+  min-width: 120px;
+}
+
+/* collapse button of the right panel (desktop): small, top right, clear of the panel headers */
+@media (min-width: 1024px) {
+  .fm-insp {
+    position: relative;
+  }
+}
+.fm-icollapse {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fm-icollapse:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+.fm-insp > .fm-scopehead,
+.fm-insp > header {
+  padding-right: 44px;
+}

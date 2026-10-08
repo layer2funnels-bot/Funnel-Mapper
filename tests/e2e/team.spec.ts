@@ -13,7 +13,9 @@ test.describe("team workspace", () => {
     await expect(page.getByRole("link", { name: /Sam Carter/ })).toBeVisible();
     await page.goto("/settings#team");
     await expect(page.getByRole("list", { name: "Team members" })).toContainText("demo@layer2funnels.test");
+    await page.goto("/settings#workspace");
     await expect(page.getByText("Only admins can change it.")).toBeVisible();
+    await page.goto("/settings#team");
     await expect(page.getByRole("button", { name: "Deactivate" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Send invite" })).toHaveCount(0);
     await ctx.close();

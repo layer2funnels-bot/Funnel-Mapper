@@ -1145,6 +1145,11 @@ function EditorInner(props: EditorProps) {
         </nav>
       )}
       <aside className="fm-insp" id="fm-insp" aria-label="Details" style={band === "tablet" || band === "phone" ? { height: `${sheetH}dvh` } : undefined}>
+        {band !== "tablet" && band !== "phone" && !clientView && (
+          <button type="button" className="fm-icollapse" aria-label="Collapse details panel" title="Hide the details panel (])" onClick={() => togglePanel("insp", true)}>
+            <Icon name="chevronRight" size={15} />
+          </button>
+        )}
         <div
           className="fm-sheet-grab"
           role="separator"

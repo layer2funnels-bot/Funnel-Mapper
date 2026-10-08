@@ -566,8 +566,16 @@ function EditorInner(props: EditorProps) {
             t = Math.min(...sel.map((n) => n.y)) * vp.zoom + vp.y,
             b = Math.max(...sel.map((n) => n.y + heightOf(n))) * vp.zoom + vp.y;
           // free area: left of the 320px floating panel (md), or above the bottom sheet (tablet / phone)
-          const freeW = w >= 1024 ? stage.width - 340 : stage.width,
-            freeH = w >= 1024 ? stage.height : stage.height * 0.5 - 8;
+          const freeW = w >= 1024 ? stage.width - 340 : stage.width;
+          let freeH = w >= 1024 ? stage.height : stage.height * 0.5 - 8;
+          if (w < 1024) {
+            // the sheet's real height (it is 40-90% of the screen and can sit above the action bar), not a fixed half
+            const sheet = document.querySelector(".fm-insp") as HTMLElement | null;
+            if (sheet) {
+              const sheetTop = window.innerHeight - (parseFloat(getComputedStyle(sheet).bottom) || 0) - sheet.getBoundingClientRect().height;
+              freeH = sheetTop - stage.top - 8;
+            }
+          }
           let dx = 0,
             dy = 0;
           if (r > freeW - 12) dx = freeW - 12 - r;

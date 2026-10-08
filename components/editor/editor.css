@@ -852,7 +852,7 @@
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--good);
+  color: #0b1220; /* sits on the amber Logic fill: dark ink, green fails contrast there */
 }
 
 /* note / heading / frame */

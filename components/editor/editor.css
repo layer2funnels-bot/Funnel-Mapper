@@ -6366,7 +6366,7 @@ dialog.fm-sharedlg {
 .fm-insp {
   background: var(--chrome);
   border-left: 1px solid var(--side-line);
-  padding: 0 0 28px;
+  padding: 0 16px 28px;
 }
 .fm-insp > * {
   margin-left: 0;
@@ -6394,7 +6394,7 @@ dialog.fm-sharedlg {
 }
 .fm-scopehead {
   padding: 14px 16px 12px;
-  margin: 0;
+  margin: 0 -16px;
 }
 .fm-fscope .eyebrow {
   font-size: 10.5px;
@@ -6424,12 +6424,13 @@ dialog.fm-sharedlg {
   color: var(--ink);
 }
 .fm-groupseg {
-  margin: 0 16px 0;
+  margin: 0;
 }
 .fm-subnav {
   display: flex;
   gap: 0;
-  padding: 10px 12px 2px;
+  margin: 0 -4px;
+  padding: 10px 0 2px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -6458,7 +6459,7 @@ dialog.fm-sharedlg {
 #rbody > fieldset > .fm-sec,
 .fm-insp > .fm-sec {
   padding: 14px 16px;
-  margin: 0;
+  margin: 0 -16px;
   border-top: 1px solid var(--side-line);
 }
 #rbody > .fm-sec:first-child {
@@ -6584,7 +6585,7 @@ dialog.fm-sharedlg {
 /* block scope */
 .fm-insp-tabs {
   padding: 0 12px;
-  margin: 0 0 14px;
+  margin: 0 -16px 14px;
   border-bottom: 1px solid var(--side-line);
   gap: 2px;
 }
@@ -6605,14 +6606,6 @@ dialog.fm-sharedlg {
   height: 2px;
   background: var(--brand);
   border-radius: 2px;
-}
-.fm-insp > fieldset,
-.fm-insp > .field,
-.fm-insp > p,
-.fm-insp > h4,
-.fm-insp > .fm-sec ~ * {
-  margin-left: 16px;
-  margin-right: 16px;
 }
 .fm-insp > fieldset {
   padding-bottom: 8px;
@@ -7303,4 +7296,28 @@ dialog.fm-sharedlg > p {
 .fm-node.zb-far.fam-page .fm-price,
 .fm-node.zb-far.fam-offer .fm-price {
   display: none;
+}
+
+/* simulating: the strip carries "was" lines, so it grows */
+.fm-kpis.sim,
+.fm-kpis.before {
+  height: auto;
+  min-height: 56px;
+}
+
+/* phone top bar (R-phone-editor): back, title, reports, overflow. Model/Actual and the scenario pill step aside. */
+@media (max-width: 767px) {
+  .fm-top .fm-actswitch,
+  .fm-top .fm-scen {
+    display: none;
+  }
+  .fm-top .fm-modes {
+    flex: none;
+  }
+  .fm-top .fm-crumbs {
+    min-width: 0;
+  }
+  .fm-top .fm-fname {
+    text-overflow: ellipsis;
+  }
 }

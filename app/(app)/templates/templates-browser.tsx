@@ -22,6 +22,7 @@ export interface TemplateCard {
 /** Templates (V2): built-in and workspace templates, a preview panel, "Use template" and "Use for client". */
 export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }: { cards: TemplateCard[]; clients: { id: string; name: string }[]; options: TemplateOption[]; canEdit: boolean; mineTitle: string }) {
   const [sel, setSel] = useState<string>(cards[0]?.id ?? "");
+  const [open, setOpen] = useState(false); // below 1280px the preview is a drawer that opens on tap
   const [filter, setFilter] = useState<"all" | "builtin" | "mine">("all");
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const cur = cards.find((c) => c.id === sel) ?? cards[0] ?? null;
@@ -30,7 +31,7 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
   const shown = filter === "builtin" ? builtins : filter === "mine" ? mine : cards;
   const item = (t: TemplateCard) => (
     <li key={t.id}>
-      <button type="button" className={`fm-tcard${cur?.id === t.id ? " on" : ""}`} aria-label={`Preview ${t.name}`} aria-pressed={cur?.id === t.id} onClick={() => setSel(t.id)}>
+      <button type="button" className={`fm-tcard${cur?.id === t.id ? " on" : ""}`} aria-label={`Preview ${t.name}`} aria-pressed={cur?.id === t.id} onClick={() => (setSel(t.id), setOpen(true))}>
         <span className="fm-fthumb">
           <GraphThumb graph={t.graph} settings={t.settings} name={t.name} height={106} className="h-[106px] w-full" />
           <span className="fm-fchip">{t.blocks} blocks</span>
@@ -67,7 +68,10 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
         )}
       </div>
       {cur && (
-        <aside className="fm-tplpanel" aria-label={`Preview: ${cur.name}`}>
+        <aside className="fm-tplpanel" data-open={open} aria-label={`Preview: ${cur.name}`}>
+          <button type="button" className="btn icon ghost fm-tplclose" aria-label="Close preview" onClick={() => setOpen(false)}>
+            ✕
+          </button>
           <GraphThumb graph={cur.graph} settings={cur.settings} name={cur.name} height={190} className="h-[190px] w-full rounded-xl border border-side-line" />
           <h2 className="mt-5 mb-2 font-display text-[22px] font-semibold tracking-tight">{cur.name}</h2>
           {cur.description && <p className="mb-4 text-sm leading-relaxed text-muted">{cur.description}</p>}

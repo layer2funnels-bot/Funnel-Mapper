@@ -887,11 +887,11 @@ function EditorInner(props: EditorProps) {
         <span className="flex-1" />
         {!share?.hideNumbers && (
           <div className="seg fm-modes" role="group" aria-label="View">
-            <button type="button" aria-pressed={!reports} onClick={() => setMode("map")} aria-label="Map" title="Map" className="fm-hide-phone">
+            <button type="button" aria-pressed={!reports} onClick={() => setMode("map")} aria-label="Map" title="Map" className={reports ? undefined : "fm-hide-phone"}>
               <Icon name="map" size={14} />
               <span className="fm-lbl">Map</span>
             </button>
-            <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights" aria-label="Reports">
+            <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights" aria-label="Reports" className={reports ? "fm-hide-phone" : undefined}>
               <Icon name="chart" size={14} />
               <span className="fm-lbl fm-hide-phone">Reports</span>
             </button>
@@ -938,13 +938,15 @@ function EditorInner(props: EditorProps) {
               <button
                 type="button"
                 className="btn primary fm-hide-phone"
+                aria-label="Share"
+                title="Share"
                 onClick={() => {
                   setShareOpen(true);
                   shareRef.current?.showModal();
                 }}
               >
                 <Icon name="share" size={15} />
-                <span>Share</span>
+                <span className="fm-lbl">Share</span>
               </button>
             )}
             {props.viewer && (

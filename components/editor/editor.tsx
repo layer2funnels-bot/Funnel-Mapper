@@ -69,6 +69,7 @@ import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
 import { QuickAdd } from "./quick-add";
 import { LineMenu } from "./line-menu";
+import { TemplatesPanel } from "./templates-panel";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
 import { TemplateDialog } from "./template-dialog";
@@ -974,6 +975,7 @@ function EditorInner(props: EditorProps) {
             {sideTab === "library" && <Palette products={props.products ?? []} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
             {sideTab === "outline" && <Outline />}
             {sideTab === "blocks" && <WorkspaceBlocks />}
+            {sideTab === "templates" && <TemplatesPanel onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
           </>
         )}
       </aside>

@@ -11,6 +11,7 @@ import { clientFormSchema, FUNNEL_STATUSES, type ClientForm } from "@/lib/schema
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/supabase/server";
 import { builtinTemplate, reidGraph } from "@/lib/templates";
+import { TEMPLATE13_BY_KEY, template13Graph } from "@/lib/templates13";
 
 export type ActionResult = { error?: string; ok?: boolean; id?: string; added?: boolean } | undefined;
 const uuid = z.uuid();
@@ -170,6 +171,15 @@ const newFunnelSchema = z.object({
   client_id: z.uuid("Pick a client"),
   name: z.string().trim().max(160).optional(),
   source: z.string().default("blank"), // "blank" | "builtin:<key>" | "template:<uuid>"
+  custom: z.string().max(50_000).optional(),
+  skip: z.string().optional(),
+});
+/** The template customize form (all optional): page names, URLs, captured screenshots, empty numbers. */
+const customSchema = z.object({
+  empty: z.boolean().default(false),
+  names: z.record(z.string().max(40), z.string().max(120)).default({}),
+  urls: z.record(z.string().max(40), z.string().max(2000)).default({}),
+  shots: z.record(z.string().max(40), z.string().max(300)).default({}),
 });
 
 export async function createFunnelAction(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -184,7 +194,23 @@ export async function createFunnelAction(_: ActionResult, fd: FormData): Promise
     settings = blankSettings(currency),
     name = "Untitled funnel",
     description = "";
-  if (p.data.source.startsWith("builtin:")) {
+  if (p.data.source.startsWith("builtin:") && TEMPLATE13_BY_KEY[p.data.source.slice(8)]) {
+    // one of the 13 approved templates, with the customize form's answers unless "Skip, use defaults"
+    const key = p.data.source.slice(8);
+    let c = customSchema.parse({});
+    if (!p.data.skip && p.data.custom) {
+      try {
+        c = customSchema.parse(JSON.parse(p.data.custom));
+      } catch {
+        return { error: "The template form couldn’t be read. Try again." };
+      }
+    }
+    // screenshots may only come from this person's own folder (the capture route stores them there)
+    const shots = Object.fromEntries(Object.entries(c.shots).filter(([, v]) => v.startsWith(`${user.id}/`)));
+    graph = reidGraph(template13Graph(key, { ...c, shots }), newId);
+    name = TEMPLATE13_BY_KEY[key].name;
+    description = TEMPLATE13_BY_KEY[key].description;
+  } else if (p.data.source.startsWith("builtin:")) {
     const t = builtinTemplate(p.data.source.slice(8));
     graph = reidGraph(t.graph, newId);
     name = t.name;

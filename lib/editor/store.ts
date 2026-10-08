@@ -102,7 +102,7 @@ export interface EditorState {
   /** Actuals rows of this funnel (loaded on demand for Trend widgets). */
   actuals: ActualRowDb[] | null;
   /** Left panel: block library, funnel outline or workspace blocks. */
-  sideTab: "library" | "outline" | "blocks";
+  sideTab: "library" | "outline" | "blocks" | "templates";
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
@@ -860,6 +860,57 @@ export function retypeNode(id: string, type: string) {
   const s = n.s && n.s.icon ? { ...n.s, icon: undefined } : n.s;
   apply({ nodes: get().nodes.map((x) => (x.id === id ? { ...x, type, name: x.name === was.label ? T.label : x.name, p: { ...defaultsFor(type), ...x.p }, ...(s ? { s: cleanStyle(s) } : {}) } : x)) }, { discrete: true });
   return true;
+}
+
+/**
+ * Templates inside the map (V2 F3): add a template's blocks to the open funnel as ONE labelled frame, centred on
+ * `centre` (the middle of the view) but moved right / down until it covers no existing element, never moving anything
+ * that is already on the map. One undo step. Returns the frame's id.
+ */
+export function insertTemplateGraph(g: FunnelGraph, name: string, centre: { x: number; y: number }) {
+  const s = get();
+  if (s.readOnly || !g.nodes.length) return null;
+  const map: Record<string, string> = {};
+  const nodes0 = g.nodes.map((n) => {
+    const id = nid();
+    map[n.id] = id;
+    return { ...structuredClone(n), id };
+  });
+  const edges = g.edges.filter((e) => map[e.from] && map[e.to]).map((e) => ({ ...structuredClone(e), id: "e" + nid(), from: map[e.from], to: map[e.to] }));
+  const PAD = 40;
+  const x0 = Math.min(...nodes0.map((n) => n.x)) - PAD,
+    y0 = Math.min(...nodes0.map((n) => n.y)) - PAD - 10,
+    x1 = Math.max(...nodes0.map((n) => n.x + nodeW(n.type))) + PAD,
+    y1 = Math.max(...nodes0.map((n) => n.y + blockH(n.type))) + PAD;
+  const w = x1 - x0,
+    h = y1 - y0;
+  const occupied = s.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w ?? nodeW(n.type), h: n.h ?? heightOf(n) }));
+  const free = (fx: number, fy: number) => occupied.every((o) => fx + w <= o.x - 20 || o.x + o.w + 20 <= fx || fy + h <= o.y - 20 || o.y + o.h + 20 <= fy);
+  let fx = snapV(centre.x - w / 2),
+    fy = snapV(centre.y - h / 2);
+  // search outward: right, then down, in growing steps, until the frame lands on empty canvas
+  outer: for (let ring = 0; ring < 40; ring++) {
+    for (const [dx, dy] of [
+      [ring, 0],
+      [0, ring],
+      [ring, ring],
+    ]) {
+      const tx = snapV(centre.x - w / 2 + dx * 220),
+        ty = snapV(centre.y - h / 2 + dy * 160);
+      if (free(tx, ty)) {
+        fx = tx;
+        fy = ty;
+        break outer;
+      }
+    }
+  }
+  const dx = fx - x0,
+    dy = fy - y0;
+  const nodes = nodes0.map((n) => ({ ...n, x: snapV(n.x + dx), y: snapV(n.y + dy) }));
+  const frame: FunnelNode = { id: nid(), type: "frame", name, x: fx, y: fy, w, h, p: { ...defaultsFor("frame") } };
+  apply({ nodes: [frame, ...s.nodes, ...nodes], edges: [...s.edges, ...edges] }, { discrete: true });
+  selectNodes([frame.id]);
+  return frame.id;
 }
 
 /** Block types that may follow a connection (they receive people): no traffic sources, no layout elements. */

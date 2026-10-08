@@ -93,3 +93,45 @@ test.describe("trash", () => {
     await expect(page.getByRole("row", { name: new RegExp(name) })).toHaveCount(0);
   });
 });
+
+test.describe("templates", () => {
+  test("the Templates page lists the 13 approved templates with live previews and creates a funnel from the customize form", async ({ page }) => {
+    await page.goto("/templates");
+    for (const name of ["Lead Squeeze", "Survey", "Summit", "Free Challenge Funnel", "Book Funnel", "Cart Funnel", "Paid Challenge Funnel", "Video Sales Letter Funnel", "Webinar Funnel", "Product Launch Funnel", "Application Funnel", "Webinar Application Funnel", "Mini Class Funnel"])
+      await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(page.getByRole("img", { name: /^Map of Webinar Funnel: 15 blocks/ }).first()).toBeVisible(); // 14 + the example source
+    const card = page.locator("li", { has: page.getByRole("heading", { name: "Webinar Application Funnel", exact: true }) });
+    await card.getByRole("button", { name: "Use template" }).click();
+    const dlg = page.getByRole("dialog", { name: "Customize Webinar Application Funnel" });
+    await expect(dlg).toBeVisible();
+    await dlg.getByLabel("Funnel name (optional)").fill("Masterclass application");
+    await dlg.getByLabel("Name for Web Class").fill("Free masterclass");
+    await dlg.getByLabel("Start with empty numbers").check();
+    await dlg.getByRole("button", { name: "Create funnel" }).click();
+    await expect(page).toHaveURL(/\/funnels\/[0-9a-f-]{36}$/);
+    await expect(page.locator(".react-flow__node", { hasText: "Free masterclass" })).toBeVisible();
+    await expect(page.locator(".react-flow__node-block")).toHaveCount(5); // empty numbers: no example source
+  });
+
+  test("a template added inside the map lands as one frame and one undo step", async ({ page }) => {
+    const graph = { ...blankGraph(), nodes: [{ id: "x", type: "landing", name: "Existing page", x: 300, y: 200, p: { cr: 30, lead: false } }], edges: [] };
+    const { id } = await createFunnel({ graph });
+    await openEditor(page, id);
+    const before = await page.locator('.react-flow__node[data-id="x"]').boundingBox();
+    await page.getByRole("button", { name: "Templates", exact: true }).click();
+    await page.getByRole("button", { name: /^5\. Book Funnel, 6 blocks/ }).click();
+    const dlg = page.getByRole("dialog", { name: "Add Book Funnel to this map" });
+    await dlg.getByRole("button", { name: "Add to map" }).click();
+    await expect(page.locator(".react-flow__node-frame", { hasText: "Book Funnel" })).toBeVisible();
+    await expect(page.locator(".react-flow__node-block")).toHaveCount(1 + 6 + 1);
+    // nothing already on the map moved
+    await page.keyboard.press("Escape");
+    const node0 = page.locator('.react-flow__node[data-id="x"]');
+    expect(await node0.evaluate((el) => (el as HTMLElement).style.transform)).toContain("translate(300px, 200px)");
+    void before;
+    // one undo removes the whole template
+    await page.keyboard.press("Control+z");
+    await expect(page.locator(".react-flow__node-block")).toHaveCount(1);
+    await expect(page.locator(".react-flow__node-frame")).toHaveCount(0);
+  });
+});

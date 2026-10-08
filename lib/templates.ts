@@ -1,6 +1,7 @@
 // Built-in templates, ported from the prototype's template() function.
 import { defaultsFor, typeOf, type NodeParams } from "./catalog";
 import { blankSettings, type FunnelEdge, type FunnelGraph, type FunnelNode, type FunnelSettings } from "./graph";
+import { TEMPLATE13_BY_KEY, TEMPLATES13, template13Graph } from "./templates13";
 
 type NodeSpec = [key: string, type: string, name: string, x: number, y: number, p?: NodeParams, extra?: Partial<FunnelNode>];
 type EdgeSpec = [from: string, to: string, port?: "main" | "alt", share?: number];
@@ -138,12 +139,16 @@ const DEFS: Record<string, { name: string; category: string; description: string
 export const BUILTIN_KEYS = Object.keys(DEFS);
 
 export function builtinTemplate(key: string): BuiltinTemplate {
+  const t13 = TEMPLATE13_BY_KEY[key];
+  if (t13) return { key, name: t13.name, category: "Built-in", description: t13.description, graph: template13Graph(key), settings: blankSettings("GBP") };
   const d = DEFS[key];
   if (!d) throw new Error(`Unknown template ${key}`);
   return { key, name: d.name, category: d.category, description: d.description, graph: d.build(), settings: blankSettings("GBP") };
 }
 
 export const builtinTemplates = (): BuiltinTemplate[] => BUILTIN_KEYS.map(builtinTemplate);
+/** The approved V2 template library (13, in the owner's order). The earlier five built-ins stay resolvable for saved links and tests. */
+export const APPROVED_TEMPLATE_KEYS = TEMPLATES13.map((t) => t.key);
 
 /** Give every node and edge a fresh id (when instantiating a template or duplicating a funnel). */
 export function reidGraph(g: FunnelGraph, newId: () => string): FunnelGraph {

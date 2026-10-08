@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // the user's own client: storage RLS decides (viewers can't write)
     const { error } = await sb.storage.from("screenshots").upload(path, img.bytes, { contentType: img.type, upsert: true, cacheControl: "3600" });
     if (error) return NextResponse.json({ error: "forbidden", message: "You can’t add screenshots in this workspace." }, { status: 403 });
-    return NextResponse.json({ path });
+    return NextResponse.json({ path, bytes: img.bytes.byteLength });
   } catch (e) {
     const code = e instanceof CaptureError ? e.code : "failed";
     return NextResponse.json({ error: code, message: e instanceof CaptureError ? e.message : "The page couldn’t be captured." }, { status: code === "timeout" ? 504 : 502 });

@@ -25,20 +25,21 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
 
   // --- new funnel from a template ---
   await page.getByRole("button", { name: "New funnel" }).click();
-  await page.getByLabel("Start from").selectOption({ label: "Webinar funnel" });
-  await page.getByLabel("Name (optional)").fill("Spring webinar");
+  await page.getByLabel("Start from").selectOption({ label: "8. Video Sales Letter Funnel" });
+  await page.getByLabel("Funnel name (optional)").fill("Spring webinar");
   await page.getByRole("button", { name: "Create funnel" }).click();
   await expect(page).toHaveURL(/\/funnels\//);
   await expect(page.getByRole("textbox", { name: "Funnel name" })).toHaveValue("Spring webinar");
-  await expect(nodes(page)).toHaveCount(9);
+  await expect(nodes(page)).toHaveCount(8); // 7 template blocks + the example traffic source
   const funnelUrl = page.url();
 
   // --- edit visually: add a downsell and connect the checkout's "didn't buy" path to it ---
+  await page.getByLabel("Search blocks").fill("Downsell");
   await page.getByRole("button", { name: "Add Downsell", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 520, y: 600 } });
-  await expect(nodes(page)).toHaveCount(10);
+  await expect(nodes(page)).toHaveCount(9);
   await page.getByLabel("Name", { exact: true }).fill("Payment plan offer");
   await page.getByLabel("Price (£)").fill("297");
-  await drag(page, await centre(page, node(page, "Program checkout").locator(".fm-port.side.bottom")), await centre(page, node(page, "Payment plan offer")));
+  await drag(page, await centre(page, node(page, "Order form + bump").locator(".fm-port.side.bottom")), await centre(page, node(page, "Payment plan offer")));
   await expect(edgeLabels(page)).toHaveCount(10);
   await expect(node(page, "Payment plan offer")).toContainText("buy");
   await waitSaved(page);
@@ -47,7 +48,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await page.goto(clientUrl);
   await expect(page.getByRole("link", { name: "Spring webinar", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Spring webinar", exact: true }).click();
-  await expect(nodes(page)).toHaveCount(10);
+  await expect(nodes(page)).toHaveCount(9);
   await expect(node(page, "Payment plan offer")).toBeVisible();
   // funnel maths in the report
   await expect(page.locator(".rline", { hasText: "ROAS" }).first()).toContainText("x");
@@ -58,15 +59,15 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await expect(page.locator(".fm-toast")).toHaveText("Version saved");
   await node(page, "Payment plan offer").click();
   await page.keyboard.press("Delete");
-  await expect(nodes(page)).toHaveCount(9);
+  await expect(nodes(page)).toHaveCount(8);
   await waitSaved(page);
   await page.getByRole("button", { name: "Version history" }).click();
   page.once("dialog", (d) => d.accept());
   await page.locator(".fm-insp li", { hasText: "Saved" }).first().getByRole("button", { name: "Restore" }).click();
-  await expect(nodes(page)).toHaveCount(10);
+  await expect(nodes(page)).toHaveCount(9);
   await waitSaved(page);
   await page.reload();
-  await expect(nodes(page)).toHaveCount(10);
+  await expect(nodes(page)).toHaveCount(9);
 
   // --- save as template, then find it on the Templates page ---
   await page.getByRole("button", { name: "File" }).click();
@@ -96,13 +97,13 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   const json = await exportAs("Funnel file (.json)");
   const file = JSON.parse(json.buf.toString());
   expect(file.app).toBe("funnel-mapper-pro");
-  expect(file.graph.nodes).toHaveLength(10);
+  expect(file.graph.nodes).toHaveLength(9);
 
   // --- import that file as a new funnel on the client page ---
   await page.goto(clientUrl);
   await page.getByLabel("Import funnel file").setInputFiles({ name: "spring.json", mimeType: "application/json", buffer: json.buf });
   await expect(page).toHaveURL(/\/funnels\//);
-  await expect(nodes(page)).toHaveCount(10);
+  await expect(nodes(page)).toHaveCount(9);
   expect(page.url()).not.toBe(funnelUrl);
 
   // --- the template is available to start new funnels ---
@@ -120,16 +121,16 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   const client = await anon.newPage();
   await client.goto(link);
   await expect(client.getByRole("textbox", { name: "Funnel name" })).toHaveValue("Spring webinar");
-  await expect(client.locator(".react-flow__node")).toHaveCount(10);
+  await expect(client.locator(".react-flow__node")).toHaveCount(9);
   await expect(client.getByRole("button", { name: "Add Landing page", exact: true })).toHaveCount(0);
   await anon.close();
 
   // --- keyboard undo still works after all that ---
   await node(page, "Payment plan offer").click();
   await page.keyboard.press(`${mod}+d`);
-  await expect(nodes(page)).toHaveCount(11);
-  await page.keyboard.press(`${mod}+z`);
   await expect(nodes(page)).toHaveCount(10);
+  await page.keyboard.press(`${mod}+z`);
+  await expect(nodes(page)).toHaveCount(9);
 
   // --- the portfolio shows the funnel with its numbers ---
   await page.goto(clientUrl);

@@ -4782,3 +4782,88 @@ dialog.fm-sharedlg {
     min-height: 44px;
   }
 }
+
+/* Templates inside the map (F3) */
+.fm-tpllist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+.fm-tpllist button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--side-ink);
+  text-align: left;
+  font-size: 13px;
+}
+.fm-tpllist button:hover,
+.fm-tpllist button:focus-visible {
+  background: var(--side-item);
+}
+.fm-tpllist .n {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--side-line);
+  font-size: 11px;
+  color: var(--side-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fm-tpllist .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-tpllist small {
+  color: var(--side-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fm-tplhover {
+  margin-top: 10px;
+  border: 1px solid var(--side-line);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 12px;
+}
+.fm-tplhover svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.fm-tplhover b {
+  display: block;
+  padding: 6px 10px 0;
+}
+.fm-tplhover p {
+  margin: 2px 0 8px;
+  padding: 0 10px;
+  color: var(--side-muted);
+  line-height: 16px;
+}
+.fm-tpldialog {
+  width: min(620px, calc(100vw - 32px));
+}
+.fm-tpldialog svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (pointer: coarse) {
+  .fm-tpllist button {
+    min-height: 44px;
+  }
+}

@@ -42,7 +42,7 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
         </div>
         {t.description && <p className="text-sm text-muted">{t.description}</p>}
         <p className="text-xs text-muted">
-          {t.blocks} blocks · plans {t.revenue} revenue · ROAS {t.roas}
+          {t.blocks} blocks · example {t.revenue} revenue · ROAS {t.roas}
         </p>
         <div className="mt-auto flex flex-wrap gap-2 pt-2">
           <button type="button" className="btn sm" onClick={() => setSel(t.id)}>
@@ -59,7 +59,9 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
   return (
     <div className={cur ? "xl:grid xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-6" : ""}>
       <div className="min-w-0">
-        <h2 className="mb-3 font-display text-xl font-bold">Built-in</h2>
+        <h2 className="mb-3 font-display text-xl font-bold">
+          Built-in <span className="text-sm font-medium text-muted">{builtins.length}</span>
+        </h2>
         <ul className="m-0 mb-10 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 2xl:grid-cols-3">{builtins.map(item)}</ul>
         <h2 className="mb-3 font-display text-xl font-bold">{mineTitle}</h2>
         {mine.length === 0 ? (

@@ -187,7 +187,7 @@ test.describe("reports and planning tools", () => {
   test("presentation mode walks through the funnel", async ({ page }) => {
     const { id } = await createFunnel({ template: "call" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "File" }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByRole("menuitem", { name: "Present" }).click();
     const card = page.getByRole("region", { name: "Presentation" });
     await expect(card).toContainText("Overview");

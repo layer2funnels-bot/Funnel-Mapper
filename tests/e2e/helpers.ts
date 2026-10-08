@@ -121,3 +121,9 @@ export async function startSimulate(page: Page) {
   await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
   await page.keyboard.press("s");
 }
+
+/** A block tile in the library: the library shows one category at a time, so search for it first. */
+export async function paletteItem(page: Page, label: string) {
+  await page.getByPlaceholder(/^Search( \d+)? blocks$/).fill(label);
+  return page.getByRole("button", { name: `Add ${label}`, exact: true });
+}

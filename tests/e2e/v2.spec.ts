@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { blankGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
-import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, startSimulate } from "./helpers";
+import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, startSimulate, paletteItem } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -72,7 +72,7 @@ test.describe("V2 editor interactions", () => {
   test("drag a connection into empty space: Quick Add places and connects the block in one undo step", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
+    await (await paletteItem(page, "Facebook Ads")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
     await expect(nodes(page)).toHaveCount(1);
     const fb = node(page, "Facebook ads");
     const from = await centre(page, fb.locator(".fm-port.side.right"));
@@ -422,7 +422,7 @@ test.describe("V2 Simulate", () => {
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
     await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText("£6,032");
     // view-only editors don't get Simulate
-    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByLabel("View only (lock editing)").check();
     await expect(page.getByRole("button", { name: "Simulate" })).toHaveCount(0);
   });

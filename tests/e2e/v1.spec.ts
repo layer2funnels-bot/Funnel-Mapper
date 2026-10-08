@@ -109,7 +109,7 @@ test.describe("notes, layers, analytics and the library", () => {
     await ctx.close();
 
     // layers: hide notes, clean map
-    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.locator(".menu-pop").getByLabel("Notes", { exact: true }).uncheck();
     await expect(page.locator(".react-flow__node-note")).toBeHidden();
     await page.getByRole("menuitemcheckbox", { name: "Clean map" }).click();

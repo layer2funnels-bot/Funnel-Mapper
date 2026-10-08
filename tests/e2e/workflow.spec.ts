@@ -57,7 +57,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await expect(page.locator(".rline", { hasText: "ROAS" }).first()).toContainText("x");
 
   // --- versions: save, change, restore ---
-  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("button", { name: "Funnel menu" }).click();
   await page.getByRole("menuitem", { name: /Save version/ }).click();
   await expect(page.locator(".fm-toast")).toHaveText("Version saved");
   await node(page, "Payment plan offer").click();
@@ -73,7 +73,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await expect(nodes(page)).toHaveCount(9);
 
   // --- save as template, then find it on the Templates page ---
-  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("button", { name: "Funnel menu" }).click();
   await page.getByRole("menuitem", { name: "Save as template" }).click();
   await page.getByLabel("Template name").fill(`Yoga webinar ${stamp}`);
   await page.getByLabel("Category").selectOption("Webinar");
@@ -82,7 +82,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
 
   // --- exports ---
   const exportAs = async (item: string) => {
-    await page.getByRole("button", { name: "File" }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: item }).click()]);
     return { name: dl.suggestedFilename(), buf: readFileSync((await dl.path())!) };
   };

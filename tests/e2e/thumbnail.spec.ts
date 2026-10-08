@@ -97,7 +97,7 @@ test.describe("Page URL to thumbnail", () => {
     await capture(page, "Quiz funnel");
     await waitSaved(page);
     // SVG export embeds the captured page
-    await page.getByRole("button", { name: "File" }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Map image (.svg)" }).click()]);
     const svg = readFileSync((await dl.path())!).toString();
     expect(svg).toMatch(/<image[^>]+href="data:image\/png;base64,/);

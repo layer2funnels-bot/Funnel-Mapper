@@ -30,7 +30,7 @@ import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useFocusBlock } from "./focus";
 import { NumInput } from "./fields";
 
-const fmt: Record<TotalDelta["key"], (v: number, cur: string) => string> = {
+export const fmtTotal: Record<TotalDelta["key"], (v: number, cur: string) => string> = {
   traffic: (v) => nf(v),
   leads: (v) => people(v),
   cust: (v) => people(v),
@@ -53,7 +53,7 @@ export function DeltaChip({
 }) {
   if (t.tone === "same")
     return <span className="fm-dchip same">{compact ? "–" : "No change"}</span>;
-  const abs = fmt[t.key](Math.abs(t.delta), cur);
+  const abs = fmtTotal[t.key](Math.abs(t.delta), cur);
   const sign = t.delta > 0 ? "+" : "−";
   const p =
     t.pct != null
@@ -62,7 +62,7 @@ export function DeltaChip({
   return (
     <span
       className={`fm-dchip ${t.tone}`}
-      title={`was ${fmt[t.key](t.was, cur)}`}
+      title={`was ${fmtTotal[t.key](t.was, cur)}`}
     >
       <span aria-hidden="true">{t.delta > 0 ? "▲" : "▼"}</span> {sign}
       {abs}
@@ -297,7 +297,7 @@ export function SimulatePanel() {
             .map((t) => (
               <div key={t.key}>
                 <span>{t.label}</span>
-                <b>{fmt[t.key](t.value, cur)}</b>
+                <b>{fmtTotal[t.key](t.value, cur)}</b>
                 <DeltaChip t={t} cur={cur} compact />
               </div>
             ))}
@@ -333,7 +333,7 @@ export function SimulatePanel() {
               <div key={t.key}>
                 <dt>{t.label}</dt>
                 <dd>
-                  <b>{fmt[t.key](t.value, cur)}</b>
+                  <b>{fmtTotal[t.key](t.value, cur)}</b>
                   <DeltaChip t={t} cur={cur} />
                 </dd>
               </div>

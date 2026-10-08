@@ -167,3 +167,35 @@ test.describe("actuals", () => {
     await expect(page.locator(".fm-kunit")).toContainText("Plan");
   });
 });
+
+test.describe("panels and simulate", () => {
+  test("[ and ] collapse the panels, the right rail reopens on a tab, and leaving Simulate asks about unsaved changes", async ({ page }) => {
+    await page.setViewportSize({ width: 1536, height: 900 });
+    const { id } = await createFunnel({});
+    await openEditor(page, id);
+    const insp = page.locator("#fm-insp");
+    await expect(insp).toBeVisible();
+    await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
+    await page.keyboard.press("]");
+    await expect(insp).toBeHidden();
+    const rail = page.getByRole("navigation", { name: "Details panel (collapsed)" });
+    await expect(rail).toBeVisible();
+    expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(27);
+    await rail.getByRole("button", { name: "Funnel notes" }).click();
+    await expect(insp).toBeVisible();
+    await expect(rail).toBeHidden();
+    await page.keyboard.press("[");
+    await expect(page.locator(".fm-side")).toBeHidden();
+    await page.keyboard.press("[");
+    await expect(page.locator(".fm-side")).toBeVisible();
+
+    // Simulate: S starts it, a what-if change marks it unsaved, Esc asks once
+    await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
+    await page.keyboard.press("s");
+    const bar = page.getByRole("toolbar", { name: "Simulation" });
+    await expect(bar).toBeVisible();
+    await expect(bar.getByText("No changes yet")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(bar).toBeHidden();
+  });
+});

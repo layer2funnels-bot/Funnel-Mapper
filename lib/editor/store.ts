@@ -163,6 +163,10 @@ export interface EditorState {
   shared: boolean;
   /** Floating quick-add: where it opened (screen px inside the canvas) and the flow position blocks go to. */
   quick: QuickAddState | null;
+  /** Simulate: flow-dot speed, walk-through step, and the "keep or discard" question on leaving. */
+  simSpeed: 1 | 2 | 4;
+  simWalk: number | null;
+  simAsk: boolean;
   /** "Connect as" menu for a line just drawn (screen px inside the canvas). */
   lineMenu: { id: string; sx: number; sy: number } | null;
   /** Workspace viewer: always read-only (the database refuses their writes too). */
@@ -241,6 +245,9 @@ export const useEditor = create<EditorState>(() => ({
   spot: null,
   shared: false,
   quick: null,
+  simSpeed: 1,
+  simWalk: null,
+  simAsk: false,
   lineMenu: null,
   viewer: false,
   mode: "map",
@@ -427,13 +434,67 @@ export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
   if (s.actualView) set({ actualView: null, actualR: null });
-  set({ simBase: takeBase(), simPlay: false, simBefore: false, panel: "simulate" });
+  set({ simBase: { ...takeBase(), prev: { nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
   setOpt("nums", true);
   setOpt("thick", true);
 }
-/** Stop simulating and keep whatever the map says now. */
+/** Stop simulating and keep whatever the map says now; the view (layers, period) goes back to what it was. */
 export function stopSim() {
-  set((s) => ({ simBase: null, simPlay: false, simBefore: false, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+  const prev = get().simBase?.prev;
+  set((s) => ({ simBase: null, simPlay: false, simBefore: false, simWalk: null, simAsk: false, spot: s.simWalk != null ? null : s.spot, panel: s.panel === "simulate" ? "inspector" : s.panel }));
+  if (prev) {
+    setOpt("nums", prev.nums);
+    setOpt("thick", prev.thick);
+    setOpt("period", prev.period);
+  }
+}
+const sameWhatif = (a: FunnelSettings["whatif"], b: FunnelSettings["whatif"]) => (["traffic", "conv", "price", "cost"] as const).every((k) => Math.abs((Number(a[k]) || 1) - (Number(b[k]) || 1)) < 1e-9);
+/** The what-if levers moved since simulating started and the result isn't saved as a scenario yet. */
+export function simUnsaved(s: Pick<EditorState, "simBase" | "settings"> = get()) {
+  const b = s.simBase;
+  if (!b || sameWhatif(s.settings.whatif, b.settings.whatif)) return false;
+  return !s.settings.scenarios.some((sc) => sameWhatif(sc.whatif, s.settings.whatif));
+}
+/** Leave Simulate (S, Esc or the toggle). Unsaved what-if changes ask once: keep as a scenario, or discard. */
+export function leaveSim() {
+  if (!get().simBase) return;
+  if (simUnsaved()) return set({ simAsk: true });
+  stopSim();
+}
+/** Keep the what-if as a named scenario; the map goes back to its baseline numbers. Block edits stay on the map. */
+export function keepSimAsScenario(name: string) {
+  const s = get(),
+    b = s.simBase;
+  if (!b) return;
+  const n = (name.trim() || `Simulation ${s.settings.scenarios.length + 1}`).slice(0, 60);
+  setSettings({ scenarios: [...s.settings.scenarios, { id: nid(), name: n, kind: "custom", whatif: { ...s.settings.whatif } }], whatif: { ...b.settings.whatif } });
+  stopSim();
+  showToast(`Saved as scenario “${n}”`);
+}
+/** Discard every change made while simulating (levers and block assumptions), then leave. One undo step. */
+export function discardSim() {
+  revertSim();
+  stopSim();
+}
+/** Compare with the baseline (current map) or with a saved scenario. The comparison is the engine's own run. */
+export function setSimVs(scenarioId: string | null) {
+  const s = get(),
+    b = s.simBase;
+  if (!b) return;
+  const sc = scenarioId ? s.settings.scenarios.find((x) => x.id === scenarioId) : undefined;
+  const settings = sc ? { ...b.settings, whatif: { ...sc.whatif } } : b.settings;
+  set({ simBase: { ...b, vs: sc ? sc.id : null, R: compute({ nodes: b.nodes, edges: b.edges }, settings) } });
+}
+export function setSimSpeed(simSpeed: 1 | 2 | 4) {
+  set({ simSpeed });
+}
+/** Walk-through: step through the funnel one stage at a time (the others dim). null ends it. */
+export function setSimWalk(i: number | null) {
+  const s = get();
+  const order = s.R.order.filter((id) => s.nodes.some((n) => n.id === id && !isAnnot(n.type)));
+  if (i == null || !order.length) return set({ simWalk: null, spot: null });
+  const k = Math.max(0, Math.min(order.length - 1, i));
+  set({ simWalk: k, spot: order[k] });
 }
 export function setSimPlay(simPlay: boolean) {
   set({ simPlay });

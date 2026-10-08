@@ -7,7 +7,7 @@ import { money, pct, people, peopleExact, ratio } from "@/lib/format";
 import { healthChecks } from "@/lib/health";
 import { setTab, clearSelection, shownR, useEditor } from "@/lib/editor/store";
 import { totalsDelta } from "@/lib/simulate";
-import { DeltaChip } from "./simulate";
+import { DeltaChip, fmtTotal } from "./simulate";
 
 /** Popover above the strip; closes on outside click and Escape. */
 function Pop({ label, button, children, wide }: { label: string; button: (open: boolean) => React.ReactNode; children: (close: () => void) => React.ReactNode; wide?: boolean }) {
@@ -83,7 +83,13 @@ export function KpiBar() {
     { id: "mrr", label: "MRR", text: "MRR", value: m(R.mrr) },
     { id: "ltvc", label: "LTV / customer", text: "LTV / customer", value: m(R.ltvc) },
   ];
-  const chip = (k: K) => (sim && k.sim ? <DeltaChip t={sim[k.sim]} cur={cur} compact /> : null);
+  const chip = (k: K) =>
+    sim && k.sim ? (
+      <>
+        <DeltaChip t={sim[k.sim]} cur={cur} compact />
+        {sim[k.sim].delta !== 0 && <small className="fm-kwas">was {fmtTotal[k.sim](sim[k.sim].was, cur)}</small>}
+      </>
+    ) : null;
   const named = nodes.filter((n) => warnIds.has(n.id));
   // visible counts per band (F11); phone shows every figure as scrolling chips, starting with Traffic
   const visible = band === "phone" ? all.length : band === "tablet" ? 3 : band === "md" ? 4 : sideOpen ? 5 : 6;

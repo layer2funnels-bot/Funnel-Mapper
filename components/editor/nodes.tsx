@@ -5,7 +5,7 @@ import { Icon } from "@/components/icon";
 import { baseOf, blockH, CATCOLOR, fourPorts, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
 import { brandMarkOf } from "@/lib/brand-marks";
-import { lostDots, stepDelta } from "@/lib/simulate";
+import { assumptionChanges, lostDots, stepDelta } from "@/lib/simulate";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { SimChip } from "./simulate";
 import { BlockArtImg, BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
@@ -148,6 +148,9 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
   const sd = simBase && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, simBase.R) : null;
+  // the assumptions changed on this block while simulating (amber Δ with "was → now" on hover)
+  const baseNode = simBase ? simBase.nodes.find((b) => b.id === id) : undefined;
+  const changed = baseNode && !simBefore ? assumptionChanges([n], [baseNode]) : [];
   const tone = sd?.changed ? (sd.dRev ? (sd.dRev > 0 ? "up" : "down") : sd.dOut ? (sd.dOut > 0 ? "up" : "down") : null) : null;
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
@@ -168,6 +171,11 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
         hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />
       )}
       <LockBadge n={n} />
+      {changed.length > 0 && (
+        <span className="fm-delta" title={changed.map((c) => `${c.label} ${nf(c.was, 2)} → ${nf(c.now, 2)}`).join(" · ")} role="img" aria-label={`Changed in this simulation: ${changed.map((c) => `${c.label} ${nf(c.was, 2)} to ${nf(c.now, 2)}`).join(", ")}`}>
+          Δ
+        </span>
+      )}
       {leak && (
         <span className="fm-leak" title="Key leak: the step that loses the most people">
           Key leak

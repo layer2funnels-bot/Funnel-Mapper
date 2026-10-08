@@ -1594,10 +1594,10 @@
     grid-template-columns: 48px 0 minmax(0, 1fr) 320px;
   }
   .fm-editor.fm-collapse-insp {
-    grid-template-columns: 48px 256px minmax(0, 1fr) 0;
+    grid-template-columns: 48px 256px minmax(0, 1fr) 26px;
   }
   .fm-editor.fm-collapse-side.fm-collapse-insp {
-    grid-template-columns: 48px 0 minmax(0, 1fr) 0;
+    grid-template-columns: 48px 0 minmax(0, 1fr) 26px;
   }
   .fm-collapse-side .fm-side,
   .fm-collapse-insp .fm-insp {
@@ -1629,7 +1629,7 @@
   }
   .fm-editor.fm-collapse-insp,
   .fm-editor.fm-collapse-side.fm-collapse-insp {
-    grid-template-columns: 48px 0 minmax(0, 1fr) 0;
+    grid-template-columns: 48px 0 minmax(0, 1fr) 26px;
   }
   .fm-editor:not(.fm-collapse-side) .fm-side {
     grid-column: 3;
@@ -5031,4 +5031,232 @@ dialog.fm-sharedlg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Simulation bar (SIMULATION_SPEC §3): 40px, chrome background, one row; wraps on tablet */
+.fm-simbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  height: 40px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--panel2);
+  font-size: 12.5px;
+}
+.fm-stage.sim .fm-stagebar,
+.fm-stage.sim .fm-legend,
+.fm-stage.sim .fm-before-badge {
+  top: 52px;
+}
+.fm-stage.sim .fm-simwarn {
+  top: 92px;
+}
+.fm-sbchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.fm-sbchip span {
+  color: var(--muted);
+}
+.fm-sbchip select {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+  max-width: 150px;
+}
+.fm-simbar > * {
+  flex: none;
+}
+.fm-sbchip select option {
+  background: var(--panel);
+}
+.fm-simchanged {
+  position: relative;
+}
+.fm-simchanged > button {
+  height: 30px;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px dashed var(--attention);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  padding: 0 10px;
+}
+.fm-simlist {
+  position: fixed;
+  z-index: 60;
+  min-width: 280px;
+  max-height: 300px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.fm-simlist li {
+  padding: 4px 6px;
+}
+.fm-simlist button {
+  border: 0;
+  background: transparent;
+  color: var(--brand-light);
+  text-align: left;
+  padding: 0;
+}
+.fm-simperiod button,
+.fm-simspeed button {
+  min-height: 30px;
+  padding: 0 8px;
+}
+.fm-simsave .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-ink);
+  display: inline-block;
+}
+.fm-simwarn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 46px;
+  z-index: 9;
+  padding: 4px 12px;
+  border: 1px solid var(--attention);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--attention);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fm-simempty {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-weight: 600;
+}
+.fm-walkcap {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  max-width: calc(100% - 32px);
+}
+.fm-walknav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1279px) {
+  .fm-simchanged > button {
+    max-width: 140px;
+  }
+}
+@media (max-width: 767px) {
+  .fm-simbar .fm-simspeed,
+  .fm-simbar .fm-sbchip.vs {
+    display: none;
+  }
+  .fm-simbar {
+    height: 52px;
+  }
+  .fm-simbar button,
+  .fm-simbar select {
+    min-height: 44px;
+  }
+}
+.fm-delta {
+  position: absolute;
+  top: -9px;
+  right: 18px;
+  z-index: 3;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--attention);
+  color: #241a03;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+.fm-kwas {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* F8: the collapsed right panel keeps a 26px rail; each icon opens the panel on that tab */
+.fm-irail {
+  display: none;
+}
+@media (min-width: 1280px) {
+  .fm-editor.fm-collapse-insp .fm-irail {
+    grid-area: insp;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding-top: 8px;
+    background: var(--chrome);
+    border-left: 1px solid var(--line);
+  }
+  .fm-irail button {
+    width: 24px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+  }
+  .fm-irail button:hover {
+    background: var(--panel2);
+    color: var(--ink);
+  }
 }

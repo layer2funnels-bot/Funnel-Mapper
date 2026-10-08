@@ -45,7 +45,7 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, type ReportSection } from "@/lib/editor/store";
+  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
@@ -69,6 +69,7 @@ import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
 import { QuickAdd } from "./quick-add";
 import { LineMenu } from "./line-menu";
+import { SimBar } from "./sim-bar";
 import { TemplatesPanel } from "./templates-panel";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
@@ -213,7 +214,8 @@ function EditorInner(props: EditorProps) {
   const simBefore = useEditor((s) => s.simBefore);
   const actualView = useEditor((s) => s.actualView);
   const toggleSim = () => {
-    if (simOn) return stopSim();
+    // read the store (the keyboard handler keeps an older copy of this function)
+    if (useEditor.getState().simBase) return leaveSim();
     startSim();
     setMode("map");
     setShowInsp(true);
@@ -366,7 +368,36 @@ function EditorInner(props: EditorProps) {
       if (ev.key === "Escape") {
         if (useEditor.getState().eyedrop) return armEyedropper(null);
         if (useEditor.getState().menu || useEditor.getState().quick) return;
+        const st = useEditor.getState();
+        if (st.simWalk != null) return setSimWalk(null);
+        // Esc with nothing selected leaves Simulate (asking once about unsaved what-if changes)
+        if (st.simBase && !st.selNodes.length && !st.selEdge) return leaveSim();
         clearSelection();
+        return;
+      }
+      // F8: [ collapses / expands the left panel, ] the right one (remembered with the view options)
+      if (!mod && !ev.altKey && (ev.key === "[" || ev.key === "]")) {
+        ev.preventDefault();
+        const o = useEditor.getState().opts;
+        if (ev.key === "[") setOpt("hideSide", !o.hideSide);
+        else setOpt("hideInsp", !o.hideInsp);
+        return;
+      }
+      // Simulate: S toggles it, Space plays / pauses the people flow, ← → step the walk-through
+      if (!mod && !ev.altKey && k === "s" && !useEditor.getState().readOnly && !useEditor.getState().shared && !presenting) {
+        ev.preventDefault();
+        toggleSim();
+        return;
+      }
+      if (useEditor.getState().simBase && ev.key === " " && !mod) {
+        ev.preventDefault();
+        setSimPlay(!useEditor.getState().simPlay);
+        return;
+      }
+      if (useEditor.getState().simWalk != null && (ev.key === "ArrowRight" || ev.key === "ArrowLeft")) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        setSimWalk((useEditor.getState().simWalk ?? 0) + (ev.key === "ArrowRight" ? 1 : -1));
         return;
       }
       // style clipboard and lock: Mod+Alt+C / V / L (key codes, because Alt changes the character on some keyboards)
@@ -981,7 +1012,7 @@ function EditorInner(props: EditorProps) {
         )}
       </aside>
 
-      <section className="fm-stage" aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
+      <section className={`fm-stage${simOn && !reports ? " sim" : ""}`} aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
         {ready && <Canvas />}
         {ready && !reports && !share?.hideNumbers && (
           <div className="fm-stagebar">
@@ -1001,6 +1032,7 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
+        {simOn && !reports && <SimBar onOpenChecks={() => (setTab("math"), setShowInsp(true), togglePanel("insp", false))} />}
         {simBefore && !reports && (
           <div className="fm-before-badge" role="status">
             Before your changes
@@ -1035,6 +1067,31 @@ function EditorInner(props: EditorProps) {
         )}
       </section>
 
+      {collapsed.insp && !reports && (
+        <nav className="fm-irail" aria-label="Details panel (collapsed)">
+          <button type="button" aria-label="Expand details panel" title="Show details panel (])" onClick={() => togglePanel("insp", false)}>
+            <Icon name="chevronLeft" size={15} />
+          </button>
+          <button type="button" aria-label="Funnel" title="Funnel" onClick={() => (setPanel("inspector"), togglePanel("insp", false))}>
+            <Icon name="sliders" size={15} />
+          </button>
+          {owner && !readOnly && !sharedView && (
+            <button type="button" aria-label="Simulate" title="Simulate (S)" onClick={() => (simOn ? setPanel("simulate") : toggleSim(), togglePanel("insp", false))}>
+              <Icon name="play" size={15} />
+            </button>
+          )}
+          {(owner || notesShared) && (
+            <button type="button" aria-label="Funnel notes" title="Funnel notes" onClick={() => (setPanel("notes"), togglePanel("insp", false))}>
+              <Icon name="note" size={15} />
+            </button>
+          )}
+          {manage && (
+            <button type="button" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), togglePanel("insp", false))}>
+              <Icon name="history" size={15} />
+            </button>
+          )}
+        </nav>
+      )}
       <aside className="fm-insp" id="fm-insp" aria-label="Details" style={band === "tablet" || band === "phone" ? { height: `${sheetH}dvh` } : undefined}>
         <div
           className="fm-sheet-grab"

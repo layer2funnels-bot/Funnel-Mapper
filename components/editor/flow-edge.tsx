@@ -19,9 +19,12 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const simBase = useEditor((s) => s.simBase);
   // while simulating, line weight is on one scale for "now" and "before", so a thicker or thinner line is a real change
   const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows), ...(s.simBase ? Object.values(s.simBase.R.flows) : [])));
-  const play = useEditor((s) => s.simPlay && !!s.simBase);
+  // people-flow dots: paused while dragging or panning
+  const play = useEditor((s) => s.simPlay && !!s.simBase && !s.dragging);
+  const speed = useEditor((s) => s.simSpeed);
   const before = useEditor((s) => s.simBefore);
-  const crowded = useEditor((s) => s.edges.length > 45);
+  // at most 8 dots a line keeps the whole map under ~300 dots; busy maps get 3 a line
+  const crowded = useEditor((s) => s.edges.length > 37);
   const calm = useReducedMotion();
   const thick = useEditor((s) => s.opts.thick);
   const cur = useEditor((s) => s.settings.currency);
@@ -36,7 +39,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const tag = edgeTag(data?.fromType, port);
   const share = num(data?.share ?? 100);
   const dots = play && !calm && look.kind !== "nodata" ? flowDots(flow0, maxF, crowded) : 0;
-  const dur = dotSeconds(Math.hypot(targetX - sourceX, targetY - sourceY) * 1.15);
+  const dur = dotSeconds(Math.hypot(targetX - sourceX, targetY - sourceY) * 1.15) / speed;
   const marker = look.arrow !== "none" ? `fm-arrow-${id}` : null;
   const style: React.CSSProperties = { strokeWidth: w, ...(look.opacity != null ? { opacity: look.opacity } : {}), ...(look.color && !selected ? { stroke: look.color } : {}), ...(look.dash ? { strokeDasharray: DASH[look.dash] ?? "none" } : {}) };
   return (

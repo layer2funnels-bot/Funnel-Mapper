@@ -7046,3 +7046,154 @@ dialog.fm-sharedlg > p {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+/* presentation (V2 "Present"): stage title and numbers on the canvas, one full-width bar underneath */
+.fm-present-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.fm-present-ui > * {
+  pointer-events: auto;
+}
+.fm-present-ui .fp-head {
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  top: 40px;
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  pointer-events: none;
+}
+.fm-present-ui .fp-kicker {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--brand-light);
+}
+.fm-present-ui .fp-title {
+  margin: 8px 0 6px;
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.fm-present-ui .fp-sub {
+  margin: 0;
+  max-width: 640px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.fm-present-ui .fp-stats {
+  display: flex;
+  gap: 32px;
+  margin: 0;
+  text-align: right;
+}
+.fm-present-ui .fp-stats dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+.fm-present-ui .fp-stats dd {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.fm-present-ui .fp-obj {
+  position: absolute;
+  right: 56px;
+  top: 150px;
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  font-size: 13px;
+  border-top: 0;
+  margin: 0;
+}
+.fm-present-ui .fp-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 32px;
+  background: var(--chrome);
+  border-top: 1px solid var(--side-line);
+}
+.fm-present-ui .fp-progress {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+.fm-present-ui .fp-progress ol {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-present-ui .fp-progress button {
+  display: block;
+  width: 36px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.fm-present-ui .fp-progress button i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.fm-present-ui .fp-progress button.done i,
+.fm-present-ui .fp-progress button[aria-current="step"] i {
+  background: var(--brand);
+}
+@media (max-width: 760px) {
+  .fm-present-ui .fp-head {
+    left: 16px;
+    right: 16px;
+    top: 20px;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .fm-present-ui .fp-title {
+    font-size: 28px;
+  }
+  .fm-present-ui .fp-stats {
+    text-align: left;
+  }
+  .fm-present-ui .fp-stats dd {
+    font-size: 24px;
+  }
+  .fm-present-ui .fp-obj {
+    right: 16px;
+    left: 16px;
+    top: auto;
+    bottom: 84px;
+    max-width: none;
+  }
+  .fm-present-ui .fp-bar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 68px;
+  }
+}
+.fm-present .react-flow__minimap,
+.fm-present .fm-zoom,
+.fm-present .fm-legend {
+  display: none !important;
+}

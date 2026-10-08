@@ -121,7 +121,8 @@ test.describe("share links (M5)", () => {
     await expect(c.locator(".fm-nstats").first()).toBeHidden();
     // the hide-numbers client view is the map alone: no panel, no numbers
     // can't edit when numbers are hidden, even if the link was created as editable
-    await expect((await paletteItem(c, "Landing page"))).toHaveCount(0);
+    await expect(c.getByPlaceholder(/^Search( \d+)? blocks$/)).toHaveCount(0);
+    await expect(c.getByRole("button", { name: "Add Landing page", exact: true })).toHaveCount(0);
     expect(await c.locator("body").innerText()).not.toMatch(/£\s?\d/); // no money anywhere on screen
     await ctx.close();
   });

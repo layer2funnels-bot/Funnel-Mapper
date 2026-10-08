@@ -7457,3 +7457,10 @@ dialog.fm-sharedlg > p {
 .fm-insp > header {
   padding-right: 44px;
 }
+
+/* hide-numbers share links show no money at all, not even masked price tabs */
+.fm-hide-all .fm-price,
+.fm-hide-all .fm-leak,
+.fm-hide-all .fm-dchip {
+  display: none !important;
+}

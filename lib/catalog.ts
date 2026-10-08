@@ -483,6 +483,15 @@ export function portsFor(type: string) {
   return { hasIn, hasOut, hasAlt, labels };
 }
 
+/**
+ * V2 four ports: every flow block connects on all four sides (top, right, bottom, left), and the line's meaning
+ * (Yes / No / Skip / No data) is chosen on the line. Yes/No and A/B logic keep their fixed outcome ports and chips.
+ */
+export const fourPorts = (type: string) => {
+  const T = typeOf(type);
+  return !!T && T.cat !== "annot" && !isShareLogic(type);
+};
+
 /** Whether a block may be the target of a connection. */
 export const canReceive = (type: string) => !["traffic", "annot"].includes(typeOf(type)?.cat);
 

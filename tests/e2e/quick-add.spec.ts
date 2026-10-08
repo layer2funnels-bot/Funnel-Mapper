@@ -131,7 +131,7 @@ test.describe("Quick Add adapts to the screen", () => {
         { x: stage.x + stage.width / 2 + 120, y: bottom },
         { x: right, y: bottom },
       ]) {
-        await drag(page, await centre(page, fb.locator(".fm-port.out")), to);
+        await drag(page, await centre(page, fb.locator(".fm-port.side.right")), to);
         const quick = page.getByRole("dialog", { name: "Add the next step" });
         await expect(quick, `zoom-out ${zoomOut}, release ${to.x},${to.y}`).toBeVisible();
         const b = (await quick.boundingBox())!;
@@ -155,7 +155,7 @@ test.describe("Quick Add adapts to the screen", () => {
     const fb = node(page, "Facebook ads");
     await expect(fb).toBeVisible();
     await page.getByRole("button", { name: "Close details" }).click(); // the new block opened its details sheet
-    const from = await centre(page, fb.locator(".fm-port.out"));
+    const from = await centre(page, fb.locator(".fm-port.side.right"));
     const stage = (await page.locator(".fm-stage").boundingBox())!;
     await drag(page, from, { x: Math.min(stage.x + stage.width - 40, from.x + 120), y: stage.y + stage.height - 90 });
     const quick = page.getByRole("dialog", { name: "Add the next step" });
@@ -169,8 +169,8 @@ test.describe("Quick Add adapts to the screen", () => {
     const row = (await quick.getByRole("option").first().boundingBox())!;
     expect(row.height).toBeGreaterThanOrEqual(44);
     // the canvas was panned so the end of the line is above the sheet
-    await expect.poll(async () => (await centre(page, fb.locator(".fm-port.out"))).y).toBeLessThan(q2.y);
-    expect((await centre(page, fb.locator(".fm-port.out"))).y).toBeGreaterThan(stage.y); // and the block it came from is still on screen
+    await expect.poll(async () => (await centre(page, fb.locator(".fm-port.side.right"))).y).toBeLessThan(q2.y);
+    expect((await centre(page, fb.locator(".fm-port.side.right"))).y).toBeGreaterThan(stage.y); // and the block it came from is still on screen
     await quick.getByRole("combobox").fill("Landing");
     await quick.getByRole("option", { name: /Landing page/ }).first().click();
     await expect(nodes(page)).toHaveCount(2);

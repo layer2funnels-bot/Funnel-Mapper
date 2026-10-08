@@ -45,7 +45,7 @@ export interface NodeStyle {
 }
 
 export type EdgePath = "curve" | "straight" | "elbow";
-export type EdgeDash = "solid" | "dashed" | "dotted";
+export type EdgeDash = "solid" | "dashed" | "dotted" | "dashdot";
 export type EdgeArrow = "none" | "end" | "both";
 export type EdgeKind = "flow" | "skip" | "nodata";
 
@@ -119,13 +119,13 @@ export function textCss(s: NodeStyle | undefined, size?: number): CSSProperties 
   return c;
 }
 
-export const DASH: Record<EdgeDash, string | undefined> = { solid: undefined, dashed: "8 6", dotted: "2 5" };
+export const DASH: Record<EdgeDash, string | undefined> = { solid: undefined, dashed: "8 6", dotted: "2 5", dashdot: "9 4 2 4" };
 export const ARROW_SIZE = { sm: 6, md: 9, lg: 13 } as const;
 
-/** Effective edge look: explicit style wins; "skip" defaults to dashed and "nodata" to dotted. */
+/** Effective edge look: explicit style wins; "skip" defaults to dotted and "nodata" to dash-dot grey (V2 line meanings). */
 export function edgeLook(s: EdgeStyle | undefined) {
   const kind = s?.kind ?? "flow";
-  const dash = s?.dash ?? (kind === "skip" ? "dashed" : kind === "nodata" ? "dotted" : undefined);
+  const dash = s?.dash ?? (kind === "skip" ? "dotted" : kind === "nodata" ? "dashdot" : undefined);
   return { kind, path: s?.path ?? "curve", dash, color: s?.color, width: s?.width, arrow: s?.arrow ?? "none", arrowSize: ARROW_SIZE[s?.arrowSize ?? "md"], label: s?.label?.trim() || "", opacity: s?.opacity != null && s.opacity < 1 ? Math.max(0.1, s.opacity) : undefined, showPct: !!s?.showPct, showRev: !!s?.showRev };
 }
 

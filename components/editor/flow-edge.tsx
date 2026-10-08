@@ -8,10 +8,11 @@ import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
 import { edgeConversion, edgePath, edgeRevenue, edgeTag } from "@/lib/editor/labels";
 import { selectEdge, shownR, useEditor } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
+import type { Side } from "@/lib/graph";
 
 type Data = { port: "main" | "alt"; fromType?: string; from?: string; to?: string; share: number; s?: EdgeStyle };
 
-export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, selected, data }: EdgeProps & { data: Data }) {
+export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected, data }: EdgeProps & { data: Data }) {
   const flow0 = useEditor((s) => shownR(s).flows[id] ?? 0);
   const k = useEditor((s) => periodFactor(s.opts.period));
   const flow = flow0 * k;
@@ -27,7 +28,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const R = useEditor(shownR);
   const port = data?.port ?? "main";
   const look = edgeLook(data?.s);
-  const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY);
+  const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY, sourcePosition as Side, targetPosition as Side);
   const wOf = (f: number) => look.width ?? (thick ? 2 + 6 * Math.sqrt(f / maxF) : 2);
   const w = wOf(flow0);
   const ed = simBase && thick && !before ? edgeDelta(id, R, simBase.R) : null;

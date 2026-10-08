@@ -75,7 +75,7 @@ test.describe("V2 editor interactions", () => {
     await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
     await expect(nodes(page)).toHaveCount(1);
     const fb = node(page, "Facebook ads");
-    const from = await centre(page, fb.locator(".fm-port.out"));
+    const from = await centre(page, fb.locator(".fm-port.side.right"));
     await drag(page, from, { x: from.x + 260, y: from.y + 20 });
     const quick = page.getByRole("dialog", { name: "Add the next step" });
     await expect(quick).toBeVisible();

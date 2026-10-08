@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { ThumbnailField } from "./thumbnail-field";
 import { WaitField } from "./wait-field";
 import { WidgetFields } from "./widget-fields";
-import { baseOf, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
+import { baseOf, fourPorts, isAnnot, isShareLogic, FRAME_COLORS, INT_LABEL, LINE_DIRS, portsFor, SHAPES, typeOf, type Interval, type TrafficModel } from "@/lib/catalog";
 import { money, nf, pct, people } from "@/lib/format";
 import { Icon } from "@/components/icon";
 import { RichTextField } from "@/components/rich-text";
@@ -11,9 +11,10 @@ import { num, offerVals, periodFactor, stepRate, withStepRate, type PeriodKey } 
 import { STEP_STATUSES, type FunnelEdge, type FunnelNode, type StepStatus } from "@/lib/graph";
 import { safeUrl } from "@/lib/rich-text";
 import { sym } from "@/lib/format";
-import { align, clearSelection, nid, setSection, tidySelection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
+import { align, clearSelection, meaningOf, nid, setMeaning, setSection, tidySelection, setSettings, deleteSelection, flipEdge, selectNodes, duplicateSelection, setInspTab, setLocked, showToast, type InspTab, updateEdge, updateNode, updateParams, useEditor, wrapInFrame } from "@/lib/editor/store";
 import { edgeConversion, edgeRevenue } from "@/lib/editor/labels";
 import { openInsertStep } from "./quick-add";
+import { MEANINGS, MeaningSwatch } from "./line-menu";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
@@ -603,7 +604,20 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
       <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
         {tab === "flow" ? (
           <>
-            {a && portsFor(a.type).hasAlt && (
+            {a && fourPorts(a.type) && (
+              <div className="field">
+                <span className="lbl">This line means</span>
+                <div className="fm-meanings" role="radiogroup" aria-label="This line means">
+                  {MEANINGS.filter(([k]) => k !== "no" || portsFor(a.type).hasAlt).map(([k, label, help]) => (
+                    <button key={k} type="button" role="radio" aria-checked={meaningOf(e) === k} onClick={() => setMeaning(e.id, k)} title={help}>
+                      <MeaningSwatch m={k} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {a && !fourPorts(a.type) && portsFor(a.type).hasAlt && (
               <div className="field">
                 <span className="lbl">Who goes this way</span>
                 <Seg<"main" | "alt">

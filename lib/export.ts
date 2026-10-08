@@ -1,11 +1,11 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
 import { brandMarkOf } from "./brand-marks";
-import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
+import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, fourPorts, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
 import { money, nf, people } from "./format";
 import { num, periodFactor, stepRows, type FunnelResult } from "./funnel-math";
-import type { FunnelEdge, FunnelNode, Goal } from "./graph";
+import type { FunnelEdge, FunnelNode, Goal, Side } from "./graph";
 import { ICONS, type IconName } from "./icons";
-import { edgeConversion, edgePath, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
+import { edgeConversion, edgePath, sidesOf, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
 import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type Wireframe } from "./block-visuals";
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
@@ -323,12 +323,13 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
 
   /* connections (React Flow draws them under the elements) */
   const maxF = Math.max(1, ...Object.values(R.flows));
-  const portXY = (n: FunnelNode, port: "in" | "out" | "alt"): [number, number] => {
+  const sideXY = (n: FunnelNode, side: Side): [number, number] => {
     // handle centres sit 9px outside the block edge (editor.css .fm-port), React Flow anchors on the outer side
     const w = nodeW(n.type),
       h = blockH(n.type);
-    if (port === "in") return [n.x - 9, n.y + h / 2];
-    if (port === "alt") return [n.x + w / 2, n.y + h + 9];
+    if (side === "left") return [n.x - 9, n.y + h / 2];
+    if (side === "bottom") return [n.x + w / 2, n.y + h + 9];
+    if (side === "top") return [n.x + w / 2, n.y - 9];
     return [n.x + w + 9, n.y + h / 2];
   };
   let edges = "",
@@ -338,10 +339,14 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       b = B[e.to];
     if (!a || !b) return;
     const port = e.port === "alt" ? "alt" : "main";
-    const [sx, sy] = portXY(a, port === "alt" ? "alt" : "out"),
-      [tx, ty] = portXY(b, "in");
+    // Yes/No logic keeps its fixed ports; every other block uses the side the line was drawn from / to
+    const [sp, tp] = sidesOf(e);
+    const s1: Side = fourPorts(a.type) ? sp : port === "alt" ? "bottom" : "right",
+      t1: Side = fourPorts(b.type) ? tp : "left";
+    const [sx, sy] = sideXY(a, s1),
+      [tx, ty] = sideXY(b, t1);
     const L = edgeLook(e.s);
-    const [d, mx, my] = edgePath(L, port, sx, sy, tx, ty);
+    const [d, mx, my] = edgePath(L, port, sx, sy, tx, ty, s1, t1);
     const flow = R.flows[e.id] || 0;
     const w = L.width ?? (opts.thick ? 2 + 6 * Math.sqrt(flow / maxF) : 2);
     const color = L.color ?? (L.kind === "nodata" ? P.muted : port === "alt" ? P.alt : P.edge);

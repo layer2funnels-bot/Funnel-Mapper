@@ -48,18 +48,18 @@ test.describe("funnel editor", () => {
       lp = node(page, "Landing page"),
       ty = node(page, "Thank-you page"),
       seq = node(page, "Email sequence");
-    await drag(page, await centre(page, fb.locator(".fm-port.out")), await centre(page, lp));
+    await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
     await expect(edgeLabels(page).first()).toContainText("1,000");
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
-    await drag(page, await centre(page, lp.locator(".fm-port.alt")), await centre(page, seq));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.bottom")), await centre(page, seq));
     await expect(edgeLabels(page)).toHaveCount(3);
     // landing converts 30%: 300 go right, 700 go down (labelled No)
     await expect(page.locator(".fm-elabel", { hasText: "300" })).toBeVisible();
     await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("700");
     // can't connect into a traffic source or to the same target twice
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, fb));
-    await drag(page, await centre(page, lp.locator(".fm-port.out")), await centre(page, ty));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, fb));
+    await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
     await expect(edgeLabels(page)).toHaveCount(3);
   });
 

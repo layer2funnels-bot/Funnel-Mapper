@@ -68,6 +68,7 @@ import { KpiBar } from "./kpi-bar";
 import { Palette, type PaletteProduct } from "./palette";
 import { Presenter } from "./present";
 import { QuickAdd } from "./quick-add";
+import { LineMenu } from "./line-menu";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
 import { TemplateDialog } from "./template-dialog";
@@ -1017,6 +1018,7 @@ function EditorInner(props: EditorProps) {
         )}
         <ZoomControls />
         <QuickAdd />
+        <LineMenu />
         {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
           <button type="button" className="fm-period-badge" onClick={() => setOpt("period", "month")} title="Show monthly numbers">
             Numbers per {opts.period} · <u>back to monthly</u>

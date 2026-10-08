@@ -38,7 +38,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await expect(nodes(page)).toHaveCount(10);
   await page.getByLabel("Name", { exact: true }).fill("Payment plan offer");
   await page.getByLabel("Price (£)").fill("297");
-  await drag(page, await centre(page, node(page, "Program checkout").locator(".fm-port.alt")), await centre(page, node(page, "Payment plan offer")));
+  await drag(page, await centre(page, node(page, "Program checkout").locator(".fm-port.side.bottom")), await centre(page, node(page, "Payment plan offer")));
   await expect(edgeLabels(page)).toHaveCount(10);
   await expect(node(page, "Payment plan offer")).toContainText("buy");
   await waitSaved(page);

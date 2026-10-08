@@ -2,10 +2,10 @@
 // Editor state (Zustand). Holds the funnel graph + settings, selection, undo/redo history and view options.
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
-import { blockH, DEFAULT_SIZE, defaultsFor, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
+import { blockH, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
 import type { ActualRowDb } from "../schemas";
-import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Viewport } from "../graph";
+import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Side, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
 import { knobsOf, type SimBase } from "../simulate";
 import { cleanStyle, type EdgeStyle, type NodeStyle } from "../style";
@@ -71,7 +71,7 @@ export interface QuickAddState {
   fx: number;
   fy: number;
   /** Opened by dragging a connection off a port into empty space: the new block lands at `fx/fy` (its in-port at that point) and is connected. */
-  from?: { id: string; port: "main" | "alt" };
+  from?: { id: string; port: "main" | "alt"; sh?: Side };
   /** Opened from "Insert step on line": the block goes onto this connection. */
   edge?: string;
 }
@@ -158,6 +158,8 @@ export interface EditorState {
   shared: boolean;
   /** Floating quick-add: where it opened (screen px inside the canvas) and the flow position blocks go to. */
   quick: QuickAddState | null;
+  /** "Connect as" menu for a line just drawn (screen px inside the canvas). */
+  lineMenu: { id: string; sx: number; sy: number } | null;
   /** Workspace viewer: always read-only (the database refuses their writes too). */
   viewer: boolean;
   /** Map (canvas) or the full-width Reports view. */
@@ -232,6 +234,7 @@ export const useEditor = create<EditorState>(() => ({
   spot: null,
   shared: false,
   quick: null,
+  lineMenu: null,
   viewer: false,
   mode: "map",
   section: "overview",
@@ -383,6 +386,13 @@ export function openQuickAdd(q: EditorState["quick"]) {
 }
 export function closeQuickAdd() {
   set({ quick: null });
+}
+export function openLineMenu(m: EditorState["lineMenu"]) {
+  if (get().readOnly) return;
+  set({ lineMenu: m });
+}
+export function closeLineMenu() {
+  set({ lineMenu: null });
 }
 export function setActuals(actuals: ActualRowDb[] | null) {
   set({ actuals });
@@ -807,15 +817,34 @@ export function frameMembers(frameId: string): string[] {
 export function canConnect(from: string, to: string, port: "main" | "alt") {
   const s = get();
   if (from === to) return false;
+  const fb = s.nodes.find((n) => n.id === from);
   const tb = s.nodes.find((n) => n.id === to);
+  if (!fb || !portsFor(fb.type).hasOut) return false;
   if (!tb || !canReceive(tb.type)) return false;
   return !s.edges.some((e) => e.from === from && e.to === to && (e.port || "main") === port);
 }
-export function connect(from: string, port: "main" | "alt", to: string) {
-  if (!canConnect(from, to, port)) return;
-  const e: FunnelEdge = { id: "e" + nid(), from, to, share: 100, port };
+/** Line meanings (V2 four ports): Yes continues, No leaves, Skip step goes past a block, No data has no numbers. */
+export type LineMeaning = "yes" | "no" | "skip" | "nodata";
+/** The meaning a connection reads as (from its port and style kind). */
+export const meaningOf = (e: Pick<FunnelEdge, "port" | "s">): LineMeaning => (e.s?.kind === "skip" ? "skip" : e.s?.kind === "nodata" ? "nodata" : e.port === "alt" ? "no" : "yes");
+/** Change what a line means. Yes / No set who travels it (the maths' port); Skip / No data are drawn differently. */
+export function setMeaning(id: string, m: LineMeaning) {
+  const e = get().edges.find((x) => x.id === id);
+  if (!e || get().readOnly) return;
+  const from = get().nodes.find((n) => n.id === e.from);
+  const alt = m === "no" && !!from && portsFor(from.type).hasAlt;
+  const kind = m === "skip" || m === "nodata" ? m : undefined;
+  const st = { ...(e.s ?? {}) };
+  if (kind) st.kind = kind;
+  else delete st.kind;
+  apply({ edges: get().edges.map((x) => (x.id === id ? { ...x, port: alt ? "alt" : m === "no" ? x.port : "main", s: Object.keys(st).length ? st : undefined } : x)) }, { discrete: true });
+}
+export function connect(from: string, port: "main" | "alt", to: string, sides: { sh?: Side; th?: Side } = {}) {
+  if (!canConnect(from, to, port)) return null;
+  const e: FunnelEdge = { id: "e" + nid(), from, to, share: 100, port, ...(sides.sh ? { sh: sides.sh } : {}), ...(sides.th ? { th: sides.th } : {}) };
   apply({ edges: [...get().edges, e] }, { discrete: true });
   selectEdge(e.id);
+  return e.id;
 }
 /**
  * Change a block's type in place (Change page type / block type). Keeps id, position, connections, URL, thumbnail,
@@ -842,12 +871,12 @@ export const canInsertType = (type: string) => canReceive(type) && portsFor(type
  * Add a block at the end of a dragged connection and connect it, as ONE change: one undo step, one autosave.
  * The block's in-port lands on (x, y); the new block is selected so the inspector follows.
  */
-export function addConnectedNode(from: { id: string; port: "main" | "alt" }, type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; w?: number; h?: number } = {}) {
+export function addConnectedNode(from: { id: string; port: "main" | "alt"; sh?: Side }, type: string, x: number, y: number, extra: { p?: NodeParams; name?: string; w?: number; h?: number } = {}) {
   const T = typeOf(type);
   const src = get().nodes.find((n) => n.id === from.id);
   if (!T || !src || !canFollowType(type) || get().readOnly) return null;
   const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
-  const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port };
+  const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port, ...(from.sh && fourPorts(src.type) ? { sh: from.sh } : {}) };
   apply({ nodes: [...get().nodes, n], edges: [...get().edges, e] }, { discrete: true });
   selectNodes([n.id]);
   return n;

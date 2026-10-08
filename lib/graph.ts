@@ -68,12 +68,19 @@ export const STEP_STATUSES = [
 ] as const;
 export type StepStatus = (typeof STEP_STATUSES)[number][0];
 
+/** The four sides a connection can leave or enter a block by (V2 four ports). Geometry only; `port` keeps the meaning. */
+export const SIDES = ["top", "right", "bottom", "left"] as const;
+export type Side = (typeof SIDES)[number];
+
 export const edgeSchema = z.object({
   id: z.string().min(1),
   from: z.string(),
   to: z.string(),
   share: finite.default(100),
   port: z.enum(["main", "alt"]).default("main"),
+  /** Side it leaves the source by / enters the target by. Absent on older maps: right (or bottom for "alt") into left. */
+  sh: z.enum(SIDES).optional(),
+  th: z.enum(SIDES).optional(),
   /** Visual style (lib/style.ts EdgeStyle). */
   s: z.record(z.string(), z.unknown()).optional(),
 });
@@ -111,8 +118,11 @@ export interface FunnelEdge {
   to: string;
   /** Percentage (0–100) of the source group sent this way. */
   share: number;
-  /** main = converted / Yes / A (right port); alt = didn't convert / No / B (bottom port). */
+  /** main = converted / Yes / A; alt = didn't convert / No / B. The maths read only this (never the side). */
   port: "main" | "alt";
+  /** Sides of the four ports the line uses (geometry only). */
+  sh?: Side;
+  th?: Side;
   s?: EdgeStyle;
 }
 export interface Viewport {

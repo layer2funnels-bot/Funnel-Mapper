@@ -2,7 +2,7 @@
 import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
 import { memo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { baseOf, blockH, CATCOLOR, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
+import { baseOf, blockH, CATCOLOR, fourPorts, isAnnot, nodeW, portsFor, typeOf } from "@/lib/catalog";
 import { FAMILIES, hasSplitBar, visualOf } from "@/lib/block-visuals";
 import { brandMarkOf } from "@/lib/brand-marks";
 import { lostDots, stepDelta } from "@/lib/simulate";
@@ -135,6 +135,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   if (!n) return null;
   const T = typeOf(n.type);
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
+  const four = fourPorts(n.type);
   const logic = T.cat === "logic";
   const cc = CATCOLOR[T.color ?? T.cat];
   const V = visualOf(n.type),
@@ -155,14 +156,24 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
-      {hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />}
+      {four ? (
+        // V2: four identical ports (hidden at rest; shown on hover, selection and while connecting). The line's meaning is chosen on the line.
+        <>
+          <Handle type="source" position={Position.Top} id="top" className="fm-port side top" title="Drag to connect" />
+          <Handle type="source" position={Position.Right} id="right" className="fm-port side right" title="Drag to connect" />
+          <Handle type="source" position={Position.Bottom} id="bottom" className="fm-port side bottom" title={hasAlt ? "Drag to connect (from here: people who leave)" : "Drag to connect"} />
+          <Handle type="source" position={Position.Left} id="left" className="fm-port side left" title="Drag to connect" />
+        </>
+      ) : (
+        hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />
+      )}
       <LockBadge n={n} />
       {leak && (
         <span className="fm-leak" title="Key leak: the step that loses the most people">
           Key leak
         </span>
       )}
-      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} />}
+      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />}
       {F.price && <span className="fm-price">{priceTab(n, cur)}</span>}
       {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
@@ -217,8 +228,8 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           ))}
         </span>
       )}
-      {hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
-      {hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
+      {!four && hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
+      {!four && hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
       {labels && (
         <span className="fm-plabel out" aria-hidden="true">
           {labels[0]}

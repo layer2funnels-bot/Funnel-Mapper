@@ -156,7 +156,7 @@ describe("map SVG export keeps the canvas elements and styles", () => {
     expect(svg).toContain(">Cold<");
     expect(svg).toContain(">1,000<");
     expect(svg).toContain(">No data<");
-    expect(svg).toMatch(/stroke-dasharray="2 5" opacity="0.7"/);
+    expect(svg).toMatch(/stroke-dasharray="9 4 2 4" opacity="0.7"/);
   });
 
   it("applies block and text styles", () => {

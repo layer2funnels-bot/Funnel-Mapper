@@ -7464,3 +7464,53 @@ dialog.fm-sharedlg > p {
 .fm-hide-all .fm-dchip {
   display: none !important;
 }
+
+/* Light theme: the page window, mini windows, system tiles and pop-overs use a hairline and a soft shadow, not the dark theme's black one */
+:root[data-theme="light"] .pgo-win,
+:root[data-theme="light"] .fm-mw {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+:root[data-theme="light"] .fm-sys {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+:root[data-theme="light"] .fm-peek {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+:root[data-theme="light"] .fm-ftb {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+/* touch widths: the canvas toolbar grows with its buttons instead of clipping them; its toggles keep their natural width */
+@media (max-width: 1023px) {
+  .fm-stagebar {
+    height: auto;
+    min-height: 48px;
+    align-items: center;
+  }
+  .fm-stagebar .seg button,
+  .fm-stagebar .fm-viewswitch button {
+    min-width: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+/* phone (R-phone-editor): fit at the bottom left, the add button at the bottom right, nothing floating under the toolbar */
+@media (max-width: 767px) {
+  .fm-zoom {
+    top: auto;
+    bottom: 14px;
+    left: 12px;
+    right: auto;
+  }
+  .fm-fab {
+    left: auto;
+    right: 14px;
+  }
+  .fm-stagebar {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    overflow-x: auto;
+  }
+}

@@ -80,15 +80,15 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
               .join("")}
           </span>
         )}
-        <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-3 font-display text-[32px] leading-tight font-semibold tracking-[-0.02em]">
+        <div className="min-w-0 flex-[1_1_320px]">
+          <h1 className="flex flex-wrap items-center gap-x-3 font-display text-[32px] leading-tight font-semibold tracking-[-0.02em]">
             {client.name} <StatusPill status={client.status} />
             {client.archived_at && <span className="stp"><i style={{ background: "#64748b" }} />Archived</span>}
           </h1>
           <p className="mt-1 text-sm text-muted">{[client.business_name, client.niche, client.country, client.email].filter(Boolean).join(" · ") || "No details yet"}</p>
         </div>
         {pricingSummary(client, client.currency) && (
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <div className="text-xs text-muted">Pricing</div>
             <div className="font-display text-[22px] font-semibold tracking-tight">{pricingSummary(client, client.currency)}</div>
           </div>

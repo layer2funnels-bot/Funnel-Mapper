@@ -339,6 +339,7 @@ button {
     color: var(--ink);
   }
   .seg button[aria-pressed="true"],
+  .seg button[role="tab"][aria-selected="true"],
   .seg button.on {
     background: var(--panel2);
     color: var(--ink);

@@ -58,7 +58,7 @@ export function Report() {
       </header>
       <div className="seg full fm-groupseg" role="tablist" aria-label="Funnel tools">
         {groups.map((g) => (
-          <button key={g.name} type="button" role="tab" aria-selected={g.name === group.name} aria-pressed={g.name === group.name} onClick={() => setTab(g.tabs[0][0])}>
+          <button key={g.name} type="button" role="tab" aria-selected={g.name === group.name} onClick={() => setTab(g.tabs[0][0])}>
             {g.name}
           </button>
         ))}

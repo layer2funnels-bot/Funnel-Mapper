@@ -42,7 +42,7 @@ export async function openEditor(page: Page, id: string) {
 }
 
 export const nodes = (page: Page) => page.locator(".react-flow__node");
-export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle span", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
+export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle span, .pgo-title", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
 export const edgeLabels = (page: Page) => page.locator(".fm-elabel");
 
 /** Flow-space position of a node from React Flow's transform. */

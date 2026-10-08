@@ -19,6 +19,8 @@ export interface FunnelListItem {
   profit: number | null;
   roas: number | null;
   checks: number;
+  /** Live preview of the saved map (server-rendered SVG). */
+  preview?: React.ReactNode;
   updated: string;
 }
 
@@ -77,7 +79,10 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
           <table className="tbl text-sm fm-funnels">
             <thead>
               <tr>
-                <th className="pl-4">Funnel</th>
+                <th className="pl-4 fm-c-map">
+                  <span className="sr-only">Map</span>
+                </th>
+                <th>Funnel</th>
                 <th className="fm-c-client">Client</th>
                 <th className="fm-c-status">Status</th>
                 <th className="fm-c-scen">Scenario</th>
@@ -91,7 +96,12 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
             <tbody>
               {list.map((f) => (
                 <tr key={f.id}>
-                  <td className="pl-4">
+                  <td className="pl-4 fm-c-map">
+                    <Link href={`/funnels/${f.id}`} className="fm-rowprev" tabIndex={-1} aria-hidden="true">
+                      {f.preview}
+                    </Link>
+                  </td>
+                  <td>
                     <Link href={`/funnels/${f.id}`} className="block max-w-[260px] truncate font-bold text-ink hover:text-brand" title={f.name}>
                       {f.name}
                     </Link>

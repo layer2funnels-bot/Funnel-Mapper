@@ -126,7 +126,7 @@ function FunnelCard({ f, currency, canEdit }: { f: FunnelItem; currency: string;
     <li className={`card flex flex-col overflow-hidden ${pending ? "opacity-60" : ""}`}>
       <Link href={`/funnels/${f.id}`} className="block border-b border-line" aria-label={`Open ${f.name}`}>
         {/* live map thumbnail: always current, works in light and dark */}
-        <GraphThumb graph={f.graph} className="h-[150px] w-full" />
+        <GraphThumb graph={f.graph} settings={f.settings} name={f.name} archived={f.status === "archived"} className="h-[150px] w-full" />
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start gap-2">

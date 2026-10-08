@@ -83,7 +83,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
       {latest && (
         <section className="card mb-8 overflow-hidden" aria-labelledby="resume-h">
           <div className="grid items-stretch md:grid-cols-[minmax(0,320px)_1fr]">
-            <GraphThumb graph={latest.graph} className="h-[150px] w-full border-b border-line md:h-full md:border-r md:border-b-0" />
+            <GraphThumb graph={latest.graph} settings={latest.settings} name={latest.name} className="h-[150px] w-full border-b border-line md:h-full md:border-r md:border-b-0" />
             <div className="flex flex-col justify-center gap-1 p-5">
               <h2 id="resume-h" className="text-xs font-bold tracking-wider text-muted uppercase">
                 Pick up where you left off
@@ -128,7 +128,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                 {recent.map((f) => (
                   <li key={f.id}>
                     <Link href={`/funnels/${f.id}`} className="card flex h-full flex-col overflow-hidden text-ink no-underline transition hover:border-brand">
-                      <GraphThumb graph={f.graph} className="h-[120px] w-full border-b border-line" />
+                      <GraphThumb graph={f.graph} settings={f.settings} name={f.name} height={120} className="h-[120px] w-full border-b border-line" />
                       <div className="flex flex-1 flex-col gap-1 p-4">
                         <b className="truncate font-display text-[16px]" title={f.name}>
                           {f.name}

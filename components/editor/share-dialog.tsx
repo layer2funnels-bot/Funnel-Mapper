@@ -111,7 +111,7 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
           {agencyName || "Your agency"} for {clientName}
         </span>
       </header>
-      <GraphThumb graph={{ nodes, edges }} className="map" />
+      <GraphThumb graph={{ nodes, edges }} settings={useEditor.getState().settings} name="the shared map" className="map" />
       <ul>
         <li>{PERM_LABEL[perm]} access</li>
         <li>{showNums ? "Numbers shown" : "Journey only, no numbers"}</li>

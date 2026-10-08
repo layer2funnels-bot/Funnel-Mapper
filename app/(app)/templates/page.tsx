@@ -30,6 +30,7 @@ export default async function TemplatesPage() {
       value: t.builtin_key ? `builtin:${t.builtin_key}` : `template:${t.id}`,
       mine: !!t.owner_id,
       graph: t.graph,
+      settings: t.settings,
       blocks: g.nodes.filter((n) => typeOf(n.type) && !isAnnot(n.type)).length,
       revenue: money(R.rev, s.currency),
       roas: ratio(R.roas),

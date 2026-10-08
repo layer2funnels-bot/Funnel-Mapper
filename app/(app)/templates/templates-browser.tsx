@@ -13,6 +13,7 @@ export interface TemplateCard {
   value: string;
   mine: boolean;
   graph: unknown;
+  settings?: unknown;
   blocks: number;
   revenue: string;
   roas: string;
@@ -32,7 +33,7 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
   const item = (t: TemplateCard) => (
     <li key={t.id} className={`card flex flex-col overflow-hidden ${sel === t.id ? "border-brand!" : ""}`}>
       <button type="button" className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left" aria-label={`Preview ${t.name}`} aria-pressed={sel === t.id} onClick={() => setSel(sel === t.id ? null : t.id)}>
-        <GraphThumb graph={t.graph} className="h-[160px] w-full border-b border-line" />
+        <GraphThumb graph={t.graph} settings={t.settings} name={t.name} height={160} className="h-[160px] w-full border-b border-line" />
       </button>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start gap-2">
@@ -75,7 +76,7 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
               <Icon name="close" />
             </button>
           </div>
-          <GraphThumb graph={cur.graph} className="my-3 h-[200px] w-full rounded-xl border border-line" />
+          <GraphThumb graph={cur.graph} settings={cur.settings} name={cur.name} height={200} className="my-3 h-[200px] w-full rounded-xl border border-line" />
           {cur.description && <p className="text-sm text-muted">{cur.description}</p>}
           <dl className="my-3 grid grid-cols-3 gap-2 text-xs text-muted">
             <div>

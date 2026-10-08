@@ -1728,3 +1728,43 @@ dialog.fm-sheetdlg > .body {
 :root[data-theme="light"] .fm-path .no {
   color: #c2410c;
 }
+
+/* Touch devices (tablets at 1024px included) and phones: comfortable targets. Mouse desktops keep the compact density. */
+@media (max-width: 1023px), (pointer: coarse) {
+  .btn,
+  a.btn,
+  .tabs button,
+  .fm-chip,
+  .top-strip .input,
+  .menu-pop button,
+  .menu-pop a {
+    min-height: 40px;
+  }
+  .btn.icon {
+    min-width: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .btn,
+  a.btn,
+  .tabs button,
+  .fm-chip,
+  .menu-pop button,
+  .menu-pop a {
+    min-height: 44px;
+  }
+  .btn.icon {
+    min-width: 44px;
+  }
+  /* Home / Client key numbers: one column on phones, hairlines only */
+  .fm-kgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fm-kgrid .fm-kc {
+    border-right: 0;
+    border-bottom: 1px solid var(--side-line);
+  }
+  .fm-kgrid .fm-kc:last-child {
+    border-bottom: 0;
+  }
+}

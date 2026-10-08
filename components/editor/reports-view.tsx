@@ -287,8 +287,7 @@ function Overview({ data, R, onSection }: SP) {
   };
   return (
     <>
-      <div className="fm-rtitle-row">
-        <h3 className="fm-rh">Project summary</h3>
+      <div className="fm-rtitle-row fm-rpersel">
         <div className="seg" role="group" aria-label="Period">
           <button type="button" aria-pressed={per === "month"} onClick={() => setPer("month")}>
             This month
@@ -298,6 +297,7 @@ function Overview({ data, R, onSection }: SP) {
           </button>
         </div>
       </div>
+      <h3 className="sr-only">Project summary</h3>
       <Kpis
         items={[
           ["Traffic", nf(A.people), `${nf(other.people)} ${otherLabel}`, "sources"],
@@ -305,21 +305,7 @@ function Overview({ data, R, onSection }: SP) {
           ["Customers", people(A.customers), `${nf(other.customers)} ${otherLabel}`, "offers"],
           ["Revenue", m(A.revenue), `${ms(other.revenue)} ${otherLabel}`, "forecast"],
           ["Profit", <span key="p" className={cls(A.profit)}>{m(A.profit)}</span>, `${ms(other.profit)} ${otherLabel}`, "expenses"],
-          ["ROAS", ratio(R.roas), "Revenue ÷ ad spend", "sources"],
-        ]}
-        onSection={onSection}
-      />
-      <h3 className="fm-rh">Unit economics</h3>
-      <Kpis
-        items={[
-          ["CPC", m(R.cpc), "Ad spend ÷ paid visitors"],
-          ["CPL", m(R.cpl), "Ad spend ÷ leads"],
-          ["CPA", m(R.cpa), "Ad spend ÷ new customers"],
-          ["AOV", m(R.aov), "Revenue ÷ new customers"],
-          ["LTV / customer", m(R.ltvc), "Lifetime revenue ÷ new customers", "forecast"],
-          ["MRR", m(R.mrr), "From subscriptions", "mrr"],
-          ["ROI", pct(R.roi), "Profit ÷ all costs", "expenses"],
-          ["Conversion", pct(R.conv), "New customers ÷ visitors"],
+          ["ROAS", ratio(R.roas), `on ${m(R.spend)} ad spend`, "sources"],
         ]}
         onSection={onSection}
       />
@@ -355,7 +341,9 @@ function Overview({ data, R, onSection }: SP) {
           </div>
         </div>
       )}
-      <div className="fm-rgrid">
+      <div className="fm-rsplit">
+        <div className="min-w-0 space-y-8">
+        <div className="fm-rgrid fm-rstack">
         <TimeChart
           title={`Revenue and profit, ${f.months} months`}
           data={f.rows}
@@ -367,6 +355,32 @@ function Overview({ data, R, onSection }: SP) {
           zero
         />
         <BarsChart title="People lost per step (click a bar to find it on the map)" data={data.leaks.slice(0, 8).map((x) => ({ id: x.id, name: x.name, value: x.lost }))} fmt={(v) => people(v)} color="var(--chart-2)" onPick={focus} />
+        </div>
+        </div>
+        <section aria-labelledby="ue-h" className="min-w-0">
+          <h3 id="ue-h" className="fm-rh">
+            Unit economics
+          </h3>
+          <dl className="fm-kn">
+            {(
+              [
+                ["CPC", m(R.cpc)],
+                ["CPL", m(R.cpl)],
+                ["CPA", m(R.cpa)],
+                ["AOV", m(R.aov)],
+                ["LTV / customer", m(R.ltvc)],
+                ["MRR", m(R.mrr)],
+                ["ROI", pct(R.roi)],
+                ["Conversion", pct(R.conv)],
+              ] as [string, string][]
+            ).map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       </div>
       <Table
         caption="People lost per step"

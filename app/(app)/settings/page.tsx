@@ -24,13 +24,14 @@ export default async function SettingsPage() {
     { id: "team", label: "Team" },
     ...(isTeam && isOwner ? [{ id: "independent", label: "Independent accounts" }] : []),
     { id: "appearance", label: "Appearance" },
+    { id: "account", label: "Account" },
   ];
   return (
-    <div className="max-w-[1040px]">
+    <div className="max-w-[1180px]">
       <PageHeader title="Settings" sub={isTeam ? "Your profile, the team workspace and its branding." : "Your profile, your private workspace and its branding."} />
-      <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
+      <div className="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-10">
       <SettingsNav sections={sections} />
-      <div className="max-w-[820px] min-w-0">
+      <div id="fm-settings" data-pane="profile" className="fm-panes min-w-0">
       <section id="profile" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="profile-h">
         <h2 id="profile-h" className="mb-4 font-display text-lg font-bold">
           Your profile
@@ -69,11 +70,12 @@ export default async function SettingsPage() {
             Team
           </h2>
           <p className="mb-2 text-sm text-muted">Everyone listed here shares this workspace’s clients, funnels and templates, and nothing else. There is no public sign-up: people join by invite only.</p>
-          <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted">
+          <dl className="fm-roles">
+            <dt className="eyebrow">Roles</dt>
             {(["owner", "admin", "editor", "viewer"] as const).map((r) => (
-              <div key={r} className="contents">
-                <dt className="font-bold text-ink">{ROLE_LABEL[r]}</dt>
-                <dd className="m-0">{ROLE_HELP[r]}</dd>
+              <div key={r}>
+                <dt>{ROLE_LABEL[r]}</dt>
+                <dd>{ROLE_HELP[r]}</dd>
               </div>
             ))}
           </dl>
@@ -130,7 +132,7 @@ export default async function SettingsPage() {
         <p className="mb-4 text-sm text-muted">Choose how the whole app looks. It is remembered for you on every device.</p>
         <AppearancePicker />
       </section>
-      <section className="card p-6" aria-labelledby="acct-h">
+      <section id="account" className="fm-pane" aria-labelledby="acct-h">
         <h2 id="acct-h" className="mb-3 font-display text-lg font-bold">
           Account
         </h2>

@@ -78,20 +78,38 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
 
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
+          <button type="button" className="fm-chip" aria-pressed={!status && !archived} onClick={() => (setStatus(""), setArchived(false))}>
+            All <b>{clients.filter((c) => !c.archived_at).length}</b>
+          </button>
+          {CLIENT_STATUSES.map((st) => (
+            <button key={st} type="button" className="fm-chip" aria-pressed={status === st && !archived} onClick={() => (setStatus(st), setArchived(false))}>
+              {STATUS_LABEL[st]} <b>{clients.filter((c) => !c.archived_at && c.status === st).length}</b>
+            </button>
+          ))}
+          {(archivedCount > 0 || archived) && (
+            <button type="button" className="fm-chip" aria-pressed={archived} onClick={() => setArchived((a) => !a)}>
+              Archived {archivedCount > 0 && <b>{archivedCount}</b>}
+            </button>
+          )}
+        </div>
+        <span className="flex-1" />
+        <div className="seg" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} aria-label="Card view" className="px-3!">
+            <Icon name="grid" size={15} />
+          </button>
+          <button type="button" aria-pressed={view === "table"} onClick={() => setView("table")} aria-label="Table view" className="px-3!">
+            <Icon name="list" size={15} />
+          </button>
+        </div>
+      </div>
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <label className="relative min-w-[220px] flex-1">
           <span className="sr-only">Search clients</span>
-          <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-          <input className="input pl-10" type="search" placeholder="Search name, email, niche, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Icon name="search" size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <input className="input pl-9" type="search" placeholder="Search name, email, niche, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
-        <select className="input w-auto" aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          {CLIENT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </option>
-          ))}
-        </select>
         <select className="input w-auto" aria-label="Filter by niche" value={niche} onChange={(e) => setNiche(e.target.value)}>
           <option value="">All niches</option>
           {niches.map((n) => (
@@ -119,25 +137,22 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
           <option value="value">Highest value</option>
           <option value="funnels">Most funnels</option>
         </select>
-        {(archivedCount > 0 || archived) && (
-          <button type="button" className="btn" aria-pressed={archived} onClick={() => setArchived((a) => !a)}>
-            <Icon name="archive" /> {archived ? "Back to active clients" : `Archived (${archivedCount})`}
-          </button>
-        )}
-        <div className="seg" role="group" aria-label="View">
-          <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")} aria-label="Card view" className="px-3!">
-            <Icon name="grid" />
-          </button>
-          <button type="button" aria-pressed={view === "table"} onClick={() => setView("table")} aria-label="Table view" className="px-3!">
-            <Icon name="list" />
-          </button>
-        </div>
       </div>
 
       {list.length === 0 ? (
-        <div className="card px-6 py-14 text-center text-muted">
-          {clients.length ? "No clients match those filters." : "No clients yet. Add your first client to start a portfolio."}
-        </div>
+        clients.length ? (
+          <div className="card px-6 py-14 text-center text-muted">No clients match those filters.</div>
+        ) : (
+          <Link href="/clients/new" className="fm-addprompt">
+            <span className="ic">
+              <Icon name="plus" size={18} />
+            </span>
+            <span>
+              <b>Add a client in four fields</b>
+              <small>Name, status, currency and pricing model. Contact details, website and notes can wait until you need them.</small>
+            </span>
+          </Link>
+        )
       ) : view === "cards" ? (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Clients">
           {list.map((c) => (
@@ -187,12 +202,12 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
             <thead>
               <tr>
                 <th className="pl-4">Client</th>
-                <th>Niche</th>
                 <th>Status</th>
-                <th>Tags</th>
-                <th className="r">Funnels</th>
+                <th>Niche</th>
+                <th className="fm-hide-lg">Tags</th>
                 <th className="r">Pricing</th>
-                <th className="r pr-4">Updated</th>
+                <th className="r">Live / funnels</th>
+                <th className="r pr-4 fm-hide-lg">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -207,18 +222,21 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
                       </span>
                     </Link>
                   </td>
-                  <td>{c.niche}</td>
                   <td>
                     <StatusPill status={c.status} />
                   </td>
-                  <td className="text-muted">{c.tags.map((t) => `#${t}`).join(" ")}</td>
-                  <td className="r">
-                    {c.funnels} <span className="text-muted">({c.liveFunnels} live)</span>
-                  </td>
+                  <td>{c.niche}</td>
+                  <td className="fm-hide-lg text-muted">{c.tags.map((t) => `#${t}`).join(" ")}</td>
                   <td className="r" title={pricingSummary(c, c.currency) || undefined}>
-                    {pricingShort(c, c.currency)}
+                    <b className="font-semibold text-ink">{pricingShort(c, c.currency)}</b>
+                    <span className="block text-xs text-muted">{PRICING_LABEL[pricingModel(c)]}</span>
                   </td>
-                  <td className="r pr-4 text-muted"><TimeAgo iso={c.updated_at} /></td>
+                  <td className="r">
+                    <b className="font-semibold">{c.liveFunnels}</b> <span className="text-muted">/ {c.funnels}</span>
+                  </td>
+                  <td className="fm-hide-lg r pr-4 text-muted">
+                    <TimeAgo iso={c.updated_at} />
+                  </td>
                 </tr>
               ))}
             </tbody>

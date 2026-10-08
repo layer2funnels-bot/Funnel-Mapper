@@ -45,10 +45,10 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="seg fm-scroll-x" role="group" aria-label="Funnel status">
+        <div className="fm-scroll-x flex gap-1.5" role="group" aria-label="Funnel status">
           {views.map(([k, l]) => (
-            <button key={k} type="button" aria-pressed={status === k} onClick={() => setStatus(k)}>
-              {l} <span className="text-muted">{count(k)}</span>
+            <button key={k} type="button" className="fm-chip" aria-pressed={status === k} onClick={() => setStatus(k)}>
+              {l} <b>{count(k)}</b>
             </button>
           ))}
         </div>
@@ -65,18 +65,18 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
             </option>
           ))}
         </select>
-        <button type="button" className="btn" aria-pressed={attention} onClick={() => setAttention((a) => !a)}>
+        <button type="button" className="btn sm" aria-pressed={attention} onClick={() => setAttention((a) => !a)}>
           <Icon name="alert" size={15} /> Needs attention
         </button>
-        <button type="button" className="btn" aria-pressed={recent} onClick={() => setRecent((r) => !r)}>
+        <button type="button" className="btn sm" aria-pressed={recent} onClick={() => setRecent((r) => !r)}>
           Updated this week
         </button>
       </div>
       {list.length === 0 ? (
         <div className="card px-6 py-14 text-center text-muted">{items.length ? "No funnels match those filters." : "No funnels yet. Create a client, then map their first funnel."}</div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="tbl text-sm fm-funnels">
+        <div className="overflow-x-auto">
+          <table className="tbl fm-funnels">
             <thead>
               <tr>
                 <th className="pl-4 fm-c-map">

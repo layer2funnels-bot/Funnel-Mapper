@@ -8,7 +8,7 @@ import type { ActionResult } from "@/app/(app)/actions";
 
 type Action = (s: ActionResult, fd: FormData) => Promise<ActionResult>;
 
-export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabel = "Save client", niches = [] }: { action: Action; client?: Partial<ClientRow>; defaultCurrency?: string; submitLabel?: string; niches?: string[] }) {
+export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabel = "Save client", niches = [], onCancel }: { action: Action; client?: Partial<ClientRow>; defaultCurrency?: string; submitLabel?: string; niches?: string[]; onCancel?: () => void }) {
   const [state, formAction] = useActionState(action, undefined);
   const c = client ?? {};
   const [model, setModel] = useState<PricingModel>(pricingModel(c));
@@ -104,7 +104,12 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
         </div>
       )}
       </details>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3">
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         <Submit className="btn primary">{submitLabel}</Submit>
         <span role="status" className="text-sm text-good">
           {state?.ok ? "Saved" : ""}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
+import { money } from "@/lib/format";
+import { monthlyValue } from "@/lib/pricing";
 import { requireUser } from "@/lib/supabase/server";
 import { ClientsBrowser, type ClientListItem } from "./clients-browser";
 
@@ -19,10 +21,13 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
     if (f.status === "live") c.live++;
   });
   const items: ClientListItem[] = (clients ?? []).map((c) => ({ ...c, funnels: counts[c.id]?.total ?? 0, liveFunnels: counts[c.id]?.live ?? 0 }));
+  const active = items.filter((c) => !c.archived_at);
+  const byCur: Record<string, number> = {};
+  active.filter((c) => c.status === "active").forEach((c) => (byCur[c.currency] = (byCur[c.currency] ?? 0) + monthlyValue(c)));
+  const fees = Object.entries(byCur).filter(([, v]) => v > 0).map(([cur, v]) => money(v, cur));
   return (
     <>
-      <PageHeader title="Clients" sub={`${items.length} client${items.length === 1 ? "" : "s"} in your portfolio`}>
-      </PageHeader>
+      <PageHeader title="Clients" sub={`${active.length} client${active.length === 1 ? "" : "s"}${fees.length ? ` · ${fees.join(" + ")} / mo in agency fees` : ""}`} />
       <ClientsBrowser clients={items} initialStatus={typeof sp.status === "string" ? sp.status : ""} initialQuery={typeof sp.q === "string" ? sp.q : ""} />
     </>
   );

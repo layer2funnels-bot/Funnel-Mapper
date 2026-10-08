@@ -27,7 +27,7 @@ test.describe("workspaces", () => {
     await expect(page).toHaveURL("/");
     await expect(page.getByText("Solo Studio").first()).toBeVisible();
     await page.goto("/clients");
-    await expect(page.getByRole("link", { name: /Indie Client/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Indie Client/ }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Sam Carter/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Second Indie Client/ })).toHaveCount(0);
     // a team funnel URL is simply not found
@@ -181,7 +181,7 @@ test.describe("multiple workspaces", () => {
       await m2.getByRole("button", { name: /Solo Studio/ }).click();
       await expect(page.getByTestId("workspace-switcher").first()).toContainText("Solo Studio");
       await page.goto("/clients");
-      await expect(page.getByRole("link", { name: /Indie Client/ })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Indie Client/ }).first()).toBeVisible();
     } finally {
       await ctx.close();
       const { data } = await svc.from("workspaces").select("id").eq("agency_name", name);
@@ -252,8 +252,8 @@ test.describe("editor panels", () => {
     await page.setViewportSize({ width: 900, height: 1000 });
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
-    await expect(page.getByRole("button", { name: "Collapse block library" })).toBeHidden();
-    await expect(page.getByRole("button", { name: "Collapse details panel" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Collapse block library" })).not.toBeInViewport(); // the drawer is closed
+    await expect(page.getByRole("button", { name: "Collapse details panel" })).not.toBeInViewport();
     await page.getByRole("button", { name: "Show building blocks" }).click();
     await expect(page.locator("#fm-side")).toBeInViewport();
   });

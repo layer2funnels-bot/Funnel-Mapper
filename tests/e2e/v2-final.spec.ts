@@ -61,11 +61,12 @@ test.describe("trash", () => {
     await sb.from("funnels").insert({ client_id: c!.id, name: fname, graph: blankGraph(), settings: {} });
 
     await page.goto(`/clients/${c!.id}`);
-    await page.getByRole("button", { name: `Move ${fname} to Trash` }).click();
+    await page.getByRole("button", { name: `Actions for ${fname}` }).click();
+    await page.getByRole("menuitem", { name: /Move to Trash/ }).click();
     const dlg = page.getByRole("dialog", { name: "Move to Trash?" });
     await expect(dlg).toBeVisible();
     await dlg.getByRole("button", { name: "Move to Trash" }).click();
-    await expect(page.getByRole("button", { name: `Move ${fname} to Trash` })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: `Actions for ${fname}` })).toHaveCount(0);
 
     await page.goto("/trash");
     const row = page.getByRole("row", { name: new RegExp(fname) });
@@ -98,10 +99,10 @@ test.describe("templates", () => {
   test("the Templates page lists the 13 approved templates with live previews and creates a funnel from the customize form", async ({ page }) => {
     await page.goto("/templates");
     for (const name of ["Lead Squeeze", "Survey", "Summit", "Free Challenge Funnel", "Book Funnel", "Cart Funnel", "Paid Challenge Funnel", "Video Sales Letter Funnel", "Webinar Funnel", "Product Launch Funnel", "Application Funnel", "Webinar Application Funnel", "Mini Class Funnel"])
-      await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: `Preview ${name}`, exact: true })).toBeVisible();
     await expect(page.getByRole("img", { name: /^Map of Webinar Funnel: 15 blocks/ }).first()).toBeVisible(); // 14 + the example source
-    const card = page.locator("li", { has: page.getByRole("heading", { name: "Webinar Application Funnel", exact: true }) });
-    await card.getByRole("button", { name: "Use template" }).click();
+    await page.getByRole("button", { name: "Preview Webinar Application Funnel", exact: true }).click();
+    await page.getByRole("complementary", { name: "Preview: Webinar Application Funnel" }).getByRole("button", { name: "Use template" }).click();
     const dlg = page.getByRole("dialog", { name: "Customize Webinar Application Funnel" });
     await expect(dlg).toBeVisible();
     await dlg.getByLabel("Funnel name (optional)").fill("Masterclass application");

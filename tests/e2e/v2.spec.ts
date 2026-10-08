@@ -18,8 +18,8 @@ test.describe("V2 editor interactions", () => {
     const box = (await tb.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(stage.x);
     expect(box.x + box.width).toBeLessThanOrEqual(stage.x + stage.width + 1);
-    await tb.getByRole("button", { name: "Analytics", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "Analytics" })).toHaveAttribute("aria-selected", "true");
+    await tb.getByRole("button", { name: "Plan", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Plan" })).toHaveAttribute("aria-selected", "true");
     await tb.getByRole("button", { name: "Style", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Style" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: "Details" }).click();
@@ -213,7 +213,7 @@ test.describe("V2 pages", () => {
     const panel = page.getByRole("complementary", { name: /^Preview:/ });
     await expect(panel).toBeVisible();
     await expect(panel.getByRole("button", { name: "Use template" })).toBeVisible();
-    await expect(panel.getByRole("button", { name: "Use for client" })).toBeVisible();
+    await expect(panel.getByLabel("Client for this template")).toBeVisible();
     await page.goto("/settings");
     const nav = page.getByRole("navigation", { name: "Settings sections" });
     await expect(nav.getByRole("link", { name: "Team" })).toBeVisible();
@@ -360,7 +360,7 @@ test.describe("V2 Simulate", () => {
     // 20% fewer conversions
     await panel.getByLabel("Conversion rates").fill("0.8");
     // headline numbers moved against the baseline (the KPI strip and the panel agree, both from the engine)
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(kpis.locator(".fm-dchip.bad").first()).toBeVisible();
     const key = panel.getByRole("group", { name: "Revenue, profit and ROAS" });
     await expect(key.locator(".fm-dchip.bad")).toHaveCount(3); // revenue, profit and ROAS all fell
@@ -420,7 +420,7 @@ test.describe("V2 Simulate", () => {
     await panel.getByRole("button", { name: "Done" }).click();
     await expect(page.getByLabel("Simulate", { exact: true })).toHaveCount(0);
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
-    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText("£6,032");
+    await expect(page.getByRole("contentinfo", { name: "Funnel numbers" })).not.toContainText(/Revenue\s*£6,032/);
     // view-only editors don't get Simulate
     await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByLabel("View only (lock editing)").check();
@@ -470,7 +470,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
     await panel.getByLabel("Conversion rates").fill("0.8");
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(node(page, "Paid membership")).not.toContainText("£4,199");
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
     // Before: the golden numbers everywhere, no change chips, a badge on the canvas
@@ -482,7 +482,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     await expect(page.locator(".fm-before-badge")).toBeVisible();
     // and After brings the changes back
     await panel.getByRole("button", { name: "After", exact: true }).click();
-    await expect(kpis).not.toContainText("£6,032");
+    await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(page.locator(".fm-before-badge")).toHaveCount(0);
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
     // the funnel itself was never changed by looking at Before

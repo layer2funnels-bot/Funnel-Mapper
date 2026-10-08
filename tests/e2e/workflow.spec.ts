@@ -12,17 +12,18 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
 
   // --- new client ---
   await page.goto("/clients");
-  await page.getByRole("link", { name: "New client" }).click();
-  await page.getByLabel("Client name *").fill(clientName);
+  await page.getByRole("button", { name: "New client" }).first().click();
+  const sheet = page.getByRole("dialog", { name: "New client" });
+  await sheet.getByLabel("Client name *").fill(clientName);
   // required fields first; the rest sits under "Add details"
-  await expect(page.getByLabel("Business name")).toBeHidden();
-  await page.getByText("Add details").click();
-  await page.getByLabel("Business name").fill("Nova Yoga Studio");
-  await page.getByLabel("Niche").fill("Wellness");
-  await page.getByLabel("Status").selectOption("active");
-  await page.getByLabel("Monthly retainer").fill("1200");
-  await page.getByLabel("Tags").fill("yoga, launch");
-  await page.getByRole("button", { name: "Create client" }).click();
+  await expect(sheet.getByLabel("Business name")).toBeHidden();
+  await sheet.getByText("Add details").click();
+  await sheet.getByLabel("Business name").fill("Nova Yoga Studio");
+  await sheet.getByLabel("Niche", { exact: true }).fill("Wellness");
+  await sheet.getByLabel("Status").selectOption("active");
+  await sheet.getByLabel("Monthly retainer").fill("1200");
+  await sheet.getByLabel("Tags").fill("yoga, launch");
+  await sheet.getByRole("button", { name: "Create client" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(clientName);
   const clientUrl = page.url();
 
@@ -54,7 +55,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await expect(nodes(page)).toHaveCount(9);
   await expect(node(page, "Payment plan offer")).toBeVisible();
   // funnel maths in the report
-  await expect(page.locator(".rline", { hasText: "ROAS" }).first()).toContainText("x");
+  await expect(page.locator(".fm-mrow", { hasText: "ROAS" }).first()).toContainText("x");
 
   // --- versions: save, change, restore ---
   await page.getByRole("button", { name: "Funnel menu" }).click();
@@ -111,7 +112,7 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
 
   // --- the template is available to start new funnels ---
   await page.goto("/templates");
-  await expect(page.getByRole("heading", { name: `Yoga webinar ${stamp}` })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Preview Yoga webinar ${stamp}` })).toBeVisible();
 
   // --- share: create a read-only link and open it as the client would (no session) ---
   await page.goto(funnelUrl);

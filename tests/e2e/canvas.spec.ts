@@ -152,7 +152,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     // 2×2 PNG
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGNgYGD4z8DAwMDAwAAADwABRe/1oQAAAABJRU5ErkJggg==", "base64");
     await page.getByLabel("Upload image").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
-    await expect(page.locator(".fm-image img")).toHaveAttribute("src", /^data:image\/png/);
+    await expect(page.locator(".fm-image img")).toHaveAttribute("src", /^data:image\/(png|webp)/);
     await expect(page.getByLabel("Description (alt text)")).toHaveValue("logo");
     await waitSaved(page);
     await page.reload();

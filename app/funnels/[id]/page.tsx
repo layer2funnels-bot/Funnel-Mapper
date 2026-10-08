@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/funnels/[id]">): 
 export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { sb, user, workspace, canEdit } = await requireUser();
+  const { sb, user, profile, workspace, canEdit } = await requireUser();
   const { data: f } = await sb.from("funnels").select("*").eq("id", id).maybeSingle();
   if (!f) notFound();
   if (f.deleted_at)
@@ -36,6 +36,7 @@ export default async function FunnelPage({ params }: PageProps<"/funnels/[id]">)
     <Editor
       mode="owner"
       userId={user.id}
+      userName={profile.full_name || user.email || ""}
       funnel={{ id: f.id, name: f.name, description: f.description, status: f.status, client_id: f.client_id, graph: parseGraph(f.graph), settings: parseSettings(f.settings), updated_at: f.updated_at }}
       client={client}
       agency={{ name: workspace.agency_name, logo_url: workspace.agency_logo_url }}

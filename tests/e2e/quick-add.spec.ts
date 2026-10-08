@@ -114,7 +114,7 @@ test.describe("Quick Add adapts to the screen", () => {
   test("dragging a connection out near the right and bottom edges keeps Quick Add on screen, at several zoom levels", async ({ page }) => {
     const { id } = await createFunnel({ graph: blankGraph() });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
+    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
     const fb = node(page, "Facebook ads");
     for (const zoomOut of [0, 1, 3]) {
       await page.getByRole("button", { name: "Fit" }).first().click();
@@ -151,7 +151,7 @@ test.describe("Quick Add adapts to the screen", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openEditor(page, id);
     await page.getByRole("button", { name: "Show building blocks" }).click();
-    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).click();
+    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).click();
     const fb = node(page, "Facebook ads");
     await expect(fb).toBeVisible();
     await page.getByRole("button", { name: "Close details" }).click(); // the new block opened its details sheet

@@ -949,3 +949,79 @@ button {
   background: var(--brand);
   color: var(--brand-ink);
 }
+
+/* Finding (V2 §16): a neutral card / compact row for a deterministic fact */
+.fm-finding {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn, #fbbf24);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.fm-finding.leak {
+  border-left-color: var(--lost);
+}
+.fm-finding.goal {
+  border-left-color: var(--brand);
+}
+.fm-finding > svg {
+  margin-top: 2px;
+  color: var(--muted);
+}
+.fm-finding h5 {
+  font-weight: 700;
+}
+.fm-finding .ev {
+  color: var(--ink);
+}
+.fm-finding .im {
+  color: var(--muted);
+  font-size: 12px;
+}
+.fm-finding .acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.fm-finding.compact {
+  padding: 8px 10px;
+}
+.fm-insights {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+/* New client: "Add details" (V2) */
+.fm-moredetails {
+  margin: 4px 0 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.fm-moredetails > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--brand);
+  list-style: none;
+}
+.fm-moredetails > summary::-webkit-details-marker {
+  display: none;
+}
+.fm-moredetails > summary::before {
+  content: "+";
+  width: 18px;
+  font-weight: 700;
+}
+.fm-moredetails[open] > summary::before {
+  content: "−";
+}

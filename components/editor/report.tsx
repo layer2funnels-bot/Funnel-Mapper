@@ -10,6 +10,9 @@ import { nid, setSection, setSettings, setTab, startSim, useEditor, type ReportT
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
 import { ForecastCharts } from "./forecast-charts";
+import { formulaFor, type FigureKey } from "@/lib/math-explain";
+import { Finding } from "@/components/finding";
+import { leakFinding } from "@/lib/findings";
 
 /** Funnel scope (nothing selected): three groups, in the order of the product loop. Tab keys are unchanged. */
 const GROUPS: { name: string; tabs: [ReportTab, string][] }[] = [
@@ -76,6 +79,9 @@ export function Report() {
   );
 }
 
+/** Figures in the Funnel tab whose formula can be shown with this map's numbers (F9 "?"). */
+const FIGURE_KEYS: Record<string, FigureKey> = { Revenue: "rev", "Ad spend": "spend", Profit: "profit", ROI: "roi", ROAS: "roas", CPA: "cpa", AOV: "aov", "LTV per customer": "ltvc", CPL: "cpl", CPC: "cpc", EPC: "epc", "Conversion rate": "conv", "Lead rate": "leadRate" };
+
 const useM = () => {
   const cur = useEditor((s) => s.settings.currency);
   return (v: number) => money(v, cur);
@@ -95,6 +101,7 @@ function MathTab() {
   const w = useMemo(() => (shared ? [] : healthChecks({ nodes, edges })), [nodes, edges, shared]);
   const performance = useMemo(() => (shared ? [] : performanceChecks({ nodes, edges }, settings, R)), [nodes, edges, settings, R, shared]);
   const focus = useFocusBlock();
+  const [why, setWhy] = useState<string | null>(null);
   const rows: [string, React.ReactNode, string][] = [
     ["Revenue", m(R.rev), basis === "ltv" ? "Lifetime value of every sale, after refunds" : "First payment of every sale, after refunds"],
     ["Ad spend", m(R.spend), "Total spent on traffic"],
@@ -150,19 +157,11 @@ function MathTab() {
           {performance.length === 0 ? (
             <p className="ok"><Icon name="check" size={14} />{R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}</p>
           ) : (
-            <ul>
+            <div className="grid gap-2">
               {performance.map((item) => (
-                <li key={item.id}>
-                  <button type="button" onClick={() => focus(item.nodeId!)} title="Select this step and zoom to it">
-                    <Icon name="alert" size={14} />
-                    <span>
-                      {item.text} is the {item.rank === "largest-loss" ? "largest leak" : "weakest continuing step"}: {people(item.lost)} of {people(item.inflow)} people ({pct(item.dropPct)}) do not continue.
-                      <small>A 10% relative conversion lift projects +{people(item.customerGain)} customers, {m(item.revenueGain)} revenue, and {m(item.profitGain)} profit per month.</small>
-                    </span>
-                  </button>
-                </li>
+                <Finding key={item.id} f={leakFinding(item, cur)} compact actions={[{ label: "Show on map", run: () => focus(item.nodeId!) }]} />
               ))}
-            </ul>
+            </div>
           )}
         </section>
       )}
@@ -181,13 +180,24 @@ function MathTab() {
         </div>
       </fieldset>
       <div>
-        {rows.map(([a, b, c]) => (
-          <div className="rline" key={a}>
-            <span>{a}</span>
-            <b>{b}</b>
-            <small>{c}</small>
-          </div>
-        ))}
+        {rows.map(([a, b, c]) => {
+          const f = FIGURE_KEYS[a] ? formulaFor(FIGURE_KEYS[a], R, cur) : null;
+          return (
+            <div className="rline" key={a}>
+              <span>
+                {a}
+                {f && (
+                  <button type="button" className="fm-why" aria-expanded={why === a} aria-label={`How ${a} is worked out`} title="Show the formula" onClick={() => setWhy(why === a ? null : a)}>
+                    ?
+                  </button>
+                )}
+              </span>
+              <b>{b}</b>
+              <small>{f && why === a ? f.words : c}</small>
+              {f && why === a && <span className="fm-whysum">{f.sum}</span>}
+            </div>
+          );
+        })}
       </div>
       <h4>Fixed costs</h4>
       <Field label={`Other costs per period (${sym(cur).trim()})`} help="Software, studio, staff. Included in profit and break-even numbers. Itemise them in the Costs tab.">

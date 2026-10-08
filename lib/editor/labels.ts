@@ -141,6 +141,44 @@ export function edgeConversion(fromId: string, flow: number, R: FunnelResult): n
   return f && f.inflow > 0 ? Math.min(1, flow / f.inflow) : null;
 }
 
+/**
+ * A line's number as a sentence (V2 F9): "59% of 1,500 = 885". The share is of the people who arrive at the source
+ * step; traffic sources (nobody arrives, they start the flow) and lines without data give null. Display only.
+ */
+export function edgeSentence(fromId: string, flow: number, R: FunnelResult, k = 1): string | null {
+  const f = R.N[fromId];
+  if (!f || !(f.inflow > 0) || !(flow > 0)) return null;
+  const pct = Math.min(1, flow / f.inflow) * 100;
+  return `${nf(pct, pct < 10 && Math.abs(pct - Math.round(pct)) > 0.05 ? 1 : 0)}% of ${ppl(f.inflow * k)} = ${ppl(flow * k)}`;
+}
+/** People who stop at a step without a line carrying them on ("615 leave here"), or null when nobody does. */
+export function leaveText(n: FunnelNode, R: FunnelResult, hasAltLine: boolean, k = 1): string | null {
+  const r = R.N[n.id];
+  if (!r || hasAltLine || typeOf(n.type)?.cat === "traffic" || !(r.non * k >= 0.5)) return null;
+  return `${ppl(r.non * k)} leave here`;
+}
+
+/**
+ * The number row of a flow block as the design draws it (V2 "Editor-default"): the left side and, when there is one, the
+ * right side ("2,000 visits … $600 / mo", "Yes 29 … No 54", "952 → 381 … 40%"). Same figures as nodeStats, just laid out
+ * for the card. Pages and offers have their own object and don't use this.
+ */
+export function nodeRow(n: FunnelNode, R: FunnelResult, cur: string, k = 1): { l: Seg[]; r?: Seg[] } {
+  const T = typeOf(n.type),
+    r0 = R.N[n.id];
+  if (!r0 || !T) return { l: [] };
+  const r = k === 1 ? r0 : { ...r0, inflow: r0.inflow * k, out: r0.out * k, non: r0.non * k, rev: r0.rev * k, spend: r0.spend * k };
+  if (T.cat === "traffic") return { l: [{ t: ppl(r.out), b: true }, { t: " visits" }], r: [{ t: r.spend ? moneyPer(r.spend, cur, k) : "free" }] };
+  const b = baseOf(n.type);
+  if (b === "cond" || b === "split") {
+    const [ya, yb] = T.ports ?? ["Yes", "No"];
+    return { l: [{ t: `${ya} ` }, { t: ppl(r.out), b: true }], r: [{ t: `${yb} ` }, { t: ppl(r.non), b: true }] };
+  }
+  if (b === "goal" || b === "exit") return { l: [{ t: ppl(r.inflow), b: true }, { t: " people" }] };
+  const rate = r.inflow > 0 ? Math.min(1, r.out / r.inflow) : 0;
+  return { l: [{ t: `${ppl(r.inflow)} → ` }, { t: ppl(r.out), b: true }], r: [{ t: `${nf(rate * 100)}%` }] };
+}
+
 export const segText = (s: Seg[]) => s.map((x) => x.t).join("");
 
 /** Edge label tag: Yes/No, A/B, or No for a didn't-convert path. */

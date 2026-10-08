@@ -18,6 +18,8 @@ import { MEANINGS, MeaningSwatch } from "./line-menu";
 import { ArrangeBar, ChecklistEditor, EdgeStyleFields, ImageFields, StylePanel } from "./style-panel";
 import { Field, NumField, NumInput, Seg, StatBox, TextField } from "./fields";
 import { Report } from "./report";
+import { InsightsSlot } from "@/components/finding";
+import { blockFindings } from "@/lib/findings";
 
 export function Inspector() {
   const hideAll = useEditor((s) => s.shared && s.settings.hideNumbers);
@@ -403,6 +405,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
   const goal = settings.goals.find((g) => g.kind === "conversion" && g.nodeId === n.id);
   const rateable = ["page", "offer", "action"].includes(T.cat) || isShareLogic(n.type);
   const impact = useMemo(() => (goal && goal.value > 0 ? withStepRate({ nodes, edges }, settings, n.id, goal.value) : null), [goal, nodes, edges, settings, n.id]);
+  const findings = useMemo(() => (shared ? [] : blockFindings(n.id, { nodes, edges }, settings, R)), [shared, n.id, nodes, edges, settings, R]);
   if (!r) return null;
   const inn = T.cat === "traffic" ? r.out : r.inflow;
   const setGoal = (v: number) => {
@@ -411,6 +414,7 @@ function NodeAnalytics({ n }: { n: FunnelNode }) {
   };
   return (
     <>
+      <InsightsSlot findings={findings} />
       <h4>Numbers (per month)</h4>
       <NodeStats n={n} />
       <StatBox

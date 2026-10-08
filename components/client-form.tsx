@@ -21,11 +21,47 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           <input className="input" id="cf-name" name="name" defaultValue={c.name ?? ""} required autoComplete="off" />
         </div>
         <div className="field">
-          <label htmlFor="cf-business">Business name</label>
-          <input className="input" id="cf-business" name="business_name" defaultValue={c.business_name ?? ""} autoComplete="off" />
+          <label htmlFor="cf-status">Status *</label>
+          <select className="input" id="cf-status" name="status" defaultValue={c.status ?? "lead"}>
+            {CLIENT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="row2">
+        <div className="field">
+          <label htmlFor="cf-currency">Currency *</label>
+          <select className="input" id="cf-currency" name="currency" defaultValue={c.currency ?? defaultCurrency}>
+            {CURRENCY_CODES.map((k) => (
+              <option key={k} value={k}>
+                {CURRENCIES[k].label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="cf-pricing">Pricing model *</label>
+          <select className="input" id="cf-pricing" name="pricing_model" value={model} onChange={(e) => setModel(e.target.value as PricingModel)}>
+            {PRICING_MODELS.map((m) => (
+              <option key={m} value={m}>
+                {PRICING_LABEL[m]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <PricingFields model={model} c={c} />
+      {/* V2 New client: the required fields first; everything else is one click away */}
+      <details className="fm-moredetails" open={!!client?.id}>
+        <summary>Add details</summary>
+      <div className="row2">
+        <div className="field">
+          <label htmlFor="cf-business">Business name</label>
+          <input className="input" id="cf-business" name="business_name" defaultValue={c.business_name ?? ""} autoComplete="off" />
+        </div>
         <div className="field">
           <label htmlFor="cf-niche">Niche</label>
           <input className="input" id="cf-niche" name="niche" list="niche-list" defaultValue={c.niche ?? ""} placeholder="Fitness, coaching…" />
@@ -34,16 +70,6 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
               <option key={n} value={n} />
             ))}
           </datalist>
-        </div>
-        <div className="field">
-          <label htmlFor="cf-status">Status</label>
-          <select className="input" id="cf-status" name="status" defaultValue={c.status ?? "lead"}>
-            {CLIENT_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
       <div className="row2">
@@ -66,29 +92,6 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           <input className="input" id="cf-country" name="country" defaultValue={c.country ?? ""} autoComplete="off" />
         </div>
       </div>
-      <div className="row2">
-        <div className="field">
-          <label htmlFor="cf-currency">Currency</label>
-          <select className="input" id="cf-currency" name="currency" defaultValue={c.currency ?? defaultCurrency}>
-            {CURRENCY_CODES.map((k) => (
-              <option key={k} value={k}>
-                {CURRENCIES[k].label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="cf-pricing">Pricing model</label>
-          <select className="input" id="cf-pricing" name="pricing_model" value={model} onChange={(e) => setModel(e.target.value as PricingModel)}>
-            {PRICING_MODELS.map((m) => (
-              <option key={m} value={m}>
-                {PRICING_LABEL[m]}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <PricingFields model={model} c={c} />
       <div className="field">
         <label htmlFor="cf-tags">Tags</label>
         <input className="input" id="cf-tags" name="tags" defaultValue={(c.tags ?? []).join(", ")} placeholder="tripwire, retainer" />
@@ -100,6 +103,7 @@ export function ClientForm({ action, client, defaultCurrency = "GBP", submitLabe
           <textarea className="input" id="cf-notes" name="notes" defaultValue={c.notes ?? ""} />
         </div>
       )}
+      </details>
       <div className="flex items-center gap-3">
         <Submit className="btn primary">{submitLabel}</Submit>
         <span role="status" className="text-sm text-good">

@@ -2,10 +2,10 @@
 import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { money, nf } from "@/lib/format";
+import { money, nf, people } from "@/lib/format";
 import { num, periodFactor } from "@/lib/funnel-math";
 import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
-import { edgeConversion, edgePath, edgeRevenue, edgeTag } from "@/lib/editor/labels";
+import { edgeConversion, edgePath, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
 import { selectEdge, shownR, useEditor } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
 import type { Side } from "@/lib/graph";
@@ -40,6 +40,9 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const share = num(data?.share ?? 100);
   const dots = play && !calm && look.kind !== "nodata" ? flowDots(flow0, maxF, crowded) : 0;
   const dur = dotSeconds(Math.hypot(targetX - sourceX, targetY - sourceY) * 1.15) / speed;
+  // zoom levels (V2): far = line thickness only, mid = the number, near = the sentence and every label
+  const band = useEditor((s) => (s.view.k < 0.4 ? "far" : s.view.k <= 0.75 ? "mid" : "near"));
+  const sentence = band === "near" && data?.from ? edgeSentence(data.from, flow0, R, k) : null;
   const marker = look.arrow !== "none" ? `fm-arrow-${id}` : null;
   const style: React.CSSProperties = { strokeWidth: w, ...(look.opacity != null ? { opacity: look.opacity } : {}), ...(look.color && !selected ? { stroke: look.color } : {}), ...(look.dash ? { strokeDasharray: DASH[look.dash] ?? "none" } : {}) };
   return (
@@ -69,6 +72,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
         </g>
       )}
       <path className="react-flow__edge-interaction" d={d} fill="none" strokeOpacity={0} strokeWidth={16} />
+      {(band !== "far" || selected) && (
       <EdgeLabelRenderer>
         <button
           type="button"
@@ -76,7 +80,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
           data-edge={id}
           style={{ left: mx, top: my }}
           onClick={() => selectEdge(id)}
-          aria-label={look.kind === "nodata" ? "Connection without data" : `Connection carrying ${nf(flow)} people`}
+          aria-label={look.kind === "nodata" ? "Connection without data" : sentence ? `Connection: ${sentence} people` : `Connection carrying ${people(flow)} people`}
         >
           {tag && <span className={`tag${tag.alt ? " alt" : ""}`}>{tag.text}</span>}
           {look.kind === "skip" && <span className="tag">Skip</span>}
@@ -85,7 +89,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
             <span className="n">No data</span>
           ) : (
             <span className="n">
-              {nf(flow)}
+              {sentence ?? people(flow)}
               {share !== 100 ? ` · ${nf(share)}%` : ""}
               {moved && ed && (
                 <span className={`sd ${moved}`}>
@@ -96,10 +100,11 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
               )}
             </span>
           )}
-          {look.kind !== "nodata" && look.showPct && data?.from && edgeConversion(data.from, flow0, R) != null && <span className="n pct"> · {nf(edgeConversion(data.from, flow0, R)! * 100, 1)}% convert</span>}
-          {look.kind !== "nodata" && look.showRev && data?.to && edgeRevenue(data.to, flow0, R) > 0 && <span className="n rev"> · {money(edgeRevenue(data.to, flow0, R) * k, cur)}</span>}
+          {look.kind !== "nodata" && look.showPct && !sentence && data?.from && edgeConversion(data.from, flow0, R) != null && <span className="n pct"> · {nf(edgeConversion(data.from, flow0, R)! * 100, 1)}% convert</span>}
+          {look.kind !== "nodata" && look.showRev && band === "near" && data?.to && edgeRevenue(data.to, flow0, R) > 0 && <span className="n rev"> · {money(edgeRevenue(data.to, flow0, R) * k, cur)}</span>}
         </button>
       </EdgeLabelRenderer>
+      )}
     </>
   );
 });

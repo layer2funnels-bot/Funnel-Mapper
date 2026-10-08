@@ -70,6 +70,9 @@ import { Presenter } from "./present";
 import { QuickAdd } from "./quick-add";
 import { LineMenu } from "./line-menu";
 import { SimBar } from "./sim-bar";
+import { MathPanel } from "./math-panel";
+import { registerCommands } from "@/lib/editor/commands";
+import { dataUrlToBlob, encodeUnder } from "@/lib/image-client";
 import { TemplatesPanel } from "./templates-panel";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
@@ -80,6 +83,8 @@ import { saveVersion, VersionsPanel } from "./versions";
 export interface EditorProps {
   mode: "owner" | "share";
   userId?: string;
+  /** Name (or email) shown as the avatar initials. */
+  userName?: string;
   funnel: { id: string; name: string; description: string; status: string; client_id: string; graph: FunnelGraph; settings: FunnelSettings; updated_at: string };
   client: { id: string; name: string; logo_url: string | null; currency: string };
   agency: { name: string; logo_url: string | null };
@@ -346,13 +351,35 @@ function EditorInner(props: EditorProps) {
       const s = useEditor.getState();
       if (!s.nodes.length) return;
       const png = await svgToPng(await renderMapSvg({ nodes: s.nodes, edges: s.edges }, s.R, { currency: s.settings.currency, nums: false, heightOf, widthOf, embedFonts: false }), 0.5);
-      const blob = await (await fetch(png.url)).blob();
+      // V2 F7: stored as WebP under 100 KB
+      const img = await new Promise<HTMLImageElement>((res, rej) => Object.assign(new Image(), { onload: function (this: HTMLImageElement) { res(this); }, onerror: rej, src: png.url }));
+      const blob = dataUrlToBlob(encodeUnder(Object.assign(img, { width: img.naturalWidth, height: img.naturalHeight }), 800));
       const sb = supabaseBrowser();
       const path = `${funnel.id}.png`;
-      const { error } = await sb.storage.from("thumbnails").upload(path, blob, { upsert: true, contentType: "image/png", cacheControl: "60" });
+      const { error } = await sb.storage.from("thumbnails").upload(path, blob, { upsert: true, contentType: "image/webp", cacheControl: "60" });
       if (!error) await sb.from("funnels").update({ thumbnail_url: path }).eq("id", funnel.id);
     } catch {}
   };
+
+  // the editor's own commands in the shared registry (quick add lists them); a ref keeps each handler current
+  const cmdRef = useRef({ runTidy, manualVersion, toggleSim, doExport });
+  useEffect(() => {
+    cmdRef.current = { runTidy, manualVersion, toggleSim, doExport };
+  });
+  useEffect(() => {
+    const can = () => !useEditor.getState().readOnly;
+    return registerCommands([
+      { id: "tidy", label: "Tidy up the layout", scope: "map", shortcut: "Mod+Shift+L", icon: "tidy", words: "arrange layout clean", run: () => void cmdRef.current.runTidy(), enabled: can },
+      { id: "fit", label: "Fit to screen", scope: "view", icon: "fit", words: "zoom show all", run: () => rf.fitView({ padding: 0.15, duration: 250, maxZoom: 1.2 }) },
+      ...(manage ? [{ id: "version", label: "Save a version", scope: "map" as const, shortcut: "Mod+S", icon: "history" as const, words: "snapshot history", run: () => void cmdRef.current.manualVersion() }] : []),
+      ...(owner ? [{ id: "simulate", label: "Start or leave Simulate", scope: "map" as const, shortcut: "S", icon: "play" as const, words: "simulation what-if", run: () => cmdRef.current.toggleSim(), enabled: () => can() && !useEditor.getState().shared }] : []),
+      { id: "export-pdf", label: "Export PDF report", scope: "map", icon: "download", words: "download", run: () => void cmdRef.current.doExport("pdf") },
+      { id: "export-png", label: "Export PNG image", scope: "map", icon: "download", words: "download picture", run: () => void cmdRef.current.doExport("png") },
+      { id: "numbers", label: "Show or hide numbers", scope: "view", icon: "hash", words: "performance clean layer", run: () => setOpt("nums", !useEditor.getState().opts.nums) },
+      { id: "panel-left", label: "Hide or show the blocks panel", scope: "view", shortcut: "[", icon: "panelLeft", run: () => setOpt("hideSide", !useEditor.getState().opts.hideSide) },
+      { id: "panel-right", label: "Hide or show the details panel", scope: "view", shortcut: "]", icon: "panelRight", run: () => setOpt("hideInsp", !useEditor.getState().opts.hideInsp) },
+    ]);
+  }, [rf, manage, owner]);
 
   /* ---------- keyboard ---------- */
   useEffect(() => {
@@ -756,6 +783,11 @@ function EditorInner(props: EditorProps) {
   return (
     <div className={cls}>
       <header className="fm-top">
+        {owner && (
+          <Link href="/" className="fm-logo" aria-label="Home" title="Home">
+            <Icon name="logo" size={17} strokeWidth={2.2} />
+          </Link>
+        )}
         {!owner && (
           <span className="flex items-center gap-2 font-display font-extrabold">
             {agency.logo_url ? (
@@ -803,96 +835,96 @@ function EditorInner(props: EditorProps) {
             Funnel name
           </label>
           <input id="fm-fname" className="fm-fname" value={name} onChange={(e) => setName(e.target.value)} readOnly={readOnly || !manage} title={name} />
+          <span className="fm-hide-phone">
+            <Menu label="Funnel menu" className="fm-cbtn" buttonContent={<Icon name="chevronDown" size={14} />}>
+              {(close) => (
+                <>
+                  {fileMenu(close)}
+                  {manage && (
+                    <>
+                      <hr />
+                      <div className="menu-label">Status</div>
+                      {FUNNEL_STATUSES.map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={status === st}
+                          onClick={async () => {
+                            close();
+                            setStatus(st);
+                            const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
+                            if (error) showToast("Couldn’t change status");
+                          }}
+                        >
+                          {STATUS_LABEL[st]}
+                          {status === st && <Icon name="check" size={14} />}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  <hr />
+                  <div className="menu-label">View</div>
+                  {viewMenu(close)}
+                </>
+              )}
+            </Menu>
+          </span>
+          {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
+          <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
+            <span className="dot" aria-hidden="true" />
+            {saveLabel[saveStatus]}
+          </span>
         </div>
-        <span className="fm-hide-phone">
-          <Menu label="File">{fileMenu}</Menu>
-        </span>
-        {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
+        <span className="flex-1" />
         {!share?.hideNumbers && (
           <div className="seg fm-modes" role="group" aria-label="View">
             <button type="button" aria-pressed={!reports} onClick={() => setMode("map")} aria-label="Map" title="Map" className="fm-hide-phone">
-              <Icon name="layers" size={15} />
+              <Icon name="map" size={14} />
               <span className="fm-lbl">Map</span>
             </button>
             <button type="button" aria-pressed={reports} onClick={() => setMode("reports")} title="Reports and insights" aria-label="Reports">
-              <Icon name="chart" size={15} />
+              <Icon name="chart" size={14} />
               <span className="fm-lbl fm-hide-phone">Reports</span>
             </button>
           </div>
         )}
+        <span className="flex-1" />
+        {!sharedView && !reports && !share?.hideNumbers && <ActualSwitch />}
         {canEdit && (
           <span className="fm-edit-tools fm-hide-phone">
-            <button type="button" className="btn icon" aria-label="Undo" title={`Undo (${kbd("Mod+Z")})`} onClick={undo} disabled={readOnly || !canUndo}>
-              <Icon name="undo" />
+            <button type="button" className="btn icon ghost" aria-label="Undo" title={`Undo (${kbd("Mod+Z")})`} onClick={undo} disabled={readOnly || !canUndo}>
+              <Icon name="undo" size={16} />
             </button>
-            <button type="button" className="btn icon" aria-label="Redo" title={`Redo (${kbd("Mod+Shift+Z")})`} onClick={redo} disabled={readOnly || !canRedo}>
-              <Icon name="redo" />
+            <button type="button" className="btn icon ghost" aria-label="Redo" title={`Redo (${kbd("Mod+Shift+Z")})`} onClick={redo} disabled={readOnly || !canRedo}>
+              <Icon name="redo" size={16} />
             </button>
             <button type="button" className="btn tidy" title={`Tidy up layout (${kbd("Mod+Shift+L")})`} aria-label="Tidy up" onClick={() => runTidy()} disabled={readOnly}>
-              <Icon name="tidy" />
+              <Icon name="tidy" size={15} />
               <span className="fm-lbl">Tidy up</span>
             </button>
           </span>
         )}
-        <span className="flex-1" />
-        {manage && (
-          <label className="fm-hide-md">
-            <span className="sr-only">Funnel status</span>
-            <select
-              className="btn"
-              value={status}
-              onChange={async (e) => {
-                const v = e.target.value;
-                setStatus(v);
-                const { error } = await supabaseBrowser().from("funnels").update({ status: v }).eq("id", funnel.id);
-                if (error) showToast("Couldn’t change status");
-              }}
-            >
-              {FUNNEL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <span className="fm-hide-phone">
-          <Menu label="View" align="right">{viewMenu}</Menu>
-        </span>
-        <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
-          <span className="dot" aria-hidden="true" />
-          {saveLabel[saveStatus]}
-        </span>
+        {owner && <span className="fm-vr fm-hide-md" aria-hidden="true" />}
         <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Show numbers and details" title="Show numbers and details" aria-expanded={showInsp} onClick={() => setShowInsp((v) => !v)}>
           <Icon name="chart" />
         </button>
-        <button
-          type="button"
-          className="btn icon ghost fm-hide-md"
-          aria-label={`${collapsed.insp ? "Expand" : "Collapse"} details panel`}
-          title={`${collapsed.insp ? "Show" : "Hide"} details panel`}
-          aria-expanded={!collapsed.insp}
-          aria-controls="fm-insp"
-          onClick={() => togglePanel("insp")}
-        >
-          <Icon name="panelRight" />
-        </button>
         {(owner || notesShared) && (
-          <button type="button" className="btn icon fm-mobile-only fm-hide-phone" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
+          <button type="button" className="btn icon ghost fm-mobile-only fm-hide-phone" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
             <Icon name="note" />
           </button>
         )}
         {owner && (
           <>
-            <button type="button" className="btn icon fm-hide-md" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
-              <Icon name="history" />
+            <button type="button" className="btn icon ghost fm-hide-md relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
+              <Icon name="comment" size={16} />
+              {commentCount > 0 && <span className="fm-cdot">{commentCount}</span>}
             </button>
-            <button type="button" className="btn icon fm-hide-md" aria-label="Present" title="Present to the client" onClick={() => setPresenting(true)} disabled={!hasNodes}>
-              <Icon name="play" />
+            <button type="button" className="btn icon ghost fm-hide-md" aria-label="Version history" title="Version history" onClick={() => (setPanel("versions"), setShowInsp(true), togglePanel("insp", false))}>
+              <Icon name="history" size={16} />
             </button>
-            <button type="button" className="btn fm-hide-md relative" aria-label={`Client comments (${commentCount} open)`} title="Client comments" onClick={() => (setPanel("comments"), setShowInsp(true), togglePanel("insp", false))}>
-              <Icon name="comment" />
-              {commentCount > 0 && <span className="pill bg-brand px-1.5! py-0! text-brand-ink">{commentCount}</span>}
+            <button type="button" className="btn icon ghost fm-hide-md" aria-label="Present" title="Present to the client" onClick={() => setPresenting(true)} disabled={!hasNodes}>
+              <Icon name="play" size={15} />
             </button>
             {manage && (
               <button
@@ -903,7 +935,7 @@ function EditorInner(props: EditorProps) {
                   shareRef.current?.showModal();
                 }}
               >
-                <Icon name="share" />
+                <Icon name="share" size={15} />
                 <span>Share</span>
               </button>
             )}
@@ -974,6 +1006,17 @@ function EditorInner(props: EditorProps) {
             </Menu>
           </span>
         )}
+        {owner && (
+          <span className="fm-av fm-hide-phone" title={props.userName ?? ""} aria-hidden="true">
+            {(props.userName ?? "")
+              .replace(/@.*/, "")
+              .split(/[\s._-]+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((w) => w[0]!.toUpperCase())
+              .join("") || "?"}
+          </span>
+        )}
       </header>
 
       <EditorRail
@@ -1004,9 +1047,10 @@ function EditorInner(props: EditorProps) {
           </div>
         ) : (
           <>
-            {sideTab === "library" && <Palette products={props.products ?? []} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
+            {sideTab === "library" && <Palette products={props.products ?? []} clientName={client.name} onCollapse={() => togglePanel("side")} onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
             {sideTab === "outline" && <Outline />}
             {sideTab === "blocks" && <WorkspaceBlocks />}
+            {sideTab === "math" && <MathPanel />}
             {sideTab === "templates" && <TemplatesPanel onPicked={() => (setShowSide(false), closeOverlayLibrary())} />}
           </>
         )}
@@ -1022,13 +1066,8 @@ function EditorInner(props: EditorProps) {
               </button>
             )}
             <ViewSwitch />
-            {!sharedView && <ActualSwitch />}
+            <span className="fm-vr" aria-hidden="true" />
             <LayersMenu />
-            {!readOnly && !sharedView && hasNodes && (
-              <button type="button" className="btn fm-simbtn fm-hide-phone" aria-pressed={simOn} onClick={toggleSim} title="Simulate: change assumptions and watch the funnel update">
-                <Icon name="sliders" size={15} /> Simulate
-              </button>
-            )}
           </div>
         )}
         {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}

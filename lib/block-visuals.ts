@@ -8,6 +8,7 @@
 // reference/project/Blocks-and-lines.dc.html (wireframe vocabulary). The final human-reviewed Figma 169 library
 // replaces the DATA below (families, wireframes, brand tints), not the renderer or any block identity.
 import { baseOf, isBlockType, libOf, typeOf } from "./catalog";
+import { WINDOWS } from "./design-tiles";
 
 export type Family = "source" | "page" | "offer" | "message" | "action" | "logic" | "goal" | "note";
 
@@ -185,3 +186,16 @@ export const FAMILY_GEOM: Record<Family, { radii: [number, number, number, numbe
   goal: { radii: [24, 24, 24, 24], pad: [16, 16], tile: "pill", tileSize: 32, tileR: 12, dashedStats: false, hatch: false },
   note: { radii: [14, 14, 14, 14], pad: [10, 10], tile: "rounded", tileSize: 32, tileR: 9, dashedStats: false, hatch: false },
 };
+
+
+/** Library key of the browser-window drawing for a page or offer type (types the library does not list use their wireframe's). */
+const WINDOW_BY_WF: Record<Wireframe, string> = { optin: "optin", sales: "sales", video: "vsl", webinar: "webinar", quiz: "quizp", app: "apply", calendar: "booking", thanks: "thanks", order: "checkout", up: "upsell", down: "downsell", sub: "sub", members: "members" };
+export function windowKeyOf(type: string): string {
+  const v = visualOf(type);
+  return WINDOW_KEYS.has(type) ? type : WINDOW_BY_WF[v.wireframe ?? (v.family === "offer" ? "order" : "sales")];
+}
+const WINDOW_KEYS = new Set(Object.keys(WINDOWS));
+
+/** Short type caption on a page / offer object ("OPT-IN PAGE", "APPLICATION", "CHECKOUT"). */
+const CAPTION: Record<string, string> = { webreg: "Webinar", webinar: "Webinar", replay: "Replay", apply: "Application", booking: "Booking", checkout: "Checkout", onestep: "One-step order", twostep: "Two-step order", bump: "Order bump", upsell: "Upsell", downsell: "Downsell", sub: "Subscription", plan: "Payment plan", cartoffer: "Cart", coupon: "Coupon" };
+export const typeCaption = (type: string): string => CAPTION[type] ?? typeOf(type)?.label ?? type;

@@ -104,7 +104,7 @@ function PagePeek({ path, owner, anchor, onEnter, onLeave, onClose }: { path: st
 }
 
 /** Semantic page wireframe (preview strip). A saved capture replaces it; the wireframe stays whenever there is none (or it fails to load). */
-export function WireframeStrip({ kind, accent, shot, owner }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner }) {
+export function WireframeStrip({ kind, accent, shot, owner, win }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner; /** The design's browser window (inner SVG of a 66 × 65 page): replaces the old strip. */ win?: string }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const openT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -153,7 +153,7 @@ export function WireframeStrip({ kind, accent, shot, owner }: { kind: Wireframe;
   return (
     <div
       ref={ref}
-      className={`fm-wf${shot ? " has-shot" : ""}`}
+      className={`${win ? "pgo-win" : "fm-wf"}${shot ? " has-shot" : ""}`}
       style={{ ["--wfa" as string]: accent }}
       aria-hidden={can ? undefined : true}
       tabIndex={can ? 0 : undefined}
@@ -165,12 +165,28 @@ export function WireframeStrip({ kind, accent, shot, owner }: { kind: Wireframe;
       onFocus={can ? (e) => e.currentTarget.matches(":focus-visible") && open(e.currentTarget, 0) : undefined}
       onBlur={can ? () => close(0) : undefined}
     >
-      {shot && <PageShot path={shot} />}
-      <svg viewBox={`0 0 ${WF_SIZE.w} ${WF_SIZE.h}`} preserveAspectRatio="xMidYMid meet" strokeWidth={1}>
-        {WIREFRAMES[kind].map((s, i) => (
-          <Shape key={i} s={s} />
-        ))}
-      </svg>
+      {win ? (
+        <>
+          <span className="pgo-chrome" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="pgo-page">
+            <svg width="66" height="65" viewBox="0 0 66 65" preserveAspectRatio="xMidYMid slice" aria-hidden="true" dangerouslySetInnerHTML={{ __html: win }} />
+            {shot && <PageShot path={shot} />}
+          </span>
+        </>
+      ) : (
+        <>
+          {shot && <PageShot path={shot} />}
+          <svg viewBox={`0 0 ${WF_SIZE.w} ${WF_SIZE.h}`} preserveAspectRatio="xMidYMid meet" strokeWidth={1}>
+            {WIREFRAMES[kind].map((s, i) => (
+              <Shape key={i} s={s} />
+            ))}
+          </svg>
+        </>
+      )}
       {shot && owner && anchor && <PagePeek path={shot} owner={owner} anchor={anchor} onEnter={() => clearTimeout(closeT.current)} onLeave={() => close()} onClose={() => setAnchor(null)} />}
     </div>
   );

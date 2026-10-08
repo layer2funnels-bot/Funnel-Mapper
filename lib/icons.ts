@@ -131,5 +131,7 @@ export const UI_ICONS = {
   swap: '<path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
   type: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
   sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  map: '<path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z M8 2v16 M16 6v16"/>',
+  calc: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/>',
 } as const;
 export type UiIconName = keyof typeof UI_ICONS;

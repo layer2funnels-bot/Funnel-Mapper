@@ -99,3 +99,11 @@ export async function latestMail(to: string, since = 0) {
   }
   throw new Error(`no email for ${to}`);
 }
+
+/** Add a library block through the palette search (annotation blocks sit in a collapsed group). */
+export async function addFromPalette(page: Page, label: string) {
+  const search = page.getByPlaceholder(/^Search \d+ blocks$/);
+  await search.fill(label);
+  await page.getByRole("button", { name: `Add ${label}`, exact: true }).click();
+  await search.fill("");
+}

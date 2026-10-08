@@ -65,21 +65,21 @@ export function KpiBar() {
   const m = (v: number) => money(v, cur);
   const ltv = basis === "ltv" ? <span className="fm-ltv" title="Lifetime value is the basis for revenue, profit and ROAS">LTV</span> : null;
   const neg = (v: number, node: React.ReactNode) => <span className={v >= 0 ? "pos" : "neg"}>{node}</span>;
-  type K = { id: string; label: React.ReactNode; text: string; value: React.ReactNode; title?: string; sim?: "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa" };
+  type K = { id: string; /** Label in the strip, where the unit sits at the right ("per month · USD"). */ short?: React.ReactNode; label: React.ReactNode; text: string; value: React.ReactNode; title?: string; sim?: "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa" };
   const all: K[] = [
-    { id: "traffic", label: "Traffic / mo", text: "Traffic", value: people(R.traffic), title: peopleExact(R.traffic), sim: "traffic" },
-    { id: "revenue", label: <>Revenue / mo {ltv}</>, text: "Revenue", value: m(R.rev), sim: "rev" },
-    { id: "profit", label: <>Profit / mo {ltv}</>, text: "Profit", value: neg(R.profit, m(R.profit)), sim: "profit" },
-    { id: "customers", label: "Customers / mo", text: "Customers", value: people(R.cust), title: peopleExact(R.cust), sim: "cust" },
+    { id: "traffic", short: "Traffic", label: "Traffic / mo", text: "Traffic", value: people(R.traffic), title: peopleExact(R.traffic), sim: "traffic" },
+    { id: "revenue", short: <>Revenue {ltv}</>, label: <>Revenue / mo {ltv}</>, text: "Revenue", value: m(R.rev), sim: "rev" },
+    { id: "profit", short: <>Profit {ltv}</>, label: <>Profit / mo {ltv}</>, text: "Profit", value: neg(R.profit, m(R.profit)), sim: "profit" },
+    { id: "customers", short: "Customers", label: "Customers / mo", text: "Customers", value: people(R.cust), title: peopleExact(R.cust), sim: "cust" },
     { id: "roas", label: <>ROAS {ltv}</>, text: "ROAS", value: ratio(R.roas), sim: "roas" },
-    { id: "leads", label: "Leads / mo", text: "Leads", value: people(R.leads), title: peopleExact(R.leads), sim: "leads" },
+    { id: "leads", short: "Leads", label: "Leads / mo", text: "Leads", value: people(R.leads), title: peopleExact(R.leads), sim: "leads" },
     { id: "roi", label: "ROI", text: "ROI", value: pct(R.roi) },
     { id: "aov", label: "AOV", text: "AOV", value: m(R.aov) },
     { id: "cpa", label: "CPA", text: "CPA", value: m(R.cpa), sim: "cpa" },
     { id: "cpl", label: "CPL", text: "CPL", value: m(R.cpl) },
     { id: "epc", label: "EPC", text: "EPC", value: m(R.epc) },
     { id: "conv", label: "Conversion rate", text: "Conversion rate", value: pct(R.conv) },
-    { id: "spend", label: "Ad spend / mo", text: "Ad spend", value: m(R.spend), sim: "spend" },
+    { id: "spend", short: "Ad spend", label: "Ad spend / mo", text: "Ad spend", value: m(R.spend), sim: "spend" },
     { id: "mrr", label: "MRR", text: "MRR", value: m(R.mrr) },
     { id: "ltvc", label: "LTV / customer", text: "LTV / customer", value: m(R.ltvc) },
   ];
@@ -167,7 +167,7 @@ export function KpiBar() {
       )}
       {strip.map((k) => (
         <div className="fm-kpi" key={k.id} data-kpi={k.id}>
-          <div>{k.label}</div>
+          <div>{k.short ?? k.label}</div>
           <b title={k.title}>{k.value}</b>
           {chip(k)}
         </div>

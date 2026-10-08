@@ -21,17 +21,20 @@ export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** Clean | Performance map: the two presets of the View menu's Layers, one click from the canvas. */
+/**
+ * Clean | Performance map (V2 "Editor-default"): Clean keeps the numbers on blocks and lines at one even weight; Performance
+ * adds the headline figures, conversion bars, line weight by people and the key leak. "Names only" lives in Layers.
+ */
 export function ViewSwitch() {
   const nums = useEditor((s) => s.opts.nums);
   const thick = useEditor((s) => s.opts.thick);
-  const set = (v: boolean) => (setOpt("nums", v), setOpt("thick", v));
+  const set = (perf: boolean) => (setOpt("nums", true), setOpt("thick", perf));
   return (
     <div className="seg fm-viewswitch" role="group" aria-label="Map view">
-      <button type="button" aria-pressed={!nums && !thick} onClick={() => set(false)} title="Names only">
+      <button type="button" aria-pressed={!thick} onClick={() => set(false)} title="Numbers on blocks and lines, one even weight">
         Clean
       </button>
-      <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Numbers on every block, line thickness shows traffic">
+      <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Headline numbers, conversion bars, line thickness shows traffic, key leak">
         Performance
       </button>
     </div>
@@ -102,7 +105,7 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
   const tab = useEditor((s) => s.sideTab);
   const shared = useEditor((s) => s.shared);
   // a tab button either shows its panel, or (when it already is showing) collapses the side panel
-  const pick = (t: "library" | "outline" | "blocks" | "templates") => (tab === t && !sideCollapsed ? onToggleSide() : setSideTab(t));
+  const pick = (t: "library" | "outline" | "blocks" | "templates" | "math") => (tab === t && !sideCollapsed ? onToggleSide() : setSideTab(t));
   const on = (t: string) => tab === t && !sideCollapsed;
   return (
     <nav className="fm-rail" aria-label="Editor tools">
@@ -117,6 +120,11 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
           {!shared && (
             <button type="button" className={on("templates") ? "on" : ""} aria-label="Templates" title="Templates: add one of the 13 to this map" aria-pressed={on("templates")} aria-controls="fm-side" onClick={() => pick("templates")}>
               <Icon name="file" />
+            </button>
+          )}
+          {!shared && (
+            <button type="button" className={on("math") ? "on" : ""} aria-label="How the math works" title="How the math works: the selected step in words" aria-pressed={on("math")} aria-controls="fm-side" onClick={() => pick("math")}>
+              <Icon name="calc" />
             </button>
           )}
           {!shared && (

@@ -86,7 +86,7 @@ export function SimBar({ onOpenChecks }: { onOpenChecks: () => void }) {
             {scen === "What-if" && <option value="__what">What-if (unsaved)</option>}
           </select>
         </label>
-        <label className="fm-sbchip vs">
+        <label className="fm-sbchip vs" title={`Compared with ${vsName}`}>
           <span>vs</span>
           <select aria-label="Compared with" value={base.vs ?? ""} onChange={(e) => setSimVs(e.target.value || null)}>
             <option value="">{BASELINE_LONG}</option>

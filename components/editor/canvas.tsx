@@ -269,6 +269,7 @@ export function Canvas() {
 
   return (
     <ReactFlow
+      proOptions={{ hideAttribution: true }}
       nodes={rfNodes}
       edges={rfEdges}
       nodeTypes={nodeTypes}

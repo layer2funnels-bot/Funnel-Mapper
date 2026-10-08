@@ -72,7 +72,7 @@ test.describe("V2 editor interactions", () => {
   test("drag a connection into empty space: Quick Add places and connects the block in one undo step", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
+    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 220 } });
     await expect(nodes(page)).toHaveCount(1);
     const fb = node(page, "Facebook ads");
     const from = await centre(page, fb.locator(".fm-port.side.right"));

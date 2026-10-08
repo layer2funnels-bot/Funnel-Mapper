@@ -107,7 +107,7 @@ export interface EditorState {
   /** The recorded numbers for `actualView`, shaped like an engine result (lib/actual-result.ts). */
   actualR: FunnelResult | null;
   /** Left panel: block library, funnel outline or workspace blocks. */
-  sideTab: "library" | "outline" | "blocks" | "templates";
+  sideTab: "library" | "outline" | "blocks" | "templates" | "math";
   /** Saved style presets and blocks of this workspace (table workspace_assets). */
   stylePresets: StylePreset[];
   workspaceBlocks: WorkspaceBlock[];
@@ -178,7 +178,7 @@ export interface EditorState {
 
 const OPTS_KEY = "fm-editor-opts";
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
@@ -232,7 +232,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,

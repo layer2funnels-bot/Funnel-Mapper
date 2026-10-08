@@ -1,6 +1,7 @@
 "use client";
 // Style / arrange / checklist controls for the inspector. Everything here is presentational or planning data:
 // none of it changes the funnel maths.
+import { encodeUnder } from "@/lib/image-client";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { typeOf } from "@/lib/catalog";
@@ -426,13 +427,13 @@ export function ChecklistEditor({ n, label = "Checklist" }: { n: FunnelNode; lab
 
 /* ---------------- images ---------------- */
 
-const MAX_SIDE = 1600;
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_SIDE = 1200;
+const MAX_BYTES = 25 * 1024 * 1024;
 
-/** Downscale an uploaded image and return a data URL (kept inside the funnel, so share links and exports can show it). */
+/** Scale an uploaded image down and keep it inside the funnel as a WebP data URL under 100 KB (V2 F7), so share links and exports can show it. */
 async function imageToDataUrl(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Choose an image file");
-  if (file.size > MAX_BYTES) throw new Error("That image is over 8 MB");
+  if (file.size > MAX_BYTES) throw new Error("That image is over 25 MB");
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => {
@@ -441,18 +442,10 @@ async function imageToDataUrl(file: File): Promise<string> {
       i.onerror = () => rej(new Error("Couldn’t read that image"));
       i.src = url;
     });
-    if (file.type === "image/svg+xml") return await new Promise((res) => {
-      const r = new FileReader();
-      r.onload = () => res(String(r.result));
-      r.readAsDataURL(file);
-    });
-    const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(img.naturalWidth * k));
-    c.height = Math.max(1, Math.round(img.naturalHeight * k));
-    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    // keep transparency for PNGs; photos as WebP
-    return file.type === "image/png" ? c.toDataURL("image/png") : c.toDataURL("image/webp", 0.85);
+    const w = img.naturalWidth || 800,
+      h = img.naturalHeight || 600;
+    const src = Object.assign(img, { width: w, height: h });
+    return encodeUnder(src, Math.min(MAX_SIDE, w));
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -465,7 +458,7 @@ export function ImageFields({ n }: { n: FunnelNode }) {
   const isData = src.startsWith("data:");
   return (
     <>
-      <Field label="Upload image" help="PNG, JPG, WebP, GIF or SVG. Large images are scaled down to 1600 px.">
+      <Field label="Upload image" help="PNG, JPG, WebP, GIF or SVG. Stored as WebP under 100 KB, at most 1200 px wide.">
         {(id) => (
           <input
             id={id}

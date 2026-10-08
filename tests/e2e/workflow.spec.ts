@@ -14,6 +14,9 @@ test("create a client, map a funnel, save, reopen, version, template, share and 
   await page.goto("/clients");
   await page.getByRole("link", { name: "New client" }).click();
   await page.getByLabel("Client name *").fill(clientName);
+  // required fields first; the rest sits under "Add details"
+  await expect(page.getByLabel("Business name")).toBeHidden();
+  await page.getByText("Add details").click();
   await page.getByLabel("Business name").fill("Nova Yoga Studio");
   await page.getByLabel("Niche").fill("Wellness");
   await page.getByLabel("Status").selectOption("active");

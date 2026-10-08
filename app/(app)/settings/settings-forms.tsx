@@ -149,7 +149,7 @@ export function MemberRow({ member: m, me, canManage, isOwner, canRemove }: { me
       <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-soft font-bold text-brand" aria-hidden="true">
         {(m.full_name || m.email).slice(0, 1).toUpperCase()}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-[1_1_170px]">
         <div className="truncate text-sm font-bold">
           {m.full_name || m.email}
           {me && <span className="ml-1 font-normal text-muted">(you)</span>}

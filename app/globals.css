@@ -214,10 +214,12 @@ button {
   .btn.primary:hover:not(:disabled) {
     background: var(--brand-hover);
     border-color: var(--brand-hover);
+    color: #011a12; /* 4.8:1 on the hover Emerald */
   }
   .btn.primary:active:not(:disabled) {
     background: var(--brand-press);
     border-color: var(--brand-press);
+    color: #fff; /* 5.5:1 on the pressed Emerald */
   }
   .btn.danger {
     color: var(--bad);

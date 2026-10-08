@@ -8,7 +8,8 @@ import { brandMarkOf } from "@/lib/brand-marks";
 import { lostDots, stepDelta } from "@/lib/simulate";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { SimChip } from "./simulate";
-import { BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { BlockArtImg, BrandGlyph, offerSubtitle, priceTab, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { artOf } from "@/lib/block-art";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor } from "@/lib/editor/store";
@@ -162,9 +163,13 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       {F.price && <span className="fm-price">{priceTab(n, cur)}</span>}
       {!shared && <StatusDot status={n.status} />}
       <div className="fm-nhead">
-        <span className="fm-nicon">
-          {brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}
-        </span>
+        {artOf(n.type) && !n.s?.icon ? (
+          <span className="fm-nicon art">
+            <BlockArtImg k={n.type} />
+          </span>
+        ) : (
+          <span className="fm-nicon">{brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}</span>
+        )}
         <div className="fm-ntitle">
           {renaming ? <RenameInput id={n.id} value={n.name} /> : <span style={textCss(n.s)}>{n.name}</span>}
           {pl ? (

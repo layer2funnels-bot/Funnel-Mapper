@@ -246,15 +246,15 @@ otp_expiry = 3600
 
 # Token-hash links verified by /auth/confirm (works for dashboard invites too).
 [auth.email.template.invite]
-subject = "You’re invited to Funnel Mapper Pro"
+subject = "You’re invited to Funnel Mapper Pro V2"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "Your Funnel Mapper Pro sign-in link"
+subject = "Your Funnel Mapper Pro V2 sign-in link"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.recovery]
-subject = "Reset your Funnel Mapper Pro password"
+subject = "Reset your Funnel Mapper Pro V2 password"
 content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize notification email template

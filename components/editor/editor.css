@@ -4391,3 +4391,161 @@ dialog.fm-sharedlg {
     min-height: 40px;
   }
 }
+
+/* Light theme: category colours are fills; where one is used as an icon or text colour, use the darkened accent (F13). */
+:root[data-theme="light"] .fm-pfav.on {
+  color: #b45309;
+}
+:root[data-theme="light"] .fm-nnote {
+  color: #a16207;
+}
+
+/* Owner block artwork (lib/block-art.ts): the image is the whole tile, so the family tile colour and shape step aside. */
+.pi.art,
+.fm-node .fm-nicon.art,
+.fm-node.fam-action .fm-nicon.art {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  border-radius: 0;
+  padding: 0;
+  overflow: visible;
+}
+.fm-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Blocks sidebar (V2): sections, category accordion with counts, widgets last */
+.fm-psec {
+  margin-top: 6px;
+}
+.fm-psec > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.fm-pcount {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--side-muted);
+}
+.fm-acc {
+  display: grid;
+  gap: 2px;
+}
+.fm-acch {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--side-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.fm-acch:hover {
+  background: var(--side-item);
+}
+.fm-acch i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.fm-acch span {
+  flex: 1;
+  min-width: 0;
+}
+.fm-acch small {
+  color: var(--side-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.fm-acch svg {
+  color: var(--side-muted);
+  transition: transform 0.15s;
+  transform: rotate(-90deg);
+}
+.fm-accg.open > .fm-acch svg {
+  transform: none;
+}
+.fm-accg.open > .fm-pal {
+  padding: 2px 0 8px;
+}
+.fm-pmore {
+  margin: 2px 0 0 40px;
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: var(--brand-light);
+  font-size: 12.5px;
+  font-weight: 600;
+  min-height: 28px;
+  padding: 0 4px;
+}
+.fm-pmore:hover {
+  text-decoration: underline;
+}
+.fm-pempty {
+  padding: 6px 4px;
+  font-size: 13px;
+}
+.fm-pempty p {
+  margin: 0 0 4px;
+}
+.fm-pal .pi.wgt,
+.fm-pal .pi.art {
+  width: 26px;
+  height: 26px;
+}
+.fm-pal .pi.wgt {
+  background: var(--brand-soft);
+  color: var(--brand-light);
+  border: 1px dashed var(--brand);
+  border-radius: 7px;
+}
+.fm-pchips .pi.art {
+  width: 22px;
+  height: 22px;
+}
+@media (pointer: coarse) {
+  .fm-acch {
+    min-height: 44px;
+  }
+}
+.wg-path {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.wg-path li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+}
+.wg-path .pn {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.wg-path b {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppearancePicker } from "@/components/theme-toggle";
 import { ROLE_HELP, ROLE_LABEL } from "@/lib/roles";
 import { requireUser } from "@/lib/supabase/server";
 import { SettingsNav } from "./settings-nav";
@@ -124,10 +124,11 @@ export default async function SettingsPage() {
       )}
 
       <section id="appearance" className="card mb-6 scroll-mt-24 p-6" aria-labelledby="look-h">
-        <h2 id="look-h" className="mb-3 font-display text-lg font-bold">
+        <h2 id="look-h" className="mb-1 font-display text-lg font-bold">
           Appearance
         </h2>
-        <ThemeToggle className="btn" />
+        <p className="mb-4 text-sm text-muted">Choose how the whole app looks. It is remembered for you on every device.</p>
+        <AppearancePicker />
       </section>
       <section className="card p-6" aria-labelledby="acct-h">
         <h2 id="acct-h" className="mb-3 font-display text-lg font-bold">

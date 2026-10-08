@@ -3,9 +3,9 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { WIDGET_SIZES } from "@/lib/catalog";
-import { money, nf } from "@/lib/format";
+import { money, nf, pct } from "@/lib/format";
 import { useEditor } from "@/lib/editor/store";
-import { chartSeries, formatMetricValue, mrrDetail, trendRange, trendValues, widgetConfig, widgetMembers, widgetValues } from "@/lib/widget-data";
+import { chartSeries, conversionPath, formatMetricValue, mrrDetail, trendRange, trendValues, widgetConfig, widgetMembers, widgetValues } from "@/lib/widget-data";
 import { ensureActuals } from "./assets";
 
 type P = NodeProps & { data: { id: string } };
@@ -58,11 +58,25 @@ export function WidgetCard({ id, selected = false, fluid = false }: { id: string
   const mrr = shown.find((v) => v.metric === "mrr");
   const detail = mrr && cfg.size !== "S" ? mrrDetail({ nodes, edges: useEditor.getState().edges }, settings, R, members) : null;
   const chartMetric = shown.find((v) => ["revenue", "profit", "leads", "customers", "mrr"].includes(v.metric));
+  const path = cfg.display === "path" && !invalid ? conversionPath(nodes, useEditor.getState().edges, R, members, cfg.size === "S" ? 3 : cfg.size === "M" ? 4 : 6) : [];
   const series = cfg.display === "chart" && chartMetric ? chartSeries(chartMetric.metric, { nodes, edges: useEditor.getState().edges }, settings, R, chartMetric.value) : [];
   return (
     <div className={`fm-widget w-${cfg.size}${selected ? " sel" : ""}${invalid ? " invalid" : ""}`} style={fluid ? { width: "100%" } : { width: dims.w, minHeight: dims.h }} role="group" aria-label={`Widget: ${scopeLabel}`}>
       <div className="wg-scope">{scopeLabel}</div>
-      {invalid ? (
+      {cfg.display === "path" && !invalid ? (
+        path.length > 1 ? (
+          <ol className="wg-path" aria-label="Conversion along the main path">
+            {path.map((st, i) => (
+              <li key={st.id}>
+                <span className="pn">{st.name}</span>
+                <b>{i === 0 ? `${nf(st.out)} in` : Number.isFinite(st.rate) ? pct(st.rate) : "—"}</b>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="wg-empty">Connect a source to a step to see the path.</p>
+        )
+      ) : invalid ? (
         <p className="wg-empty">{cfg.scope === "frame" ? "The frame was removed. Pick another scope in the panel." : "None of its steps are left."}</p>
       ) : (
         <div className="wg-vals">

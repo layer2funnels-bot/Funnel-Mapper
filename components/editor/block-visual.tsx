@@ -10,6 +10,7 @@ import type { StepStatus } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { offerSubtitle, priceTab } from "@/lib/editor/labels";
 import { brandMarkOf } from "@/lib/brand-marks";
+import { artOf, artSrc } from "@/lib/block-art";
 import { visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type WfShape, type Wireframe } from "@/lib/block-visuals";
 
 const PAINT: Record<WfPaint, { fill: string; stroke: string }> = {
@@ -103,10 +104,26 @@ export function BrandGlyph({ type, size = 18 }: { type: string; size?: number })
   );
 }
 
-/** Library / Quick Add tile for a block, in the shape of its family. */
-export function BlockTile({ type, icon, size = 16 }: { type: string; icon: IconName; size?: number }) {
+/** The owner's artwork for a block (public/blocks): it IS the tile (shape and colour included). */
+export function BlockArtImg({ k }: { k: string }) {
+  const a = artOf(k);
+  if (!a) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- static block artwork, tiny WebP
+  return <img className={`fm-art ${a.shape}`} src={artSrc(a)} alt="" draggable={false} loading="lazy" decoding="async" />;
+}
+
+/** Library / Quick Add tile for a block, in the shape of its family. `artKey` is the library key (presets have their own artwork). */
+export function BlockTile({ type, icon, size = 16, artKey }: { type: string; icon: IconName; size?: number; artKey?: string }) {
   const v = visualOf(type),
     T = typeOf(type);
+  const ak = artKey ?? type;
+  if (artOf(ak)) {
+    return (
+      <span className="pi art" aria-hidden="true">
+        <BlockArtImg k={ak} />
+      </span>
+    );
+  }
   const bg = v.brand ?? CATCOLOR[T?.color ?? T?.cat ?? "annot"];
   return (
     <span className={`pi fam-${v.family}${v.brand ? " brand" : ""}`} style={{ background: bg }}>

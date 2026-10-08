@@ -10,7 +10,7 @@ import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 import { goalCurrent } from "./report-data";
-import { formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
+import { conversionPath, formatMetricValue, widgetConfig, widgetMembers, widgetValues, type WidgetMetric } from "./widget-data";
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const csvq = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
@@ -132,6 +132,8 @@ export interface MapSvgOptions {
   goals?: Goal[];
   /** Page screenshots as data URLs, by node id (drawn instead of the semantic wireframe). */
   shots?: Record<string, string>;
+  /** Owner block artwork as data URLs, by block type (lib/block-art.ts): drawn in place of the family tile. */
+  art?: Record<string, string>;
   /** Engine-backed extras for widgets (the 12-month series for Chart widgets, MRR detail); the editor passes them, nothing is calculated here. */
   widgetData?: {
     series: (metric: WidgetMetric, value: number) => number[];
@@ -514,8 +516,9 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       const dims = WIDGET_SIZES[cfg.size];
       const vals = widgetValues(cfg, g.nodes, R, opts.goals ?? []);
       const { members, invalid } = widgetMembers(cfg, g.nodes);
-      const shown = (cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals);
-      const rows = Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
+      const path = cfg.display === "path" && !invalid ? conversionPath(g.nodes, g.edges, R, members, cfg.size === "S" ? 3 : cfg.size === "M" ? 4 : 6) : [];
+      const shown = path.length ? [] : cfg.size === "S" ? vals.slice(0, 1) : cfg.size === "M" ? vals.slice(0, 2) : vals;
+      const rows = path.length ? Math.ceil((path.length * 20) / 44) : Math.ceil(shown.length / (cfg.size === "S" ? 1 : 2));
       // the same extras as the card on the canvas: MRR detail and, for the Chart display, the 12-month line
       const mrrV = shown.find((v) => v.metric === "mrr");
       const mrrLine = mrrV && cfg.size !== "S" && opts.widgetData ? opts.widgetData.mrr(members) : null;
@@ -534,6 +537,13 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
           y = n.y + 28 + row * 44;
         o += `<text x="${n2(x)}" y="${n2(y + 10)}" font-size="11.5" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(v.label)}</text>`;
         o += `<text x="${n2(x)}" y="${n2(y + 32)}" font-size="${cfg.size === "L" ? 22 : 20}" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(formatMetricValue(v, opts.currency), cw, 20, 700, F.display, measure))}</text>`;
+      });
+      path.forEach((st, i) => {
+        const y = n.y + 42 + i * 20;
+        const v = i === 0 ? `${nf(st.out)} in` : Number.isFinite(st.rate) ? `${nf(st.rate * 100, 1)}%` : "–";
+        const vw = measure(v, 12, 700, F.display);
+        o += `<text x="${n2(n.x + 12)}" y="${n2(y)}" font-size="12" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(ellipsis(st.name, w - 36 - vw, 12, 400, F.sans, measure))}</text>`;
+        o += `<text x="${n2(n.x + w - 12)}" y="${n2(y)}" text-anchor="end" font-size="12" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(v)}</text>`;
       });
       const below = n.y + 28 + rows * 44;
       if (mrrLine) o += `<text x="${n2(n.x + 12)}" y="${n2(below + 4)}" font-size="11" font-family="${esc(F.sans)}" fill="${P.muted}">${esc(`Month 12 ${Number.isFinite(mrrLine.month12) ? money(mrrLine.month12, opts.currency) : "n/a"} · ${nf(mrrLine.subscribers, 1)} subscribers`)}</text>`;
@@ -610,11 +620,15 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
       tcx = innerL + ts / 2;
     const tint = V.brand ?? c;
     const ink = V.brand ? "#FFFFFF" : P.catInk;
-    if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
+    const artUrl = s?.icon ? undefined : opts.art?.[n.type];
+    if (artUrl) o += `<image href="${esc(artUrl)}" x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" preserveAspectRatio="xMidYMid meet"/>`;
+    else if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
     else if (G.tile === "diamond") o += `<rect x="${n2(tcx - ts * 0.41)}" y="${n2(tcy - ts * 0.41)}" width="${n2(ts * 0.82)}" height="${n2(ts * 0.82)}" rx="${G.tileR}" fill="${tint}" transform="rotate(45 ${n2(tcx)} ${n2(tcy)})"/>`;
     else o += `<rect x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" rx="${G.tileR}" fill="${tint}"/>`;
     const mark = s?.icon ? undefined : brandMarkOf(n.type);
-    if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
+    if (artUrl) {
+      // the artwork carries its own glyph
+    } else if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
     else {
       const icon = ICONS[(s?.icon as IconName) || T.icon] ?? ICONS.page;
       o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;

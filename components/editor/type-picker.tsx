@@ -26,8 +26,12 @@ export function TypePicker() {
   const options = useMemo(() => (n ? [n.type, ...retypeTargets(n.type)] : []), [n]);
   const items = useMemo(() => {
     const set = new Set(options);
-    return searchLibrary(q).filter((it) => set.has(it.payload.type) && BY_KEY[it.key]).filter((it, i, a) => a.findIndex((x) => x.payload.type === it.payload.type) === i);
-  }, [options, q]);
+    const found = searchLibrary(q).filter((it) => set.has(it.payload.type) && BY_KEY[it.key]).filter((it, i, a) => a.findIndex((x) => x.payload.type === it.payload.type) === i);
+    // a block of an earlier (pre-V2) type still shows its own type first, so "Current" is always there
+    const T = n ? typeOf(n.type) : undefined;
+    if (n && T && !found.some((it) => it.payload.type === n.type) && !q.trim()) found.unshift({ key: n.type, label: T.label, icon: T.icon, group: libOf(n.type), kw: "", payload: { type: n.type } });
+    return found;
+  }, [options, q, n]);
   const page = n && typeOf(n.type)?.cat === "page";
   return (
     <dialog ref={ref} className="modal fm-typepick" aria-labelledby="tp-title" onClose={() => openTypePicker(null)} onCancel={() => openTypePicker(null)}>

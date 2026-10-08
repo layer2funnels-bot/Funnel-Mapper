@@ -6,7 +6,7 @@ import { useReactFlow } from "@xyflow/react";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icon";
-import { CATCOLOR, LIB_GROUPS, typeOf, type LibGroup } from "@/lib/catalog";
+import { CATCOLOR, groupColor, LIB_GROUPS, typeOf, type LibGroup } from "@/lib/catalog";
 import { addConnectedNode, addNode, canFollowType, canInsertType, closeQuickAdd, insertStepOnEdge, openQuickAdd, useEditor } from "@/lib/editor/store";
 import { BY_KEY, ITEMS, searchLibrary, type LibItem } from "@/lib/library";
 import { useBand } from "@/lib/use-band";
@@ -244,7 +244,7 @@ function QuickAddBox() {
         </button>
         {(Object.keys(LIB_GROUPS) as LibGroup[]).map((g) => (
           <button key={g} type="button" aria-pressed={group === g} onClick={() => (setGroup(group === g ? "" : g), setI(0))}>
-            <i style={{ background: CATCOLOR[g === "comms" || g === "sales" ? "action" : g] }} aria-hidden="true" />
+            <i style={{ background: CATCOLOR[groupColor(g)] }} aria-hidden="true" />
             {LIB_GROUPS[g]}
           </button>
         ))}
@@ -269,7 +269,7 @@ function QuickAddBox() {
                   pick(k);
                 }}
               >
-                <BlockTile type={r.item.payload.type} icon={r.item.icon} size={13} />
+                <BlockTile type={r.item.payload.type} icon={r.item.icon} size={13} artKey={r.item.key} />
                 <span className="qn">{r.product ? r.product.name : r.item.label}</span>
                 <small>{r.product ? typeOf(r.item.payload.type).label : LIB_GROUPS[r.item.group]}</small>
               </li>

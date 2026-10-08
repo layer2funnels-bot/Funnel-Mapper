@@ -85,6 +85,7 @@ export function WidgetFields({ n }: { n: FunnelNode }) {
             ["number", "Number"],
             ["trend", "Number + trend"],
             ["chart", "Chart"],
+            ["path", "Path"],
           ]}
           onChange={(v) => set({ display: v })}
         />

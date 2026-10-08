@@ -90,7 +90,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
           <Icon name="menu" />
         </button>
         <Link href="/" className="fm-brandlink flex items-center gap-2 font-display text-[17px] font-extrabold text-ink no-underline">
-          <BrandMark size={26} /> Funnel Mapper Pro
+          <BrandMark size={26} /> Funnel Mapper Pro V2
         </Link>
       </div>
       <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-panel pb-[env(safe-area-inset-bottom)] sm:hidden">

@@ -1,6 +1,7 @@
 "use client";
 // Browser-side exports: file download, the map as SVG/PNG (with the canvas fonts embedded) and the PDF client report.
 import { money, moneyShort, nf, pct, ratio } from "@/lib/format";
+import { artOf, artSrc } from "@/lib/block-art";
 import { stepRows, type FunnelResult } from "@/lib/funnel-math";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 import { mapSvg, type MapSvgOptions, type Measure } from "@/lib/export";
@@ -172,13 +173,29 @@ async function loadShots(nodes: FunnelNode[]): Promise<Record<string, string>> {
   return out;
 }
 
+/** The owner's block artwork for the block types on the map, as data URLs (static files, same origin). */
+async function loadArt(nodes: FunnelNode[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const types = [...new Set(nodes.map((n) => n.type))].filter((t) => artOf(t));
+  await Promise.all(
+    types.map(async (t) => {
+      try {
+        const r = await fetch(artSrc(artOf(t)!));
+        if (r.ok) out[t] = await toDataUrl(await r.blob());
+      } catch {}
+    }),
+  );
+  return out;
+}
+
 /** The map as a self-contained SVG: canvas fonts embedded, text measured with them, images inlined. */
 export async function renderMapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: FunnelResult, opts: Omit<MapSvgOptions, "fonts" | "measure"> & { embedFonts?: boolean }) {
   await document.fonts?.ready;
   const fonts = await appFonts();
   const nodes = await inlineImages(g.nodes);
   const shots = opts.shots ?? (await loadShots(g.nodes));
-  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, shots, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
+  const art = opts.art ?? (await loadArt(g.nodes));
+  return mapSvg({ nodes, edges: g.edges }, R, { ...opts, shots, art, fonts: opts.embedFonts === false ? { sans: fonts.sans, display: fonts.display } : fonts, measure: canvasMeasure() });
 }
 
 /* ---------------- PDF client report ---------------- */

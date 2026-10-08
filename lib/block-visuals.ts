@@ -46,6 +46,7 @@ const PAGE_WF: Record<string, Wireframe> = {
   members: "members", community: "members", course: "members",
   orderp: "order", cartp: "order",
   upsellp: "up", downsellp: "down",
+  longsales: "sales", homeabout: "sales",
 };
 
 /** Offer type -> wireframe. Any offer not listed uses `order`. */
@@ -53,6 +54,7 @@ const OFFER_WF: Record<string, Wireframe> = {
   bump: "up", upsell: "up", oto: "up",
   downsell: "down",
   sub: "sub", membership: "sub",
+  onestep: "order", twostep: "order", cartoffer: "order",
 };
 
 /** Brand tints (traffic sources and messaging whose brand is unambiguous). Marks come later from a licensed icon set. */
@@ -68,6 +70,7 @@ const BRAND: Record<string, string> = {
   redditads: "#FF4500",
   bingads: "#174AE4",
   follow: "#25D366", wab: "#25D366",
+  quoraads: "#B92B27",
 };
 
 function familyOf(type: string): Family {
@@ -78,8 +81,8 @@ function familyOf(type: string): Family {
   if (T.cat === "page") return "page";
   if (T.cat === "offer") return "offer";
   if (T.cat === "logic") return T.color === "goal" ? "goal" : "logic";
-  const g = libOf(type); // action-category blocks: Communication and Sales & CRM read as messages
-  return g === "comms" || g === "sales" ? "message" : "action";
+  const g = libOf(type); // action-category blocks: Communication, Communities, AI and Sales & CRM tools read as messages
+  return g === "comms" || g === "sales" || g === "community" || g === "aicall" || g === "aiauto" ? "message" : "action";
 }
 
 const cache = new Map<string, BlockVisual>();

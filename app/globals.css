@@ -52,40 +52,42 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --bg: #f8fafc;
-  --dot: #d6dde7;
-  --library: #ffffff;
-  --chrome: #ffffff;
+  /* V2 Light theme (reference/CLAUDE_CODE_IMPLEMENTATION.md F13, V2-theme-tokens): only surfaces, borders and text swap.
+     Emerald, its hover/pressed colours, the category colours and the leak line colour are the same as Dark. */
+  --bg: #f4f6fa; /* canvas */
+  --dot: #d3dbe6;
+  --library: #ffffff; /* panel / library */
+  --chrome: #ffffff; /* top bar and blocks */
   --panel: #ffffff;
-  --panel2: #f1f5f9;
-  --line: #dbe2ea;
-  --ink: #0f172a;
-  --muted: #475569;
-  --brand: #047857; /* pressed emerald: 5.5:1 with white text on light surfaces */
-  --brand-hover: #065f46;
-  --brand-press: #064e3b;
-  --brand-light: #047857;
-  --brand-ink: #ffffff;
+  --panel2: #e5eaf1; /* raised / hover */
+  --line: #c4cedb; /* border */
+  --ink: #0f172a; /* primary text 16.5:1 */
+  --muted: #55657b; /* secondary text 5.9:1 */
+  --brand: #10b981;
+  --brand-hover: #059669;
+  --brand-press: #047857;
+  --brand-light: #047857; /* emerald text on light surfaces 5.1:1 */
+  --brand-ink: #03241a; /* dark green text on the Emerald button 6.5:1 */
   --brand-soft: #d1fae5;
-  --side: #0f172a;
-  --side-ink: #e2e8f0;
-  --side-muted: #94a3b8;
-  --side-item: #1e293b;
-  --side-line: #1e293b;
-  --c-traffic: #2563eb;
-  --c-page: #7c3aed;
-  --c-offer: #c2410c;
-  --c-action: #0f766e;
-  --c-logic: #b45309;
-  --c-goal: #4d7c0f;
-  --c-note: #a16207;
-  --cat-ink: #ffffff;
+  --side: #ffffff;
+  --side-ink: #0f172a;
+  --side-muted: #55657b;
+  --side-item: #e5eaf1;
+  --side-line: #c4cedb;
+  --c-traffic: #60a5fa;
+  --c-page: #a78bfa;
+  --c-offer: #fb923c;
+  --c-action: #2dd4bf;
+  --c-logic: #fbbf24;
+  --c-goal: #84cc16;
+  --c-note: #fde68a;
+  --cat-ink: #0b1220;
   --good: #15803d;
-  --bad: #b91c1c;
+  --bad: #b91c1c; /* red text (errors) 6.0:1 */
   --neg: #b91c1c;
-  --warn: #b45309;
-  --edge: #94a3b8;
-  --lost: #c2410c; /* darker orange for contrast on white */
+  --warn: #b45309; /* amber text (checks) 4.6:1 */
+  --edge: #7b8aa0; /* strong border / dashes */
+  --lost: #c2410c; /* orange text (leaks) 4.8:1 */
   --attention: #b45309;
   /* categorical chart series, validated against #ffffff */
   --chart-1: #047857;
@@ -125,6 +127,7 @@
   --color-attention: var(--attention);
   --font-sans: var(--font-dm-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-bricolage), var(--font-dm-sans), sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --shadow-card: var(--shadow);
 }
 

@@ -1,4 +1,5 @@
 import { AppNav } from "@/components/app-nav";
+import { ThemeSync } from "@/components/theme-toggle";
 import { TopStrip } from "@/components/top-strip";
 import { templateOptions } from "@/lib/queries";
 import { roleLabel } from "@/lib/roles";
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     : [[], []];
   return (
     <div className="min-h-full lg:flex">
+      <ThemeSync saved={user.user_metadata?.theme === "light" || user.user_metadata?.theme === "dark" ? user.user_metadata.theme : null} at={Number(user.user_metadata?.theme_at) || 0} />
       <AppNav agency={workspace.agency_name || "Layer2Funnels"} user={profile.full_name || user.email || ""} role={roleLabel(role)} logo={workspace.agency_logo_url} team={isTeam} workspaceId={workspace.id} workspaces={workspaces} canCreate={isAdmin} />
       <div className="min-w-0 flex-1">
         <TopStrip canEdit={canEdit} clients={clients} templates={templates} />

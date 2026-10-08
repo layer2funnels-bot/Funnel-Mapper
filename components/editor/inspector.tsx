@@ -636,10 +636,18 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
   const rev = edgeRevenue(e.to, flow, R);
   return (
     <>
-      <h3>Connection</h3>
-      <p className="sub">
-        {a?.name} → {b?.name}
-      </p>
+      <header className="fm-scopehead">
+        <button type="button" className="fm-back" onClick={clearSelection}>
+          <Icon name="chevronLeft" size={14} /> Funnel
+        </button>
+        <h3 className="sr-only">Connection</h3>
+        <span className="eyebrow">Connection · {{ yes: "Converted", no: "Didn’t convert", skip: "Skip step", nodata: "No data" }[meaningOf(e)]}</span>
+        <div className="fm-conchips">
+          <span title={a?.name}>{a?.name}</span>
+          <Icon name="arrow" size={13} />
+          <span title={b?.name}>{b?.name}</span>
+        </div>
+      </header>
       <div className="fm-insp-tabs" role="tablist" aria-label="Connection panels">
         {(
           [

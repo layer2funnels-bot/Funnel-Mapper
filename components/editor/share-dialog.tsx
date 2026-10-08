@@ -126,18 +126,18 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
       <p className="mb-4 text-sm text-muted">Anyone with the link can open it, with your agency name and the client’s logo. No sign-in needed.</p>
       <div className="fm-sharegrid">
         <div className="min-w-0">
-          <div className="mb-4 rounded-xl border border-line p-4">
+          <div className="fm-sharebox">
             <div className="field">
               <span className="lbl">They can</span>
               <Seg<Perm> label="Permission" value={perm} options={(Object.keys(PERM_LABEL) as Perm[]).map((k) => [k, PERM_LABEL[k]])} onChange={setPerm} />
               <span className="help">{PERM_HELP[perm]}</span>
             </div>
             <label className="check">
-              <input type="checkbox" checked={showNums} onChange={(e) => setShowNums(e.target.checked)} /> Show numbers
+              <input type="checkbox" role="switch" checked={showNums} onChange={(e) => setShowNums(e.target.checked)} /> Show numbers
             </label>
             {!showNums && <p className="help -mt-1 mb-2">Prices, rates, costs and results are removed before the page reaches them. Editing is off for these links.</p>}
             <label className="check">
-              <input type="checkbox" checked={notesShared} onChange={(e) => setSettings({ notes: { body: useEditor.getState().settings.notes.body, shared: e.target.checked } })} /> Show the funnel notes
+              <input type="checkbox" role="switch" checked={notesShared} onChange={(e) => setSettings({ notes: { body: useEditor.getState().settings.notes.body, shared: e.target.checked } })} /> Show the funnel notes
             </label>
             <p className="help -mt-1 mb-2">Applies to every link of this funnel. Block notes, checklists and screenshots are always internal.</p>
             <div className="field mb-3 max-w-[300px]">
@@ -155,13 +155,11 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
               <Icon name="link" /> Create link
             </button>
           </div>
-          <div className="fm-sharepreview-wide">{preview}</div>
           <details className="fm-sharepreview-fold">
             <summary>Preview what {clientName || "your client"} sees</summary>
             {preview}
           </details>
-        </div>
-        <div className="min-w-0">
+          <div className="fm-sharelinks">
           {err && (
             <p role="alert" className="mb-2 text-sm text-bad">
               {err}
@@ -213,9 +211,22 @@ export const ShareDialog = forwardRef<HTMLDialogElement, ShareDialogProps>(funct
               })}
             </ul>
           )}
+          </div>
         </div>
+        <aside className="fm-sharepane" aria-label={`What ${clientName || "your client"} sees`}>
+          <div className="fm-sharepane-h">
+            <h4>What {clientName || "your client"} sees</h4>
+            <form method="dialog">
+              <button className="btn icon ghost" aria-label="Close">
+                <Icon name="close" size={16} />
+              </button>
+            </form>
+          </div>
+          <div className="fm-sharepreview-wide">{preview}</div>
+          <p className="help">Updates live as you change the settings. Your branding comes from Settings › Workspace.</p>
+        </aside>
       </div>
-      <form method="dialog" className="mt-4 text-right">
+      <form method="dialog" className="fm-sharedone">
         <button className="btn">Done</button>
       </form>
     </dialog>

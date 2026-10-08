@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { blankGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
-import { createFunnel, node, openEditor } from "./helpers";
+import { createFunnel, node, openEditor, startSimulate } from "./helpers";
 
 // Serious / critical WCAG 2.1 A/AA findings fail the run. This sweep covers the surfaces and states the page-level scans do not reach:
 // every Reports section, dialogs, menus, Quick Add, Simulate (playing), presentation, the shared view, empty and phone states.
@@ -79,7 +79,7 @@ for (const theme of ["dark", "light"] as const) {
       await scan(page, `widget inspector (${theme})`);
       // Simulate playing + Before
       await page.keyboard.press("Escape"); // leave the widget
-      await page.getByRole("button", { name: "Simulate" }).click();
+      await startSimulate(page);
       const panel = page.getByLabel("Simulate", { exact: true });
       await panel.getByLabel("Conversion rates").fill("0.8");
       await panel.locator(".fm-playbtn").click();

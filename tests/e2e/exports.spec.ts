@@ -40,7 +40,7 @@ function graph(): FunnelGraph {
 }
 
 async function exportAs(page: Page, item: string) {
-  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("button", { name: "Funnel menu" }).click();
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: item }).click()]);
   return readFileSync((await dl.path())!);
 }

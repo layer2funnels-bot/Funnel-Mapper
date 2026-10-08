@@ -102,8 +102,36 @@ export async function latestMail(to: string, since = 0) {
 
 /** Add a library block through the palette search (annotation blocks sit in a collapsed group). */
 export async function addFromPalette(page: Page, label: string) {
-  const search = page.getByPlaceholder(/^Search \d+ blocks$/);
+  const search = page.getByPlaceholder(/^Search( \d+)? blocks$/);
   await search.fill(label);
   await page.getByRole("button", { name: `Add ${label}`, exact: true }).click();
   await search.fill("");
+}
+
+/** Start Simulate on the map: the Simulate group of the Funnel panel (What-if), or the collapsed rail's button. */
+export async function startSimulate(page: Page) {
+  const rail = page.getByRole("button", { name: "Simulate", exact: true });
+  if (await rail.isVisible().catch(() => false)) return rail.click();
+  const tab = page.getByRole("tab", { name: "Simulate", exact: true });
+  if (await tab.isVisible().catch(() => false)) {
+    await tab.click();
+    return page.getByRole("button", { name: "Simulate on the map" }).click();
+  }
+  // a block is selected, so the panel shows its tabs: the S shortcut starts Simulate from the map
+  await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
+  await page.keyboard.press("s");
+}
+
+/** A block tile in the library: the library shows one category at a time, so search for it first. */
+export async function paletteItem(page: Page, label: string) {
+  await page.getByPlaceholder(/^Search( \d+)? blocks$/).fill(label);
+  return page.getByRole("button", { name: `Add ${label}`, exact: true }).first();
+}
+
+const GROUP_OF: Record<string, string> = { Overview: "Model", Steps: "Model", Sources: "Model", Costs: "Model", "What-if": "Simulate", Scenarios: "Simulate", Forecast: "Track", Actuals: "Track" };
+/** A tab of the Funnel panel: open its group (Model | Simulate | Track) first, then the tab. */
+export async function funnelTab(page: Page, name: keyof typeof GROUP_OF | string) {
+  const tab = page.getByRole("tab", { name, exact: true });
+  if (!(await tab.isVisible().catch(() => false))) await page.getByRole("tablist", { name: "Funnel tools" }).getByRole("tab", { name: GROUP_OF[name], exact: true }).click();
+  await tab.click();
 }

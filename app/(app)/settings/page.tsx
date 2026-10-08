@@ -70,8 +70,8 @@ export default async function SettingsPage() {
             Team
           </h2>
           <p className="mb-2 text-sm text-muted">Everyone listed here shares this workspace’s clients, funnels and templates, and nothing else. There is no public sign-up: people join by invite only.</p>
+          <p className="eyebrow mb-1">Roles</p>
           <dl className="fm-roles">
-            <dt className="eyebrow">Roles</dt>
             {(["owner", "admin", "editor", "viewer"] as const).map((r) => (
               <div key={r}>
                 <dt>{ROLE_LABEL[r]}</dt>

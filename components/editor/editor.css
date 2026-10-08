@@ -6191,6 +6191,7 @@ dialog.fm-sharedlg {
   border-top: 1px solid var(--side-line);
 }
 .pgo-ty {
+  color: var(--cc);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -6713,7 +6714,7 @@ dialog.fm-sharedlg {
   min-width: 28px;
   padding: 0 6px;
   border-radius: 6px;
-  color: #cbd5e1;
+  color: var(--ink);
   font-size: 12px;
   display: inline-flex;
   align-items: center;
@@ -7320,4 +7321,13 @@ dialog.fm-sharedlg > p {
   .fm-top .fm-fname {
     text-overflow: ellipsis;
   }
+}
+
+/* Light theme contrast: category colours are fills, not text colours; text that borrows them is darkened toward ink */
+:root[data-theme="light"] .fm-price,
+:root[data-theme="light"] .pgo-ty {
+  color: color-mix(in srgb, var(--cc, var(--ink)) 45%, #0f172a);
+}
+:root[data-theme="light"] .fm-dchip.bad {
+  color: #9a3412; /* the leak orange is a fill; as text on white it is darkened */
 }

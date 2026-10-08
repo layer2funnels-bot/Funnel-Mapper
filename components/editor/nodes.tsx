@@ -121,7 +121,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const warn = useEditor((s) => !s.shared && s.warnIds.has(id));
   const leak = useEditor((s) => s.keyLeak === id && s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
   // F9: "615 leave here" on the key leak, and on the selected step, when no line carries those people on
-  const leaves = useEditor((s) => (leak || (selected && s.opts.nums && !s.settings.hideNumbers) ? leaveText(s.nodes.find((x) => x.id === id)!, shownR(s), s.edges.some((e) => e.from === id && e.port === "alt"), periodFactor(s.opts.period)) : null));
+  const leaves = useEditor((s) => (leak || (selected && s.opts.nums && !s.settings.hideNumbers) ? ((nn) => (nn ? leaveText(nn, shownR(s), s.edges.some((e) => e.from === id && e.port === "alt"), periodFactor(s.opts.period)) : null))(s.nodes.find((x) => x.id === id)) : null));
   const perf = useEditor((s) => s.opts.nums && s.opts.thick && !s.settings.hideNumbers);
   const band = useEditor((s) => zoomBand(s.view.k));
   const renaming = useEditor((s) => s.renaming === id);
@@ -221,7 +221,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
             </div>
           </div>
           <div className="pgo-cap">
-            <span className="pgo-ty" style={{ color: cc }}>
+            <span className="pgo-ty" style={{ "--cc": cc } as React.CSSProperties}>
               <span className="pgo-ic" style={{ background: cc }}>
                 <Icon name={(n.s?.icon as IconName) || T.icon} size={9} />
               </span>

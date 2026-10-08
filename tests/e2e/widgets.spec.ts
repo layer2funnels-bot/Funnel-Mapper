@@ -114,7 +114,7 @@ test("exports draw widgets like the canvas: numbers, MRR detail and the 12-month
   ];
   const { id } = await createFunnel({ graph: { ...g, nodes: nodesWithWidgets } as typeof g });
   await openEditor(page, id);
-  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("button", { name: "Funnel menu" }).click();
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Map image (.svg)" }).click()]);
   const svg = readFileSync((await dl.path())!).toString();
   expect(svg).toContain(">Revenue<");

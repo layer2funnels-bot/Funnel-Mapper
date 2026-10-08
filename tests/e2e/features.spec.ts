@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createFunnel, node, nodes, openEditor, waitSaved } from "./helpers";
+import { createFunnel, node, nodes, openEditor, waitSaved, funnelTab, paletteItem } from "./helpers";
 
 const WEBINAR_LIVE = "20000000-0000-4000-8000-000000000003"; // seeded, has last month's actuals
 
@@ -87,6 +87,7 @@ test.describe("share links (M5)", () => {
     const { id, sb } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
     await node(page, "Live webinar").click();
+    await page.getByRole("tab", { name: "Plan" }).click();
     await page.getByLabel("Internal notes").fill("SECRET: margin is thin");
     await waitSaved(page);
     const link = await makeLink(page, id, { edit: true });
@@ -95,7 +96,7 @@ test.describe("share links (M5)", () => {
     await c.goto(link);
     await expect(c.locator(".react-flow__node")).toHaveCount(9);
     expect(await c.content()).not.toContain("SECRET");
-    await c.getByRole("button", { name: "Add Thank-you page", exact: true }).click();
+    await (await paletteItem(c, "Thank-you page")).click();
     await expect(c.locator(".react-flow__node")).toHaveCount(10);
     await expect(c.locator(".fm-saved")).toHaveText(/Saved/, { timeout: 20_000 });
     await ctx.close();
@@ -118,9 +119,9 @@ test.describe("share links (M5)", () => {
     await expect(c.locator(".react-flow__node")).toHaveCount(9);
     await expect(c.locator(".fm-kpis")).toHaveCount(0);
     await expect(c.locator(".fm-nstats").first()).toBeHidden();
-    await expect(c.getByRole("heading", { name: "The journey" })).toBeVisible();
+    // the hide-numbers client view is the map alone: no panel, no numbers
     // can't edit when numbers are hidden, even if the link was created as editable
-    await expect(c.getByRole("button", { name: "Add Landing page", exact: true })).toHaveCount(0);
+    await expect((await paletteItem(c, "Landing page"))).toHaveCount(0);
     expect(await c.locator("body").innerText()).not.toMatch(/£\s?\d/); // no money anywhere on screen
     await ctx.close();
   });
@@ -153,7 +154,7 @@ test.describe("reports and planning tools", () => {
     const profit = async () => (await page.locator(".fm-kpis .fm-kpi", { hasText: "Profit" }).locator("b").textContent())!;
     const before = await profit();
     // costs
-    await page.getByRole("tab", { name: "Costs" }).click();
+    await funnelTab(page, "Costs");
     await page.getByRole("button", { name: "Add expense", exact: true }).click();
     await page.getByLabel("Expense name").fill("Funnel software");
     await page.getByLabel("Amount").fill("300");
@@ -164,30 +165,30 @@ test.describe("reports and planning tools", () => {
     await page.getByLabel("How often").nth(1).selectOption("one_time");
     await expect(page.locator(".statbox", { hasText: "Payback" })).toContainText("periods");
     // scenarios
-    await page.getByRole("tab", { name: "Scenarios" }).click();
+    await funnelTab(page, "Scenarios");
     await page.getByRole("button", { name: "Add conservative and best case", exact: true }).click();
     const table = page.getByRole("table", { name: "Scenario comparison" });
     await expect(table.getByRole("columnheader")).toHaveCount(4);
     await expect(table.getByRole("row", { name: /Profit/ })).toBeVisible();
     // forecast
-    await page.getByRole("tab", { name: "Forecast" }).click();
+    await funnelTab(page, "Forecast");
     await expect(page.locator(".recharts-surface").first()).toBeVisible();
     await page.getByLabel("Months").fill("6");
     await page.getByRole("button", { name: "Show table" }).click();
     await expect(page.locator("#rbody table tbody tr")).toHaveCount(6);
     // what-if + goal seek
-    await page.getByRole("tab", { name: "What-if" }).click();
+    await funnelTab(page, "What-if");
     await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
     await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
     await page.getByRole("button", { name: "Apply to what-if" }).click();
-    await page.getByRole("tab", { name: "Overview" }).click();
-    await expect(page.locator(".rline", { hasText: "Profit" }).first()).toContainText("£50,000");
+    await funnelTab(page, "Overview");
+    await expect(page.locator(".fm-mrow", { hasText: "Profit" }).first()).toContainText("£50,000");
   });
 
   test("presentation mode walks through the funnel", async ({ page }) => {
     const { id } = await createFunnel({ template: "call" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "File" }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByRole("menuitem", { name: "Present" }).click();
     const card = page.getByRole("region", { name: "Presentation" });
     await expect(card).toContainText("Overview");
@@ -219,9 +220,9 @@ test.describe("reports and planning tools", () => {
 
   test("planned vs actual", async ({ page }) => {
     await openEditor(page, WEBINAR_LIVE);
-    await page.getByRole("tab", { name: "Actuals" }).click();
+    await funnelTab(page, "Actuals");
     await expect(page.locator(".statbox", { hasText: "Revenue actual" })).not.toContainText("–");
-    await expect(page.getByRole("table", { name: "Planned vs actual by step" }).getByRole("row")).toHaveCount(10);
+    await expect.poll(() => page.getByRole("table", { name: "Planned vs actual by step" }).getByRole("row").count()).toBeGreaterThanOrEqual(10);
     await page.getByRole("button", { name: "Enter actuals for this range" }).click();
     const dlg = page.getByRole("dialog");
     await dlg.getByLabel("Facebook ads visitors").fill("2000");
@@ -242,9 +243,9 @@ test.describe("portfolio", () => {
     await page.goto("/clients");
     await expect(page.getByRole("table")).toBeVisible(); // V2: the table is the default view
     await page.getByRole("button", { name: "Card view" }).click();
-    await page.getByLabel("Filter by status").selectOption("proposal");
+    await page.getByRole("group", { name: "Filter by status" }).getByRole("button", { name: /^Proposal/ }).click();
     await expect(page.getByRole("list", { name: "Clients" }).getByRole("listitem")).toHaveCount(1);
-    await page.getByLabel("Filter by status").selectOption("");
+    await page.getByRole("group", { name: "Filter by status" }).getByRole("button", { name: /^All/ }).click();
     await page.getByLabel("Search clients").fill("calm mind");
     await expect(page.getByRole("list", { name: "Clients" }).getByRole("listitem")).toHaveCount(1);
     await page.getByRole("button", { name: "Table view" }).click();

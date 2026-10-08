@@ -2,7 +2,7 @@
 // client archive and logo upload. Uses the seeded local stack (see playwright.config.ts).
 import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { DEMO_CLIENT, createFunnel, env, node, nodes, openEditor, signIn, waitSaved } from "./helpers";
+import { DEMO_CLIENT, createFunnel, env, node, nodes, openEditor, signIn, waitSaved, funnelTab } from "./helpers";
 
 test.describe("reports / insights", () => {
   test("a first-class Reports view: same numbers as the map, every section, deep links", async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe("reports / insights", () => {
 
     // scenarios: presets from the map's Scenarios tab, compared in Reports with deltas
     await page.getByRole("button", { name: "Map", exact: true }).click();
-    await page.getByRole("tab", { name: "Scenarios" }).click();
+    await funnelTab(page, "Scenarios");
     await page.getByRole("button", { name: "Add conservative and best case", exact: true }).click();
     await page.getByRole("button", { name: "Duplicate Best case" }).click();
     await expect(page.getByLabel("Scenario name").last()).toHaveValue("Best case (copy)");
@@ -109,7 +109,7 @@ test.describe("notes, layers, analytics and the library", () => {
     await ctx.close();
 
     // layers: hide notes, clean map
-    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.locator(".menu-pop").getByLabel("Notes", { exact: true }).uncheck();
     await expect(page.locator(".react-flow__node-note")).toBeHidden();
     await page.getByRole("menuitemcheckbox", { name: "Clean map" }).click();
@@ -135,11 +135,11 @@ test.describe("notes, layers, analytics and the library", () => {
     const side = page.locator(".fm-side");
     await expect(side.getByRole("heading", { name: "Communication" })).toBeVisible();
     await expect(side.getByRole("heading", { name: "Sales & CRM" })).toBeVisible();
-    await side.getByPlaceholder(/Search \d+ blocks/).fill("membership");
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("membership");
     await side.getByRole("button", { name: "Add Membership", exact: true }).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp")).toContainText("Billing"); // subscription fields
-    await side.getByPlaceholder(/Search \d+ blocks/).fill("");
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("");
     await expect(side.getByRole("button", { name: "Recent: Membership" })).toBeVisible();
     await side.getByRole("button", { name: "Favourite Callout" }).click();
     await side.getByRole("button", { name: "Favourite: Callout" }).click();

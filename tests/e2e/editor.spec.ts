@@ -3,7 +3,7 @@ import { money } from "../../lib/format";
 import { compute } from "../../lib/funnel-math";
 import { blankSettings } from "../../lib/graph";
 import { tidyLayout } from "../../lib/layout";
-import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved } from "./helpers";
+import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved, paletteItem } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -24,30 +24,30 @@ test.describe("funnel editor", () => {
     await openEditor(page, id);
     await expect(page.locator(".fm-empty")).toBeVisible();
     const stage = await centre(page, ".fm-stage");
-    await page.getByRole("button", { name: "Add Landing page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
+    await (await paletteItem(page, "Landing page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp h3")).toHaveText("Landing page");
     await expect(page.locator(".fm-empty")).toBeHidden();
     // dropped where the mouse was (± snapping), not at the centre
     const box = (await nodes(page).first().boundingBox())!;
     expect(box.x).toBeLessThan(stage.x);
-    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).click();
+    await (await paletteItem(page, "Facebook Ads")).click();
     await expect(nodes(page)).toHaveCount(2);
-    await expect(page.locator(".fm-insp h3")).toHaveText("Facebook ads");
+    await expect(page.locator(".fm-insp h3")).toHaveText("Facebook Ads");
   });
 
   test("connect ports: right = converted, bottom = didn't convert", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await page.getByRole("button", { name: "Add Facebook Ads", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
-    await page.getByRole("button", { name: "Add Landing page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
-    await page.getByRole("button", { name: "Add Thank-you page", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
-    await page.getByRole("button", { name: "Add Email sequence", exact: true }).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
+    await (await paletteItem(page, "Facebook Ads")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 130, y: 200 } });
+    await (await paletteItem(page, "Landing page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 400, y: 200 } });
+    await (await paletteItem(page, "Thank-you page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 110 } });
+    await (await paletteItem(page, "SMS")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 680, y: 430 } });
     await expect(nodes(page)).toHaveCount(4);
-    const fb = node(page, "Facebook ads"),
+    const fb = node(page, "Facebook Ads"),
       lp = node(page, "Landing page"),
       ty = node(page, "Thank-you page"),
-      seq = node(page, "Email sequence");
+      seq = node(page, "SMS");
     await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
     await expect(edgeLabels(page).first()).toContainText("1,000");
@@ -71,7 +71,7 @@ test.describe("funnel editor", () => {
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await page.getByLabel("Share of them (%)").fill("50");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("360");
-    await page.getByRole("radio", { name: "No: people who leave" }).click();
+    await page.getByRole("radio", { name: "No", exact: true }).click();
     // now half of the 1,680 who didn't register
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("840");
     await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("No");
@@ -79,7 +79,7 @@ test.describe("funnel editor", () => {
     await expect(edgeLabels(page)).toHaveCount(8);
     // traffic sources have no "didn't convert" path, so the option isn't offered
     await page.locator(".fm-elabel", { hasText: "2,400" }).first().click();
-    await expect(page.getByRole("radio", { name: "No: people who leave" })).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: "No", exact: true })).toHaveCount(0);
   });
 
   test("box select with shift-drag, then group actions", async ({ page }) => {
@@ -153,7 +153,7 @@ test.describe("funnel editor", () => {
     // keyboard shortcut + ELK alternative
     await page.keyboard.press(`${mod}+Shift+l`);
     await expect.poll(() => pos(page, first.id)).toEqual({ x: laid[0].x, y: laid[0].y });
-    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByRole("menuitem", { name: "Tidy up (ELK layered)" }).click();
     await expect(page.locator(".fm-toast")).toContainText("ELK");
   });
@@ -216,17 +216,17 @@ test.describe("funnel editor", () => {
   test("dark mode", async ({ page }) => {
     const { id } = await createFunnel({ template: "tripwire" });
     await openEditor(page, id);
-    await page.getByRole("button", { name: "View", exact: true }).click();
+    await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     const theme = await page.evaluate(() => document.documentElement.dataset.theme);
     expect(["dark", "light"]).toContain(theme);
     if (theme !== "dark") {
-      await page.getByRole("button", { name: "View", exact: true }).click();
+      await page.getByRole("button", { name: "Funnel menu" }).click();
       await page.getByRole("menuitem", { name: "Switch light / dark" }).click();
     }
-    // locked Emerald dark tokens: panels #1E293B, workspace chrome / blocks #111827
+    // locked Emerald dark tokens; V2 board: the right panel sits on the workspace chrome #111827
     const bg = await page.locator(".fm-insp").evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(bg).toBe("rgb(30, 41, 59)");
+    expect(bg).toBe("rgb(17, 24, 39)");
     const nodeBg = await page.locator(".fm-node").first().evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(nodeBg).toBe("rgb(17, 24, 39)");
     await page.screenshot({ path: "test-results/editor-dark.png" });
@@ -246,7 +246,7 @@ test.describe("tablet and phone", () => {
     await expect(page.locator(".fm-side")).not.toBeInViewport();
     await page.getByRole("button", { name: "Show building blocks" }).click();
     await expect(page.locator(".fm-side")).toBeInViewport();
-    await page.getByRole("button", { name: "Add Landing page", exact: true }).click();
+    await (await paletteItem(page, "Landing page")).click();
     await expect(page.locator(".fm-side")).not.toBeInViewport();
     await expect(nodes(page)).toHaveCount(10);
     // selecting opens the inspector sheet

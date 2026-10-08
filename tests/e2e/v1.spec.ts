@@ -14,7 +14,7 @@ test.describe("reports / insights", () => {
     await expect(main.getByRole("heading", { name: "Overview" })).toBeVisible();
     // golden quiz funnel (MASTER_HANDOFF §14): the report agrees with the engine and the KPI bar
     await expect(main.locator(".fm-rkpis").first()).toContainText("£6,032");
-    await expect(main.locator(".fm-rkpis").first()).toContainText(/Customers\s*89\b/);
+    await expect(main.locator(".fm-rkpis").first()).toContainText(/Customers\s*89(?!\.\d)/);
     await expect(main.locator(".fm-rkpis").first()).toContainText("13.4x");
     await expect(main).toContainText("Key leak: Quiz funnel");
     for (const name of ["Funnel data", "Traffic sources", "Offers & products", "Expenses", "Scenario comparison", "Revenue & profit forecast", "Goals & required numbers", "MRR forecast", "Month-to-month", "Traffic reinvestment", "Published status"]) {
@@ -133,18 +133,22 @@ test.describe("notes, layers, analytics and the library", () => {
     const { id } = await createFunnel();
     await openEditor(page, id);
     const side = page.locator(".fm-side");
-    await expect(side.getByRole("heading", { name: "Communication" })).toBeVisible();
-    await expect(side.getByRole("heading", { name: "Sales & CRM" })).toBeVisible();
+    await expect(side.locator("button.fm-sb-ah", { hasText: "Communication" })).toBeVisible(); // V2: one category open at a time
+    await expect(side.locator("button.fm-sb-ah", { hasText: "Sales & CRM" })).toBeVisible();
     await side.getByPlaceholder(/Search( \d+)? blocks/).fill("membership");
     await side.getByRole("button", { name: "Add Membership", exact: true }).click();
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp")).toContainText("Billing"); // subscription fields
     await side.getByPlaceholder(/Search( \d+)? blocks/).fill("");
     await expect(side.getByRole("button", { name: "Recent: Membership" })).toBeVisible();
-    await side.getByRole("button", { name: "Favourite Callout" }).click();
-    await side.getByRole("button", { name: "Favourite: Callout" }).click();
-    await expect(page.locator(".fm-shape.callout")).toHaveCount(1);
-    await side.getByRole("button", { name: "Add Link / video", exact: true }).click();
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("Rectangle");
+    await side.getByRole("button", { name: "Add Rectangle", exact: true }).first().hover();
+    await side.getByRole("button", { name: "Favourite Rectangle" }).click();
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("");
+    await side.getByRole("button", { name: "Favourite: Rectangle" }).click();
+    await expect(page.locator(".fm-shape")).toHaveCount(1);
+    await side.getByPlaceholder(/Search( \d+)? blocks/).fill("Link card");
+    await side.getByRole("button", { name: "Add Link card", exact: true }).first().click();
     await page.getByLabel("Link (page, video or file)").fill("https://youtu.be/dQw4w9WgXcQ");
     await page.getByLabel("Title").fill("Sales video");
     await expect(page.locator(".fm-node.linkcard")).toContainText("Sales video");
@@ -186,18 +190,19 @@ test.describe("roles and clients", () => {
     await expect(page.locator(".fm-insp")).toContainText("Share of all visitors");
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".fm-rkpis").first()).toContainText("£6,032");
-    await page.goto("/settings");
+    await page.goto("/settings#team");
     await expect(page.locator("main")).toContainText("Viewer");
     await expect(page.getByRole("heading", { name: "Invite a teammate" })).toHaveCount(0);
     await ctx.close();
   });
 
   test("the owner assigns roles; an invite can start as a viewer", async ({ page }) => {
-    await page.goto("/settings");
+    await page.goto("/settings#team");
     const row = page.getByRole("listitem").filter({ hasText: "teammate@layer2funnels.test" });
     await expect(row.getByLabel("Role for teammate@layer2funnels.test")).toHaveValue("editor");
     await expect(page.getByRole("listitem").filter({ hasText: "demo@layer2funnels.test" })).toContainText("Owner");
     await expect(page.getByLabel("Role", { exact: true })).toHaveValue("editor");
+    await page.goto("/settings#independent");
     await expect(page.getByRole("heading", { name: "Independent accounts" })).toBeVisible(); // owner only
   });
 
@@ -221,7 +226,7 @@ test.describe("roles and clients", () => {
     await expect(page.getByRole("button", { name: "Restore client" })).toBeVisible();
     await page.goto("/clients");
     await expect(page.getByText(name)).toHaveCount(0);
-    await page.getByRole("button", { name: /Archived \(\d+\)/ }).click();
+    await page.getByRole("button", { name: /^Archived/ }).click();
     await expect(page.getByText(name).first()).toBeVisible();
     await page.goto(`/clients/${data!.id}`);
     await page.getByRole("button", { name: "Restore client" }).click();

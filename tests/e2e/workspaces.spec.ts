@@ -243,7 +243,7 @@ test.describe("editor panels", () => {
     await expect(page.locator("#fm-insp")).toBeHidden();
 
     // version history re-opens the right panel; both restore immediately
-    await page.getByRole("button", { name: "Version history" }).click();
+    await page.getByRole("button", { name: "Version history" }).first().click();
     await expect(page.locator("#fm-insp")).toBeVisible();
     await page.getByRole("button", { name: "Expand block library" }).click();
     await expect(page.locator("#fm-side")).toBeVisible();

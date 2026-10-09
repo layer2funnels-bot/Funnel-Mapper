@@ -5,7 +5,7 @@
 import { useViewport } from "@xyflow/react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { isAnnot, retypeTargets } from "@/lib/catalog";
+import { blockPivot, CATCOLOR, isAnnot, PITCH, retypeTargets, typeOf } from "@/lib/catalog";
 import { kbd } from "@/lib/platform";
 import { copyStyle, deleteSelection, duplicateSelection, flipEdge, heightOf, openMenu, openTypePicker, pasteStyle, selectNodes, setEdgeStyle, setInspTab, setLocked, setOpt, showToast, updateParams, useEditor, widthOf, wrapInFrame, type InspTab } from "@/lib/editor/store";
 import { openInsertStep } from "./quick-add";
@@ -103,7 +103,7 @@ export function FloatingToolbar() {
           {/* V2 "Editor-block": colour, copy / paste style, next step, then plan, lock, duplicate, more */}
           <Tip label="Style">
             <button type="button" className="sw" aria-label="Style" onClick={() => openInspector("style")}>
-              <i style={{ background: n.s?.fill || "transparent", borderColor: n.s?.border || "var(--attention)" }} aria-hidden="true" />
+              <i style={{ background: n.s?.accent || CATCOLOR[typeOf(n.type).color ?? typeOf(n.type).cat] }} aria-hidden="true" />
               <Icon name="chevronDown" size={12} />
             </button>
           </Tip>
@@ -126,8 +126,8 @@ export function FloatingToolbar() {
                 type="button"
                 className="next"
                 onClick={() => {
-                  const x = n.x + widthOf(n) + 80,
-                    y = n.y;
+                  const x = n.x + PITCH.x,
+                    y = n.y + blockPivot(n.type);
                   openQuickAdd({ sx: x * vp.zoom + vp.x, sy: y * vp.zoom + vp.y, fx: x, fy: y, from: { id: n.id, port: "main" } });
                 }}
               >

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { CaptureError, captureProviderFromEnv, validateCaptureUrl } from "@/lib/capture";
 import { supabaseServer } from "@/lib/supabase/server";
-import { ImageRejected, optimiseImage } from "@/lib/image-pipeline";
+import { ImageRejected, optimiseImage, optimisePicture } from "@/lib/image-pipeline";
+import { picPath } from "@/lib/shot-path";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -41,6 +42,9 @@ export async function POST(req: Request) {
     // the user's own client: storage RLS decides (viewers can't write)
     const { error } = await sb.storage.from("screenshots").upload(path, img.bytes, { contentType: img.type, upsert: true, cacheControl: "3600" });
     if (error) return NextResponse.json({ error: "forbidden", message: "You can’t add screenshots in this workspace." }, { status: 403 });
+    // the 208 x 256 picture the block shows on the map; the capture itself is still saved if this part fails (the map falls back to it)
+    const pic = await optimisePicture(Buffer.from(raw.bytes)).catch(() => null);
+    if (pic) await sb.storage.from("screenshots").upload(picPath(path), pic.bytes, { contentType: pic.type, upsert: true, cacheControl: "3600" });
     return NextResponse.json({ path, bytes: img.bytes.byteLength });
   } catch (e) {
     if (e instanceof ImageRejected) return NextResponse.json({ error: "too_big", message: e.message }, { status: 422 });

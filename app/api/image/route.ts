@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { ImageRejected, MAX_INPUT_BYTES, optimiseImage, sizeLine, type ImageKind } from "@/lib/image-pipeline";
+import { ImageRejected, MAX_INPUT_BYTES, optimiseImage, optimisePicture, sizeLine, type ImageKind } from "@/lib/image-pipeline";
+import { picPath } from "@/lib/shot-path";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -33,6 +34,11 @@ export async function POST(req: Request) {
     // the user's own client: storage RLS decides who may write (viewers can't)
     const { error } = await sb.storage.from(target.bucket).upload(path, out.bytes, { contentType: out.type, upsert: true, cacheControl: "3600" });
     if (error) return NextResponse.json({ error: "forbidden", message: "You can’t add images in this workspace." }, { status: 403 });
+    if (target.kind === "shot") {
+      // the 208 x 256 picture the block shows on the map (the map falls back to the full image when it is missing)
+      const pic = await optimisePicture(Buffer.from(await file.arrayBuffer())).catch(() => null);
+      if (pic) await sb.storage.from(target.bucket).upload(picPath(path), pic.bytes, { contentType: pic.type, upsert: true, cacheControl: "3600" });
+    }
     const url = target.bucket === "logos" ? sb.storage.from("logos").getPublicUrl(path).data.publicUrl : null;
     return NextResponse.json({ path, url, bytes: out.bytes.byteLength, before: file.size, line: `Optimised ${sizeLine(file.size, out.bytes.byteLength)}` });
   } catch (e) {

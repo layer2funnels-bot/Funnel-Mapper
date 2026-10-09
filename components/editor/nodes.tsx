@@ -13,7 +13,7 @@ import { BlockArtImg, BrandGlyph, StatusDot, WireframeStrip } from "./block-visu
 import { artOf } from "@/lib/block-art";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
-import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor, viewK } from "@/lib/editor/store";
+import { checklistOf, moveNodes, openSettingsBox, setChecklist, shownR, startRename, updateNode, useEditor, viewK } from "@/lib/editor/store";
 import { blockChip, perfLine, priceTab } from "@/lib/editor/labels";
 import { nf, people as ppl, peopleExact } from "@/lib/format";
 import { waitValid } from "@/lib/wait";
@@ -21,6 +21,7 @@ import { boxCss, shapeGeom, textCss } from "@/lib/style";
 import { hostOf, isVideoUrl } from "@/lib/rich-text";
 import { RichText } from "@/components/rich-text";
 import { WidgetNode } from "./widget-node";
+import { saveActual } from "./actuals-host";
 
 type P = NodeProps & { data: { id: string } };
 
@@ -94,6 +95,59 @@ function RenameInput({ id, value }: { id: string; value: string }) {
   );
 }
 
+/** Actual mode: click the number chip, type the real number, Enter saves, Esc cancels. No panel opens. */
+function ChipEdit({ n, view, onClose }: { n: FunnelNode; view: "clean" | "people" | "money"; onClose: () => void }) {
+  const range = useEditor((s) => s.actualView);
+  const rows = useEditor((s) => s.actuals);
+  const T = typeOf(n.type);
+  const money = view === "money";
+  const field: "visitors" | "revenue" | "spend" = money ? (T.cat === "offer" ? "revenue" : "spend") : "visitors";
+  const label = money ? (T.cat === "offer" ? "Revenue" : "Spend") : T.cat === "traffic" ? "Visits" : "People in";
+  const mine = rows?.find((x) => x.node_id === n.id && range && x.period_start === range.start && x.period_end === range.end);
+  const [v, setV] = useState(mine?.[field] != null ? String(mine[field]) : "");
+  const [busy, setBusy] = useState(false);
+  if (!range || (money && T.cat !== "offer" && T.cat !== "traffic")) return null;
+  const save = async () => {
+    setBusy(true);
+    const num = v.trim() === "" ? null : Number(v);
+    const ok = await saveActual(n.id, range, { visitors: mine?.visitors ?? null, conversions: mine?.conversions ?? null, revenue: mine?.revenue ?? null, spend: mine?.spend ?? null, [field]: Number.isFinite(num) ? num : null });
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <div className="fm-chipedit nodrag nopan" role="dialog" aria-label={`Real number for ${n.name}`} onKeyDown={(e) => e.stopPropagation()}>
+      <label>
+        {label} · {range.label}
+        <input
+          autoFocus
+          inputMode="decimal"
+          value={v}
+          disabled={busy}
+          onChange={(e) => setV(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void save();
+            if (e.key === "Escape") onClose();
+          }}
+        />
+      </label>
+      <div>
+        <small>
+          <kbd>Enter</kbd> save
+        </small>
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            openSettingsBox(n.id);
+          }}
+        >
+          Open settings ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Progress of the goal attached to a goal block (target comes from Plan / Reports goals, never invented). */
 export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const n = useNode(id);
@@ -110,6 +164,8 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   // the picture-first block shows less at a distance: far = shapes and lines, mid = names, near = number chips and subtype
   const band = useEditor((s) => (s.view.k < 0.3 ? "far" : s.view.k < 0.5 ? "mid" : "near"));
   const actualOn = useEditor((s) => !!s.actualView);
+  const canEnter = useEditor((s) => !!s.actualView && !s.readOnly && !s.shared && !(s.nodes.find((x) => x.id === id)?.locked));
+  const [chipOpen, setChipOpen] = useState(false);
   const renaming = useEditor((s) => s.renaming === id);
   const multi = useEditor((s) => s.selNodes.length > 1 && s.selNodes.includes(id));
   const spot = useEditor((s) => s.spot);
@@ -184,16 +240,25 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
             {glyph}
           </div>
         )}
-        {showMore && !warn && chipText && (
+        {showMore && !warn && chipText && (actualOn && canEnter ? (
+          <button type="button" className="fm-chip edit nodrag nopan" title={`${chip?.title}. Click to type the real number`} aria-label={`${chip?.value} ${chip?.unit}. Edit the real number`.trim()} aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
+            {chipText}
+          </button>
+        ) : (
           <span className="fm-chip" title={chip?.title} aria-label={`${chip?.value} ${chip?.unit}`.trim()}>
             {chipText}
           </span>
-        )}
-        {showMore && !warn && !chipText && emptyActual && (
+        ))}
+        {showMore && !warn && !chipText && emptyActual && (canEnter ? (
+          <button type="button" className="fm-chip empty edit nodrag nopan" title="No real numbers entered for these dates. Click to type one" aria-label="No real numbers entered. Type one" aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
+            —
+          </button>
+        ) : (
           <span className="fm-chip empty" title="No real numbers entered for these dates" aria-label="No real numbers entered">
             —
           </span>
-        )}
+        ))}
+        {chipOpen && canEnter && <ChipEdit n={n} view={view} onClose={() => setChipOpen(false)} />}
         {warn && (
           <span className="fm-chip warn" title="Needs a fix: see Checks" aria-label="Needs a fix">
             !

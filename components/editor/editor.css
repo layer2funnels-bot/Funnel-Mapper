@@ -8885,7 +8885,7 @@ dialog.fm-exportdlg {
   line-height: 20px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto; /* hovering the chip never opens the page preview: only the picture does */
 }
 .fm-chip.empty {
   border-style: dashed;
@@ -9088,4 +9088,68 @@ dialog.fm-exportdlg {
 }
 .fm-readonly .react-flow__handle.fm-port::before {
   opacity: 0 !important;
+}
+/* Actual mode: the chip is a button; a small popup under it takes the real number */
+.fm-chip.edit {
+  pointer-events: auto;
+  cursor: pointer;
+  font-family: inherit;
+}
+.fm-chip.edit:hover,
+.fm-chip.edit[aria-expanded="true"] {
+  border-color: var(--brand);
+}
+.fm-chip.edit:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.fm-chipedit {
+  position: absolute;
+  top: 18px;
+  right: -12px;
+  z-index: 8;
+  width: 220px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  cursor: default;
+}
+.fm-chipedit label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-chipedit input {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.fm-chipedit > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.fm-chipedit kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+}
+.fm-chipedit button {
+  border: 0;
+  background: transparent;
+  color: var(--brand-light);
+  font: inherit;
+  cursor: pointer;
 }

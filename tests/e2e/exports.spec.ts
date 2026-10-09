@@ -109,7 +109,8 @@ test("client exports: PDF report sections match the maths; SVG/PNG keep the canv
 
   // the live editor still shows the same numbers after exporting
   await expect(page.locator(".fm-kpis")).toContainText(/Customers\s*89(?!\.)/);
-  await expect(page.locator(".fm-kpis")).toContainText("13.4x");
+  await page.locator(".fm-kpis").getByRole("button", { name: /more/ }).click();
+  await expect(page.getByRole("dialog", { name: /numbers/i })).toContainText("13.4x");
 });
 
 test("PDF report: Actual vs plan page appears only with entered actuals and prints the same rows as Month-to-month", async ({ page }) => {

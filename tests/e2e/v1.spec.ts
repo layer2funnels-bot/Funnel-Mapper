@@ -156,15 +156,14 @@ test.describe("notes, layers, analytics and the library", () => {
     // floating quick-add: double-click empty canvas, search, Enter adds at that spot; "/" opens it too
     const before = await nodes(page).count();
     await page.locator(".react-flow__pane").dblclick({ position: { x: 120, y: 420 } });
-    await page.getByLabel("Search blocks to add").fill("upsell page");
+    await page.getByLabel("Search blocks to add").fill("upsell");
     await page.keyboard.press("Enter");
     await expect(nodes(page)).toHaveCount(before + 1);
     await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
+    // "/" jumps to the Blocks sidebar search (V2)
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
     await page.keyboard.press("/");
-    await expect(page.getByLabel("Search blocks to add")).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
+    await expect(side.getByPlaceholder(/Search( \d+)? blocks/)).toBeFocused();
   });
 });
 

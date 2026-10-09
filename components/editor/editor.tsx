@@ -931,7 +931,7 @@ function EditorInner(props: EditorProps) {
           <Icon name="chart" />
         </button>
         {(owner || notesShared) && (
-          <button type="button" className="btn icon ghost fm-mobile-only fm-hide-phone" aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
+          <button type="button" className={`btn icon ghost fm-hide-phone${clientView ? "" : " fm-mobile-only"}`} aria-label="Funnel notes" title="Funnel notes" aria-pressed={panel === "notes"} onClick={() => (setPanel(panel === "notes" ? "inspector" : "notes"), setMode("map"), setShowInsp(true), togglePanel("insp", false))}>
             <Icon name="note" />
           </button>
         )}

@@ -104,7 +104,7 @@ export function KpiBar() {
   const named = nodes.filter((n) => warnIds.has(n.id));
   // visible counts per band (F11); phone shows every figure as scrolling chips, starting with Traffic
   const roomy = band === "phone" ? all.length : band === "tablet" ? 3 : band === "md" ? 4 : sideOpen ? 5 : 6;
-  const visible = band === "phone" || band === "tablet" || band === "md" || !barW ? roomy : Math.max(3, Math.min(roomy, Math.floor((barW - 380) / 116)));
+  const visible = band === "phone" || band === "tablet" || band === "md" || !barW ? roomy : Math.max(3, Math.min(roomy, Math.floor((barW - 340) / 105)));
   const SHOW_MD = ["traffic", "revenue", "profit", "roas"];
   const strip = band === "md" ? all.filter((k) => SHOW_MD.includes(k.id)) : all.slice(0, visible);
   const rest = all.filter((k) => !strip.includes(k));

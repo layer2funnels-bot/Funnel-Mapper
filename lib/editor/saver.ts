@@ -141,6 +141,8 @@ export function useAutosave({ funnelId, save, saveVersion, lastVersionAt, enable
     };
     // changes made before autosave started (e.g. a recovered local draft) are saved straight away
     if (useEditor.getState().rev !== savedRev.current.rev) timer.current = setTimeout(flush, 300);
+    const retry = () => void flush(); // the chip's Retry button
+    window.addEventListener("fm-save-retry", retry);
     window.addEventListener("online", online);
     window.addEventListener("offline", offline);
     window.addEventListener("beforeunload", beforeUnload);
@@ -148,6 +150,7 @@ export function useAutosave({ funnelId, save, saveVersion, lastVersionAt, enable
       alive = false;
       unsub();
       clearTimeout(timer.current);
+      window.removeEventListener("fm-save-retry", retry);
       window.removeEventListener("online", online);
       window.removeEventListener("offline", offline);
       window.removeEventListener("beforeunload", beforeUnload);

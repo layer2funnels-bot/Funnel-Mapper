@@ -123,7 +123,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                 <h2 id="funnels-h" className="sr-only">
                   Funnels
                 </h2>
-                <FunnelList funnels={funnels} currency={client.currency} canEdit={canEdit} hidden={hiddenFunnels} total={rows.length} allHref={`/clients/${client.id}?tab=funnels&all=1`} newCard={<NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} className="fm-newcard" label="New funnel from a template" />} />
+                <FunnelList funnels={funnels} currency={client.currency} canEdit={canEdit} hidden={hiddenFunnels} total={rows.length} allHref={`/clients/${client.id}?tab=funnels&all=1`} newCard={<NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} className="fm-newcard" label="New funnel from a template" />} emptyAction={<NewFunnelButton clients={(allClients ?? []).map((c) => ({ id: c.id, name: c.name }))} clientId={client.id} templates={tpls} className="btn primary" label="New funnel" />} />
               </section>
               <aside className="min-w-0 space-y-8">
                 <section aria-labelledby="kn-h">

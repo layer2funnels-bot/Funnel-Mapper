@@ -10,10 +10,12 @@ test.describe("autosave and offline (M4)", () => {
     await context.setOffline(true);
     await node(page, "Live webinar").click();
     await page.getByLabel("Name", { exact: true }).fill("Offline webinar");
-    await expect(page.locator(".fm-saved")).toContainText("Offline", { timeout: 15_000 });
+    await expect(page.locator(".fm-saved")).toContainText("Offline · kept on this device", { timeout: 15_000 });
+    await expect(page.locator(".fm-offline")).toContainText("Changes are kept on this device and will save when you’re back");
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event("online")));
     await waitSaved(page);
+    await expect(page.locator(".fm-offline")).toHaveCount(0);
     await page.reload();
     await expect(node(page, "Offline webinar")).toBeVisible();
   });

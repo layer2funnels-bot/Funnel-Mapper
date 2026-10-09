@@ -639,7 +639,7 @@ function EditorInner(props: EditorProps) {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · saved on this device", error: "Retrying…", readonly: "View only" };
+  const saveLabel: Record<string, string> = { saved: "Saved", dirty: "Unsaved", saving: "Saving…", offline: "Offline · kept on this device", error: "Couldn’t save", readonly: "View only" };
   const canEdit = manage || !!share?.canEdit;
   const cls = ["fm-editor", clientView && "fm-clientview", band !== "xl" && `fm-${band}`, band === "phone" && (selNodesCount > 0 || !!selEdgeId || selectMode) && "fm-has-bar", reports && "fm-mode-reports", showSide && "show-side", showInsp && "show-insp", collapsed.side && "fm-collapse-side", collapsed.insp && "fm-collapse-insp", !opts.nums && "fm-hide-nums", !opts.notes && "fm-hide-notes", !opts.checks && "fm-hide-checks", share?.hideNumbers && "fm-hide-all", sharedView && band === "phone" && hasWidgets && !reports && "fm-has-shared-wg", readOnly && "fm-readonly"].filter(Boolean).join(" ");
 
@@ -895,6 +895,11 @@ function EditorInner(props: EditorProps) {
           <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
             <span className="dot" aria-hidden="true" />
             {saveLabel[saveStatus]}
+            {saveStatus === "error" && (
+              <button type="button" className="fm-saved-retry" onClick={() => window.dispatchEvent(new Event("fm-save-retry"))}>
+                Retry
+              </button>
+            )}
           </span>
         </div>
         <span className="flex-1" />
@@ -1086,6 +1091,11 @@ function EditorInner(props: EditorProps) {
 
       <section className={`fm-stage${simOn && !reports ? " sim" : ""}`} aria-label="Funnel canvas" onClick={() => showSide && setShowSide(false)} onPointerDown={closeOverlayLibrary}>
         {ready && <Canvas />}
+        {saveStatus === "offline" && !reports && (
+          <div className="fm-offline" role="status">
+            <b>You’re offline.</b> Changes are kept on this device and will save when you’re back.
+          </div>
+        )}
         {ready && !reports && !share?.hideNumbers && (
           <div className="fm-stagebar">
             {!readOnly && (

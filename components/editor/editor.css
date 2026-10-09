@@ -7710,3 +7710,44 @@ dialog.fm-exportdlg {
     min-height: 44px;
   }
 }
+
+/* States board: the save chip says what happened and offers Retry; offline says nothing is lost */
+.fm-saved-retry {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0 0 0 2px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--brand-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.fm-offline {
+  position: absolute;
+  z-index: 60;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.fm-offline b {
+  color: var(--ink);
+}
+@media (max-width: 1023px) {
+  .fm-offline {
+    top: 64px;
+  }
+}
+:root[data-theme="light"] .fm-saved-retry {
+  color: #047857;
+}

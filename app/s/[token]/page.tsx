@@ -22,8 +22,8 @@ export default async function SharePage({ params }: PageProps<"/s/[token]">) {
           <div className="mb-3 flex justify-center">
             <BrandMark size={40} />
           </div>
-          <h1 className="mb-2 font-display text-2xl font-bold">This link isn’t available</h1>
-          <p className="text-sm text-muted">It may have expired or been revoked. Ask the person who sent it for a new link.</p>
+          <h1 className="mb-2 font-display text-2xl font-bold">This link is no longer active</h1>
+          <p className="text-sm text-muted">It may have expired or been switched off. Ask the person who sent it for a new link. Nothing on your side needs fixing.</p>
         </div>
       </main>
     );

@@ -40,7 +40,7 @@ test.describe("private internal tool", () => {
 
   test("unknown share token shows nothing", async ({ page }) => {
     await page.goto("/s/not-a-real-token-123");
-    await expect(page.getByRole("heading", { name: "This link isn’t available" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This link is no longer active" })).toBeVisible();
     const r = await page.request.get("/api/share/not-a-real-token-123");
     expect(r.status()).toBe(404);
   });

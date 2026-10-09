@@ -8713,3 +8713,7 @@ dialog.fm-exportdlg {
     min-height: 44px;
   }
 }
+/* the Actual banner already says which dates the map shows */
+.fm-editor:has(.fm-banner-actual) .fm-before-badge.actual {
+  display: none;
+}

@@ -112,18 +112,20 @@ test.describe("notes, layers, analytics and the library", () => {
     await page.getByRole("button", { name: "Funnel menu" }).click();
     await page.locator(".menu-pop").getByLabel("Notes", { exact: true }).uncheck();
     await expect(page.locator(".react-flow__node-note")).toBeHidden();
-    await page.getByRole("menuitemcheckbox", { name: "Clean map" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Clean", exact: true }).click();
     await expect(page.locator(".fm-editor")).toHaveClass(/fm-hide-nums/);
-    await page.getByRole("menuitemcheckbox", { name: "Performance map" }).click();
-    await page.getByLabel("Numbers on the map per").selectOption("year");
-    await expect(page.getByRole("button", { name: /Numbers per year/ })).toBeVisible();
+    await page.getByRole("menuitemcheckbox", { name: "People", exact: true }).click();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: /Numbers per year/ }).click();
+    // the calendar sets the dates the numbers cover: this year = twelve months of the plan
+    await page.getByRole("button", { name: /^Dates:/ }).click();
+    await page.getByRole("button", { name: "This year" }).click();
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page.locator(".fm-kpis")).toContainText(/per year|\/ yr/);
 
     // element Analytics tab: numbers, a conversion goal and a per-period forecast
     await node(page, "Fitness quiz").click();
     await page.getByRole("tab", { name: "Analytics" }).click();
-    await expect(page.locator(".fm-insp")).toContainText("Share of all visitors");
+    await expect(page.locator(".fm-insp")).toContainText("People in");
     await page.getByLabel("Target conversion (%)").fill("60");
     await expect(page.locator(".fm-insp")).toContainText("Revenue at target");
     await expect(page.locator(".fm-insp table")).toContainText("Year");
@@ -161,7 +163,7 @@ test.describe("notes, layers, analytics and the library", () => {
     await expect(nodes(page)).toHaveCount(before + 1);
     await expect(page.getByRole("dialog", { name: "Quick add a block" })).toHaveCount(0);
     // "/" jumps to the Blocks sidebar search (V2)
-    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
+    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 400 } });
     await page.keyboard.press("/");
     await expect(side.getByPlaceholder(/Search( \d+)? blocks/)).toBeFocused();
   });
@@ -186,7 +188,7 @@ test.describe("roles and clients", () => {
     await expect(page.getByLabel("Funnel name")).toHaveAttribute("readonly", "");
     await page.locator(".react-flow__node", { hasText: "Quiz funnel" }).first().click();
     await page.getByRole("tab", { name: "Analytics" }).click();
-    await expect(page.locator(".fm-insp")).toContainText("Share of all visitors");
+    await expect(page.locator(".fm-insp")).toContainText("People in");
     await page.getByRole("button", { name: "Reports", exact: true }).click();
     await expect(page.locator(".fm-rkpis").first()).toContainText("£6,032");
     await page.goto("/settings#team");

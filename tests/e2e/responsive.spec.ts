@@ -39,7 +39,7 @@ test.describe("phone (390px)", () => {
     await page.goto("/funnels");
     const table = page.locator(".fm-funnels");
     await expect(table).toBeVisible();
-    for (const h of ["Funnel", "Revenue / mo", "Checks"]) await expect(table.getByRole("columnheader", { name: h })).toBeVisible();
+    for (const h of ["Funnel", "Revenue / mo", "Checks"]) await expect(table.getByRole("columnheader", { name: h, exact: true })).toBeVisible();
     const box = await table.boundingBox();
     expect(box!.x + box!.width).toBeLessThanOrEqual(390);
     await ctx.close();

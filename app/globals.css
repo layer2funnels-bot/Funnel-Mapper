@@ -697,14 +697,19 @@ button {
     display: none;
   }
 }
-@media (max-width: 1023px) {
-  .fm-funnels .fm-c-client,
-  .fm-funnels .fm-c-profit,
-  .fm-funnels .fm-c-roas {
+@media (max-width: 1439px) {
+  /* the client moves under the funnel's name before the table runs out of room */
+  .fm-funnels .fm-c-client {
     display: none;
   }
   .fm-funnels .fm-c-client2 {
     display: block;
+  }
+}
+@media (max-width: 1023px) {
+  .fm-funnels .fm-c-profit,
+  .fm-funnels .fm-c-roas {
+    display: none;
   }
 }
 @media (max-width: 639px) {
@@ -1939,4 +1944,29 @@ dialog.fm-sheetdlg > .body {
 }
 .fm-rowmenu button[aria-haspopup] svg {
   margin-left: auto;
+}
+
+.fm-funnels-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 639px) {
+  .fm-funnels .fm-c-pick {
+    width: 30px;
+    padding-left: 8px;
+    padding-right: 0;
+  }
+  .fm-funnels .fm-c-act {
+    width: 40px;
+    padding-right: 4px;
+  }
+  .fm-funnels .fm-c-name a,
+  .fm-funnels .fm-c-name .fm-c-client2 {
+    max-width: 120px !important;
+  }
+  .fm-funnels th,
+  .fm-funnels td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
 }

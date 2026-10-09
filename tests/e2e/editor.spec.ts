@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { money } from "../../lib/format";
 import { compute } from "../../lib/funnel-math";
+import { typeOf } from "../../lib/catalog";
 import { blankSettings } from "../../lib/graph";
 import { tidyLayout } from "../../lib/layout";
 import { centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, waitSaved, paletteItem } from "./helpers";
@@ -52,10 +53,10 @@ test.describe("funnel editor", () => {
       seq = node(page, "SMS");
     await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
-    await expect(edgeLabels(page).first()).toContainText("100%");
+    await expect(edgeLabels(page).first()).toContainText("1,000"); // a source has no "share of arrivals": its line says how many visit
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
     await drag(page, await centre(page, lp.locator(".fm-port.side.bottom")), await centre(page, seq));
-    await expect(edgeLabels(page)).toHaveCount(3);
+    await expect(page.locator("path.fm-edge")).toHaveCount(3);
     // landing converts 30%: 300 go right, 700 go down (labelled No)
     await expect(page.locator(".fm-elabel", { hasText: "30%" })).toBeVisible();
     await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("70%");
@@ -65,11 +66,11 @@ test.describe("funnel editor", () => {
     // can't connect into a traffic source or to the same target twice
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, fb));
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
-    await expect(edgeLabels(page)).toHaveCount(3);
+    await expect(page.locator("path.fm-edge")).toHaveCount(3);
   });
 
   test("edit an edge: share and path", async ({ page }) => {
-    const { id } = await createFunnel({ template: "webinar" });
+    const { id, graph } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
     // registration → thank-you page carries the 720 people who registered (2,400 × 30%)
     await page.locator('.fm-elabel[aria-label*="720 people"]').first().click();
@@ -83,7 +84,8 @@ test.describe("funnel editor", () => {
     await page.getByRole("button", { name: "Delete connection" }).click();
     await expect(page.locator("path.fm-edge")).toHaveCount(8);
     // traffic sources have no "didn't convert" path, so the option isn't offered
-    await page.locator('.fm-elabel[aria-label*="2,400 people"]').first().click();
+    const src = graph.edges.find((e) => typeOf(graph.nodes.find((n) => n.id === e.from)!.type).cat === "traffic")!;
+    await page.locator(`.react-flow__edge[data-id="${src.id}"] .react-flow__edge-interaction`).dispatchEvent("click");
     await expect(page.getByRole("radio", { name: "No", exact: true })).toHaveCount(0);
   });
 
@@ -121,7 +123,7 @@ test.describe("funnel editor", () => {
     await expect(nodes(page)).toHaveCount(8);
     await page.getByRole("button", { name: "Redo" }).click();
     await expect(nodes(page)).toHaveCount(7);
-    await page.locator(".react-flow__pane").click({ position: { x: 420, y: 20 } });
+    await page.locator(".react-flow__pane").click({ position: { x: 20, y: 400 } });
     await page.keyboard.press(`${mod}+a`);
     await expect(page.locator(".fm-insp h3")).toHaveText("7 blocks");
     await page.keyboard.press("Escape");

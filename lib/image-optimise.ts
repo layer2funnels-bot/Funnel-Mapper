@@ -24,7 +24,7 @@ export interface Optimised {
 /** Narrower widths to try after the kind's maximum: 1200 → 1000 → 800 → 600 for screenshots, then halves for small kinds. */
 function widthsFor(kind: ImageKind, natural: number): number[] {
   const max = Math.min(MAX_WIDTH[kind], natural);
-  const steps = kind === "shot" ? [1200, 1000, 800, 600] : [MAX_WIDTH[kind], Math.round(MAX_WIDTH[kind] * 0.75), Math.round(MAX_WIDTH[kind] / 2)];
+  const steps = kind === "shot" ? [1200, 1000, 800, 600, 480, 360] : [MAX_WIDTH[kind], Math.round(MAX_WIDTH[kind] * 0.75), Math.round(MAX_WIDTH[kind] / 2)];
   return [max, ...steps.filter((w) => w < max)];
 }
 

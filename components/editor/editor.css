@@ -1600,10 +1600,10 @@
     grid-template-columns: 48px 0 minmax(0, 1fr) 320px;
   }
   .fm-editor.fm-collapse-insp {
-    grid-template-columns: 48px 256px minmax(0, 1fr) 26px;
+    grid-template-columns: 48px 256px minmax(0, 1fr) 36px;
   }
   .fm-editor.fm-collapse-side.fm-collapse-insp {
-    grid-template-columns: 48px 0 minmax(0, 1fr) 26px;
+    grid-template-columns: 48px 0 minmax(0, 1fr) 36px;
   }
   .fm-collapse-side .fm-side,
   .fm-collapse-insp .fm-insp {
@@ -1635,7 +1635,7 @@
   }
   .fm-editor.fm-collapse-insp,
   .fm-editor.fm-collapse-side.fm-collapse-insp {
-    grid-template-columns: 48px 0 minmax(0, 1fr) 26px;
+    grid-template-columns: 48px 0 minmax(0, 1fr) 36px;
   }
   .fm-editor:not(.fm-collapse-side) .fm-side {
     grid-column: 3;
@@ -8571,4 +8571,91 @@ dialog.fm-exportdlg {
   body:has(.fm-sbx) .fm-side {
     visibility: hidden;
   }
+}
+
+/* ---- Right panel, redrawn: funnel level + block Analytics ---- */
+.fm-foruse {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.fm-three > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fm-three span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-three b {
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fm-three small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-splitbar {
+  height: 6px;
+  margin-bottom: 16px;
+  border-radius: 3px;
+  background: var(--panel2);
+  overflow: hidden;
+}
+.fm-splitbar i {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+}
+.fm-path .to button b {
+  margin-left: 8px;
+  font-weight: 600;
+}
+.fm-leakacts {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.fm-linkbtn {
+  display: inline-block;
+  margin: 4px 0 16px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-light);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fm-linkbtn:hover {
+  text-decoration: underline;
+}
+.fm-irail button {
+  position: relative;
+}
+.fm-irail-checks i {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--attention);
+  color: #241a03;
+  font: 700 10px/14px var(--font-sans, inherit);
+  font-style: normal;
+  text-align: center;
+}
+:root[data-theme="light"] .fm-three b {
+  color: var(--ink);
 }

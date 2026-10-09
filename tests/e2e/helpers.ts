@@ -35,7 +35,16 @@ export async function createFunnel(opts: { template?: string; graph?: FunnelGrap
   return { id: data.id as string, graph, sb };
 }
 
-export async function openEditor(page: Page, id: string) {
+/** Most specs work in the full details panel. The panel starts collapsed to a rail for new users; pass { panel: false } to test that default. */
+export async function openEditor(page: Page, id: string, opts: { panel?: boolean } = {}) {
+  if (opts.panel !== false)
+    await page.addInitScript(() => {
+      try {
+        const k = "fm-editor-opts";
+        const o = JSON.parse(localStorage.getItem(k) || "{}");
+        if (o.hideInsp === undefined) localStorage.setItem(k, JSON.stringify({ ...o, hideInsp: false }));
+      } catch {}
+    });
   await page.goto(`/funnels/${id}`);
   await expect(page.locator(".fm-editor")).toBeVisible();
   await expect(page.locator(".fm-saved")).toContainText(/Saved|View only/);

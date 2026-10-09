@@ -129,6 +129,8 @@ export interface EditorState {
   simBase: SimBase | null;
   /** The block whose settings box is open (double-click or Enter on a selected block). */
   settingsBox: string | null;
+  /** The funnel's own status (Draft / Proposed / Live / Archived) and how to change it; set can be null for viewers and share links. */
+  funnelCtl: { status: string; set: ((status: string) => void) | null };
   /** The Baseline run (what-if levers at neutral) while Compare with Baseline is on and a scenario is active. */
   compareBase: SimBase | null;
   /** Simulate: the people-flow animation is running. */
@@ -196,7 +198,7 @@ export interface EditorState {
 const OPTS_KEY = "fm-editor-opts";
 const viewFlags = (view: MapView) => ({ view, nums: view !== "clean", thick: view !== "clean" });
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: true };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
@@ -237,6 +239,7 @@ export const useEditor = create<EditorState>(() => ({
   workspaceBlocks: [],
   assetsStatus: "idle",
   simBase: null,
+  funnelCtl: { status: "draft", set: null },
   settingsBox: null,
   compareBase: null,
   simPlay: false,
@@ -254,7 +257,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: true },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -1183,4 +1186,8 @@ export function setSpot(spot: string | null) {
 /** Force a save of the current content (e.g. after restoring a local draft). */
 export function markDirty() {
   set((s) => ({ rev: s.rev + 1, saveStatus: s.readOnly ? s.saveStatus : "dirty" }));
+}
+
+export function setFunnelCtl(status: string, set: ((status: string) => void) | null) {
+  useEditor.setState({ funnelCtl: { status, set } });
 }

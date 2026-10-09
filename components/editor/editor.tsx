@@ -2,12 +2,13 @@
 import "./editor.css";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark, Icon } from "@/components/icon";
 import { Menu } from "@/components/menu";
 import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelNode, type FunnelSettings } from "@/lib/graph";
+import { healthChecks } from "@/lib/health";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
 import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { chartSeries, mrrDetail, type WidgetMetric } from "@/lib/widget-data";
@@ -45,7 +46,7 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, setMapView, openSettingsBox, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
+  useEditor, setMapView, setFunnelCtl, setSideTab, openSettingsBox, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
@@ -139,6 +140,17 @@ function EditorInner(props: EditorProps) {
     if (presenting) stopSim();
   }, [presenting]);
   const [status, setStatus] = useState(funnel.status);
+  const changeStatus = useCallback(
+    async (st: string) => {
+      setStatus(st);
+      const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
+      if (error) showToast("Couldn’t change status");
+    },
+    [funnel.id],
+  );
+  useEffect(() => {
+    setFunnelCtl(status, manage ? changeStatus : null);
+  }, [status, manage, changeStatus]);
   const [commentCount, setCommentCount] = useState(props.unresolvedComments ?? 0);
   const helpRef = useRef<HTMLDialogElement>(null);
   const tipsRef = useRef<HTMLDialogElement>(null);
@@ -148,6 +160,9 @@ function EditorInner(props: EditorProps) {
   const selEdgeId = useEditor((s) => s.selEdge);
   const band = useBand();
   const sharedView = useEditor((s) => s.shared);
+  const nodesForChecks = useEditor((s) => s.nodes);
+  const edgesForChecks = useEditor((s) => s.edges);
+  const checkCount = useMemo(() => (sharedView ? 0 : healthChecks({ nodes: nodesForChecks, edges: edgesForChecks }).length), [sharedView, nodesForChecks, edgesForChecks]);
   const hasWidgets = useEditor((s) => s.nodes.some((n) => n.type === "widget"));
   const [sheetH, setSheetH] = useState(50);
   const sheetDrag = useRef<{ y: number; h: number } | null>(null);
@@ -868,9 +883,7 @@ function EditorInner(props: EditorProps) {
                           aria-checked={status === st}
                           onClick={async () => {
                             close();
-                            setStatus(st);
-                            const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
-                            if (error) showToast("Couldn’t change status");
+                            await changeStatus(st);
                           }}
                         >
                           {STATUS_LABEL[st]}
@@ -1151,8 +1164,17 @@ function EditorInner(props: EditorProps) {
           <button type="button" aria-label="Expand details panel" title="Show details panel (])" onClick={() => togglePanel("insp", false)}>
             <Icon name="chevronLeft" size={15} />
           </button>
-          <button type="button" aria-label="Funnel" title="Funnel" onClick={() => (setPanel("inspector"), togglePanel("insp", false))}>
+          <button type="button" aria-label="Funnel" title={checkCount ? `Funnel · ${checkCount} to fix` : "Funnel"} className="fm-irail-checks" onClick={() => (setPanel("inspector"), togglePanel("insp", false))}>
             <Icon name="sliders" size={15} />
+            {checkCount > 0 && <i aria-hidden="true">{checkCount}</i>}
+          </button>
+          {owner && !sharedView && (
+            <button type="button" aria-label="Goals" title="Goals" onClick={() => setSection("goals")}>
+              <Icon name="target" size={15} />
+            </button>
+          )}
+          <button type="button" aria-label="Outline" title="Outline of the funnel" onClick={() => (setSideTab("outline"), togglePanel("side", false))}>
+            <Icon name="list" size={15} />
           </button>
           {owner && !readOnly && !sharedView && (
             <button type="button" aria-label="Simulate" title="Simulate (S)" onClick={() => (simOn ? setPanel("simulate") : toggleSim(), togglePanel("insp", false))}>

@@ -127,6 +127,62 @@ test.describe("tablet (768px and 1024px)", () => {
   });
 });
 
+// Presentation: the heading, the stage tags on the map, the selected block's card and the bottom bar never draw over each other,
+// on any screen from a small phone to a tablet, at every stage.
+test("Present: header, stage tags, block card and bar do not overlap at any stage on phones and tablets", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const { id } = await createFunnel({ graph: builtinTemplate("tripwire").graph });
+  for (const [w, h] of [[320, 640], [390, 844], [430, 932], [768, 1024]] as const) {
+    const { ctx, page } = await open(browser, w, h);
+    await openEditor(page, id);
+    const direct = page.getByRole("button", { name: /^Present$/ }).first();
+    if (await direct.isVisible().catch(() => false)) await direct.click();
+    else {
+      // phones keep the file menu behind "More"; wider screens have the Funnel menu beside the name
+      const fileMenu = page.getByRole("button", { name: "Funnel menu" });
+      await ((await fileMenu.count()) ? fileMenu : page.getByRole("button", { name: "More", exact: true })).first().click();
+      await page.getByRole("menuitem", { name: /Present/ }).click();
+    }
+    await expect(page.locator(".fm-present-ui")).toBeVisible();
+    const found: string[] = [];
+    for (let step = 0; step < 8; step++) {
+      await page.waitForTimeout(600);
+      const r = await page.evaluate(() => {
+        const vis = (e: Element) => {
+          const b = e.getBoundingClientRect();
+          const cs = getComputedStyle(e);
+          return b.width > 0 && b.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && b.bottom > 0 && b.top < innerHeight;
+        };
+        const items: { name: string; l: number; t: number; r: number; b: number }[] = [];
+        const add = (name: string, sel: string) =>
+          document.querySelectorAll(sel).forEach((e, i) => {
+            if (!vis(e)) return;
+            const b = e.getBoundingClientRect();
+            items.push({ name: name + (i || ""), l: b.left, t: b.top, r: b.right, b: b.bottom });
+          });
+        add("heading", ".fp-head > div:not(.fp-stats)");
+        add("stats", ".fp-stats");
+        add("blockcard", ".fp-obj");
+        add("bar", ".fp-bar");
+        add("tag", ".fm-frame .ftitle");
+        const out: string[] = [];
+        for (let i = 0; i < items.length; i++)
+          for (let j = i + 1; j < items.length; j++) {
+            const a = items[i],
+              c = items[j];
+            if (Math.min(a.r, c.r) - Math.max(a.l, c.l) > 2 && Math.min(a.b, c.b) - Math.max(a.t, c.t) > 2) out.push(`${a.name} x ${c.name}`);
+          }
+        return { out, done: !!document.querySelector(".fp-bar .btn.primary[aria-label='Finish']") };
+      });
+      found.push(...r.out.map((o) => `${w}px step ${step}: ${o}`));
+      if (r.done) break;
+      await page.keyboard.press("ArrowRight");
+    }
+    expect(found, `overlaps at ${w}px`).toEqual([]);
+    await ctx.close();
+  }
+});
+
 test.describe("desktop numbers strip", () => {
   for (const [w, h] of [[1280, 800], [1440, 900], [1536, 864]] as const) {
     test(`${w}px: the strip shows Traffic, Revenue and Profit whole, the rest behind "+N more"`, async ({ browser }) => {

@@ -397,11 +397,14 @@ Branch `claude/vibrant-hypatia-66sckx`, started from `main` after PR #30. No mat
 - **Appearance board:** the theme picker shows a mini funnel map per theme and a check badge. Dark is the default; Light is stored on the person (unchanged).
 - **Tablet (768):** the funnel name now truncates before the scenario pill does (the pill was clipped to "Basel").
 - **Phone:** a wide funnel opens at a readable 50% zoom from its first block instead of a 25% overview where nothing could be read (R-phone-editor); Fit still shows everything. The block sheet's header is 98px instead of 140px (back arrow shares the title row).
-- **Decided, not defects:** blocks show as coloured shapes without text below 40% zoom (V2-zoom-levels: "No text, no numbers"). A Present stage-tag overlap could not be reproduced at 390 or 768 on the tripwire funnel; reopen with a funnel that shows it.
+- **Decided, not defects:** blocks show as coloured shapes without text below 40% zoom (V2-zoom-levels: "No text, no numbers").
 - **Responsive tests:** `tests/e2e/responsive.spec.ts` (phone 390, tablet 768 / 1024, desktop strip at 1280 / 1440 / 1536) pins the layout decisions: Clients filters behind a button, Home stacked rows, Funnels compact table and map column, Templates drawer, Reports toggle and library bottom sheet, readable phone start zoom, compact sheet header, KPI strip fit. Playwright still has one project; these tests set their own viewport.
 - **Housekeeping:** stale "migrations not applied" lines corrected: `arwedmqmxrxllytzriat` has every migration; `kyhlhacbmlbkiibvpsel` (3 migrations) is unused by the deployed domains and untouched.
 - **Decision for the owner (Trash retention):** the owner's boards disagree. `V2-delete-confirm`, `V2-trash` and the build brief say items are removed after 30 days by a scheduled job; the Design Freeze Report says "No time limit, no auto-delete". The app follows the freeze report (nothing is removed automatically; only an owner or admin can delete for good) because an automatic purge deletes data permanently. If 30 days is wanted: add a scheduled job and change the Trash and confirmation copy together.
-- **Still open:** the 430 board was not compared line by line (the 430 layouts follow the 390 ones and pass the no-sideways-scroll and touch-size specs at 430).
+- **Present overlap, closed:** checked every stage of the five funnels the demo user can open (one has stage frames) at 320, 360, 390, 430, 768 and 1024: the heading, stats, stage tags, block card and bottom bar never overlap. Guarded by a test in `responsive.spec.ts` (320 / 390 / 430 / 768, every stage).
+- **430, closed:** all phone boards (R-phone-*, V2-responsive-checks) are drawn at 390; there is no 430 board. 430 now has the same 40px touch-size sweep as 390 and 768 (`touch-targets.spec.ts`) and is in the no-sideways-scroll sweep.
+- **Demo data:** the demo funnel "Subscription + A/B test" had a saved Fit view (zoom 0.123) from the 8 Oct phone checks, so it never showed the new readable phone start. Its `graph.view` was reset to the default on 9 Oct (one field, one row, on `arwedmqmxrxllytzriat`); it now opens at 0.5 on a phone.
+- **Still open:** only the Trash retention decision above.
 
 ## I. Recommended order (history)
 

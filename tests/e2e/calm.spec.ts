@@ -220,7 +220,7 @@ test.describe("picture-first blocks", () => {
     await expect(quiz.locator(".fm-chip")).toContainText("2,300");
     // Clean: names and lines only
     await page.getByRole("button", { name: "Clean", exact: true }).click();
-    await expect(page.locator(".fm-chip")).toHaveCount(0);
+    await expect(page.locator(".fm-chip:not(.warn)")).toHaveCount(0); // a "needs a fix" mark is a state, not a number
     await expect(quiz.locator(".fm-ntitle")).toBeVisible();
   });
 

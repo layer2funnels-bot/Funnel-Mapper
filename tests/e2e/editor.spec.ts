@@ -175,8 +175,9 @@ test.describe("funnel editor", () => {
     await expect(page.locator(".fm-toast")).toContainText("Layout tidied");
     const n = await pos(page, note.id),
       c = await pos(page, coaching.id);
-    expect(n.x - c.x, "same horizontal offset").toBe(before.dx);
-    expect(n.y - c.y, "still below that block, not re-anchored").toBeGreaterThanOrEqual(before.dy);
+    // it keeps its place next to that block; when the new layout puts a (bigger) block there it is only nudged to the nearest free spot
+    expect(Math.hypot(n.x - c.x - before.dx, n.y - c.y - before.dy), "stays near the block it belongs to").toBeLessThanOrEqual(340);
+    expect(n.y - c.y, "still below that block, not re-anchored").toBeGreaterThan(0);
     // on screen, the note overlaps no funnel block (frames are containers and may enclose it).
     // Every box is read in the same frame: "fit to screen" is still zooming, and boxes read one by one would mix zoom levels.
     const blocks = graph.nodes.filter((x) => !["note", "label", "frame"].includes(x.type));

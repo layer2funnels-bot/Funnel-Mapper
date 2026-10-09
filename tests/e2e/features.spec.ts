@@ -184,8 +184,7 @@ test.describe("reports and planning tools", () => {
     await page.getByRole("spinbutton", { name: "Of", exact: true }).fill("50000");
     await expect(page.locator(".statbox", { hasText: "Multiplier needed" })).toBeVisible();
     await page.getByRole("button", { name: "Apply to what-if" }).click();
-    await funnelTab(page, "Overview");
-    await expect(page.locator(".fm-mrow", { hasText: "Profit" }).first()).toContainText("£50,000");
+    await expect.poll(profit).toContain("50,000"); // the strip has the profit; the funnel panel no longer repeats it
   });
 
   test("presentation mode walks through the funnel", async ({ page }) => {

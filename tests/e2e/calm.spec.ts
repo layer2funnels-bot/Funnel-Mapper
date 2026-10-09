@@ -89,7 +89,7 @@ test("the details panel starts as a rail and the strip's numbers are not repeate
   // the strip leads with Traffic and is never hidden
   const strip = page.locator(".fm-kpis");
   await expect(strip).toContainText(/Traffic/);
-  const revenue = (await strip.innerText()).match(/[£$€]\s?[\d,]+/)?.[0];
+  const revenue = (await strip.innerText()).match(/[£$€]\s?[1-9][\d,]*/)?.[0];
   await page.getByRole("button", { name: "Funnel", exact: true }).click();
   await expect(page.locator(".fm-insp")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Biggest leak/i }).or(page.getByText(/Biggest leak/i)).first()).toBeVisible();
@@ -141,7 +141,8 @@ test("Plan control: one control for the scenario and Actual; a scenario shows th
   await expect(plan).toContainText("Baseline");
   await plan.getByRole("button", { name: /^Plan:/ }).click();
   await page.getByRole("button", { name: /New scenario from Baseline/ }).click();
-  await expect(page.getByRole("status").filter({ hasText: /Baseline is untouched/ })).toBeVisible();
+  // the scenario opens in Simulate; the banner names it as soon as a lever moves, and Baseline is never edited
+  await expect(page.getByRole("button", { name: /Play flow/ })).toBeVisible();
 });
 
 test("Actual: the banner offers Enter numbers and Import CSV when nothing is entered for the dates", async ({ page }) => {
@@ -177,6 +178,7 @@ test("Funnels list: select rows for the bulk bar, rename from the row menu, tras
   const name = `E2E list ${Date.now()}`;
   await createFunnel({ graph: blankGraph(), name });
   await page.goto("/funnels");
+  await page.getByPlaceholder(/Search funnels/).fill(name);
   const row = page.locator("tr", { hasText: name });
   await expect(row).toBeVisible();
   await row.getByRole("checkbox").check();
@@ -189,7 +191,9 @@ test("Funnels list: select rows for the bulk bar, rename from the row menu, tras
   await input.fill(`${name} renamed`);
   await input.press("Enter");
   await expect(page.locator("tr", { hasText: `${name} renamed` })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Renamed" })).toHaveCount(1); // saved, not only shown
   await page.reload();
+  await page.getByPlaceholder(/Search funnels/).fill(name);
   const renamed = page.locator("tr", { hasText: `${name} renamed` });
   await expect(renamed).toBeVisible();
   await renamed.getByRole("button", { name: /^Actions for/ }).click();

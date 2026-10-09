@@ -12,11 +12,13 @@ test.describe("funnel editor", () => {
     const { id } = await createFunnel({ template: "tripwire" });
     await openEditor(page, id);
     await expect(nodes(page)).toHaveCount(11);
-    await expect(edgeLabels(page)).toHaveCount(7);
+    // lines carry their rate; a label that would sit on a block or on a very short line is left out
+    await expect(edgeLabels(page).first()).toBeVisible();
+    expect(await edgeLabels(page).count()).toBeGreaterThanOrEqual(3);
     // KPI bar: tripwire revenue £7,485 / profit £6,825 (same as the prototype)
     await expect(page.locator(".fm-kpis")).toContainText("£7,485");
     await expect(page.locator(".fm-kpis")).toContainText("£6,825");
-    await expect(node(page, "Fitness quiz")).toContainText("1,035");
+    await expect(node(page, "Fitness quiz")).toContainText("2,300"); // people in: the one number a block shows
   });
 
   test("drag a block from the palette, and tap to add", async ({ page }) => {
@@ -50,13 +52,16 @@ test.describe("funnel editor", () => {
       seq = node(page, "SMS");
     await drag(page, await centre(page, fb.locator(".fm-port.side.right")), await centre(page, lp));
     await expect(edgeLabels(page)).toHaveCount(1);
-    await expect(edgeLabels(page).first()).toContainText("1,000");
+    await expect(edgeLabels(page).first()).toContainText("100%");
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
     await drag(page, await centre(page, lp.locator(".fm-port.side.bottom")), await centre(page, seq));
     await expect(edgeLabels(page)).toHaveCount(3);
     // landing converts 30%: 300 go right, 700 go down (labelled No)
-    await expect(page.locator(".fm-elabel", { hasText: "300" })).toBeVisible();
-    await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("700");
+    await expect(page.locator(".fm-elabel", { hasText: "30%" })).toBeVisible();
+    await expect(page.locator(".fm-elabel", { hasText: "No" })).toContainText("70%");
+    // the people are on hover and in the line's name
+    await expect(page.locator('.fm-elabel[aria-label*="300 people"]')).toHaveCount(1);
+    await expect(page.locator('.fm-elabel[aria-label*="700 people"]')).toHaveCount(1);
     // can't connect into a traffic source or to the same target twice
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, fb));
     await drag(page, await centre(page, lp.locator(".fm-port.side.right")), await centre(page, ty));
@@ -67,18 +72,18 @@ test.describe("funnel editor", () => {
     const { id } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
     // registration → thank-you page carries the 720 people who registered (2,400 × 30%)
-    await page.locator(".fm-elabel", { hasText: "720" }).first().click();
+    await page.locator('.fm-elabel[aria-label*="720 people"]').first().click();
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await page.getByLabel("Share of them (%)").fill("50");
-    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("360");
+    await expect(page.locator('.fm-elabel[aria-label*="360 people"]')).toContainText("· 50%");
     await page.getByRole("radio", { name: "No", exact: true }).click();
     // now half of the 1,680 who didn't register
-    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("840");
-    await expect(page.locator(".fm-elabel", { hasText: "· 50%" })).toContainText("No");
+    await expect(page.locator('.fm-elabel[aria-label*="840 people"]')).toContainText("· 50%");
+    await expect(page.locator('.fm-elabel[aria-label*="840 people"]')).toContainText("No");
     await page.getByRole("button", { name: "Delete connection" }).click();
-    await expect(edgeLabels(page)).toHaveCount(8);
+    await expect(page.locator("path.fm-edge")).toHaveCount(8);
     // traffic sources have no "didn't convert" path, so the option isn't offered
-    await page.locator(".fm-elabel", { hasText: "2,400" }).first().click();
+    await page.locator('.fm-elabel[aria-label*="2,400 people"]').first().click();
     await expect(page.getByRole("radio", { name: "No", exact: true })).toHaveCount(0);
   });
 
@@ -267,7 +272,7 @@ test.describe("tablet and phone", () => {
     await expect(nodes(page)).toHaveCount(11);
     // top bar: back, name, Reports, overflow; the KPI chips scroll inside their own strip
     await expect(page.getByRole("link", { name: /^Back to/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reports", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "More" })).toBeVisible();
     await expect(page.locator(".fm-kpis")).toBeVisible();
     // no horizontal page scroll

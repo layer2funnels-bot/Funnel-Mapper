@@ -57,7 +57,7 @@ test.describe("phone (390px)", () => {
     const { id } = await createFunnel({ graph: builtinTemplate("quiz").graph });
     const { ctx, page } = await open(browser, 390, 844);
     await openEditor(page, id);
-    await expect(page.getByRole("button", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reports", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Map", exact: true })).toBeHidden(); // you are on the map: only the other view is offered
     await page.getByRole("button", { name: /Add a block|Show building blocks/ }).first().click();
     const sheet = await page.locator(".fm-side").boundingBox();

@@ -7751,3 +7751,45 @@ dialog.fm-exportdlg {
 :root[data-theme="light"] .fm-saved-retry {
   color: #047857;
 }
+
+/* tablet header: the funnel name gives way before the scenario pill does (the pill used to be clipped to "Basel") */
+@media (max-width: 1023px) {
+  .fm-top .fm-scen {
+    flex: none;
+    max-width: none;
+  }
+  .fm-top .fm-fname {
+    flex: 1 1 0;
+    min-width: 48px;
+  }
+}
+
+/* phone block sheet: the back arrow shares the title's row (the header was 140px tall before any field) */
+@media (max-width: 767px) {
+  .fm-insp .fm-scopehead {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    column-gap: 2px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .fm-insp .fm-scopehead .fm-back {
+    grid-column: 1;
+    grid-row: 1;
+    width: 40px;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+    font-size: 0; /* the arrow alone: it still reads "Funnel" to a screen reader */
+  }
+  .fm-insp .fm-scopehead h3 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-size: 18px;
+  }
+  .fm-insp .fm-scopehead .sub {
+    grid-column: 2;
+    margin: 0 0 4px;
+  }
+}

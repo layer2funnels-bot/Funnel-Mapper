@@ -68,6 +68,20 @@ test.describe("phone (390px)", () => {
     await ctx.close();
   });
 
+  test("editor: a wide funnel opens at a readable zoom from its first block, and the block sheet header is compact", async ({ browser }) => {
+    const { id } = await createFunnel({ graph: builtinTemplate("quiz").graph });
+    const { ctx, page } = await open(browser, 390, 844);
+    await openEditor(page, id);
+    await expect(page.locator(".react-flow__node").first()).toBeVisible();
+    const k = await page.locator(".react-flow__viewport").evaluate((el) => Number(/scale\(([\d.]+)\)/.exec((el as HTMLElement).style.transform)?.[1] ?? 0));
+    expect(k, "zoom on first open").toBeGreaterThanOrEqual(0.49); // names are readable; Fit still shows the whole funnel
+    await node(page, "Quiz funnel").click();
+    await expect(page.locator(".fm-insp .fm-scopehead")).toBeVisible();
+    const head = await page.locator(".fm-insp .fm-scopehead").boundingBox();
+    expect(head!.height).toBeLessThanOrEqual(112);
+    await ctx.close();
+  });
+
   test("editor: the numbers strip scrolls and starts with Traffic", async ({ browser }) => {
     const { id } = await createFunnel({ graph: builtinTemplate("quiz").graph });
     const { ctx, page } = await open(browser, 390, 844);

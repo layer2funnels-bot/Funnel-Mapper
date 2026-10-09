@@ -85,23 +85,46 @@ export function AppearancePicker() {
             role="radio"
             aria-checked={on}
             onClick={() => setTheme(o.id)}
-            className={`rounded-xl border p-3 text-left ${on ? "border-brand ring-2 ring-brand/40" : "border-line hover:border-brand"}`}
+            className={`relative rounded-xl border p-3 text-left ${on ? "border-brand ring-2 ring-brand/40" : "border-line hover:border-brand"}`}
             data-testid={`theme-${o.id}`}
           >
-            <svg viewBox="0 0 160 72" className="mb-2 block w-full rounded-lg" aria-hidden="true">
-              <rect width="160" height="72" fill={o.c.bg} />
-              <rect width="160" height="10" fill={o.c.panel} />
-              <rect y="10" width="28" height="62" fill={o.c.panel} stroke={o.c.line} strokeWidth="0.5" />
-              <rect x="44" y="26" width="34" height="22" rx="3" fill={o.c.panel} stroke={o.c.line} />
-              <rect x="98" y="26" width="34" height="22" rx="3" fill={o.c.panel} stroke={o.c.line} />
-              <path d="M78 37 H98" stroke="#10B981" strokeWidth="1.5" />
-              <rect x="48" y="31" width="18" height="3" rx="1.5" fill={o.c.ink} />
-              <rect x="48" y="38" width="12" height="3" rx="1.5" fill={o.c.muted} />
-              <rect x="102" y="31" width="18" height="3" rx="1.5" fill={o.c.ink} />
-              <rect x="102" y="38" width="12" height="3" rx="1.5" fill="#10B981" />
+            <svg viewBox="0 0 260 112" className="mb-2 block w-full rounded-lg" aria-hidden="true">
+              <rect width="260" height="112" rx="8" fill={o.c.bg} stroke={o.c.line} />
+              <rect x="12" y="22" width="52" height="68" rx="6" fill={o.c.panel} stroke={o.c.line} />
+              {[40, 72].map((y) => (
+                <g key={y}>
+                  <circle cx="26" cy={y} r="6" fill="#60A5FA" />
+                  <rect x="37" y={y - 4} width="20" height="3" rx="1.5" fill={o.c.ink} />
+                  <rect x="37" y={y + 1} width="13" height="2.5" rx="1.25" fill={o.c.muted} />
+                </g>
+              ))}
+              <path d="M64 56 C74 56 70 56 84 56" stroke={o.c.muted} strokeWidth="1.5" fill="none" />
+              {[84, 134].map((x, i) => (
+                <g key={x}>
+                  <rect x={x} y="38" width="36" height="36" rx="4" fill={o.c.panel} stroke={o.c.line} />
+                  <rect x={x} y="38" width="36" height="5" rx="2" fill={i === 0 ? "#A78BFA" : "#FB923C"} />
+                  <rect x={x + 6} y="50" width="20" height="3" rx="1.5" fill={o.c.ink} />
+                  <rect x={x + 6} y="57" width="14" height="2.5" rx="1.25" fill={o.c.muted} />
+                  <rect x={x + 6} y="64" width="24" height="4" rx="2" fill={i === 0 ? "#A78BFA" : "#FB923C"} opacity="0.85" />
+                </g>
+              ))}
+              <path d="M120 56 H134" stroke="#10B981" strokeWidth="1.5" />
+              <path d="M170 56 H184" stroke="#10B981" strokeWidth="1.5" />
+              <rect x="184" y="49" width="14" height="14" rx="3" fill="#FBBF24" />
+              <path d="M198 56 H212" stroke="#10B981" strokeWidth="1.5" />
+              <rect x="212" y="30" width="36" height="22" rx="4" fill={o.c.panel} stroke={o.c.line} />
+              <rect x="212" y="30" width="36" height="4" rx="2" fill="#FB923C" />
+              <rect x="218" y="40" width="18" height="3" rx="1.5" fill={o.c.ink} />
+              <path d="M191 63 V86 H206" stroke="#FB923C" strokeWidth="1.5" strokeDasharray="3 2.5" fill="none" />
+              <circle cx="213" cy="86" r="6" fill="#2DD4BF" />
+              <path d="M219 86 H226" stroke="#10B981" strokeWidth="1.5" />
+              <rect x="226" y="76" width="22" height="20" rx="4" fill={o.c.panel} stroke={o.c.line} />
+              <rect x="226" y="76" width="22" height="4" rx="2" fill="#FB923C" />
             </svg>
+            <span aria-hidden="true" className={`absolute right-5 top-5 grid h-5 w-5 place-items-center rounded-full border text-[11px] font-bold ${on ? "border-brand bg-brand text-[#06281d]" : "border-line bg-bg/70"}`}>
+              {on ? "✓" : ""}
+            </span>
             <span className="flex items-center gap-2 font-bold">
-              {on && <span aria-hidden="true">✓</span>}
               {o.label}
               {o.id === "dark" && <span className="rounded-full border border-line px-2 text-[11px] font-medium text-muted">Default</span>}
             </span>

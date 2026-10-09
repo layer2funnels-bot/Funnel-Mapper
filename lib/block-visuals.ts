@@ -82,6 +82,7 @@ function familyOf(type: string): Family {
   if (T.cat === "page") return "page";
   if (T.cat === "offer") return "offer";
   if (T.cat === "logic") return T.color === "goal" ? "goal" : "logic";
+  if (type === "won") return "action"; // an event: diamond artwork, listed with the diamonds on the Object-system board, though it sits in Sales & CRM
   const g = libOf(type); // action-category blocks: Communication, Communities, AI and Sales & CRM tools read as messages
   return g === "comms" || g === "sales" || g === "community" || g === "aicall" || g === "aiauto" ? "message" : "action";
 }

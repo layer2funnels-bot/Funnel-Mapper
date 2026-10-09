@@ -52,6 +52,20 @@ export function Canvas() {
     const s = useEditor.getState();
     return s.nodes.length > 0 && s.view.x === 60 && s.view.y === 40 && s.view.k === 1;
   });
+  // phone: a wide funnel opens at a readable zoom from its first block (R-phone-editor), not shrunk to a 25% overview where nothing can be read; Fit still shows it all
+  const [phoneStart] = useState(() => {
+    if (!fitOnInit || typeof window === "undefined" || window.innerWidth >= 768) return null;
+    const ns = useEditor.getState().nodes;
+    const minX = Math.min(...ns.map((n) => n.x)),
+      maxX = Math.max(...ns.map((n) => n.x + (n.w ?? 210))),
+      minY = Math.min(...ns.map((n) => n.y)),
+      maxY = Math.max(...ns.map((n) => n.y + (n.h ?? 110)));
+    const stageH = window.innerHeight - 56 - 64; // top bar and numbers strip
+    const fit = Math.min((window.innerWidth - 32) / (maxX - minX), (stageH - 120) / (maxY - minY));
+    if (fit >= 0.5) return null; // small enough to read when fitted: keep the built-in fit
+    const k = 0.5;
+    return { x: 16 - minX * k, y: Math.max(72, stageH / 2 - ((minY + maxY) / 2) * k - 24), k };
+  });
   const dims = useEditor((s) => s.dims);
   const frameDrag = useRef<{ frame: string; start: { x: number; y: number }; members: Record<string, { x: number; y: number }> } | null>(null);
 
@@ -336,8 +350,8 @@ export function Canvas() {
           e.dataTransfer.dropEffect = "copy";
         }
       }}
-      defaultViewport={{ x: view.x, y: view.y, zoom: view.k }}
-      fitView={fitOnInit}
+      defaultViewport={phoneStart ? { x: phoneStart.x, y: phoneStart.y, zoom: phoneStart.k } : { x: view.x, y: view.y, zoom: view.k }}
+      fitView={fitOnInit && !phoneStart}
       fitViewOptions={{ padding: 0.15, maxZoom: 1.2 }}
       onMoveEnd={(_, vp) => {
         setDragging(false);

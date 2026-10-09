@@ -1,6 +1,7 @@
 "use client";
 import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StatusPill } from "@/components/status-pill";
@@ -73,7 +74,25 @@ export function FunnelsBrowser({ items, initialStatus = "", initialClient = "", 
         </button>
       </div>
       {list.length === 0 ? (
-        <div className="card px-6 py-14 text-center text-muted">{items.length ? "No funnels match those filters." : "No funnels yet. Create a client, then map their first funnel."}</div>
+        items.length ? (
+          <div className="card px-6 py-14 text-center text-muted">No funnels match those filters.</div>
+        ) : (
+          <EmptyState
+            title="No funnels yet"
+            actions={
+              <>
+                <Link href="/clients" className="btn primary">
+                  Choose a client
+                </Link>
+                <Link href="/templates" className="btn">
+                  Browse templates
+                </Link>
+              </>
+            }
+          >
+            A funnel belongs to a client. Pick one, then start from a template or a blank map.
+          </EmptyState>
+        )
       ) : (
         <div className="overflow-x-auto">
           <table className="tbl fm-funnels">

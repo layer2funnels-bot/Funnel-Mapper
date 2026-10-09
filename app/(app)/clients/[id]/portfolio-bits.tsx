@@ -3,6 +3,7 @@ import { TimeAgo } from "@/components/time-ago";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { GraphThumb } from "@/components/graph-thumb";
+import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/icon";
 import { LogoUpload } from "@/components/logo-upload";
 import { StatusPill } from "@/components/status-pill";
@@ -117,11 +118,11 @@ const FILTERS: [string, string][] = [
   ["archived", "Archived"],
 ];
 
-export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, total = funnels.length, allHref, newCard }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean; hidden?: number; total?: number; allHref?: string; newCard?: React.ReactNode }) {
+export function FunnelList({ funnels, currency, canEdit = true, hidden = 0, total = funnels.length, allHref, newCard, emptyAction }: { funnels: FunnelItem[]; currency: string; canEdit?: boolean; hidden?: number; total?: number; allHref?: string; newCard?: React.ReactNode; emptyAction?: React.ReactNode }) {
   const [filter, setFilter] = useState("all");
   const count = (k: string) => (k === "all" ? funnels.filter((f) => f.status !== "archived").length : funnels.filter((f) => f.status === k).length);
   const list = funnels.filter((f) => (filter === "all" ? f.status !== "archived" : f.status === filter));
-  if (!funnels.length) return <div className="card px-6 py-12 text-center text-sm text-muted">{canEdit ? "No funnels yet. Use “New funnel” to start from a template or a blank canvas." : "No funnels yet."}</div>;
+  if (!funnels.length) return canEdit ? <EmptyState title="No funnels yet" actions={emptyAction}>Start from a template or a blank map.</EmptyState> : <EmptyState title="No funnels yet" compact>Nothing has been mapped for this client.</EmptyState>;
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-1.5" role="group" aria-label="Filter funnels">

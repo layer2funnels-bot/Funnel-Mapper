@@ -26,7 +26,7 @@ Converted against `reference/ project/*.dc.html` (boards are visual specs, rende
 - **Done:** editor chrome, library (170 blocks, 6 widgets, page/offer windows), objects at every zoom, right panel (Model / Simulate / Track, block tabs, connection, multi-select), floating toolbar and menus, Reports, Share, shared view, presentation, Home, Clients, Client, Funnels, Templates, Settings (one section at a time), New client sheet, light theme, phone top bar, touch targets (40px tablet, 44px phone).
 - **Found and fixed by the E2E run:** editor crash when deleting a block (live on production until PR #21), invisible inline rename on pages and offers at the far zoom, no mouse control to collapse the right panel, Settings showing every section at once, duplicate DOM ids from a second client form, light-theme contrast (Emerald text, leak chips, toolbar, primary button hover), invalid `aria-pressed` on tabs.
 - **Decision for the owner:** the shared client link has no details panel (matches the Shared-view board), so a client with numbers cannot open the Forecast tab. The E2E test was changed to match.
-- **Known gaps:** action diamond shapes, message capsules and some goal-capsule details; the Trash page, States and V2-appearance picker boards were not compared; responsive pass done for 1280, 1024 and 390 only (768 and 430 not compared to the R-* boards); non-desktop Playwright projects were not run.
+- **Known gaps (history):** superseded by "9 Oct follow-up: States, Appearance, phone and tablet, responsive tests" below.
 - **Tests:** unit 263 pass; lint, typecheck, build and file-integrity pass. Desktop E2E: many tests were updated for the V2 UI; see the latest run result in the pull request.
 
 ## A. Executive summary
@@ -45,7 +45,7 @@ Converted against `reference/ project/*.dc.html` (boards are visual specs, rende
 - **Access:** invite-only; independent users and multiple workspaces (merged from `main`).
   - Owner / Admin / Editor / Viewer per workspace, enforced in RLS.
   - Funnel notes stay internal unless shared on purpose, enforced in the share RPC.
-- **Not done here, needs the owner:** the 3 new migrations are not yet applied to the demo or production databases.
+- **Migrations (history):** the 3 new migrations were not applied when this was written. Superseded: applied to `arwedmqmxrxllytzriat` on 8 Oct (see "Deployment status (8 Oct 2026)" at the top); verified again on 9 Oct against the live migration list.
   - Production also still lacks migrations 4–9.
   - `docs/deployment.md` has the exact order. The deploy script now handles hand-migrated histories safely.
 
@@ -94,7 +94,7 @@ Converted against `reference/ project/*.dc.html` (boards are visual specs, rende
 | Export: PDF report | PASS | Batch 3 sections plus final V1: Executive summary (year at today's rates, key leak), named goals with required numbers or conversion impact, MRR forecast, traffic reinvestment (only when a rate is chosen), build status. Every figure from `lib/report-data.ts`; checked visually |
 | Locked Emerald UI direction | PASS | Batch 2 `app/globals.css`: dark-first locked tokens (canvas #0B1220, library #0F172A, chrome #111827, panels #1E293B, borders #334155, text #E2E8F0/#94A3B8, Emerald #10B981/#059669/#047857/#34D399, semantic category colours); light theme kept as an option. Layout unchanged |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
-| Deployment | READY (not applied) | `npm run deploy` now matches hand-migrated histories by name and refuses gaps (`MIGRATIONS_BASELINE`), unit-tested. Demo (`arwedmqmxrxllytzriat`) has everything up to `20261009000000_workspace_members`; production (`kyhlhacbmlbkiibvpsel`) has 3 of 12. The 3 V1-completion migrations are not applied to either database: they must go in right before this code (see docs/deployment.md) |
+| Deployment | READY (not applied) | `npm run deploy` now matches hand-migrated histories by name and refuses gaps (`MIGRATIONS_BASELINE`), unit-tested. Demo (`arwedmqmxrxllytzriat`) has everything up to `20261009000000_workspace_members`; production (`kyhlhacbmlbkiibvpsel`) has 3 of 12. Superseded: every migration is applied to `arwedmqmxrxllytzriat` (see the 8 Oct deployment status); `kyhlhacbmlbkiibvpsel` is unused by the deployed domains |
 
 ## C. Gap matrix
 
@@ -284,7 +284,7 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
   - DB 37/37 and unit 115/115; typecheck, lint and build clean.
   - e2e `workspaces` + `team` + `privacy` 24/24.
 - **Still to do:**
-  - Production (`kyhlhacbmlbkiibvpsel`) still needs the pending migrations, including 20261007 + 20261008, before this code is deployed there.
+  - Superseded: the deployed domains run on `arwedmqmxrxllytzriat`, which has every migration. `kyhlhacbmlbkiibvpsel` (3 migrations) is not used by either domain and was left untouched.
   - Until this follow-up is deployed to the demo, an independent sign-up there leaves its (harmless) pending row behind.
 
 ## Workspace/auth completion pass (done)
@@ -373,7 +373,7 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 ## V2 final completion pass (checkpoint)
 
 See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, unit 209/209, E2E 151/151, typecheck / lint / build clean. Final QA pass: see "Final Phase 1 QA and completion pass" in the same file. Owner actions still open: apply pending migrations (docs/deployment.md), set CAPTURE_URL_TEMPLATE for automatic thumbnails; final Figma 169 visuals not available.
-New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
+Migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): applied to `arwedmqmxrxllytzriat` on 8 Oct, together with trash, actuals_source and image_limit.
 
 ## 9 Oct overnight batch: phone / tablet layouts, desktop polish, Export step
 
@@ -385,8 +385,23 @@ Branch `claude/vibrant-hypatia-66sckx` (one PR). No maths, database, RLS or auth
 - **Shared client view:** the Funnel notes button now shows on desktop when the owner shares the notes (it was only reachable on small screens).
 - **"/"** focuses the Blocks sidebar search (V2 design); help text and the empty-canvas context menu no longer call it quick add (double-click the canvas still opens quick add).
 - **Tests:** unit 263/263, DB 55/55, E2E desktop 158/158 (the full run found three drifted legacy tests, now aligned with V2: KPI "more" popover for ROAS, "/" shortcut, quick-add search term), typecheck clean, lint 0 errors (9 existing warnings), production build clean.
-- **Still open (design):** action diamonds, message capsules and goal capsule details, Trash / States / V2-appearance boards, 768 / 430 board comparisons, Present stage-tag overlap at the smallest widths, block labels at the default phone zoom, phone sheet header height, hatched logic blocks (left as is).
+- **Still open (design):** superseded by "9 Oct follow-up" below.
 - **Deployment:** the Vercel preview for this PR is the place to look; production deploys from main when the owner merges. Pending migrations: see "V2 final completion pass" above.
+
+## 9 Oct follow-up: States, Appearance, phone and tablet, responsive tests
+
+Branch `claude/vibrant-hypatia-66sckx`, started from `main` after PR #30. No maths, database, RLS or auth change; no migration.
+
+- **Canvas objects (Object-system board):** compared against the app. Actions are diamonds drawn from the owner's artwork (`public/blocks/Actions__*`), messages are circles with their brand tile, goals are lime round tiles: all match. One real defect: **Deal won** sat in Sales & CRM and rendered as a message card although its artwork is a diamond; it is now an action (`lib/block-visuals.ts`, unit-tested). Per-action colours on the board are not applied on purpose: the owner's artwork supersedes them. "Message after 1 day" in the board is sample text: messages have no delay field in the model.
+- **States board:** `EmptyState` component (title, one line, next-step buttons) on Funnels (none yet) and a client's funnel list; branded not-found pages inside and outside the app shell (same wording for "missing" and "not yours", 404 status kept); share link error reads "This link is no longer active"; save chip says "Offline · kept on this device" or "Couldn't save" with a Retry button; an offline banner says changes are kept and will save when back. Tests: `states.spec.ts`, offline banner assertions in `features.spec.ts`.
+- **Appearance board:** the theme picker shows a mini funnel map per theme and a check badge. Dark is the default; Light is stored on the person (unchanged).
+- **Tablet (768):** the funnel name now truncates before the scenario pill does (the pill was clipped to "Basel").
+- **Phone:** a wide funnel opens at a readable 50% zoom from its first block instead of a 25% overview where nothing could be read (R-phone-editor); Fit still shows everything. The block sheet's header is 98px instead of 140px (back arrow shares the title row).
+- **Decided, not defects:** blocks show as coloured shapes without text below 40% zoom (V2-zoom-levels: "No text, no numbers"). A Present stage-tag overlap could not be reproduced at 390 or 768 on the tripwire funnel; reopen with a funnel that shows it.
+- **Responsive tests:** `tests/e2e/responsive.spec.ts` (phone 390, tablet 768 / 1024, desktop strip at 1280 / 1440 / 1536) pins the layout decisions: Clients filters behind a button, Home stacked rows, Funnels compact table and map column, Templates drawer, Reports toggle and library bottom sheet, readable phone start zoom, compact sheet header, KPI strip fit. Playwright still has one project; these tests set their own viewport.
+- **Housekeeping:** stale "migrations not applied" lines corrected: `arwedmqmxrxllytzriat` has every migration; `kyhlhacbmlbkiibvpsel` (3 migrations) is unused by the deployed domains and untouched.
+- **Decision for the owner (Trash retention):** the owner's boards disagree. `V2-delete-confirm`, `V2-trash` and the build brief say items are removed after 30 days by a scheduled job; the Design Freeze Report says "No time limit, no auto-delete". The app follows the freeze report (nothing is removed automatically; only an owner or admin can delete for good) because an automatic purge deletes data permanently. If 30 days is wanted: add a scheduled job and change the Trash and confirmation copy together.
+- **Still open:** the 430 board was not compared line by line (the 430 layouts follow the 390 ones and pass the no-sideways-scroll and touch-size specs at 430).
 
 ## I. Recommended order (history)
 

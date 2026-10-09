@@ -2,10 +2,9 @@
 // How the math works (V2 F9): the selected step's numbers in words, with the arithmetic, and a short glossary.
 // Display only: every figure is the engine's own (lib/math-explain reads FunnelResult).
 import { useMemo } from "react";
-import { periodFactor } from "@/lib/funnel-math";
 import { perSuffix } from "@/lib/format";
 import { explainBlock, GLOSSARY } from "@/lib/math-explain";
-import { shownR, useEditor } from "@/lib/editor/store";
+import { shownR, useEditor, viewK } from "@/lib/editor/store";
 
 export function MathPanel() {
   const nodes = useEditor((s) => s.nodes);
@@ -13,7 +12,7 @@ export function MathPanel() {
   const sel = useEditor((s) => s.selNodes);
   const R = useEditor(shownR);
   const cur = useEditor((s) => s.settings.currency);
-  const k = useEditor((s) => periodFactor(s.opts.period));
+  const k = useEditor((s) => viewK(s.opts));
   const hidden = useEditor((s) => s.settings.hideNumbers);
   const n = sel.length === 1 ? nodes.find((x) => x.id === sel[0]) : undefined;
   const lines = useMemo(

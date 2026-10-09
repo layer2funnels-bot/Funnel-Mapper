@@ -56,7 +56,9 @@ import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
-import { ActualSwitch, EditorRail, LayersMenu, ScenarioPill, ViewSwitch } from "./chrome";
+import { EditorRail, LayersMenu, ViewSwitch } from "./chrome";
+import { EditingBanner, PlanControl } from "./plan-control";
+import { RangePicker } from "./range-picker";
 import { Outline } from "./outline";
 import { WorkspaceBlocks } from "./workspace-blocks";
 import { CommentsPanel } from "./comments";
@@ -721,17 +723,6 @@ function EditorInner(props: EditorProps) {
               <label>
                 <input type="checkbox" checked={opts.checks} onChange={(e) => setOpt("checks", e.target.checked)} /> Checklists
               </label>
-              {!share?.hideNumbers && (
-                <label className="fm-layer-period">
-                  Forecast: numbers per
-                  <select value={opts.period} onChange={(e) => setOpt("period", e.target.value as typeof opts.period)} aria-label="Numbers on the map per">
-                    <option value="day">Day</option>
-                    <option value="week">Week</option>
-                    <option value="month">Month</option>
-                    <option value="year">Year</option>
-                  </select>
-                </label>
-              )}
               {canEdit && (
                 <label className="fm-layer-period">
                   Currency
@@ -884,7 +875,6 @@ function EditorInner(props: EditorProps) {
               )}
             </Menu>
           </span>
-          {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
           <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
             <span className="dot" aria-hidden="true" />
             {saveLabel[saveStatus]}
@@ -909,7 +899,18 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         <span className="flex-1" />
-        {!sharedView && !reports && !share?.hideNumbers && <ActualSwitch />}
+        {owner && !sharedView && !share?.hideNumbers && (
+          <PlanControl
+            showActual={!reports}
+            onNewScenario={() => {
+              if (!useEditor.getState().simBase) startSim();
+              setMode("map");
+              setShowInsp(true);
+              togglePanel("insp", false);
+              setPanel("simulate");
+            }}
+          />
+        )}
         {canEdit && (
           <span className="fm-edit-tools fm-hide-phone">
             <button type="button" className="btn icon ghost" aria-label="Undo" title={`Undo (${kbd("Mod+Z")})`} onClick={undo} disabled={readOnly || !canUndo}>
@@ -1089,6 +1090,7 @@ function EditorInner(props: EditorProps) {
             <b>You’re offline.</b> Changes are kept on this device and will save when you’re back.
           </div>
         )}
+        {ready && !reports && owner && !share?.hideNumbers && <EditingBanner />}
         {ready && !reports && !share?.hideNumbers && (
           <div className="fm-stagebar">
             {!readOnly && (
@@ -1097,6 +1099,7 @@ function EditorInner(props: EditorProps) {
               </button>
             )}
             <ViewSwitch />
+            <RangePicker />
             <span className="fm-vr" aria-hidden="true" />
             <LayersMenu />
           </div>
@@ -1129,11 +1132,6 @@ function EditorInner(props: EditorProps) {
         <ZoomControls />
         <QuickAdd />
         <LineMenu />
-        {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
-          <button type="button" className="fm-period-badge" onClick={() => setOpt("period", "month")} title="Show monthly numbers">
-            Numbers per {opts.period} · <u>back to monthly</u>
-          </button>
-        )}
       </section>
 
       {collapsed.insp && !reports && !clientView && (

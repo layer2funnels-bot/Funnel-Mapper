@@ -1,25 +1,8 @@
 "use client";
-// Editor chrome pieces (V2 D2): scenario pill, Clean | Performance switch, left tool rail.
+// Editor chrome pieces: the Clean | People | Money switch, Layers, and the left tool rail (the Plan control is in plan-control.tsx).
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { setActualView, setMapView, setOpt, setSideTab, showToast, useEditor } from "@/lib/editor/store";
-import { actualMonths } from "@/lib/actual-result";
-import { ensureActuals } from "./assets";
-import { BASELINE, scenarioLabel } from "@/lib/scenario-label";
-
-/** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
-export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
-  const w = useEditor((s) => s.settings.whatif);
-  const list = useEditor((s) => s.settings.scenarios);
-  const label = scenarioLabel({ whatif: w, scenarios: list });
-  return (
-    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}${label !== BASELINE ? " vs Baseline" : ""}`} title="Choose a scenario">
-      <i aria-hidden="true" />
-      <span className="lbl">Scenario:</span> {label}
-      {label !== BASELINE && <span className="vs"> vs Baseline</span>}
-    </button>
-  );
-}
+import { setMapView, setOpt, setSideTab, useEditor } from "@/lib/editor/store";
 
 /**
  * Clean | People | Money (editor-calm brief): Clean = names, types and lines, no numbers at all. People (default) = one people
@@ -39,46 +22,6 @@ export function ViewSwitch() {
       <button type="button" aria-pressed={view === "money"} onClick={() => setMapView("money")} title="Revenue on offers, spend on sources, and the same rates">
         Money
       </button>
-    </div>
-  );
-}
-
-const monthView = (m: string) => {
-  const [y, mo] = m.split("-").map(Number);
-  const start = `${m}-01`,
-    end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
-  const days = Number(end.slice(8));
-  return { start, end, label: `${new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" })} · ${days} days` };
-};
-
-/** Model | Actual (F4): Actual draws the same map with the numbers entered or imported for a month. */
-export function ActualSwitch() {
-  const view = useEditor((s) => s.actualView);
-  const rows = useEditor((s) => s.actuals);
-  const months = actualMonths(rows ?? []);
-  const toActual = async () => {
-    await ensureActuals();
-    const ms = actualMonths(useEditor.getState().actuals ?? []);
-    if (!ms.length) return showToast("No actuals yet. Add them in the funnel panel: Track › Actuals.");
-    setActualView(monthView(ms[0]));
-  };
-  return (
-    <div className="seg fm-actswitch" role="group" aria-label="Plan or actual numbers">
-      <button type="button" aria-pressed={!view} onClick={() => setActualView(null)} title="The modelled plan">
-        Model
-      </button>
-      <button type="button" aria-pressed={!!view} onClick={toActual} title="Numbers you entered or imported">
-        Actual
-      </button>
-      {view && months.length > 1 && (
-        <select className="fm-actmonth" aria-label="Month of actuals" value={view.start.slice(0, 7)} onChange={(e) => setActualView(monthView(e.target.value))}>
-          {months.map((m) => (
-            <option key={m} value={m}>
-              {monthView(m).label.split(" · ")[0]}
-            </option>
-          ))}
-        </select>
-      )}
     </div>
   );
 }
@@ -138,8 +81,6 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
 export function LayersMenu() {
   const notes = useEditor((s) => s.opts.notes);
   const checks = useEditor((s) => s.opts.checks);
-  const period = useEditor((s) => s.opts.period);
-  const hideNums = useEditor((s) => s.settings.hideNumbers);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -163,11 +104,6 @@ export function LayersMenu() {
           <label>
             <input type="checkbox" checked disabled /> Map
           </label>
-          {!hideNums && (
-            <label>
-              <input type="checkbox" checked={period !== "month"} onChange={(e) => setOpt("period", e.target.checked ? "week" : "month")} /> Forecast (per week)
-            </label>
-          )}
           <label>
             <input type="checkbox" checked={notes} onChange={(e) => setOpt("notes", e.target.checked)} /> Notes
           </label>

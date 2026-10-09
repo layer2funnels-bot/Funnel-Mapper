@@ -4,10 +4,10 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { money, nf, people } from "@/lib/format";
 import { blockH, isAnnot, nodeW } from "@/lib/catalog";
-import { num, periodFactor } from "@/lib/funnel-math";
+import { num } from "@/lib/funnel-math";
 import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
 import { edgePath, edgeRate, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
-import { selectEdge, shownR, useEditor } from "@/lib/editor/store";
+import { selectEdge, shownR, useEditor, viewK } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
 import type { Side } from "@/lib/graph";
 
@@ -15,9 +15,9 @@ type Data = { port: "main" | "alt"; fromType?: string; from?: string; to?: strin
 
 export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected, data }: EdgeProps & { data: Data }) {
   const flow0 = useEditor((s) => shownR(s).flows[id] ?? 0);
-  const k = useEditor((s) => periodFactor(s.opts.period));
+  const k = useEditor((s) => viewK(s.opts));
   const flow = flow0 * k;
-  const simBase = useEditor((s) => s.simBase);
+  const simBase = useEditor((s) => s.simBase ?? s.compareBase); // the simulation start, or Baseline while Compare with Baseline is on
   // while simulating, line weight is on one scale for "now" and "before", so a thicker or thinner line is a real change
   const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows), ...(s.simBase ? Object.values(s.simBase.R.flows) : [])));
   // people-flow dots: paused while dragging or panning
@@ -30,7 +30,7 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const thick = useEditor((s) => s.opts.thick);
   const view = useEditor((s) => (s.settings.hideNumbers ? "clean" : s.opts.view));
   // the one leak label: the people lost on the dashed line that leaves the biggest-leak step
-  const lost = useEditor((s) => (data?.from && data.port === "alt" && s.keyLeak === data.from && view !== "clean" ? (s.R.N[data.from]?.non ?? 0) * periodFactor(s.opts.period) : 0));
+  const lost = useEditor((s) => (data?.from && data.port === "alt" && s.keyLeak === data.from && view !== "clean" ? (s.R.N[data.from]?.non ?? 0) * viewK(s.opts) : 0));
   const cur = useEditor((s) => s.settings.currency);
   const R = useEditor(shownR);
   const port = data?.port ?? "main";

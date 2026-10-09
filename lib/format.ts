@@ -53,7 +53,19 @@ export function perSuffix(k = 1): string {
   if (near(k, 12 / 52)) return "/ wk";
   if (near(k, 3)) return "/ qtr";
   if (near(k, 12)) return "/ yr";
+  if (Number.isInteger(k) && k > 1 && k < 12) return `/ ${k} mo`;
   return `/ ${nf((k * 365) / 12)} days`;
+}
+/** The period in words for the strip's unit ("per month", "per week", "per 7 days"). */
+export function perWord(k = 1): string {
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  if (near(k, 1)) return "per month";
+  if (near(k, 12 / 365)) return "per day";
+  if (near(k, 12 / 52)) return "per week";
+  if (near(k, 3)) return "per quarter";
+  if (near(k, 12)) return "per year";
+  if (Number.isInteger(k) && k > 1 && k < 12) return `per ${k} months`;
+  return `per ${nf((k * 365) / 12)} days`;
 }
 /** Money with its period, and the LTV tag when lifetime value is the funnel's basis: "£3,064 / mo", "£9,120 / mo LTV". */
 export const moneyPer = (v: number, cur: string, k = 1, basis?: "first" | "ltv") => `${money(v, cur)} ${perSuffix(k)}${basis === "ltv" ? " LTV" : ""}`;

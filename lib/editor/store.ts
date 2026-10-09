@@ -3,7 +3,9 @@
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
 import { blockH, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
-import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
+import { compute, periodFactor, warnNodeIds, type FunnelResult } from "../funnel-math";
+import { monthRange, rangeLabel, rangeScale, type DateRange } from "../range";
+import { NEUTRAL_WHATIF } from "../scenario-label";
 import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Side, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
@@ -32,8 +34,12 @@ export interface ViewOpts {
   notes: boolean;
   /** Layers: checklist elements and checklist badges. */
   checks: boolean;
-  /** Forecast layer: numbers on the map per day / week / month / year (the funnel models a month). */
+  /** Older "numbers per day / week / month / year" choice. The calendar range below replaces it; kept so saved options still load. */
   period: "day" | "week" | "month" | "year";
+  /** The calendar range the Plan numbers cover (null = this calendar month). Actual mode shows the real entries for the same dates. */
+  range: DateRange | null;
+  /** Compare with Baseline: when a scenario is active, blocks and the strip show the change from Baseline (off by default). */
+  compare: boolean;
   /** Background of exported map images (PNG / SVG). */
   bg: "light" | "dark" | "transparent";
   snap: boolean;
@@ -119,6 +125,8 @@ export interface EditorState {
   assetsStatus: "idle" | "loading" | "ready" | "error";
   /** Simulate: the map as it was when simulating started (null = not simulating). Everything shown as a change is live minus this. */
   simBase: SimBase | null;
+  /** The Baseline run (what-if levers at neutral) while Compare with Baseline is on and a scenario is active. */
+  compareBase: SimBase | null;
   /** Simulate: the people-flow animation is running. */
   simPlay: boolean;
   /** Simulate: the map shows the baseline (before your changes) instead of now. */
@@ -184,7 +192,7 @@ export interface EditorState {
 const OPTS_KEY = "fm-editor-opts";
 const viewFlags = (view: MapView) => ({ view, nums: view !== "clean", thick: view !== "clean" });
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
@@ -225,6 +233,7 @@ export const useEditor = create<EditorState>(() => ({
   workspaceBlocks: [],
   assetsStatus: "idle",
   simBase: null,
+  compareBase: null,
   simPlay: false,
   simBefore: false,
   menu: null,
@@ -240,7 +249,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -281,9 +290,16 @@ export function keyLeakOf(nodes: FunnelNode[], R: FunnelResult): string | null {
   }
   return best;
 }
+const isNeutral = (w: FunnelSettings["whatif"]) => w.traffic === 1 && w.conv === 1 && w.price === 1 && w.cost === 1;
+/** Baseline run for "Compare with Baseline": the same map with the what-if levers at neutral. */
+const compareOf = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings): SimBase | null => {
+  if (!get().opts.compare || isNeutral(settings.whatif)) return null;
+  const base = { ...settings, whatif: { ...NEUTRAL_WHATIF } };
+  return { R: compute({ nodes, edges }, base), nodes, edges, settings: base, at: Date.now() };
+};
 const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => {
   const R = compute({ nodes, edges }, settings);
-  return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R) };
+  return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R), compareBase: compareOf(nodes, edges, settings) };
 };
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
 export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)));
@@ -364,6 +380,7 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     simBefore: false,
     panel: "inspector",
   });
+  set({ compareBase: compareOf(p.graph.nodes, p.graph.edges, p.settings) }); // Compare with Baseline may have been left on
 }
 
 /** Replace the whole graph/settings (version restore, import). Undoable. */
@@ -1082,6 +1099,32 @@ export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
   try {
     localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
   } catch {}
+}
+/** The factor the calendar puts on Plan numbers (the funnel models one month): 1 for this month, 3 for a quarter, 7 days = 7 × 12 / 365. */
+export function viewK(o: Pick<ViewOpts, "range" | "period">): number {
+  return o.range ? rangeScale(o.range) : periodFactor(o.period);
+}
+/** The dates the calendar shows (this calendar month until a range is chosen). */
+export const viewRange = (o: Pick<ViewOpts, "range">): DateRange => o.range ?? monthRange(new Date());
+/** Choose the dates the numbers cover. Actual mode follows (it shows the real entries for the same dates). */
+export function setRange(range: DateRange | null) {
+  const opts = { ...get().opts, range, period: "month" as const };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+  const av = get().actualView;
+  if (av) setActualView({ ...av, ...viewRange(opts), label: rangeLabel(viewRange(opts)) });
+}
+/** Compare with Baseline on or off (the Baseline run is computed only while it is on and a scenario is active). */
+export function setCompare(on: boolean) {
+  const opts = { ...get().opts, compare: on };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+  const s = get();
+  set({ compareBase: compareOf(s.nodes, s.edges, s.settings) });
 }
 /** Switch between Clean, People and Money (sets the numbers and line-weight flags that follow the view). */
 export function setMapView(view: MapView) {

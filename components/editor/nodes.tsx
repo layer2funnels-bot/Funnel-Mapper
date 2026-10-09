@@ -13,10 +13,9 @@ import { BlockArtImg, BrandGlyph, offerSubtitle, SplitBar, StatusDot, WireframeS
 import { artOf } from "@/lib/block-art";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
-import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor } from "@/lib/editor/store";
+import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor, viewK } from "@/lib/editor/store";
 import { blockChip, perfLine, subLabel } from "@/lib/editor/labels";
 import { nf, people as ppl, peopleExact } from "@/lib/format";
-import { periodFactor } from "@/lib/funnel-math";
 import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
 import { hostOf, isVideoUrl } from "@/lib/rich-text";
@@ -107,15 +106,16 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const perf = view !== "clean";
   // Biggest leak: a dashed ring and a chip above-left (no number); the people lost are on the leak line, once
   const leak = useEditor((s) => s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers);
-  const lostHere = useEditor((s) => (s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers && !s.edges.some((e) => e.from === id && e.port === "alt") ? (s.R.N[id]?.non ?? 0) * periodFactor(s.opts.period) : 0));
+  const lostHere = useEditor((s) => (s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers && !s.edges.some((e) => e.from === id && e.port === "alt") ? (s.R.N[id]?.non ?? 0) * viewK(s.opts) : 0));
   const band = useEditor((s) => zoomBand(s.view.k));
   const renaming = useEditor((s) => s.renaming === id);
   const multi = useEditor((s) => s.selNodes.length > 1 && s.selNodes.includes(id));
   const spot = useEditor((s) => s.spot);
   const outOfStage = useEditor((s) => !!s.stageIds && !s.stageIds.includes(id));
-  const period = useEditor((s) => s.opts.period);
+  const k = useEditor((s) => viewK(s.opts));
   const shared = useEditor((s) => s.shared);
   const simBase = useEditor((s) => s.simBase);
+  const cmp = useEditor((s) => s.simBase ?? s.compareBase); // what the changes are measured against: the simulation start, or Baseline while Compare is on
   const simBefore = useEditor((s) => s.simBefore);
   const playing = useEditor((s) => s.simPlay && !!s.simBase);
   const altWired = useEditor((s) => s.edges.some((e) => e.from === id && e.port === "alt"));
@@ -128,12 +128,11 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const cc = CATCOLOR[T.color ?? T.cat];
   const V = visualOf(n.type),
     F = FAMILIES[V.family];
-  const k = periodFactor(period);
   const chip = blockChip(n, R, cur, k, view, basis);
   const pl = perf ? perfLine(n, R, cur, k, basis) : null;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
-  const sd = simBase && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, simBase.R) : null;
+  const sd = cmp && perf && !spot && !outOfStage && !shared && !simBefore ? stepDelta(n, R, cmp.R) : null;
   // the assumptions changed on this block while simulating (amber Δ with "was → now" on hover)
   const baseNode = simBase ? simBase.nodes.find((b) => b.id === id) : undefined;
   const changed = baseNode && !simBefore ? assumptionChanges([n], [baseNode]) : [];

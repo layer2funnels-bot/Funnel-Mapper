@@ -7920,3 +7920,415 @@ dialog.fm-exportdlg {
 .react-flow__edge:hover .fm-edge.quiet {
   opacity: 1;
 }
+
+/* ===== Plan control, editing banner and calendar (V3 "Plan control and calendar") ===== */
+.fm-plan {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  white-space: nowrap;
+}
+.fm-plan-k {
+  padding: 0 4px 0 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.fm-plan-sel,
+.fm-plan-act {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-plan-act {
+  border-left: 1px solid var(--line);
+  border-radius: 0 9px 9px 0;
+  color: var(--muted);
+}
+.fm-plan-act[aria-pressed="true"] {
+  background: var(--brand-soft);
+  color: var(--brand-light);
+}
+.fm-plan.is-actual .fm-plan-sel {
+  color: var(--muted);
+}
+.fm-plan-sel:hover,
+.fm-plan-act:hover {
+  color: var(--ink);
+}
+.fm-plan-pop {
+  position: absolute;
+  z-index: 95;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+  white-space: normal;
+}
+.fm-plan-h {
+  margin: 0 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.fm-plan-opt {
+  appearance: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.fm-plan-opt:hover {
+  background: var(--panel2);
+}
+.fm-plan-opt i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+}
+.fm-plan-opt[aria-checked="true"] {
+  background: var(--panel2);
+}
+.fm-plan-opt[aria-checked="true"] i {
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 3px var(--panel2), inset 0 0 0 8px var(--brand);
+}
+.fm-plan-opt b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.fm-plan-opt small,
+.fm-plan-cmp small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-plan-new {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--brand-light);
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-plan-cmp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 4px;
+  border-top: 1px solid var(--line);
+}
+.fm-plan-cmp b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.fm-switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel2);
+  cursor: pointer;
+}
+.fm-switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.12s;
+}
+.fm-switch[aria-checked="true"] {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.fm-switch[aria-checked="true"] i {
+  transform: translateX(18px);
+  background: #03241a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fm-switch i {
+    transition: none;
+  }
+}
+/* the banner under the bar while a scenario other than Baseline is active */
+.fm-banner {
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  font-size: 13px;
+  color: var(--muted);
+}
+.fm-banner b {
+  color: var(--brand-light);
+  font-weight: 600;
+}
+.fm-banner-n {
+  padding: 1px 8px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--brand-light);
+}
+.fm-banner-back {
+  appearance: none;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--brand-light);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fm-banner ~ .fm-stagebar {
+  top: 56px;
+}
+:root[data-theme="light"] .fm-banner b,
+:root[data-theme="light"] .fm-banner-n,
+:root[data-theme="light"] .fm-banner-back,
+:root[data-theme="light"] .fm-plan-new,
+:root[data-theme="light"] .fm-plan-act[aria-pressed="true"] {
+  color: #047857;
+}
+/* the calendar */
+.fm-range {
+  position: relative;
+}
+.fm-range-btn {
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.fm-range-pop {
+  position: fixed;
+  z-index: 95;
+  width: 640px;
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+}
+.fm-range-body {
+  display: flex;
+}
+.fm-range-presets {
+  flex: none;
+  width: 150px;
+  margin: 0;
+  padding: 10px;
+  list-style: none;
+  border-right: 1px solid var(--line);
+}
+.fm-range-presets button {
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.fm-range-presets button:hover {
+  background: var(--panel2);
+}
+.fm-range-presets button.on {
+  background: var(--brand-soft);
+  color: var(--brand-light);
+  font-weight: 600;
+}
+.fm-cal {
+  position: relative;
+  display: flex;
+  flex: 1;
+  gap: 18px;
+  padding: 14px 16px;
+}
+.fm-cal-nav {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.fm-cal-nav .btn {
+  pointer-events: auto;
+}
+.fm-cal-m {
+  flex: 1;
+  min-width: 0;
+}
+.fm-cal-t {
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.fm-cal-g {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+.fm-cal-w {
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.fm-cal-d {
+  appearance: none;
+  position: relative;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fm-cal-d:hover {
+  background: var(--panel2);
+}
+.fm-cal-d.in {
+  background: rgba(16, 185, 129, 0.2);
+}
+.fm-cal-d.end {
+  background: var(--brand);
+  color: #03241a;
+  font-weight: 700;
+}
+.fm-cal-d i,
+.fm-cal-key {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--brand-light);
+}
+.fm-cal-d i {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+}
+.fm-cal-d.end i {
+  background: #03241a;
+}
+.fm-range-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.fm-range-foot .btn {
+  min-height: 40px;
+}
+@media (max-width: 767px) {
+  .fm-range-pop {
+    position: fixed;
+    left: 0 !important;
+    right: 0;
+    bottom: 0;
+    top: auto !important;
+    width: auto;
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    z-index: 120;
+  }
+  .fm-range-body {
+    flex-direction: column;
+  }
+  .fm-range-presets {
+    display: flex;
+    width: auto;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .fm-range-presets button {
+    white-space: nowrap;
+  }
+  .fm-cal .fm-cal-m:nth-child(3) {
+    display: none;
+  }
+  .fm-cal-d {
+    height: 44px;
+  }
+  .fm-plan-pop {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: 64px;
+    width: auto;
+  }
+}

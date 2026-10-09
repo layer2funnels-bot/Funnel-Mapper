@@ -237,7 +237,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
             {ribbon && <span className="fm-ribbon">{ribbon}</span>}
           </div>
         ) : (
-          <div className={`fm-shape${art ? " art" : ""}`} aria-hidden="true">
+          <div className={`fm-form${art ? " art" : ""}`} aria-hidden="true">
             {glyph}
           </div>
         )}

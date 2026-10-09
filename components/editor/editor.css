@@ -8800,7 +8800,7 @@ dialog.fm-exportdlg {
   line-height: 14px;
   white-space: nowrap;
 }
-.fm-shape {
+.fm-form {
   position: absolute;
   display: grid;
   place-items: center;
@@ -8808,16 +8808,16 @@ dialog.fm-exportdlg {
   color: var(--cat-ink);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
 }
-.fam-source .fm-shape,
-.fam-goal .fm-shape {
+.fam-source .fm-form,
+.fam-goal .fm-form {
   inset: 0;
   border-radius: 50%;
 }
-.fam-message .fm-shape {
+.fam-message .fm-form {
   inset: 0;
   border-radius: 22px 22px 22px 6px;
 }
-.fam-logic .fm-shape {
+.fam-logic .fm-form {
   left: 11px;
   top: 11px;
   width: 50px;
@@ -8825,7 +8825,7 @@ dialog.fm-exportdlg {
   border-radius: 10px;
   transform: rotate(45deg);
 }
-.fam-action .fm-shape {
+.fam-action .fm-form {
   left: 9px;
   top: 9px;
   width: 44px;
@@ -8833,22 +8833,22 @@ dialog.fm-exportdlg {
   border-radius: 8px;
   transform: rotate(45deg);
 }
-.fam-logic .fm-shape > *,
-.fam-action .fm-shape > * {
+.fam-logic .fm-form > *,
+.fam-action .fm-form > * {
   transform: rotate(-45deg);
 }
 /* the owner's artwork is the whole shape (colour included) */
-.fm-shape.art {
+.fm-form.art {
   background: transparent;
   box-shadow: none;
 }
-.fm-shape.art .fm-art {
+.fm-form.art .fm-art {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
-.fam-action .fm-shape.art,
-.fam-logic .fm-shape.art {
+.fam-action .fm-form.art,
+.fam-logic .fm-form.art {
   inset: 0;
   left: 0;
   top: 0;
@@ -8857,14 +8857,14 @@ dialog.fm-exportdlg {
   transform: none;
   border-radius: 0;
 }
-.fam-action .fm-shape.art > *,
-.fam-logic .fm-shape.art > * {
+.fam-action .fm-form.art > *,
+.fam-logic .fm-form.art > * {
   transform: none;
 }
-.fam-goal .fm-shape {
+.fam-goal .fm-form {
   background: var(--c-goal);
 }
-.fm-blk.brand .fm-shape:not(.art) {
+.fm-blk.brand .fm-form:not(.art) {
   background: var(--tile);
   color: #fff;
 }
@@ -8893,9 +8893,11 @@ dialog.fm-exportdlg {
   background: transparent;
 }
 .fm-chip.warn {
+  display: grid;
+  place-items: center;
   width: 22px;
   padding: 0;
-  text-align: center;
+  line-height: 1;
   background: var(--attention);
   border-color: var(--attention);
   color: #241a03;
@@ -8957,55 +8959,55 @@ dialog.fm-exportdlg {
 }
 /* states: exactly one extra thing each */
 .fm-blk:hover:not(.sel) .fm-pbody,
-.fm-blk:hover:not(.sel) .fm-shape:not(.art) {
+.fm-blk:hover:not(.sel) .fm-form:not(.art) {
   outline: 1.5px dashed var(--brand);
   outline-offset: 3px;
 }
 .fm-blk.sel .fm-pbody,
-.fm-blk.sel .fm-shape:not(.art) {
+.fm-blk.sel .fm-form:not(.art) {
   box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(16, 185, 129, 0.16);
 }
-.fm-blk.sel .fm-shape.art {
+.fm-blk.sel .fm-form.art {
   box-shadow: none;
 }
-.fm-blk.sel .fm-shape.art .fm-art {
+.fm-blk.sel .fm-form.art .fm-art {
   filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
 }
 .fm-blk.sel.multi .fm-pbody,
-.fm-blk.sel.multi .fm-shape:not(.art) {
+.fm-blk.sel.multi .fm-form:not(.art) {
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.7);
 }
 .fm-blk.warn .fm-pbody,
-.fm-blk.warn .fm-shape:not(.art) {
+.fm-blk.warn .fm-form:not(.art) {
   box-shadow: 0 0 0 1.5px var(--attention);
 }
 .fm-blk.err .fm-pbody,
-.fm-blk.err .fm-shape:not(.art) {
+.fm-blk.err .fm-form:not(.art) {
   box-shadow: 0 0 0 1.5px var(--bad);
 }
 .fm-blk.leak .fm-pbody,
-.fm-blk.leak .fm-shape:not(.art) {
+.fm-blk.leak .fm-form:not(.art) {
   outline: 2px dashed #f97316;
   outline-offset: 5px;
 }
-.fm-blk.leak .fm-shape.art {
+.fm-blk.leak .fm-form.art {
   outline: 2px dashed #f97316;
   outline-offset: 5px;
   border-radius: 50%;
 }
 .fm-blk.sim-up .fm-pbody,
-.fm-blk.sim-up .fm-shape:not(.art) {
+.fm-blk.sim-up .fm-form:not(.art) {
   box-shadow: 0 0 0 2px var(--sim-up);
 }
 .fm-blk.sim-down .fm-pbody,
-.fm-blk.sim-down .fm-shape:not(.art) {
+.fm-blk.sim-down .fm-form:not(.art) {
   box-shadow: 0 0 0 2px var(--sim-down);
 }
 .fm-blk.dim {
   opacity: 0.28;
 }
 .fm-blk.spot .fm-pbody,
-.fm-blk.spot .fm-shape:not(.art) {
+.fm-blk.spot .fm-form:not(.art) {
   box-shadow: 0 0 0 3px var(--brand);
 }
 .fm-blk .fm-simchip {
@@ -9160,7 +9162,7 @@ dialog.fm-exportdlg {
 /* zoomed out, the name and the number chip grow a little (the stage sets --ck / --ckn from the zoom) so they stay readable */
 .fm-chip {
   transform: scale(var(--ck, 1));
-  transform-origin: 100% 100%;
+  transform-origin: 0 100%; /* grows away from the picture, never over its logo */
 }
 .fm-ntitle {
   transform: scale(var(--ckn, 1));
@@ -9168,4 +9170,12 @@ dialog.fm-exportdlg {
 }
 :root[data-theme="light"] .fm-chip.warn {
   color: #fff;
+}
+
+/* a tap on a block, a library tile or a button never paints a grey box */
+.fm-stage,
+.fm-side,
+.fm-insp,
+.fm-actionbar {
+  -webkit-tap-highlight-color: transparent;
 }

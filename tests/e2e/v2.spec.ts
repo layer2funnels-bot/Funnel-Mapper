@@ -318,8 +318,8 @@ test.describe("V2 finishing pass", () => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
     // V2: platform blocks use the owner's brand art on the map; pages and offers keep their window
-    await expect(node(page, "Instagram traffic").locator(".fm-shape svg.fm-bmark, .fm-shape img")).toHaveCount(1);
-    await expect(node(page, "Quiz funnel").locator(".fm-shape svg.fm-bmark")).toHaveCount(0);
+    await expect(node(page, "Instagram traffic").locator(".fm-form svg.fm-bmark, .fm-form img")).toHaveCount(1);
+    await expect(node(page, "Quiz funnel").locator(".fm-form svg.fm-bmark")).toHaveCount(0);
     await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
     await expect(page.locator(".fm-sb-t svg.fm-bmark, .fm-sb-t img").first()).toBeVisible();
   });

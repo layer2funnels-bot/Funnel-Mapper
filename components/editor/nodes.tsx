@@ -113,6 +113,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const spot = useEditor((s) => s.spot);
   const outOfStage = useEditor((s) => !!s.stageIds && !s.stageIds.includes(id));
   const k = useEditor((s) => viewK(s.opts));
+  const build = useEditor((s) => s.opts.build); // the optional build-status layer
   const shared = useEditor((s) => s.shared);
   const simBase = useEditor((s) => s.simBase);
   const cmp = useEditor((s) => s.simBase ?? s.compareBase); // what the changes are measured against: the simulation start, or Baseline while Compare is on
@@ -125,10 +126,10 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const { hasIn, hasOut, hasAlt, labels } = portsFor(n.type);
   const four = fourPorts(n.type);
   const logic = T.cat === "logic";
-  const cc = CATCOLOR[T.color ?? T.cat];
+  const cc = n.s?.accent && /^#[0-9a-f]{6}$/i.test(n.s.accent) ? n.s.accent : CATCOLOR[T.color ?? T.cat];
   const V = visualOf(n.type),
     F = FAMILIES[V.family];
-  const chip = blockChip(n, R, cur, k, view, basis);
+  const chip = n.s?.hideNum ? null : blockChip(n, R, cur, k, view, basis);
   const pl = perf ? perfLine(n, R, cur, k, basis) : null;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
   // Simulate: how this step moved against the baseline (only while simulating, and not in a presentation)
@@ -197,7 +198,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
               </span>
               {typeCaption(n.type)}
             </span>
-            {!shared && <StatusDot status={n.status} />}
+            {!shared && build && <StatusDot status={n.status} />}
             {internal && (
               <span className="fm-nnote" title="Has internal notes (Plan tab)">
                 <Icon name="note" size={11} />
@@ -213,7 +214,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
       ) : (
         <>
       {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />}
-      {!shared && <StatusDot status={n.status} />}
+      {!shared && build && <StatusDot status={n.status} />}
       <div className="fm-nhead">
         {artOf(n.type) && !n.s?.icon ? (
           <span className="fm-nicon art">

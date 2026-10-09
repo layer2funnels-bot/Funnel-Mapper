@@ -42,6 +42,10 @@ export interface NodeStyle {
   pad?: number;
   /** Block icon override (key of lib/icons ICONS). */
   icon?: string;
+  /** Accent colour: an optional override of the family colour (glyph, bar, disc). */
+  accent?: string;
+  /** Hide this block's number (People / Money views). */
+  hideNum?: boolean;
 }
 
 export type EdgePath = "curve" | "straight" | "elbow";

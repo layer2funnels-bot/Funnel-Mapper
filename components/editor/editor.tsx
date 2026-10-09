@@ -45,7 +45,7 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, setMapView, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
+  useEditor, setMapView, openSettingsBox, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
@@ -58,6 +58,7 @@ import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
 import { EditorRail, LayersMenu, ViewSwitch } from "./chrome";
 import { EditingBanner, PlanControl } from "./plan-control";
+import { SettingsBox } from "./settings-box";
 import { RangePicker } from "./range-picker";
 import { Outline } from "./outline";
 import { WorkspaceBlocks } from "./workspace-blocks";
@@ -461,6 +462,16 @@ function EditorInner(props: EditorProps) {
         ev.preventDefault();
         startRename(useEditor.getState().selNodes[0]);
         return;
+      }
+      // Enter on one selected block opens its settings box (double-click does too)
+      if (ev.key === "Enter" && !mod && !ev.shiftKey && !ev.altKey && !useEditor.getState().settingsBox && useEditor.getState().selNodes.length === 1 && !useEditor.getState().shared) {
+        const st = useEditor.getState();
+        const sel1 = st.nodes.find((x) => x.id === st.selNodes[0]);
+        if (sel1 && !isAnnot(sel1.type) && sel1.type !== "widget") {
+          ev.preventDefault();
+          openSettingsBox(sel1.id);
+          return;
+        }
       }
       if (mod && k === "a") {
         ev.preventDefault();
@@ -1131,6 +1142,7 @@ function EditorInner(props: EditorProps) {
         )}
         <ZoomControls />
         <QuickAdd />
+        <SettingsBox />
         <LineMenu />
       </section>
 

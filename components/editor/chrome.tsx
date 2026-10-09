@@ -81,6 +81,7 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
 export function LayersMenu() {
   const notes = useEditor((s) => s.opts.notes);
   const checks = useEditor((s) => s.opts.checks);
+  const build = useEditor((s) => s.opts.build);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -109,6 +110,9 @@ export function LayersMenu() {
           </label>
           <label>
             <input type="checkbox" checked={checks} onChange={(e) => setOpt("checks", e.target.checked)} /> Checklist
+          </label>
+          <label title="Planned, in progress or live on each block. Select several blocks to set them together.">
+            <input type="checkbox" checked={build} onChange={(e) => setOpt("build", e.target.checked)} /> Build status
           </label>
         </div>
       )}

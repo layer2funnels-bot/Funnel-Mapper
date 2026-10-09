@@ -38,6 +38,8 @@ export interface ViewOpts {
   period: "day" | "week" | "month" | "year";
   /** The calendar range the Plan numbers cover (null = this calendar month). Actual mode shows the real entries for the same dates. */
   range: DateRange | null;
+  /** Optional layer: each block shows its build status (planned, in progress, live); several selected blocks are set together. */
+  build: boolean;
   /** Compare with Baseline: when a scenario is active, blocks and the strip show the change from Baseline (off by default). */
   compare: boolean;
   /** Background of exported map images (PNG / SVG). */
@@ -125,6 +127,8 @@ export interface EditorState {
   assetsStatus: "idle" | "loading" | "ready" | "error";
   /** Simulate: the map as it was when simulating started (null = not simulating). Everything shown as a change is live minus this. */
   simBase: SimBase | null;
+  /** The block whose settings box is open (double-click or Enter on a selected block). */
+  settingsBox: string | null;
   /** The Baseline run (what-if levers at neutral) while Compare with Baseline is on and a scenario is active. */
   compareBase: SimBase | null;
   /** Simulate: the people-flow animation is running. */
@@ -192,7 +196,7 @@ export interface EditorState {
 const OPTS_KEY = "fm-editor-opts";
 const viewFlags = (view: MapView) => ({ view, nums: view !== "clean", thick: view !== "clean" });
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
@@ -233,6 +237,7 @@ export const useEditor = create<EditorState>(() => ({
   workspaceBlocks: [],
   assetsStatus: "idle",
   simBase: null,
+  settingsBox: null,
   compareBase: null,
   simPlay: false,
   simBefore: false,
@@ -249,7 +254,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -389,6 +394,27 @@ export function replaceContent(graph: Pick<FunnelGraph, "nodes" | "edges">, sett
   apply({ nodes: graph.nodes, edges: graph.edges, settings: settings ?? get().settings, ...(name != null ? { name } : {}) }, { discrete: true });
   set({ selNodes: [], selEdge: null });
   commitHistory();
+}
+
+/* ---------------- block settings box ---------------- */
+type BoxSnap = Pick<FunnelNode, "p" | "name" | "s" | "desc" | "url" | "checklist" | "type">;
+let boxSnap: { id: string; snap: BoxSnap } | null = null;
+/** Open the settings box of one block (not for notes, shapes or widgets). Remembers how the block was, so Esc can put it back. */
+export function openSettingsBox(id: string) {
+  const n = get().nodes.find((x) => x.id === id);
+  if (!n || isAnnot(n.type) || n.type === "widget") return;
+  boxSnap = { id, snap: { p: { ...n.p }, name: n.name, s: n.s ? { ...n.s } : undefined, desc: n.desc, url: n.url, checklist: n.checklist ? n.checklist.map((c) => ({ ...c })) : undefined, type: n.type } };
+  set({ settingsBox: id, selNodes: [id], selEdge: null });
+}
+/** Close the settings box. `revert` puts the block back as it was when the box opened (Esc); Enter and clicking away keep the edits. */
+export function closeSettingsBox(revert = false) {
+  const b = boxSnap;
+  boxSnap = null;
+  if (revert && b && !get().readOnly) {
+    // the type is never changed by a revert (a page type change is its own undo step)
+    apply({ nodes: get().nodes.map((x) => (x.id === b.id ? { ...x, p: b.snap.p, name: b.snap.name, s: b.snap.s, desc: b.snap.desc, url: b.snap.url, checklist: b.snap.checklist } : x)) });
+  }
+  set({ settingsBox: null });
 }
 
 /* ---------------- history ---------------- */

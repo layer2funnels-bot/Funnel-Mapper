@@ -145,7 +145,7 @@ function NodeInspector({ n }: { n: FunnelNode }) {
   const choose = setInspTab;
   return (
     <>
-      <ScopeHeader title={n.name || T.label} sub={T.label} status={flow && !shared ? (n.status ?? "planned") : undefined} locked={n.locked} onStatus={ro || n.locked ? undefined : (v) => updateNode(n.id, { status: v })} />
+      <ScopeHeader title={n.name || T.label} sub={T.label} locked={n.locked} />
       <div className="fm-insp-tabs" role="tablist" aria-label="Element panels">
         {tabs.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={cur === k} onClick={() => choose(k)}>
@@ -336,7 +336,7 @@ function NodeDetails({ n }: { n: FunnelNode }) {
   );
 }
 
-function InternalNotes({ n }: { n: FunnelNode }) {
+export function InternalNotes({ n }: { n: FunnelNode }) {
   const ro = useEditor((s) => s.readOnly);
   return (
     <RichTextField
@@ -724,8 +724,24 @@ function EdgeInspector({ e }: { e: FunnelEdge }) {
   );
 }
 
+/** The optional build-status layer: set planned / in progress / live on every selected block at once. */
+function BuildStatusBar() {
+  const ids = useEditor((s) => s.selNodes);
+  const nodes = useEditor((s) => s.nodes);
+  const flow = nodes.filter((n) => ids.includes(n.id) && !isAnnot(n.type));
+  const same = flow.length > 0 && new Set(flow.map((n) => n.status ?? "planned")).size === 1 ? (flow[0].status ?? "planned") : "";
+  return (
+    <div className="field">
+      <span className="lbl">Build status</span>
+      <Seg<StepStatus> label="Build status" value={same as StepStatus} options={STEP_STATUSES.map(([v, l]) => [v, l] as [StepStatus, string])} onChange={(v) => flow.forEach((n) => updateNode(n.id, { status: v }))} />
+      <p className="help">Shown on each block while the Build status layer is on, and in Reports → Published status.</p>
+    </div>
+  );
+}
+
 function MultiInspector({ count }: { count: number }) {
   const ro = useEditor((s) => s.readOnly);
+  const build = useEditor((s) => s.opts.build);
   const first = useEditor((s) => s.nodes.find((n) => n.id === s.selNodes[0]));
   const sameType = useEditor((s) => s.selNodes.length > 1 && new Set(s.nodes.filter((n) => s.selNodes.includes(n.id)).map((n) => n.type)).size === 1);
   const [tab, setTab] = useState<"style" | "arrange" | "details">("style");
@@ -746,6 +762,7 @@ function MultiInspector({ count }: { count: number }) {
         ))}
       </div>
       <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
+        {build && <BuildStatusBar />}
         {cur === "style" && first && <MultiStyle />}
         {cur === "arrange" && (
           <>

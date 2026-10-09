@@ -59,6 +59,7 @@ import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
 import { EditorRail, LayersMenu, ViewSwitch } from "./chrome";
 import { EditingBanner, PlanControl } from "./plan-control";
+import { ActualsHost } from "./actuals-host";
 import { SettingsBox } from "./settings-box";
 import { RangePicker } from "./range-picker";
 import { Outline } from "./outline";
@@ -1156,6 +1157,7 @@ function EditorInner(props: EditorProps) {
         <ZoomControls />
         <QuickAdd />
         <SettingsBox />
+        <ActualsHost />
         <LineMenu />
       </section>
 

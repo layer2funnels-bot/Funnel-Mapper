@@ -13,13 +13,16 @@ import { placePeek, type Rect } from "@/lib/peek-place";
 import { cleanStyle } from "@/lib/style";
 import type { FunnelNode } from "@/lib/graph";
 import { closeSettingsBox, deleteSelection, duplicateSelection, retypeNode, selectNodes, setLocked, setOpt, updateNode, updateParams, useEditor, viewK } from "@/lib/editor/store";
+import { rangeScale } from "@/lib/range";
+import { actualsInRange } from "@/lib/actual-result";
 import { NumInput, Seg, TextField } from "./fields";
+import { saveActual } from "./actuals-host";
 import { ChecklistEditor } from "./style-panel";
 import { InternalNotes } from "./inspector";
 import { ThumbnailField } from "./thumbnail-field";
 import { WaitField } from "./wait-field";
 
-type Tab = "settings" | "page" | "pricing" | "style" | "notes";
+type Tab = "actual" | "settings" | "page" | "pricing" | "style" | "notes";
 const SWATCHES = ["#A78BFA", "#10B981", "#FB923C", "#60A5FA", "#2DD4BF", "#FBBF24", "#94A3B8"];
 const rect = (r: DOMRect): Rect => ({ x: r.left, y: r.top, w: r.width, h: r.height });
 
@@ -68,7 +71,9 @@ function Box({ n }: { n: FunnelNode }) {
   const cur = useEditor((s) => s.settings.currency);
   const r = useEditor((s) => s.R.N[n.id]);
   const k = useEditor((s) => viewK(s.opts));
-  const [tab, setTab] = useState<Tab>("settings");
+  const view = useEditor((s) => s.actualView);
+  const rows = useEditor((s) => s.actuals);
+  const [tab, setTab] = useState<Tab>(view && !n.locked && !isAnnotType(n.type) ? "actual" : "settings");
   const [pos, setPos] = useState<{ left: number; top: number; w: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const P = (key: string) => (v: number | string | boolean) => updateParams(n.id, { [key]: v });
@@ -78,7 +83,7 @@ function Box({ n }: { n: FunnelNode }) {
     isCond = base === "cond" || base === "split",
     isTraffic = T.cat === "traffic",
     isAction = T.cat === "action";
-  const tabs: [Tab, string][] = [["settings", "Settings"], ...(isPage ? ([["page", "Page"]] as [Tab, string][]) : isOffer ? ([["pricing", "Pricing"]] as [Tab, string][]) : []), ["style", "Style"], ["notes", "Notes"]];
+  const tabs: [Tab, string][] = [...(view && !ro ? ([["actual", "Actual"]] as [Tab, string][]) : []), ["settings", "Settings"], ...(isPage ? ([["page", "Page"]] as [Tab, string][]) : isOffer ? ([["pricing", "Pricing"]] as [Tab, string][]) : []), ["style", "Style"], ["notes", "Notes"]];
   const close = (revert: boolean) => {
     closeSettingsBox(revert);
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`.react-flow__node[data-id="${n.id}"]`)?.focus());
@@ -176,6 +181,7 @@ function Box({ n }: { n: FunnelNode }) {
       </div>
       <fieldset className="fm-sbx-body" disabled={ro || !!n.locked}>
         {n.locked && !ro && <p className="fm-sbx-note">Locked. Unlock it below to change it.</p>}
+        {tab === "actual" && view && <ActualTab n={n} view={view} rows={rows ?? []} />}
         {tab === "settings" && (
           <>
             {isCond && base === "cond" && <TextField label="Question" value={n.name} onChange={(v) => updateNode(n.id, { name: v })} />}
@@ -313,5 +319,80 @@ function Box({ n }: { n: FunnelNode }) {
         </button>
       </footer>
     </div>
+  );
+}
+
+const isAnnotType = (t: string) => ["note", "label", "shape", "image", "checklist", "widget", "frame"].includes(t);
+
+/** The block's Actual tab: what really happened for the dates on the calendar. Saves as you go; the difference from Plan is signed. */
+function ActualTab({ n, view, rows }: { n: FunnelNode; view: { start: string; end: string; label: string }; rows: import("@/lib/schemas").ActualRowDb[] }) {
+  const T = typeOf(n.type);
+  const base = baseOf(n.type);
+  const r = useEditor((s) => s.R.N[n.id]);
+  const cur = useEditor((s) => s.settings.currency);
+  const exact = actualsInRange(rows, view.start, view.end).filter((x) => x.node_id === n.id);
+  const mine = rows.find((x) => x.node_id === n.id && x.period_start === view.start && x.period_end === view.end);
+  const isTraffic = T.cat === "traffic",
+    isOffer = T.cat === "offer";
+  const [v, setV] = useState({ visitors: mine?.visitors ?? null, conversions: mine?.conversions ?? null, revenue: mine?.revenue ?? null, spend: mine?.spend ?? null } as Record<"visitors" | "conversions" | "revenue" | "spend", number | null>);
+  const [state, setState] = useState<"" | "saving" | "saved">("");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const set = (key: keyof typeof v, x: number) => {
+    const next = { ...v, [key]: Number.isFinite(x) ? x : null };
+    setV(next);
+    if (timer.current) clearTimeout(timer.current);
+    setState("saving");
+    timer.current = setTimeout(async () => setState((await saveActual(n.id, view, next)) ? "saved" : ""), 500);
+  };
+  useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
+  const scale = rangeScale({ start: view.start, end: view.end });
+  const planIn = r ? (isTraffic ? r.out : r.inflow) * scale : 0;
+  const planRate = r && r.inflow > 0 ? r.out / r.inflow : NaN;
+  const actRate = v.visitors && v.conversions != null ? v.conversions / v.visitors : NaN;
+  const diffPts = (actRate - planRate) * 100;
+  const diffIn = planIn > 0 && v.visitors != null ? (v.visitors / planIn - 1) * 100 : NaN;
+  const chip = (d: number, unit: string, text: string) => (Number.isFinite(d) ? <p className={`fm-sbx-diff ${d < -0.05 ? "down" : d > 0.05 ? "up" : ""}`}>{text} <b>{d < -0.05 ? "▼" : d > 0.05 ? "▲" : "="} {d > 0 ? "+" : d < 0 ? "−" : ""}{nf(Math.abs(d), 1)}{unit}</b></p> : null);
+  void base;
+  void exact;
+  return (
+    <>
+      <p className="fm-sbx-sub">Real numbers for {view.label}</p>
+      <div className="fm-sbx-f">
+        <span className="lbl">{isTraffic ? "Visits" : "People in"}</span>
+        <span className="fm-sbx-unit">
+          <NumInput value={v.visitors ?? undefined} onChange={(x) => set("visitors", x)} min={0} aria-label={isTraffic ? "Visits" : "People in"} />
+          <span aria-hidden="true">{isTraffic ? "visits" : "people"}</span>
+        </span>
+        {chip(diffIn, "%", `Plan ${ppl(planIn)}`)}
+      </div>
+      {isTraffic ? (
+        <div className="fm-sbx-f">
+          <span className="lbl">Spend</span>
+          <span className="fm-sbx-unit">
+            <NumInput value={v.spend ?? undefined} onChange={(x) => set("spend", x)} min={0} aria-label="Spend" />
+            <span aria-hidden="true">{cur}</span>
+          </span>
+        </div>
+      ) : (
+        <div className="fm-sbx-f">
+          <span className="lbl">{isOffer ? "People who bought" : "People who moved on"}</span>
+          <span className="fm-sbx-unit">
+            <NumInput value={v.conversions ?? undefined} onChange={(x) => set("conversions", x)} min={0} aria-label={isOffer ? "People who bought" : "People who moved on"} />
+            <span aria-hidden="true">people</span>
+          </span>
+          {Number.isFinite(actRate) && chip(diffPts, " pts", `${nf(actRate * 100, 0)}% ${isOffer ? "bought" : "moved on"} · Plan ${nf(planRate * 100, 0)}%`)}
+        </div>
+      )}
+      {isOffer && (
+        <div className="fm-sbx-f">
+          <span className="lbl">Revenue</span>
+          <span className="fm-sbx-unit">
+            <NumInput value={v.revenue ?? undefined} onChange={(x) => set("revenue", x)} min={0} aria-label="Revenue" />
+            <span aria-hidden="true">{cur}</span>
+          </span>
+        </div>
+      )}
+      <p className="fm-sbx-sub">Source: Entered by hand · {state === "saving" ? "saving…" : state === "saved" ? "saved" : "autosaves"}</p>
+    </>
   );
 }

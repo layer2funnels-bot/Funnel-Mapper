@@ -129,6 +129,8 @@ export interface EditorState {
   simBase: SimBase | null;
   /** The block whose settings box is open (double-click or Enter on a selected block). */
   settingsBox: string | null;
+  /** The "Enter numbers" dialog (Type it in, or Import CSV) opened from the Actual banner. */
+  actualsEntry: "type" | "csv" | null;
   /** The funnel's own status (Draft / Proposed / Live / Archived) and how to change it; set can be null for viewers and share links. */
   funnelCtl: { status: string; set: ((status: string) => void) | null };
   /** The Baseline run (what-if levers at neutral) while Compare with Baseline is on and a scenario is active. */
@@ -241,6 +243,7 @@ export const useEditor = create<EditorState>(() => ({
   simBase: null,
   funnelCtl: { status: "draft", set: null },
   settingsBox: null,
+  actualsEntry: null,
   compareBase: null,
   simPlay: false,
   simBefore: false,
@@ -1190,4 +1193,11 @@ export function markDirty() {
 
 export function setFunnelCtl(status: string, set: ((status: string) => void) | null) {
   useEditor.setState({ funnelCtl: { status, set } });
+}
+
+export function openActualsEntry(tab: "type" | "csv" = "type") {
+  useEditor.setState({ actualsEntry: tab });
+}
+export function closeActualsEntry() {
+  useEditor.setState({ actualsEntry: null });
 }

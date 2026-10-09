@@ -8659,3 +8659,57 @@ dialog.fm-exportdlg {
 :root[data-theme="light"] .fm-three b {
   color: var(--ink);
 }
+
+/* ---- Actual mode: banner + the block's Actual tab ---- */
+.fm-banner-actual {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.fm-banner-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.fm-banner-cta {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fm-banner-cta:hover {
+  background: var(--brand-hover);
+}
+.fm-sbx-diff {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-sbx-diff b {
+  margin-left: 4px;
+}
+.fm-sbx-diff.down b {
+  color: var(--neg);
+}
+.fm-sbx-diff.up b {
+  color: var(--good);
+}
+@media (max-width: 767px) {
+  .fm-banner-actual .fm-banner-cta,
+  .fm-banner-actual .fm-banner-back {
+    min-height: 44px;
+  }
+}

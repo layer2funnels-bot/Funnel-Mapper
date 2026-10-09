@@ -9,7 +9,8 @@ import { nf } from "@/lib/format";
 import { rangeLabel } from "@/lib/range";
 import { BASELINE, BASELINE_LONG, NEUTRAL_WHATIF, scenarioLabel } from "@/lib/scenario-label";
 import type { WhatIf } from "@/lib/graph";
-import { setActualView, setCompare, setSettings, useEditor, viewRange } from "@/lib/editor/store";
+import { openActualsEntry, setActualView, setCompare, setSettings, useEditor, viewRange } from "@/lib/editor/store";
+import { actualsInRange } from "@/lib/actual-result";
 import { ensureActuals } from "./assets";
 
 const LEVERS: [keyof WhatIf, string][] = [
@@ -119,9 +120,11 @@ export function PlanControl({ showActual, onNewScenario }: { showActual: boolean
 
 /** Slim banner under the bar while a scenario other than Baseline is active: Baseline is untouched, one click back. */
 export function EditingBanner() {
+  const actual = useEditor((s) => s.actualView);
   const w = useEditor((s) => s.settings.whatif);
   const list = useEditor((s) => s.settings.scenarios);
   const label = scenarioLabel({ whatif: w, scenarios: list });
+  if (actual) return <ActualBanner />;
   if (label === BASELINE) return null;
   const n = changeCount(w);
   return (
@@ -137,6 +140,33 @@ export function EditingBanner() {
       <button type="button" className="fm-banner-back" onClick={() => setSettings({ whatif: { ...NEUTRAL_WHATIF } })}>
         Back to Baseline
       </button>
+    </div>
+  );
+}
+
+/** Actual mode: what the map is showing, and the two ways to put real numbers in (the block's Actual tab is the third). */
+function ActualBanner() {
+  const view = useEditor((s) => s.actualView);
+  const rows = useEditor((s) => s.actuals);
+  const ro = useEditor((s) => s.readOnly);
+  if (!view) return null;
+  const inRange = actualsInRange(rows ?? [], view.start, view.end);
+  const steps = new Set(inRange.map((r) => r.node_id)).size;
+  return (
+    <div className="fm-banner fm-banner-actual" role="status">
+      <span className="fm-banner-tag">ACTUAL</span>
+      <span>{steps === 0 ? "No real numbers for these dates yet." : `Real numbers for ${view.label} · ${steps} ${steps === 1 ? "step" : "steps"} entered. A dash means nothing was entered.`}</span>
+      <span className="flex-1" />
+      {!ro && (
+        <>
+          <button type="button" className="fm-banner-cta" onClick={() => openActualsEntry("type")}>
+            Enter numbers
+          </button>
+          <button type="button" className="fm-banner-back" onClick={() => openActualsEntry("csv")}>
+            Import CSV
+          </button>
+        </>
+      )}
     </div>
   );
 }

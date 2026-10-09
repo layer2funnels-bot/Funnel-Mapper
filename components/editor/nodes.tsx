@@ -142,7 +142,8 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
   const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", tone && `sim-${tone}`, n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
-  const sub = V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
+  // Clean and Money keep the caption to the block's type: the one number a view shows is the chip (V3 "one number per block")
+  const sub = view !== "people" ? T.label : V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
       {four ? (

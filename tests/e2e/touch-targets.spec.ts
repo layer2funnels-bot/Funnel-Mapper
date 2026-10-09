@@ -23,7 +23,7 @@ async function offenders(page: Page) {
   });
 }
 
-for (const [w, h] of [[390, 844], [768, 1024]] as const) {
+for (const [w, h] of [[390, 844], [430, 932], [768, 1024]] as const) {
   test(`${w}px: interactive controls are at least 40px`, async ({ browser }) => {
     test.setTimeout(240_000);
     const g = builtinTemplate("quiz").graph;

@@ -117,4 +117,20 @@ test.describe("Page URL to thumbnail", () => {
     expect(await p.content()).not.toContain("shot-");
     await ctx.close();
   });
+
+  test("the preview opens from the picture only: hovering the name or the number chip never opens it", async ({ page }) => {
+    const { id } = await createFunnel({ template: "quiz" });
+    await openEditor(page, id);
+    await capture(page, "Quiz funnel");
+    await expect(shotOf(page, "Quiz funnel")).toBeVisible();
+    await page.mouse.move(5, 300);
+    await node(page, "Quiz funnel").locator(".fm-ntitle").hover();
+    await page.waitForTimeout(700);
+    await expect(page.locator(".fm-peek")).toHaveCount(0);
+    await node(page, "Quiz funnel").locator(".fm-chip").hover();
+    await page.waitForTimeout(700);
+    await expect(page.locator(".fm-peek")).toHaveCount(0);
+    await node(page, "Quiz funnel").locator(".fm-picwin").hover();
+    await expect(page.locator(".fm-peek")).toBeVisible();
+  });
 });

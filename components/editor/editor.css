@@ -9166,3 +9166,6 @@ dialog.fm-exportdlg {
   transform: scale(var(--ckn, 1));
   transform-origin: 50% 0;
 }
+:root[data-theme="light"] .fm-chip.warn {
+  color: #fff;
+}

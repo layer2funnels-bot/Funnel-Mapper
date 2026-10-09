@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GraphThumb } from "@/components/graph-thumb";
 import { Icon } from "@/components/icon";
-import { PageHeader, Stat } from "@/components/page-header";
+import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { money, moneyShort, ratio, timeAgo } from "@/lib/format";
@@ -66,9 +66,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const latest = fs[0];
   // health for the funnels people touched most recently (parsed from the saved map, same checks as the editor)
   const checked = fs.slice(0, 40).map((f) => ({ f, checks: healthChecks(parseGraph(f.graph)) }));
-  const attention = checked.filter((x) => x.checks.length > 0).slice(0, 5);
-  const recent = fs.slice(0, 3);
-  const perClient = (["active", "proposal", "lead", "paused", "past"] as const).map((s) => ({ s, n: cl.filter((c) => c.status === s).length }));
+  const attention = checked.filter((x) => x.checks.length > 0).slice(0, 3);
+    const perClient = (["active", "proposal", "lead", "paused", "past"] as const).map((s) => ({ s, n: cl.filter((c) => c.status === s).length }));
 
   const weekday = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   const blocks = (f: (typeof fs)[number]) => parseGraph(f.graph).nodes.filter((n) => typeOf(n.type)?.cat !== "annot").length;
@@ -76,77 +75,101 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const losing = fs.filter((f) => (sum(f).profit ?? 0) < 0 && f.status !== "draft").slice(0, 2);
   const unpriced = cl.filter((c) => c.status !== "past" && pricingValue(c) <= 0 && fs.some((f) => f.client_id === c.id)).slice(0, 2);
 
+  const cont = fs[0];
+  const contSum = cont ? sum(cont) : {};
+  const tot = (rows: { cur: string; v: number }[]) => {
+    const list = byCurrencyRows(rows).filter((r) => Math.abs(r.v) > 0.005);
+    return list.length ? list.map((r) => moneyShort(r.v, r.cur)).join(" · ") : money(0, workspace.default_currency);
+  };
+
   return (
-    <div className="mx-auto max-w-[1280px]">
+    <div className="mx-auto max-w-[1180px]">
       <PageHeader eyebrow={weekday} title={`${greet}${first ? `, ${first}` : ""}`}>
         <HomeRangePicker current={range.key} label={range.label} from={range.from} to={range.to} />
       </PageHeader>
 
-      <section aria-label="Totals" className="fm-kgrid mb-9">
-        <Stat label="Active clients" value={active.length} hint={`${pipeline.length} in the pipeline · ${cl.length} total`} />
-        <Stat label="Live funnels" value={live.length} hint={`${proposed.length} proposed · ${fs.length} total`} />
-        <Stat
-          label={`Planned revenue · ${range.label}`}
-          value={byCurrency(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })), workspace.default_currency)}
-          hint={
-            <>
-              <span className="fm-tag plan">Plan</span> live funnels · {k === 1 ? "1 month" : `${k} months`} · profit {byCurrencyText(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}
-              {(acts ?? []).length > 0 && (
-                <span className="mt-1 block">
-                  <span className="fm-tag actual">Actual</span> recorded {byCurrencyText((acts ?? []).map((a) => ({ cur: curOf(fs.find((f) => f.id === a.funnel_id)!), v: Number(a.revenue ?? 0) })))}
-                </span>
-              )}
-            </>
-          }
-        />
-        <Stat
-          label={`Agency fees · ${range.label}`}
-          value={byCurrency(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })), workspace.default_currency)}
-          hint={`Agency MRR ${byCurrencyText(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })))} / mo · client funnel MRR ${byCurrencyText(live.map((f) => ({ cur: curOf(f), v: sum(f).mrr ?? 0 })))} / mo`}
-        />
-      </section>
-
-      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0 space-y-10">
-          <section aria-labelledby="resume-h">
-            <div className="fm-secth">
-              <h2 id="resume-h">Pick up where you left off</h2>
-              <Link href="/funnels">All funnels</Link>
+      {cont ? (
+        <section aria-labelledby="resume-h" className="fm-hero">
+          <Link href={`/funnels/${cont.id}`} className="fm-hero-thumb" aria-label={`Open ${cont.name}`}>
+            <GraphThumb graph={cont.graph} settings={cont.settings} name={cont.name} height={190} className="h-[190px] w-full" />
+          </Link>
+          <div className="fm-hero-body">
+            <span className="fm-hero-eyebrow" id="resume-h">Continue where you left off</span>
+            <div className="fm-hero-title">
+              <h2 title={cont.name}>{cont.name}</h2>
+              <StatusPill status={cont.status} />
             </div>
-            {recent.length === 0 ? (
-              <p className="fm-empty-line">No funnels yet. Create a client, then map their first funnel.</p>
-            ) : (
-              <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
-                {recent.map((f) => (
-                  <li key={f.id}>
-                    <Link href={`/funnels/${f.id}`} className="fm-fcard">
-                      <span className="fm-fthumb">
-                        <GraphThumb graph={f.graph} settings={f.settings} name={f.name} height={118} className="h-[118px] w-full" />
-                        <span className="fm-fchip">{blocks(f)} blocks</span>
-                      </span>
-                      <span className="fm-frow">
-                        <b title={f.name}>{f.name}</b>
-                        <StatusPill status={f.status} />
-                      </span>
-                      <span className="fm-frow sub">
-                        <span className="truncate">
-                          {clientById[f.client_id]?.name} · edited {timeAgo(f.updated_at)}
-                        </span>
-                        <span className="shrink-0 text-ink">
-                          <b className="font-semibold">{money(sum(f).rev, curOf(f))}</b> / mo
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+            <p className="fm-hero-sub">
+              {clientById[cont.client_id]?.name} · {blocks(cont)} blocks · edited {timeAgo(cont.updated_at)}
+            </p>
+            <dl className="fm-hero-kpis">
+              <div>
+                <dt>Revenue / mo</dt>
+                <dd>{money(contSum.rev, curOf(cont))}</dd>
+              </div>
+              <div>
+                <dt>Profit / mo</dt>
+                <dd className={(contSum.profit ?? 0) < 0 ? "text-neg" : "text-good"}>{money(contSum.profit, curOf(cont))}</dd>
+              </div>
+              <div>
+                <dt>ROAS</dt>
+                <dd>{ratio(contSum.roas)}</dd>
+              </div>
+            </dl>
+            <div className="fm-hero-actions">
+              <Link href={`/funnels/${cont.id}`} className="btn primary">
+                Continue mapping
+                <Icon name="chevronRight" size={15} />
+              </Link>
+              <Link href={`/funnels/${cont.id}?view=reports`} className="btn">
+                Reports
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="fm-hero empty">
+          <p className="fm-empty-line">No funnels yet. Create a client, then map their first funnel.</p>
+        </section>
+      )}
 
+      <dl aria-label="Totals" className="fm-tot">
+        <div>
+          <dt>Active clients</dt>
+          <dd>{active.length}</dd>
+          <small>{pipeline.length} in the pipeline · {cl.length} total</small>
+        </div>
+        <div>
+          <dt>Live funnels</dt>
+          <dd>{live.length}</dd>
+          <small>{proposed.length} proposed · {fs.length} total</small>
+        </div>
+        <div>
+          <dt>Planned revenue · {range.label}</dt>
+          <dd>{tot(live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })))}</dd>
+          <small>
+            <span className="fm-tag plan">Plan</span> profit {tot(live.map((f) => ({ cur: curOf(f), v: (sum(f).profit ?? 0) * k })))}
+            {(acts ?? []).length > 0 && (
+              <>
+                {" "}
+                · <span className="fm-tag actual">Actual</span> {byCurrencyText((acts ?? []).map((a) => ({ cur: curOf(fs.find((f) => f.id === a.funnel_id)!), v: Number(a.revenue ?? 0) })))}
+              </>
+            )}
+          </small>
+        </div>
+        <div>
+          <dt>Agency fees · {range.label}</dt>
+          <dd>{tot(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) * k })))}</dd>
+          <small>MRR {tot(active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })))} / mo</small>
+        </div>
+      </dl>
+
+      <div className="fm-homegrid">
+        <div className="min-w-0">
           <section aria-labelledby="recent-h">
             <div className="fm-secth">
               <h2 id="recent-h">Recent funnels</h2>
-              <Link href="/funnels">View {fs.length}</Link>
+              <Link href="/funnels">View all {fs.length}</Link>
             </div>
             {fs.length === 0 ? null : (
               <div className="fm-tblwrap" tabIndex={0} role="region" aria-label="Recent funnels (scrolls sideways when it is wider than the screen)">
@@ -154,7 +177,6 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                   <thead>
                     <tr>
                       <th>Funnel</th>
-                      <th>Client</th>
                       <th>Status</th>
                       <th className="r">Revenue / mo</th>
                       <th className="r">Profit / mo</th>
@@ -169,8 +191,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                           <Link href={`/funnels/${f.id}`} className="font-semibold text-ink no-underline hover:text-brand">
                             {f.name}
                           </Link>
+                          <span className="fm-subcell">{clientById[f.client_id]?.name}</span>
                         </td>
-                        <td className="text-muted" data-label="Client">{clientById[f.client_id]?.name}</td>
                         <td data-label="Status">
                           <StatusPill status={f.status} />
                         </td>
@@ -187,7 +209,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           </section>
         </div>
 
-        <aside className="min-w-0 space-y-10">
+        <aside className="min-w-0 space-y-8">
           <section aria-labelledby="attn-h">
             <div className="fm-secth">
               <h2 id="attn-h">Needs attention</h2>

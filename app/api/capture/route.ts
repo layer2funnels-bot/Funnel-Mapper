@@ -32,7 +32,6 @@ export async function POST(req: Request) {
   const check = validateCaptureUrl(parsed.data.url);
   if (!check.ok) return NextResponse.json({ error: "bad_url", message: check.reason }, { status: 422 });
   const provider = captureProviderFromEnv();
-  if (!provider) return NextResponse.json({ error: "unavailable", message: "Automatic capture isn’t set up here. Upload a screenshot instead." }, { status: 503 });
   if (limited(user.id)) return NextResponse.json({ error: "rate_limited", message: "Too many captures. Try again in a minute." }, { status: 429 });
   try {
     const raw = await provider.capture(check.url);

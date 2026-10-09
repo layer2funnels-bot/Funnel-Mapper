@@ -12,19 +12,29 @@ describe("validateCaptureUrl (SSRF guard)", () => {
 });
 
 describe("captureProviderFromEnv", () => {
-  it("is off without a template containing {url}", () => {
-    expect(captureProviderFromEnv({})).toBeNull();
-    expect(captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/shot" })).toBeNull();
+  it("uses the built-in public services, in order, without a template containing {url}", async () => {
+    const seen: string[] = [];
+    const flaky = (async (u: string) => {
+      seen.push(u);
+      return seen.length === 1 ? new Response("no", { status: 502 }) : new Response(new Uint8Array([1]), { headers: { "content-type": "image/png" } });
+    }) as unknown as typeof fetch;
+    for (const env of [{}, { CAPTURE_URL_TEMPLATE: "https://x.test/shot" }]) {
+      seen.length = 0;
+      expect((await captureProviderFromEnv(env, flaky).capture("https://example.com/a?b=c")).type).toBe("image/png");
+      expect(seen).toHaveLength(2);
+      expect(seen[0]).toBe("https://image.thum.io/get/width/1280/crop/800/noanimate/https://example.com/a?b=c");
+      expect(seen[1]).toContain("api.microlink.io/?url=https%3A%2F%2Fexample.com%2Fa%3Fb%3Dc");
+    }
   });
   it("encodes the page address into the template and checks the answer is an image", async () => {
     let seen = "";
     const ok = (async (u: string) => ((seen = u), new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "image/png" } }))) as unknown as typeof fetch;
-    const p = captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/shot?url={url}" }, ok)!;
+    const p = captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/shot?url={url}" }, ok);
     expect((await p.capture("https://example.com/a?b=c")).type).toBe("image/png");
     expect(seen).toBe("https://x.test/shot?url=https%3A%2F%2Fexample.com%2Fa%3Fb%3Dc");
     const html = (async () => new Response("<html>", { headers: { "content-type": "text/html" } })) as unknown as typeof fetch;
-    await expect(captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/?u={url}" }, html)!.capture("https://example.com")).rejects.toMatchObject({ code: "bad_image" });
+    await expect(captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/?u={url}" }, html).capture("https://example.com")).rejects.toMatchObject({ code: "bad_image" });
     const down = (async () => new Response("no", { status: 500 })) as unknown as typeof fetch;
-    await expect(captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/?u={url}" }, down)!.capture("https://example.com")).rejects.toBeInstanceOf(CaptureError);
+    await expect(captureProviderFromEnv({ CAPTURE_URL_TEMPLATE: "https://x.test/?u={url}" }, down).capture("https://example.com")).rejects.toBeInstanceOf(CaptureError);
   });
 });

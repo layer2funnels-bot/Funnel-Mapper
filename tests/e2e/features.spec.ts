@@ -120,7 +120,7 @@ test.describe("share links (M5)", () => {
     await c.goto(link);
     await expect(c.locator(".react-flow__node")).toHaveCount(9);
     await expect(c.locator(".fm-kpis")).toHaveCount(0);
-    await expect(c.locator(".fm-chip").first()).toBeHidden();
+    await expect(c.locator(".fm-bchip").first()).toBeHidden();
     // the hide-numbers client view is the map alone: no panel, no numbers
     // can't edit when numbers are hidden, even if the link was created as editable
     await expect(c.getByPlaceholder(/^Search( \d+)? blocks$/)).toHaveCount(0);

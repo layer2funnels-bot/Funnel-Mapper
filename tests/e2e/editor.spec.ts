@@ -25,12 +25,12 @@ test.describe("funnel editor", () => {
   test("drag a block from the palette, and tap to add", async ({ page }) => {
     const { id } = await createFunnel();
     await openEditor(page, id);
-    await expect(page.locator(".fm-empty")).toBeVisible();
+    await expect(page.locator(".fm-canvas-empty")).toBeVisible();
     const stage = await centre(page, ".fm-stage");
     await (await paletteItem(page, "Landing page")).dragTo(page.locator(".react-flow__pane"), { targetPosition: { x: 300, y: 250 } });
     await expect(nodes(page)).toHaveCount(1);
     await expect(page.locator(".fm-insp h3")).toHaveText("Landing page");
-    await expect(page.locator(".fm-empty")).toBeHidden();
+    await expect(page.locator(".fm-canvas-empty")).toBeHidden();
     // dropped where the mouse was (± snapping), not at the centre
     const box = (await nodes(page).first().boundingBox())!;
     expect(box.x).toBeLessThan(stage.x);

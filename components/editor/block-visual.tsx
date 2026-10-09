@@ -11,7 +11,6 @@ import type { IconName } from "@/lib/icons";
 import { offerSubtitle, priceTab } from "@/lib/editor/labels";
 import { brandMarkOf } from "@/lib/brand-marks";
 import { placePeek } from "@/lib/peek-place";
-import { picPath } from "@/lib/shot-path";
 import { hostOf, safeUrl } from "@/lib/rich-text";
 import { selectNodes, setInspTab, useEditor } from "@/lib/editor/store";
 import { artOf, artSrc } from "@/lib/block-art";
@@ -32,16 +31,15 @@ function Shape({ s }: { s: WfShape }) {
 }
 
 /** The captured / uploaded page screenshot (private bucket, signed URL) drawn over the wireframe once it has loaded. */
-export function PageShot({ path, pic }: { path: string; pic?: boolean }) {
-  // on the map the block shows the 208 x 256 picture (lib/shot-path.ts); older captures have none, so the full image takes over
-  const [full, setFull] = useState(!pic);
+export function PageShot({ path }: { path: string }) {
+  // the block shows the whole page, fitted inside its picture (not the old cropped 208 x 256 file), so any upload or capture looks right
   const remote = /^https?:|^data:/.test(path);
-  const url = useSignedUrl("screenshots", remote ? null : full ? path : picPath(path), () => setFull(true));
+  const url = useSignedUrl("screenshots", remote ? null : path);
   const src = remote ? path : url;
   const [bad, setBad] = useState(false);
   if (!src || bad) return null;
   // eslint-disable-next-line @next/next/no-img-element -- user screenshot
-  return <img className="fm-shot" src={src} alt="" draggable={false} onError={() => (full ? setBad(true) : setFull(true))} />;
+  return <img className="fm-shot" src={src} alt="" draggable={false} onError={() => setBad(true)} />;
 }
 
 /** Who the hover preview belongs to (the canvas card passes it; library tiles and the inspector don't). */
@@ -108,7 +106,7 @@ function PagePeek({ path, owner, anchor, onEnter, onLeave, onClose }: { path: st
 }
 
 /** Semantic page wireframe (preview strip). A saved capture replaces it; the wireframe stays whenever there is none (or it fails to load). */
-export function WireframeStrip({ kind, accent, shot, owner, win, pic }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner; /** The design's browser window (inner SVG of a 66 × 65 page): replaces the old strip. */ win?: string; /** Fills a picture-first block (104 × 128): the capture, or the page drawing, anchored to the top. */ pic?: boolean }) {
+export function WireframeStrip({ kind, accent, shot, owner, win, pic }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner; /** The design's browser window (inner SVG of a 66 × 65 page): replaces the old strip. */ win?: string; /** Fills a picture-first block (104 × 128): the capture, or the page drawing, fitted inside it. */ pic?: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const openT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -172,7 +170,7 @@ export function WireframeStrip({ kind, accent, shot, owner, win, pic }: { kind: 
       {pic ? (
         <>
           {win && <svg viewBox="0 0 66 65" preserveAspectRatio="xMidYMin slice" aria-hidden="true" dangerouslySetInnerHTML={{ __html: win }} />}
-          {shot && <PageShot path={shot} pic />}
+          {shot && <PageShot path={shot} />}
         </>
       ) : win ? (
         <>

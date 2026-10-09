@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useState, useTransition } from "react";
-import { FormMessage, Submit } from "@/components/form-bits";
+import { FormMessage, Submit, useKeepingForm } from "@/components/form-bits";
 import { LogoUpload } from "@/components/logo-upload";
 import { CURRENCIES, CURRENCY_CODES } from "@/lib/graph";
 import { ROLE_HELP, ROLE_LABEL, roleLabel, type Role } from "@/lib/roles";
@@ -8,8 +8,9 @@ import { createIndependentAccountAction, inviteMemberAction, removeMemberAction,
 
 export function ProfileForm({ fullName, email, role }: { fullName: string; email: string; role: string }) {
   const [state, action] = useActionState(updateProfileAction, undefined);
+  const { submit, pending } = useKeepingForm(action);
   return (
-    <form action={action}>
+    <form onSubmit={submit}>
       <FormMessage state={state?.error ? state : state?.ok ? { message: "Saved" } : undefined} />
       <div className="row2">
         <div className="field">
@@ -23,15 +24,16 @@ export function ProfileForm({ fullName, email, role }: { fullName: string; email
           </p>
         </div>
       </div>
-      <Submit className="btn primary">Save</Submit>
+      <Submit className="btn primary" pending={pending}>Save</Submit>
     </form>
   );
 }
 
 export function WorkspaceForm({ agencyName, currency, disabled }: { agencyName: string; currency: string; disabled: boolean }) {
   const [state, action] = useActionState(updateWorkspaceAction, undefined);
+  const { submit, pending } = useKeepingForm(action);
   return (
-    <form action={action}>
+    <form onSubmit={submit}>
       <fieldset disabled={disabled} className="m-0 border-0 p-0">
         <FormMessage state={state?.error ? state : state?.ok ? { message: "Saved" } : undefined} />
         <div className="row2">
@@ -51,7 +53,7 @@ export function WorkspaceForm({ agencyName, currency, disabled }: { agencyName: 
             <span className="help">Used for new clients. Each client and funnel can override it.</span>
           </div>
         </div>
-        {!disabled && <Submit className="btn primary">Save branding</Submit>}
+        {!disabled && <Submit className="btn primary" pending={pending}>Save branding</Submit>}
       </fieldset>
     </form>
   );

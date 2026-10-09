@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { blankGraph, type FunnelEdge, type FunnelGraph, type FunnelNode } from "../../lib/graph";
 import { defaultsFor } from "../../lib/catalog";
 import { template13Graph } from "../../lib/templates13";
-import { createFunnel, node, openEditor } from "./helpers";
+import { createFunnel, drag, node, openEditor } from "./helpers";
 
 // The calm editor (V3): Clean shows no numbers, People and Money show one per block and one per line, labels never sit on a block's
 // name, and the quick settings box opens and closes from the keyboard.
@@ -216,11 +216,11 @@ test.describe("picture-first blocks", () => {
     const name = (await quiz.locator(".fm-ntitle > span:first-child").boundingBox())!;
     expect(name.y).toBeGreaterThanOrEqual(pic.y + pic.height - 1); // the name sits under the picture, not on it
     // exactly one chip on a block that has people
-    await expect(quiz.locator(".fm-chip")).toHaveCount(1);
-    await expect(quiz.locator(".fm-chip")).toContainText("2,300");
+    await expect(quiz.locator(".fm-bchip")).toHaveCount(1);
+    await expect(quiz.locator(".fm-bchip")).toContainText("2,300");
     // Clean: names and lines only
     await page.getByRole("button", { name: "Clean", exact: true }).click();
-    await expect(page.locator(".fm-chip:not(.warn)")).toHaveCount(0); // a "needs a fix" mark is a state, not a number
+    await expect(page.locator(".fm-bchip:not(.warn)")).toHaveCount(0); // a "needs a fix" mark is a state, not a number
     await expect(quiz.locator(".fm-ntitle")).toBeVisible();
   });
 
@@ -239,7 +239,7 @@ test.describe("picture-first blocks", () => {
     const { id } = await createFunnel({ template: "tripwire" });
     await openEditor(page, id, { panel: false });
     await page.getByRole("group", { name: /Plan or actual numbers/ }).getByRole("button", { name: "Actual", exact: true }).click();
-    const chip = node(page, "Fitness quiz").locator(".fm-chip");
+    const chip = node(page, "Fitness quiz").locator(".fm-bchip");
     await expect(chip).toHaveText("—");
     await chip.click();
     const pop = page.getByRole("dialog", { name: /Real number for Fitness quiz/ });
@@ -269,4 +269,61 @@ test("block artwork has no border or box, and platform blocks without a tile use
   });
   expect(bad).toEqual([]);
   for (const i of [0, 1, 2]) await expect(page.locator(`.react-flow__node[data-id="a${i}"] .fm-form svg.fm-bmark`)).toHaveCount(1);
+});
+
+test("a connected line can be moved to another dot or block without deleting it", async ({ page }) => {
+  const g = blankGraph();
+  g.nodes = [
+    { id: "a", type: "landing", name: "Start", x: 100, y: 100, p: defaultsFor("landing") },
+    { id: "b", type: "optin", name: "Middle", x: 500, y: 100, p: defaultsFor("optin") },
+    { id: "c", type: "sales", name: "Other", x: 500, y: 400, p: defaultsFor("sales") },
+  ];
+  g.edges = [{ id: "e1", from: "a", to: "b", share: 100, port: "main" }];
+  const { id, sb } = await createFunnel({ graph: g });
+  await openEditor(page, id);
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  const dot = (nodeId: string, side: string) => page.locator(`.react-flow__node[data-id="${nodeId}"] .react-flow__handle[data-handleid="${side}"]`).first();
+  const mid = async (l: ReturnType<typeof dot>) => {
+    const b = (await l.boundingBox())!;
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  const saved = async () => {
+    await expect(page.locator(".fm-saved")).toHaveText(/Saved/, { timeout: 20_000 });
+    const { data } = await sb.from("funnels").select("graph").eq("id", id).single();
+    return (data!.graph as { edges: { id: string; to: string; th?: string }[] }).edges;
+  };
+  // 1. the end of the line (on Middle's left dot) is dragged onto Other: same line, new block
+  await page.locator('.react-flow__edge[data-id="e1"]').click({ force: true, position: { x: 2, y: 2 } }).catch(() => {});
+  const end = await mid(dot("b", "left"));
+  const to = await mid(dot("c", "left"));
+  await drag(page, end, to);
+  let edges = await saved();
+  expect(edges).toHaveLength(1);
+  expect(edges[0]).toMatchObject({ id: "e1", to: "c" });
+  // 2. then onto Other's top dot: the same line now arrives from above
+  const end2 = await mid(dot("c", "left"));
+  const top = await mid(dot("c", "top"));
+  await drag(page, end2, top);
+  edges = await saved();
+  expect(edges).toHaveLength(1);
+  expect(edges[0]).toMatchObject({ id: "e1", to: "c", th: "top" });
+});
+
+test("Settings: the default currency changes on the first save and stays shown", async ({ page }) => {
+  await page.goto("/settings#workspace");
+  const cur = page.locator("#ws-cur");
+  const was = await cur.inputValue();
+  const next = was === "EUR" ? "USD" : "EUR";
+  try {
+    await cur.selectOption(next);
+    await page.getByRole("button", { name: "Save branding" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+    await expect(cur).toHaveValue(next); // not put back to the old one by the form reset
+    await page.reload();
+    await expect(page.locator("#ws-cur")).toHaveValue(next);
+  } finally {
+    await page.locator("#ws-cur").selectOption(was);
+    await page.getByRole("button", { name: "Save branding" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  }
 });

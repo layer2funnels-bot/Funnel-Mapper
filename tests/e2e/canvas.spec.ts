@@ -56,7 +56,7 @@ test.describe("canvas completeness (Batch 2)", () => {
     const blk = node(page, "Live webinar").locator(".fm-blk");
     await expect(blk.locator(".fm-pglyph")).toHaveCSS("background-color", "rgb(251, 146, 60)");
     await page.getByRole("button", { name: "Hide", exact: true }).click();
-    await expect(blk.locator(".fm-chip")).toHaveCount(0);
+    await expect(blk.locator(".fm-bchip")).toHaveCount(0);
     await page.getByRole("button", { name: "Show", exact: true }).click();
 
     // layer order

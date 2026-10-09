@@ -557,7 +557,7 @@ function EditorInner(props: EditorProps) {
         const el = document.querySelector(".fm-stage")?.getBoundingClientRect();
         if (!el) return;
         const at = rf.screenToFlowPosition({ x: el.left + el.width / 2, y: el.top + el.height / 2 });
-        openQuickAdd({ sx: el.width / 2 - 150, sy: el.height / 3, fx: at.x - 105, fy: at.y - 48 });
+        openQuickAdd({ sx: el.width / 2, sy: el.height / 2, fx: at.x, fy: at.y, centre: true });
         return;
       }
       if (ev.key === "Delete" || ev.key === "Backspace") {
@@ -1152,7 +1152,7 @@ function EditorInner(props: EditorProps) {
         )}
         {ready && !reports && <FloatingToolbar />}
         {ready && !hasNodes && (
-          <div className="fm-empty">
+          <div className="fm-canvas-empty">
             <div>
               <strong>Map your first funnel</strong>
               Add a traffic source, the pages people visit, then the offers they buy. Use a Yes/No condition for every decision.

@@ -239,6 +239,18 @@ export function Canvas() {
     [rf],
   );
 
+  // names and number chips grow a little as the map zooms out, so they stay readable (CSS vars on the stage; nothing re-renders)
+  useEffect(() => {
+    const set = (k: number) => {
+      const el = document.querySelector<HTMLElement>(".fm-stage");
+      if (!el) return;
+      el.style.setProperty("--ck", String(Math.max(1, Math.min(1.7, 0.7 / k))));
+      el.style.setProperty("--ckn", String(Math.max(1, Math.min(1.4, 0.55 / k))));
+    };
+    set(useEditor.getState().view.k);
+    return useEditor.subscribe((s, p) => s.view.k !== p.view.k && set(s.view.k));
+  }, []);
+
   // touch: a long press opens the same menus as a right-click
   useEffect(() => {
     const root = document.querySelector<HTMLElement>(".fm-stage .react-flow");
@@ -363,7 +375,7 @@ export function Canvas() {
       minZoom={0.08} // Fit has to be able to show a wide funnel on a phone
       maxZoom={2.5}
       snapToGrid={opts.snap}
-      snapGrid={[11, 11]}
+      snapGrid={[10, 10]}
       selectionKeyCode="Shift"
       multiSelectionKeyCode={["Shift", "Meta", "Control"]}
       selectionMode={SelectionMode.Partial}
@@ -379,7 +391,7 @@ export function Canvas() {
       attributionPosition="bottom-center"
       aria-label="Funnel canvas"
     >
-      <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="var(--dot)" />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="var(--dot)" />
       {opts.mini && <MiniMap position="bottom-left" pannable zoomable nodeColor={miniColor} nodeStrokeWidth={0} ariaLabel="Mini map" style={{ width: 190, height: 120 }} />}
     </ReactFlow>
   );

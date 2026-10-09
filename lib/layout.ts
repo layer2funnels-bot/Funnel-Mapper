@@ -1,7 +1,7 @@
 // Auto-layout ("Tidy up"). tidyLayout() is a pure port of the prototype's tidy(): a layered (Sugiyama-style)
 // layout tuned for funnels: traffic on the left, converted paths straight across, "didn't convert" paths below.
 // elkLayout() is an alternative using elkjs' layered algorithm with fixed port sides.
-import { NH, blockH, isAnnot, nodeW, typeOf } from "./catalog";
+import { NH, NODE_W, PITCH, blockH, blockPivot, isAnnot, nodeW, picRect, typeOf } from "./catalog";
 import type { FunnelEdge, FunnelNode } from "./graph";
 
 export interface LayoutOptions {
@@ -19,7 +19,7 @@ export interface LayoutOptions {
 const annotW = (n: FunnelNode) => n.w ?? (n.type === "label" ? 300 : nodeW(n.type));
 const defaultH = (n: FunnelNode) => n.h ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type));
 
-const GRID = 11;
+const GRID = 10;
 const snapper = (on: boolean) => (v: number) => (on ? Math.round(v / GRID) * GRID : Math.round(v));
 
 /**
@@ -211,13 +211,16 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   }
 
   // 4. y positions: follow the main parent, alt children sit lower; isotonic fit keeps order + spacing
-  const GAPY = 56,
-    GAPX = 120,
-    COLW = opts.colW ?? 200,
+  // blocks sit on a 240 x 200 pitch: a page (184 tall) leaves 16px before the next row
+  const GAPY = 16,
+    COLW = opts.colW ?? NODE_W,
+    GAPX = PITCH.x - COLW,
     y: Record<string, number> = {};
-  // y[] holds block CENTRES: objects on a row are centre-aligned (page and offer cards are taller), so lines stay straight
+  // y[] holds each block's PICTURE CENTRE: blocks on a row are aligned on it (pages are taller than sources), so lines stay straight
+  const above = (n: FunnelNode) => blockPivot(n.type);
+  const below = (n: FunnelNode) => nodeH(n) - above(n);
   const place = (c: string[], desired: number[]) => {
-    const sp = c.map((id, i) => (nodeH(B[id]) + nodeH(B[c[i + 1] ?? id])) / 2 + GAPY),
+    const sp = c.map((id, i) => below(B[id]) + above(B[c[i + 1] ?? id]) + GAPY),
       off = [0];
     for (let i = 1; i < c.length; i++) off[i] = off[i - 1] + sp[i - 1];
     // pool adjacent violators on z = y - off
@@ -238,10 +241,10 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   cols.forEach((c) => {
     const d = c.map((id, i) => {
       const ps = inn[id];
-      if (!ps.length) return i * (NH + GAPY);
+      if (!ps.length) return i * PITCH.y;
       const w = ps.map((e) => (e.port === "alt" ? 1 : 3)),
         t = w.reduce((a, b) => a + b, 0);
-      return ps.reduce((s, e, j) => s + (y[e.from] + (e.port === "alt" ? (nodeH(B[e.from]) + nodeH(B[id])) / 2 + GAPY : 0)) * w[j], 0) / t;
+      return ps.reduce((s, e, j) => s + (y[e.from] + (e.port === "alt" ? below(B[e.from]) + above(B[id]) + GAPY : 0)) * w[j], 0) / t;
     });
     place(c, d);
   });
@@ -254,11 +257,11 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
     });
     place(c, d);
   }
-  const minY = Math.min(...topo.map((id) => y[id] - nodeH(B[id]) / 2));
+  const minY = Math.min(...topo.map((id) => y[id] - above(B[id])));
   topo.forEach((id) => {
     const n = B[id];
     n.x = snap(80 + rank[id] * (COLW + GAPX) + (COLW - bw(n.type)) / 2);
-    n.y = snap(80 + y[id] - nodeH(n) / 2 - minY);
+    n.y = snap(80 + y[id] - above(n) - minY);
   });
 
   // 5. carry annotations along
@@ -338,8 +341,11 @@ export function layoutMetrics(nodes: FunnelNode[], edges: FunnelEdge[], heightOf
     .map((e) => {
       const a = B[e.from],
         b = B[e.to];
-      const p1 = e.port === "alt" ? [a.x + nodeW(a.type) / 2, a.y + heightOf(a)] : [a.x + nodeW(a.type), a.y + heightOf(a) / 2];
-      const p2 = [b.x, b.y + heightOf(b) / 2];
+      // lines leave and arrive at the picture, not at the name under it
+      const pa = picRect(a.type),
+        pb = picRect(b.type);
+      const p1 = e.port === "alt" ? [a.x + pa.x + pa.w / 2, a.y + pa.y + pa.h] : [a.x + pa.x + pa.w, a.y + blockPivot(a.type)];
+      const p2 = [b.x + pb.x, b.y + blockPivot(b.type)];
       return { e, p1, p2 };
     });
   const cross = (p: number[], q: number[], r: number[], s: number[]) => {

@@ -113,11 +113,11 @@ describe("editor store", () => {
     expect(S().nodes[0].x).toBe(n.x + 100);
   });
 
-  it("adds blocks snapped to the 11px grid and selects them", () => {
+  it("adds blocks snapped to the 10px grid and selects them", () => {
     load();
     const n = addNode("landing", 103, 57)!;
-    expect(n.x % 11).toBe(0);
-    expect(n.y % 11).toBe(0);
+    expect(n.x % 10).toBe(0);
+    expect(n.y % 10).toBe(0);
     expect(S().selNodes).toEqual([n.id]);
     expect(n.p.cr).toBe(30);
   });

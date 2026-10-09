@@ -3,7 +3,7 @@ import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { money, nf, people } from "@/lib/format";
-import { blockH, isAnnot, nodeW } from "@/lib/catalog";
+import { blockH, isAnnot, nodeW, picRect } from "@/lib/catalog";
 import { num } from "@/lib/funnel-math";
 import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
 import { edgePath, edgeRate, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
@@ -38,7 +38,16 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY, sourcePosition as Side, targetPosition as Side);
   // a label never sits on a block: it goes at the midpoint, and hides when the line is too short or the midpoint is over a block (the leak label always wins)
   const length = Math.hypot(targetX - sourceX, targetY - sourceY);
-  const overBlock = useEditor((s) => s.nodes.some((m) => m.type !== "frame" && !isAnnot(m.type) && mx > m.x - 24 && mx < m.x + nodeW(m.type) + 24 && my > m.y - 12 && my < m.y + blockH(m.type) + 12));
+  const overBlock = useEditor((s) =>
+    s.nodes.some((m) => {
+      if (m.type === "frame" || isAnnot(m.type)) return false;
+      const r = picRect(m.type);
+      // over the picture (with a margin) or over the name under it: a label never sits on either
+      const onPic = mx > m.x + r.x - 24 && mx < m.x + r.x + r.w + 24 && my > m.y - 12 && my < m.y + r.y + r.h + 12;
+      const onName = mx > m.x - 30 && mx < m.x + nodeW(m.type) + 30 && my > m.y + r.y + r.h - 4 && my < m.y + blockH(m.type) + 12;
+      return onPic || onName;
+    }),
+  );
   // a loop or skip line that runs through other blocks is drawn quietly (faded, no label) until it is hovered or one of its ends is selected
   const pathEl = useRef<SVGPathElement>(null);
   const nodesAll = useEditor((s) => s.nodes);
@@ -50,7 +59,10 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
     if (!el || !(len > 0)) return;
     const rects = nodesAll
       .filter((m) => m.id !== data?.from && m.id !== data?.to && m.type !== "frame" && !isAnnot(m.type))
-      .map((m) => ({ l: m.x + 6, r: m.x + nodeW(m.type) - 6, t: m.y + 6, b: m.y + blockH(m.type) - 6 }));
+      .map((m) => {
+        const r = picRect(m.type);
+        return { l: m.x + r.x + 6, r: m.x + r.x + r.w - 6, t: m.y + 6, b: m.y + r.y + r.h - 6 };
+      });
     let hit = false;
     for (let i = 1; i < 24 && !hit; i++) {
       const pt = el.getPointAtLength((len * i) / 24);

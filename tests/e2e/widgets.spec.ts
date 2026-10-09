@@ -20,14 +20,14 @@ test.describe("Widgets", () => {
     const total = graph.nodes.length + 1;
     await expect(nodes(page)).toHaveCount(total);
 
-    // move: it lands on the snap grid (11px)
+    // move: it lands on the snap grid (10px)
     const w = widgets.first();
     const from = await centre(page, w);
     await drag(page, from, { x: from.x + 83, y: from.y + 47 });
     const t = await w.evaluate((el) => (el as HTMLElement).style.transform);
     const [, x, y] = t.match(/translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/)!.map(Number);
-    expect(x % 11, "x on grid").toBe(0);
-    expect(y % 11, "y on grid").toBe(0);
+    expect(x % 10, "x on grid").toBe(0);
+    expect(y % 10, "y on grid").toBe(0);
 
     // duplicate (Ctrl/Cmd+D): two widgets with the same settings
     await w.click();

@@ -3,7 +3,7 @@
 // several blocks give Align, Frame, Style, Delete. Floating toolbars and right-click menus don't exist on a phone:
 // "More" opens the same menu as an action sheet.
 import { Icon } from "@/components/icon";
-import { isAnnot, nodeW, portsFor } from "@/lib/catalog";
+import { blockPivot, isAnnot, picRect, portsFor } from "@/lib/catalog";
 import { clearSelection, deleteSelection, duplicateSelection, heightOf, openMenu, openQuickAdd, selectNodes, setInspTab, setOpt, useEditor, wrapInFrame } from "@/lib/editor/store";
 import type { InspTab } from "@/lib/editor/store";
 
@@ -36,7 +36,7 @@ export function PhoneActionBar() {
   const next = () => {
     if (!n || !portsFor(n.type).hasOut) return;
     const box = document.querySelector(".fm-stage")?.getBoundingClientRect();
-    openQuickAdd({ sx: 8, sy: (box?.height ?? 600) / 3, fx: n.x + nodeW(n.type) + 80, fy: n.y + heightOf(n) / 2, from: { id: n.id, port: "main" } });
+    openQuickAdd({ sx: 8, sy: (box?.height ?? 600) / 3, fx: n.x + picRect(n.type).x + picRect(n.type).w + 80, fy: n.y + blockPivot(n.type), from: { id: n.id, port: "main" } });
   };
   return (
     <div className="fm-actionbar" role="toolbar" aria-label={n ? "Block actions" : sel.length > 1 ? "Selection actions" : edge ? "Connection actions" : "Select blocks"}>

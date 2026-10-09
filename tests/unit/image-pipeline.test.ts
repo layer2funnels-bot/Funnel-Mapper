@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
-import { ImageRejected, optimiseImage, sizeLine } from "@/lib/image-optimise";
+import { ImageRejected, optimiseImage, optimisePicture, PIC_SIZE, sizeLine } from "@/lib/image-optimise";
+import { picPath } from "@/lib/shot-path";
 
 // a noisy 2400×3000 PNG with transparency: the worst case for the size rule
 async function noisy(w: number, h: number) {
@@ -30,5 +31,17 @@ describe("100 KB image rule", () => {
   it("rejects what isn't an image, in plain words", async () => {
     await expect(optimiseImage(Buffer.from("not an image"), "logo")).rejects.toBeInstanceOf(ImageRejected);
     expect(sizeLine(7.8 * 1024 * 1024, 61 * 1024)).toBe("7.8 MB → 61 KB");
+  });
+});
+
+describe("block picture (208 x 256)", () => {
+  it("is cropped from the top of the page, exactly 208 x 256, under 100 KB", async () => {
+    const out = await optimisePicture(await noisy(1200, 4000));
+    expect([out.width, out.height]).toEqual([PIC_SIZE.w, PIC_SIZE.h]);
+    expect(out.bytes.byteLength).toBeLessThan(100 * 1024);
+    expect((await sharp(out.bytes).metadata()).format).toBe("webp");
+  }, 60000);
+  it("lives next to the capture", () => {
+    expect(picPath("u1/shot-n1-123.webp")).toBe("u1/shot-n1-123-pic.webp");
   });
 });

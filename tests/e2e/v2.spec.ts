@@ -122,7 +122,7 @@ test.describe("V2 editor interactions", () => {
     // one undo goes back to the quiz
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 600 } });
     await page.keyboard.press(`${mod}+z`);
-    await expect(node(page, "Quiz funnel").locator(".pgo-cap, .fm-ntitle small").first()).not.toContainText("Survey");
+    await expect(node(page, "Quiz funnel").locator(".fm-ntitle small").first()).not.toContainText("Survey");
   });
 
   test("Wait: duration + unit, live label, invalid state, no analytics", async ({ page }) => {
@@ -177,7 +177,7 @@ test.describe("V2 editor interactions", () => {
     await expect(page.locator(".fm-rmain")).toContainText("a month");
     await page.getByRole("button", { name: "Show on map" }).first().click();
     await expect(page.locator(".fm-rmain")).toBeHidden();
-    await expect(page.locator(".fm-node.sel")).toHaveCount(1);
+    await expect(page.locator(".fm-blk.sel")).toHaveCount(1);
   });
 });
 
@@ -318,8 +318,8 @@ test.describe("V2 finishing pass", () => {
     const { id } = await createFunnel({ template: "quiz" });
     await openEditor(page, id);
     // V2: platform blocks use the owner's brand art on the map; pages and offers keep their window
-    await expect(node(page, "Instagram traffic").locator(".fm-nicon svg.fm-bmark, .fm-nicon img")).toHaveCount(1);
-    await expect(node(page, "Quiz funnel").locator(".fm-nicon svg.fm-bmark")).toHaveCount(0);
+    await expect(node(page, "Instagram traffic").locator(".fm-shape svg.fm-bmark, .fm-shape img")).toHaveCount(1);
+    await expect(node(page, "Quiz funnel").locator(".fm-shape svg.fm-bmark")).toHaveCount(0);
     await page.getByPlaceholder(/^Search( \d+)? blocks/).fill("Facebook ads");
     await expect(page.locator(".fm-sb-t svg.fm-bmark, .fm-sb-t img").first()).toBeVisible();
   });

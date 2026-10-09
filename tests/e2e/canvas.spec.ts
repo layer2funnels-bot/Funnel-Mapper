@@ -40,19 +40,24 @@ test.describe("canvas completeness (Batch 2)", () => {
     await expect(page.locator(".fm-node.label .ntext")).toHaveCSS("font-size", "40px");
   });
 
-  test("block style, icon, lock and layer order", async ({ page }) => {
+  test("block style (colour, icon, number chip), lock and layer order", async ({ page }) => {
     const { id, graph } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
     const target = graph.nodes.find((n) => n.name === "Live webinar")!;
     await node(page, "Live webinar").click();
     await styleTab(page).click();
-    await page.getByLabel("Fill", { exact: true }).fill("#0f3d2e");
-    await page.getByLabel("Corner radius").fill("4");
+    // a block is a picture with its name under it: colour, icon and the number chip are all that is styled
+    await expect(page.getByLabel("Fill", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("Corner radius")).toHaveCount(0);
+    await expect(page.getByLabel("Border colour")).toHaveCount(0);
+    await page.getByRole("radio", { name: "#FB923C" }).click();
     await page.getByLabel("Search icons").fill("star");
     await page.getByRole("button", { name: "Icon star" }).click();
-    const box = node(page, "Live webinar").locator(".fm-node");
-    await expect(box).toHaveCSS("background-color", "rgb(15, 61, 46)");
-    await expect(box).toHaveCSS("border-radius", "4px");
+    const blk = node(page, "Live webinar").locator(".fm-blk");
+    await expect(blk.locator(".fm-pglyph")).toHaveCSS("background-color", "rgb(251, 146, 60)");
+    await page.getByRole("button", { name: "Hide", exact: true }).click();
+    await expect(blk.locator(".fm-chip")).toHaveCount(0);
+    await page.getByRole("button", { name: "Show", exact: true }).click();
 
     // layer order
     await page.getByRole("button", { name: "Bring to front" }).click();
@@ -63,9 +68,9 @@ test.describe("canvas completeness (Batch 2)", () => {
 
     // lock: can't be dragged, nudged or deleted; unlock restores it
     await page.getByRole("button", { name: "Lock", exact: true }).first().click();
-    await expect(box.locator(".fm-lock")).toBeVisible();
+    await expect(blk.locator(".fm-lock")).toBeVisible();
     const before = await pos(page, target.id);
-    const c = await centre(page, box.locator(".fm-ntitle, .pgo-title"));
+    const c = await centre(page, blk.locator(".fm-ntitle"));
     await drag(page, c, { x: c.x + 150, y: c.y + 80 });
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Delete");
@@ -73,16 +78,16 @@ test.describe("canvas completeness (Batch 2)", () => {
     await expect(nodes(page)).toHaveCount(graph.nodes.length);
     await node(page, "Live webinar").click();
     await page.getByRole("button", { name: "Unlock" }).first().click();
-    await expect(box.locator(".fm-lock")).toHaveCount(0);
+    await expect(blk.locator(".fm-lock")).toHaveCount(0);
     await waitSaved(page);
     await page.reload();
-    await expect(node(page, "Live webinar").locator(".fm-node")).toHaveCSS("background-color", "rgb(15, 61, 46)");
+    await expect(node(page, "Live webinar").locator(".fm-pglyph")).toHaveCSS("background-color", "rgb(251, 146, 60)");
   });
 
   test("connection styles: elbow, dashed, colour, arrow, skip and no-data, without changing the numbers", async ({ page }) => {
     const { id } = await createFunnel({ template: "webinar" });
     await openEditor(page, id);
-    const label = page.locator(".fm-elabel", { hasText: "720" }).first();
+    const label = page.locator('.fm-elabel[aria-label*="720 people"]').first();
     await label.click();
     await expect(page.locator(".fm-insp h3")).toHaveText("Connection");
     await styleTab(page).click(); // connection inspector: Flow | Style

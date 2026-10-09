@@ -445,18 +445,60 @@ export const LINE_DIRS: [string, string][] = [
 ];
 
 /**
- * Canonical block footprint (V2 handoff, "Canonical dimensions"): every flow block is 200px wide; page and offer
- * blocks carry a preview strip and are 38px taller than the rest. Library, canvas, Performance map, Presentation,
- * Shared view, Tidy Up and every export read these three values. Layout only: it never touches the maths.
+ * Block geometry (V4 "picture-first" blocks). A block is a picture or shape with its name under it and one number chip.
+ * The node box is `nodeW` wide (room for a two-line name) and `blockH(type)` tall: the picture area, then the name block.
+ * Lines attach to the picture or shape, never to the name, so layout aligns blocks on `blockPivot(type)`, the picture's centre.
+ * Blocks sit on a 240 x 200 pitch. Layout only: it never touches the maths.
  */
+export type BlockFamily = "source" | "page" | "offer" | "message" | "action" | "logic" | "goal" | "note";
+
+/** Which family a block type draws as (shared by the renderers in lib/block-visuals.ts). */
+export function blockFamily(type: string): BlockFamily {
+  const T = typeOf(type);
+  if (!T) return "note";
+  if (T.cat === "annot") return "note";
+  if (T.cat === "traffic") return "source";
+  if (T.cat === "page") return "page";
+  if (T.cat === "offer") return "offer";
+  if (T.cat === "logic") return T.color === "goal" ? "goal" : "logic";
+  if (type === "won") return "action"; // an event: a diamond, though it sits in Sales & CRM
+  const g = libOf(type); // action-category blocks: Communication, Communities, AI and Sales & CRM tools read as messages
+  return g === "comms" || g === "sales" || g === "community" || g === "aicall" || g === "aiauto" ? "message" : "action";
+}
+
+/** Picture or shape size per family (the bounding box: a rotated square is measured after it is rotated). */
+export const PIC: Record<BlockFamily, { w: number; h: number }> = {
+  source: { w: 64, h: 64 },
+  page: { w: 104, h: 128 },
+  offer: { w: 104, h: 128 },
+  message: { w: 62, h: 56 },
+  action: { w: 62, h: 62 },
+  logic: { w: 72, h: 72 },
+  goal: { w: 56, h: 56 },
+  note: { w: 200, h: 76 },
+};
+/** Space under the picture for the name (two lines at most) and the subtype. */
+export const LABEL_H = 56;
 export const NH = 76;
 export const NH_TALL = 114;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept so callers can stay per-type if a family ever differs
-export const nodeW = (type?: string): number => 200;
-/** Height of a flow block (px). Notes and headings can be taller; the editor uses measured heights when available. */
+export const NODE_W = 136;
+export const PITCH = { x: 240, y: 200 } as const;
+export const nodeW = (type?: string): number => (type && blockFamily(type) === "note" ? 200 : NODE_W);
+/** Height of a flow block (px): the picture area plus the name. Notes and headings can be taller; the editor uses measured heights when available. */
 export const blockH = (type: string) => {
-  const c = typeOf(type)?.cat;
-  return c === "page" || c === "offer" ? NH_TALL : NH;
+  const f = blockFamily(type);
+  return f === "note" ? NH : PIC[f].h + LABEL_H;
+};
+/** Where the picture's centre sits below the top of the block (lines leave and arrive here). */
+export const blockPivot = (type: string) => {
+  const f = blockFamily(type);
+  return f === "note" ? NH / 2 : PIC[f].h / 2;
+};
+/** The picture's box inside the node, relative to its top-left corner. */
+export const picRect = (type: string) => {
+  const f = blockFamily(type),
+    P = PIC[f];
+  return f === "note" ? { x: 0, y: 0, w: 200, h: NH } : { x: (NODE_W - P.w) / 2, y: 0, w: P.w, h: P.h };
 };
 
 /**

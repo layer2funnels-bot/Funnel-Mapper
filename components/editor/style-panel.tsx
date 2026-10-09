@@ -184,7 +184,60 @@ function StyleShortcuts({ ids }: { ids: string[] }) {
   );
 }
 
+const ACCENTS = ["#A78BFA", "#10B981", "#FB923C", "#60A5FA", "#2DD4BF", "#FBBF24", "#94A3B8"];
+
+/** A funnel block is a picture or shape with its name under it (V4): colour, icon and the number chip are all that is styled. */
+function BlockStyle({ n, all }: { n: FunnelNode; all: string[] }) {
+  const st: NodeStyle = n.s ?? {};
+  const S = (patch: Partial<NodeStyle>) => setNodeStyle(n.id, patch, all);
+  const T = typeOf(n.type);
+  const [q, setQ] = useState("");
+  const icons = (Object.keys(ICONS) as IconName[]).filter((k) => k.includes(q.trim().toLowerCase()));
+  return (
+    <>
+      <div className="fm-sec">
+        <h4>Colour</h4>
+        <div className="fm-sbx-sw" role="radiogroup" aria-label="Accent colour">
+          {ACCENTS.map((c) => (
+            <button key={c} type="button" role="radio" aria-checked={st.accent === c} aria-label={c} style={{ background: c }} onClick={() => S({ accent: st.accent === c ? undefined : c })} />
+          ))}
+        </div>
+        <p className="help">Colours the type glyph, the bottom bar and the shape. Without one, the block keeps its family colour.</p>
+      </div>
+      {all.length === 1 && (
+        <div className="fm-sec">
+          <h4>Icon</h4>
+          <div className="flex items-center gap-2">
+            <input className="input" placeholder="Search icons" aria-label="Search icons" value={q} onChange={(e) => setQ(e.target.value)} />
+            {st.icon && (
+              <button type="button" className="btn sm ghost" onClick={() => S({ icon: undefined })}>
+                Default
+              </button>
+            )}
+          </div>
+          <div className="fm-icongrid" role="group" aria-label="Icon">
+            {icons.map((k) => (
+              <button key={k} type="button" aria-pressed={(st.icon || T.icon) === k} aria-label={`Icon ${k}`} title={k} onClick={() => S({ icon: k === T.icon ? undefined : k })}>
+                <Icon name={k} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="fm-sec">
+        <h4>Number chip</h4>
+        <Seg<string> label="Number chip" value={st.hideNum ? "hide" : "show"} options={[["show", "Show"], ["hide", "Hide"]]} onChange={(v) => S({ hideNum: v === "hide" ? true : undefined })} />
+        <p className="help">The one number this block shows in the People and Money views.</p>
+      </div>
+    </>
+  );
+}
+
 export function StylePanel({ n, ids }: { n: FunnelNode; ids?: string[] }) {
+  return typeOf(n.type).cat !== "annot" ? <BlockStyle n={n} all={ids ?? [n.id]} /> : <AnnotStyle n={n} ids={ids} />;
+}
+
+function AnnotStyle({ n, ids }: { n: FunnelNode; ids?: string[] }) {
   const all = ids ?? [n.id];
   const st: NodeStyle = n.s ?? {};
   const S = (patch: Partial<NodeStyle>) => setNodeStyle(n.id, patch, all);

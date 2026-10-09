@@ -1,35 +1,28 @@
 import { describe, expect, it } from "vitest";
-import fixtures from "../fixtures/prototype-results.json";
 import { elkLayout, layoutMetrics, tidyLayout } from "@/lib/layout";
 import { builtinTemplate, BUILTIN_KEYS } from "@/lib/templates";
-import { NH, blockH, isAnnot, nodeW } from "@/lib/catalog";
+import { NH, blockH, blockPivot, isAnnot, nodeW } from "@/lib/catalog";
 import type { FunnelEdge, FunnelNode } from "@/lib/graph";
 
 // Notes and headings deliberately differ from the prototype (which re-anchored them under the nearest block):
 // they keep their placement; see "annotations" below. Flow blocks and frames still match the prototype exactly.
 const carried = (n: { type: string }) => n.type === "note" || n.type === "label";
 
-const FX = fixtures as Record<string, any>;
-// The prototype laid out 210 x 96 cards (logic 170). The fixtures were captured with that geometry, so parity is
-// checked with it; the app's canonical footprint (200 x 76 / 114) is covered separately below.
-const PROTO = { blockW: (t: string) => (t === "cond" || t === "split" ? 170 : 210), colW: 210, heightOf: () => 96 };
-
-describe("tidyLayout matches the prototype's Tidy up", () => {
+describe("tidyLayout (240 x 200 pitch, aligned on the picture centre)", () => {
   for (const key of BUILTIN_KEYS) {
-    it(`${key}: from template positions`, () => {
-      const t = builtinTemplate(key);
-      const res = tidyLayout(t.graph.nodes, t.graph.edges, PROTO);
-      res.forEach((n, i) => {
-        if (carried(n)) return;
-        expect([n.x, n.y], n.name).toEqual([FX[key].tidy[i].x, FX[key].tidy[i].y]);
-        if (FX[key].tidy[i].w != null) expect([n.w, n.h]).toEqual([FX[key].tidy[i].w, FX[key].tidy[i].h]);
-      });
-    });
-    it(`${key}: from scrambled positions`, () => {
-      const t = builtinTemplate(key);
-      const nodes = t.graph.nodes.map((n, i) => ({ ...n, x: FX[key].scrambled[i].x, y: FX[key].scrambled[i].y }));
-      const res = tidyLayout(nodes, t.graph.edges, PROTO);
-      res.forEach((n, i) => carried(n) || expect([n.x, n.y], n.name).toEqual([FX[key].tidyScrambled[i].x, FX[key].tidyScrambled[i].y]));
+    it(`${key}: no overlaps, lines run left to right, columns sit on the 240px pitch`, () => {
+      for (const scramble of [false, true]) {
+        const t = builtinTemplate(key);
+        const nodes = scramble ? t.graph.nodes.map((n, i) => ({ ...n, x: (i * 137) % 900, y: (i * 251) % 700 })) : t.graph.nodes;
+        const res = tidyLayout(nodes, t.graph.edges);
+        const m = layoutMetrics(res, t.graph.edges);
+        expect(m.overlaps, key).toBe(0);
+        const flow = res.filter((n) => !isAnnot(n.type));
+        const x0 = Math.min(...flow.map((n) => n.x));
+        for (const n of flow) expect((n.x - x0) % 10, `${key}: ${n.name} x`).toBe(0); // snapped to the 10px grid
+        const cols = [...new Set(flow.map((n) => Math.round((n.x - x0) / 240)))];
+        expect(cols.length, key).toBeGreaterThan(1);
+      }
     });
   }
   it("does not mutate its input", () => {
@@ -37,6 +30,10 @@ describe("tidyLayout matches the prototype's Tidy up", () => {
     const before = JSON.stringify(t.graph.nodes);
     tidyLayout(t.graph.nodes, t.graph.edges);
     expect(JSON.stringify(t.graph.nodes)).toBe(before);
+  });
+  it("is deterministic", () => {
+    const t = builtinTemplate("webinar");
+    expect(tidyLayout(t.graph.nodes, t.graph.edges)).toEqual(tidyLayout(t.graph.nodes, t.graph.edges));
   });
 });
 
@@ -103,22 +100,22 @@ describe("Tidy up keeps annotations where they were placed", () => {
   });
 });
 
-describe("canonical footprint (200 x 76, page and offer 114)", () => {
-  it("centre-aligns a row of mixed-height blocks so the connections stay straight", () => {
+describe("block footprint (136 wide; a page is 184 tall, a source 120)", () => {
+  it("aligns a row of mixed-height blocks on the picture centre so the connections stay straight", () => {
     // source -> page -> offer -> action in one straight run: all four vertical centres must coincide
     const g = [blk("s", 0, 0, "fbads"), blk("p", 300, 90, "landing"), blk("o", 600, 10, "checkout"), blk("a", 900, 50, "seq")];
     const edges = [edge("s", "p"), edge("p", "o"), edge("o", "a")];
     const res = tidyLayout(g, edges, { snap: false });
     const centre = (id: string) => {
       const n = res.find((x) => x.id === id)!;
-      return n.y + H(n) / 2;
+      return n.y + blockPivot(n.type);
     };
     expect(centre("p")).toBeCloseTo(centre("s"), 5);
     expect(centre("o")).toBeCloseTo(centre("s"), 5);
     expect(centre("a")).toBeCloseTo(centre("s"), 5);
-    expect(blockH("landing")).toBe(114);
-    expect(blockH("fbads")).toBe(76);
-    expect(nodeW("cond")).toBe(200);
+    expect(blockH("landing")).toBe(184);
+    expect(blockH("fbads")).toBe(120);
+    expect(nodeW("cond")).toBe(136);
   });
   it("never overlaps blocks of different heights in a column", () => {
     const g = [blk("s", 0, 0, "fbads"), blk("p", 0, 0, "landing"), blk("q", 0, 0, "optin"), blk("c", 0, 0, "seq")];

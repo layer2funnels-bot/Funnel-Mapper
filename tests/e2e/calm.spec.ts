@@ -23,11 +23,11 @@ async function snapshot(page: Page) {
     const out: { nodes: { id: string; title: string; text: string; box: DOMRect; titleBox: DOMRect | null }[]; labels: { text: string; box: DOMRect }[] } = { nodes: [], labels: [] };
     document.querySelectorAll<HTMLElement>(".react-flow__node").forEach((el) => {
       if (/react-flow__node-(frame|note|label|shape|image|checklist|widget)/.test(el.className)) return;
-      const t = el.querySelector<HTMLElement>(".fm-ntitle span, .pgo-title");
+      const t = el.querySelector<HTMLElement>(".fm-ntitle > span:first-child");
       const clone = el.cloneNode(true) as HTMLElement;
-      // the leak chip and its "−N" stub are the funnel's one leak label, counted with the lines
-      clone.querySelectorAll(".fm-leak, .fm-leakstub, .fm-nstats.badges, .fm-ntasks, .react-flow__handle").forEach((x) => x.remove());
-      clone.querySelectorAll(".fm-ntitle span, .pgo-title").forEach((x) => x.remove());
+      // the leak chip and its "-N" stub are the funnel's one leak label; an offer's price is an input drawn on its picture, not the view's number
+      clone.querySelectorAll(".fm-leak, .fm-leakstub, .fm-nbadges, .fm-ribbon, .react-flow__handle").forEach((x) => x.remove());
+      clone.querySelectorAll(".fm-ntitle > span:first-child").forEach((x) => x.remove());
       out.nodes.push({ id: el.dataset.id ?? "", title: t?.textContent ?? "", text: clone.innerText, box: el.getBoundingClientRect(), titleBox: t?.getBoundingClientRect() ?? null });
     });
     document.querySelectorAll<HTMLElement>(".fm-elabel").forEach((el) => {
@@ -201,4 +201,53 @@ test("Funnels list: select rows for the bulk bar, rename from the row menu, tras
   await page.getByRole("dialog").getByRole("button", { name: "Move to Trash" }).click();
   await expect(page.locator("tr", { hasText: `${name} renamed` })).toHaveCount(0);
   void node;
+});
+
+test.describe("picture-first blocks", () => {
+  test("a page is a 104 x 128 picture with its name under it; People shows one chip a block; names stay in two lines", async ({ page }) => {
+    const { id } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    const quiz = node(page, "Fitness quiz");
+    const pic = (await quiz.locator(".fm-pic").boundingBox())!;
+    const k = Number((await page.locator(".fm-zoom output").innerText()).replace("%", "")) / 100;
+    // the zoom readout is rounded to a whole percent, so allow a pixel or two
+    expect(Math.abs(pic.width / k - 104)).toBeLessThan(3);
+    expect(Math.abs(pic.height / k - 128)).toBeLessThan(3);
+    const name = (await quiz.locator(".fm-ntitle > span:first-child").boundingBox())!;
+    expect(name.y).toBeGreaterThanOrEqual(pic.y + pic.height - 1); // the name sits under the picture, not on it
+    // exactly one chip on a block that has people
+    await expect(quiz.locator(".fm-chip")).toHaveCount(1);
+    await expect(quiz.locator(".fm-chip")).toContainText("2,300");
+    // Clean: names and lines only
+    await page.getByRole("button", { name: "Clean", exact: true }).click();
+    await expect(page.locator(".fm-chip:not(.warn)")).toHaveCount(0); // a "needs a fix" mark is a state, not a number
+    await expect(quiz.locator(".fm-ntitle")).toBeVisible();
+  });
+
+  test("a long name stops at two lines", async ({ page }) => {
+    const { id } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id);
+    await node(page, "Fitness quiz").click();
+    await page.getByLabel("Name", { exact: true }).fill("A very long block name that goes on and on and on for far too many words to fit");
+    const span = page.locator(".fm-ntitle > span:first-child", { hasText: "A very long block name" });
+    await expect(span).toHaveCount(1);
+    expect(await span.evaluate((el) => (el as HTMLElement).offsetHeight)).toBeLessThanOrEqual(2 * 17 + 1); // layout height, whatever the zoom
+    expect(await span.evaluate((el) => getComputedStyle(el).webkitLineClamp)).toBe("2");
+  });
+
+  test("Actual mode: the chip is a button, a small popup takes the real number, no panel opens", async ({ page }) => {
+    const { id } = await createFunnel({ template: "tripwire" });
+    await openEditor(page, id, { panel: false });
+    await page.getByRole("group", { name: /Plan or actual numbers/ }).getByRole("button", { name: "Actual", exact: true }).click();
+    const chip = node(page, "Fitness quiz").locator(".fm-chip");
+    await expect(chip).toHaveText("—");
+    await chip.click();
+    const pop = page.getByRole("dialog", { name: /Real number for Fitness quiz/ });
+    await expect(pop).toBeVisible();
+    await pop.getByRole("textbox").fill("1800");
+    await page.keyboard.press("Enter");
+    await expect(pop).toBeHidden();
+    await expect(chip).toHaveText("1,800");
+    await expect(page.locator(".fm-insp")).toBeHidden(); // no panel opened
+  });
 });

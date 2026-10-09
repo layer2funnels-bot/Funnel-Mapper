@@ -57,3 +57,24 @@ export function sizeLine(before: number, after: number) {
   const f = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
   return `${f(before)} → ${f(after)}`;
 }
+
+/** The picture a block shows on the map (V4): 208 x 256, top of the page, WebP under 100 KB (2x the 104 x 128 picture). */
+export const PIC_SIZE = { w: 208, h: 256 } as const;
+export async function optimisePicture(input: Buffer | Uint8Array): Promise<Optimised> {
+  if (input.byteLength > MAX_INPUT_BYTES) throw new ImageRejected("This image is over 25 MB. Choose a smaller file.");
+  for (const quality of QUALITIES) {
+    let out;
+    try {
+      out = await sharp(input, { limitInputPixels: 100_000_000 })
+        .rotate()
+        .flatten({ background: "#ffffff" })
+        .resize({ width: PIC_SIZE.w, height: PIC_SIZE.h, fit: "cover", position: "top" })
+        .webp({ quality, effort: 4 })
+        .toBuffer({ resolveWithObject: true });
+    } catch {
+      throw new ImageRejected("This file isn’t an image we can read. Use PNG, JPG or WebP.");
+    }
+    if (out.data.byteLength < MAX_STORED_BYTES) return { bytes: out.data, width: out.info.width, height: out.info.height, type: "image/webp" };
+  }
+  throw new ImageRejected("This image can’t be made small enough. Try a simpler image.");
+}

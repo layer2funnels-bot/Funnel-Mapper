@@ -2,7 +2,7 @@
 // recent-funnel tile is drawn from the funnel's OWN saved canvas (nodes, edges, frames), never from an image or a
 // template thumbnail, so it can't go stale. People on each line and the biggest leak come from the authoritative
 // engine (compute), the same numbers as the map; nothing here calculates a funnel.
-import { blockH, isAnnot, nodeW, fourPorts, typeOf } from "./catalog";
+import { blockH, isAnnot, nodeW, fourPorts, picRect, typeOf } from "./catalog";
 import { visualOf, type Family, type Wireframe } from "./block-visuals";
 import { compute, type FunnelResult, type MathSettings } from "./funnel-math";
 import { parseGraph, parseSettings, type FunnelEdge, type FunnelGraph, type FunnelNode, type Side } from "./graph";
@@ -74,8 +74,13 @@ export function previewModel(rawGraph: unknown, rawSettings: unknown, w: number,
   const base = { label, scale: 1, tx: 0, ty: 0, detail: "full" as PreviewDetail, names: false, windows: false, nodes: [], edges: [], frames: [], leakId: null };
   if (!flow.length) return { ...base, empty: true };
 
-  const box = (n: FunnelNode) => ({ x: n.x, y: n.y, w: nodeW(n.type), h: blockH(n.type) });
-  const rects = [...flow.map(box), ...frames.map((f) => ({ x: f.x, y: f.y, w: f.w ?? 400, h: f.h ?? 240 }))];
+  // lines attach to the picture, so `box` is the picture; the block with its name under it decides the fit
+  const box = (n: FunnelNode) => {
+    const r = picRect(n.type);
+    return { x: n.x + r.x, y: n.y + r.y, w: r.w, h: r.h };
+  };
+  const whole = (n: FunnelNode) => ({ x: n.x, y: n.y, w: nodeW(n.type), h: blockH(n.type) });
+  const rects = [...flow.map(whole), ...frames.map((f) => ({ x: f.x, y: f.y, w: f.w ?? 400, h: f.h ?? 240 }))];
   // offers carry a price tab 10px above the card
   const x0 = Math.min(...rects.map((r) => r.x)),
     y0 = Math.min(...rects.map((r) => r.y)) - 10,

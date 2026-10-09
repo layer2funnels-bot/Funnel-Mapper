@@ -1254,8 +1254,12 @@ button {
   letter-spacing: -0.01em;
   color: var(--ink);
 }
-.fm-tot small {
+.fm-tot dd.sub {
   display: block;
+  margin: 0;
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
   font-size: 12px;
   line-height: 1.4;
   color: var(--muted);

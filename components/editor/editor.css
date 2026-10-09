@@ -3775,12 +3775,14 @@ dialog.fm-sharedlg {
   border: 1px solid transparent;
 }
 .fm-simchip .good {
-  background: var(--sim-up-bg);
+  /* the tint sits on an opaque panel: over a page picture a see-through chip fails contrast */
+  background: linear-gradient(var(--sim-up-bg), var(--sim-up-bg)), var(--panel);
   color: var(--sim-up);
   border-color: var(--sim-up);
 }
 .fm-simchip .bad {
-  background: var(--sim-down-bg);
+  /* the tint sits on an opaque panel: over a page picture a see-through chip fails contrast */
+  background: linear-gradient(var(--sim-down-bg), var(--sim-down-bg)), var(--panel);
   color: var(--sim-down);
   border-color: var(--sim-down);
 }

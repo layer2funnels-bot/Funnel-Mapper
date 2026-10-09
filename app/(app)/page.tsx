@@ -233,16 +233,16 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           <div>
             <dt>Active clients</dt>
             <dd>{active.length}</dd>
-            <small>
+            <dd className="sub">
               {pipeline.length} in the pipeline · {cl.length} total
-            </small>
+            </dd>
           </div>
           <div>
             <dt>Live funnels</dt>
             <dd>{live.length}</dd>
-            <small>
+            <dd className="sub">
               {proposed.length} proposed · {fs.length} total
-            </small>
+            </dd>
           </div>
           <div>
             <dt>Planned revenue · {range.label}</dt>
@@ -251,7 +251,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                 live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })),
               )}
             </dd>
-            <small>
+            <dd className="sub">
               <span className="fm-tag plan">Plan</span> profit{" "}
               {tot(
                 live.map((f) => ({
@@ -271,7 +271,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                   )}
                 </>
               )}
-            </small>
+            </dd>
           </div>
           <div>
             <dt>Agency fees · {range.label}</dt>
@@ -283,13 +283,13 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                 })),
               )}
             </dd>
-            <small>
+            <dd className="sub">
               MRR{" "}
               {tot(
                 active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })),
               )}{" "}
               / mo
-            </small>
+            </dd>
           </div>
         </dl>
       </section>

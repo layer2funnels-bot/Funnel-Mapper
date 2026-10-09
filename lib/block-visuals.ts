@@ -7,7 +7,7 @@
 // INTERIM BASELINE: built from reference/DESIGN_V2_HANDOFF.md (families, canonical anatomy) and
 // reference/project/Blocks-and-lines.dc.html (wireframe vocabulary). The final human-reviewed Figma 169 library
 // replaces the DATA below (families, wireframes, brand tints), not the renderer or any block identity.
-import { baseOf, isBlockType, libOf, typeOf } from "./catalog";
+import { baseOf, blockFamily, isBlockType, typeOf } from "./catalog";
 import { WINDOWS } from "./design-tiles";
 
 export type Family = "source" | "page" | "offer" | "message" | "action" | "logic" | "goal" | "note";
@@ -74,18 +74,7 @@ const BRAND: Record<string, string> = {
   quoraads: "#B92B27",
 };
 
-function familyOf(type: string): Family {
-  const T = typeOf(type);
-  if (!T) return "note";
-  if (T.cat === "annot") return "note";
-  if (T.cat === "traffic") return "source";
-  if (T.cat === "page") return "page";
-  if (T.cat === "offer") return "offer";
-  if (T.cat === "logic") return T.color === "goal" ? "goal" : "logic";
-  if (type === "won") return "action"; // an event: diamond artwork, listed with the diamonds on the Object-system board, though it sits in Sales & CRM
-  const g = libOf(type); // action-category blocks: Communication, Communities, AI and Sales & CRM tools read as messages
-  return g === "comms" || g === "sales" || g === "community" || g === "aicall" || g === "aiauto" ? "message" : "action";
-}
+const familyOf = (type: string): Family => blockFamily(type);
 
 const cache = new Map<string, BlockVisual>();
 

@@ -215,7 +215,7 @@ const loadOpts = (): ViewOpts => {
 
 let uid = 1;
 export const nid = () => "n" + Date.now().toString(36) + (uid++).toString(36);
-const GRID = 11;
+const GRID = 10;
 
 const blankResult = compute({ nodes: [], edges: [] }, { basis: "first", fixed: 0 });
 

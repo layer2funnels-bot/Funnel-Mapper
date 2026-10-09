@@ -363,7 +363,7 @@ export function Canvas() {
       minZoom={0.08} // Fit has to be able to show a wide funnel on a phone
       maxZoom={2.5}
       snapToGrid={opts.snap}
-      snapGrid={[11, 11]}
+      snapGrid={[10, 10]}
       selectionKeyCode="Shift"
       multiSelectionKeyCode={["Shift", "Meta", "Control"]}
       selectionMode={SelectionMode.Partial}
@@ -379,7 +379,7 @@ export function Canvas() {
       attributionPosition="bottom-center"
       aria-label="Funnel canvas"
     >
-      <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="var(--dot)" />
+      <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} color="var(--dot)" />
       {opts.mini && <MiniMap position="bottom-left" pannable zoomable nodeColor={miniColor} nodeStrokeWidth={0} ariaLabel="Mini map" style={{ width: 190, height: 120 }} />}
     </ReactFlow>
   );

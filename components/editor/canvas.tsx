@@ -244,7 +244,7 @@ export function Canvas() {
     const set = (k: number) => {
       const el = document.querySelector<HTMLElement>(".fm-stage");
       if (!el) return;
-      el.style.setProperty("--ck", String(Math.max(1, Math.min(1.7, 0.7 / k))));
+      el.style.setProperty("--ck", String(Math.max(1, Math.min(1.3, 0.6 / k))));
       el.style.setProperty("--ckn", String(Math.max(1, Math.min(1.4, 0.55 / k))));
     };
     set(useEditor.getState().view.k);

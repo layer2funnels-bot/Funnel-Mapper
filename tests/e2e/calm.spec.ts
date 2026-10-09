@@ -251,3 +251,22 @@ test.describe("picture-first blocks", () => {
     await expect(page.locator(".fm-insp")).toBeHidden(); // no panel opened
   });
 });
+
+test("block artwork has no border or box, and platform blocks without a tile use the vector mark", async ({ page }) => {
+  const g = blankGraph();
+  const types = ["ttads", "xads", "threads", "goal", "exit", "cond", "igads"];
+  g.nodes = types.map((type, i) => ({ id: `a${i}`, type, name: type, x: 120 + (i % 4) * 260, y: 80 + Math.floor(i / 4) * 220, p: defaultsFor(type) }));
+  const { id } = await createFunnel({ graph: g });
+  await openEditor(page, id);
+  const bad = await page.evaluate(() => {
+    const out: string[] = [];
+    document.querySelectorAll<HTMLElement>(".react-flow__node .fm-form, .react-flow__node .fm-form *").forEach((el) => {
+      const cs = getComputedStyle(el);
+      if (el.tagName === "svg" || el.closest("svg")) return;
+      if (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== "none") out.push(`${el.className} border ${cs.borderTopWidth}`);
+    });
+    return out;
+  });
+  expect(bad).toEqual([]);
+  for (const i of [0, 1, 2]) await expect(page.locator(`.react-flow__node[data-id="a${i}"] .fm-form svg.fm-bmark`)).toHaveCount(1);
+});

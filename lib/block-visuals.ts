@@ -64,7 +64,7 @@ const BRAND: Record<string, string> = {
   igads: "#E4405F", igorg: "#E4405F",
   gads: "#4285F4",
   ytads: "#FF0000", ytorg: "#FF0000",
-  ttads: "#010101", ttorg: "#010101",
+  ttads: "#010101", ttorg: "#010101", xorg: "#000000", threads: "#000000",
   liads: "#0A66C2", liorg: "#0A66C2",
   pinads: "#E60023",
   xads: "#000000",

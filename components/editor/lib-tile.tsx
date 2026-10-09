@@ -2,6 +2,7 @@
 // where there is one, the browser-window tile for pages and offers, the system tile for Communities, AI Calling and AI
 // Automation, and the family tile for anything else. `size` is the design's 44px tile; every part scales with it.
 import { BLOCK_ART } from "@/lib/block-art";
+import { brandMarkOf } from "@/lib/brand-marks";
 import { SYS_TILES, WIDGET_TILES, WINDOWS, type SysTile } from "@/lib/design-tiles";
 import type { IconName } from "@/lib/icons";
 import { BlockTile } from "./block-visual";
@@ -45,8 +46,26 @@ export function LibTile({ k, type, icon, size = 44, widget }: { k: string; type:
   const w = widget ? WIDGET_TILES[widget] : undefined;
   if (w) return <Sys t={w} size={size} />;
   const art = BLOCK_ART[k];
+  if (art?.glyph) {
+    // TikTok, X, Threads: the owner's file is a 30px glyph with no tile, so the mark is drawn as a vector in a clean black disc
+    const mark = brandMarkOf(k);
+    return (
+      <span className="fm-sys c" style={{ width: size, height: size, background: "#0b0b0f" }} aria-hidden="true">
+        <span className="gl">
+          {mark ? (
+            <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="#fff">
+              <path d={mark} />
+            </svg>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- static block artwork
+            <img src={artSrc(art.file)} width={Math.round(size * 0.55)} height={Math.round(size * 0.55)} alt="" draggable={false} />
+          )}
+        </span>
+      </span>
+    );
+  }
   if (art) {
-    const px = art.glyph ? Math.round(size * 0.36) : art.shape === "diamond" ? Math.round(size * (54 / 44)) : size;
+    const px = art.shape === "diamond" ? Math.round(size * (54 / 44)) : size;
     // eslint-disable-next-line @next/next/no-img-element -- static block artwork
     return <img className={`fm-uic ${art.shape}`} src={artSrc(art.file)} width={px} height={px} alt="" draggable={false} loading="lazy" decoding="async" />;
   }

@@ -126,5 +126,9 @@ export const BLOCK_ART: Record<string, BlockArt> = {
 };
 
 /** Artwork URL for a block type or library key (null: use the family tile). */
-export const artOf = (key: string): BlockArt | null => BLOCK_ART[key] ?? null;
+/** The owner's artwork for a block. The tiny glyph-only images (TikTok, X, Threads: 30px, no tile of their own) are not used: those blocks draw their mark in a clean disc instead. */
+export const artOf = (key: string): BlockArt | null => {
+  const a = BLOCK_ART[key];
+  return a && !a.glyph ? a : null;
+};
 export const artSrc = (a: BlockArt) => `/blocks/${a.file}`;

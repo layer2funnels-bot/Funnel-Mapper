@@ -1156,6 +1156,33 @@ function EditorInner(props: EditorProps) {
             <div>
               <strong>Map your first funnel</strong>
               Add a traffic source, the pages people visit, then the offers they buy. Use a Yes/No condition for every decision.
+              {!readOnly && (
+                <span className="acts">
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => {
+                      const el = document.querySelector(".fm-stage")?.getBoundingClientRect();
+                      if (!el) return;
+                      const at = rf.screenToFlowPosition({ x: el.left + el.width / 2, y: el.top + el.height / 2 });
+                      openQuickAdd({ sx: el.width / 2, sy: el.height / 2, fx: at.x, fy: at.y, centre: true });
+                    }}
+                  >
+                    Add a block
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setSideTab("templates");
+                      setOpt("hideSide", false);
+                      setShowSide(true);
+                    }}
+                  >
+                    Start from a template
+                  </button>
+                </span>
+              )}
             </div>
           </div>
         )}

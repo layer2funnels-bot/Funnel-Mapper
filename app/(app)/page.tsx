@@ -65,7 +65,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
     sb
       .from("funnels")
       .select(
-        "id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url",
+        "id, name, status, client_id, summary, settings, updated_at, thumbnail_url",
       )
       .is("deleted_at", null)
       .order("updated_at", { ascending: false }),
@@ -75,6 +75,12 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const fs = (funnels ?? []).filter(
     (f) => clientById[f.client_id] && f.status !== "archived",
   );
+  // saved maps for the few funnels the page draws or checks (the rest are listed from their saved numbers, which keeps this page light)
+  const SHOWN = 12;
+  const { data: maps } = fs.length
+    ? await sb.from("funnels").select("id, graph").in("id", fs.slice(0, SHOWN).map((f) => f.id))
+    : { data: [] as { id: string; graph: unknown }[] };
+  const graphOf = Object.fromEntries((maps ?? []).map((m) => [m.id, m.graph]));
   // recorded actuals in the range (whole periods inside it), for live funnels
   const liveIds = fs.filter((f) => f.status === "live").map((f) => f.id);
   const { data: acts } = liveIds.length
@@ -111,8 +117,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const latest = fs[0];
   // health for the funnels people touched most recently (parsed from the saved map, same checks as the editor)
   const checked = fs
-    .slice(0, 40)
-    .map((f) => ({ f, checks: healthChecks(parseGraph(f.graph)) }));
+    .slice(0, SHOWN)
+    .map((f) => ({ f, checks: healthChecks(parseGraph(graphOf[f.id])) }));
   const attention = checked.filter((x) => x.checks.length > 0).slice(0, 3);
   const perClient = (
     ["active", "proposal", "lead", "paused", "past"] as const
@@ -124,7 +130,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
     month: "long",
   });
   const blocks = (f: (typeof fs)[number]) =>
-    parseGraph(f.graph).nodes.filter((n) => typeOf(n.type)?.cat !== "annot")
+    parseGraph(graphOf[f.id]).nodes.filter((n) => typeOf(n.type)?.cat !== "annot")
       .length;
   // other things worth a look, from the saved numbers only: funnels losing money, clients with funnels and no price set
   const losing = fs
@@ -161,72 +167,6 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           to={range.to}
         />
       </PageHeader>
-
-      {cont ? (
-        <section aria-labelledby="resume-h" className="fm-hero">
-          <Link
-            href={`/funnels/${cont.id}`}
-            className="fm-hero-thumb"
-            aria-label={`Open ${cont.name}`}
-          >
-            <GraphThumb
-              graph={cont.graph}
-              settings={cont.settings}
-              name={cont.name}
-              height={190}
-              className="h-[190px] w-full"
-            />
-          </Link>
-          <div className="fm-hero-body">
-            <span className="fm-hero-eyebrow" id="resume-h">
-              Continue where you left off
-            </span>
-            <div className="fm-hero-title">
-              <h2 title={cont.name}>{cont.name}</h2>
-              <StatusPill status={cont.status} />
-            </div>
-            <p className="fm-hero-sub">
-              {clientById[cont.client_id]?.name} · {blocks(cont)} blocks ·
-              edited {timeAgo(cont.updated_at)}
-            </p>
-            <dl className="fm-hero-kpis">
-              <div>
-                <dt>Revenue / mo</dt>
-                <dd>{money(contSum.rev, curOf(cont))}</dd>
-              </div>
-              <div>
-                <dt>Profit / mo</dt>
-                <dd
-                  className={
-                    (contSum.profit ?? 0) < 0 ? "text-neg" : "text-good"
-                  }
-                >
-                  {money(contSum.profit, curOf(cont))}
-                </dd>
-              </div>
-              <div>
-                <dt>ROAS</dt>
-                <dd>{ratio(contSum.roas)}</dd>
-              </div>
-            </dl>
-            <div className="fm-hero-actions">
-              <Link href={`/funnels/${cont.id}`} className="btn primary">
-                Continue mapping
-                <Icon name="chevronRight" size={15} />
-              </Link>
-              <Link href={`/funnels/${cont.id}?view=reports`} className="btn">
-                Reports
-              </Link>
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section className="fm-hero empty">
-          <p className="fm-empty-line">
-            No funnels yet. Create a client, then map their first funnel.
-          </p>
-        </section>
-      )}
 
       <section aria-label="Totals">
         <dl className="fm-tot">
@@ -293,6 +233,72 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           </div>
         </dl>
       </section>
+
+      {cont ? (
+        <section aria-labelledby="resume-h" className="fm-hero">
+          <Link
+            href={`/funnels/${cont.id}`}
+            className="fm-hero-thumb"
+            aria-label={`Open ${cont.name}`}
+          >
+            <GraphThumb
+              graph={graphOf[cont.id]}
+              settings={cont.settings}
+              name={cont.name}
+              height={190}
+              className="h-[190px] w-full"
+            />
+          </Link>
+          <div className="fm-hero-body">
+            <span className="fm-hero-eyebrow" id="resume-h">
+              Continue where you left off
+            </span>
+            <div className="fm-hero-title">
+              <h2 title={cont.name}>{cont.name}</h2>
+              <StatusPill status={cont.status} />
+            </div>
+            <p className="fm-hero-sub">
+              {clientById[cont.client_id]?.name} · {blocks(cont)} blocks ·
+              edited {timeAgo(cont.updated_at)}
+            </p>
+            <dl className="fm-hero-kpis">
+              <div>
+                <dt>Revenue / mo</dt>
+                <dd>{money(contSum.rev, curOf(cont))}</dd>
+              </div>
+              <div>
+                <dt>Profit / mo</dt>
+                <dd
+                  className={
+                    (contSum.profit ?? 0) < 0 ? "text-neg" : "text-good"
+                  }
+                >
+                  {money(contSum.profit, curOf(cont))}
+                </dd>
+              </div>
+              <div>
+                <dt>ROAS</dt>
+                <dd>{ratio(contSum.roas)}</dd>
+              </div>
+            </dl>
+            <div className="fm-hero-actions">
+              <Link href={`/funnels/${cont.id}`} className="btn primary">
+                Continue mapping
+                <Icon name="chevronRight" size={15} />
+              </Link>
+              <Link href={`/funnels/${cont.id}?view=reports`} className="btn">
+                Reports
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="fm-hero empty">
+          <p className="fm-empty-line">
+            No funnels yet. Create a client, then map their first funnel.
+          </p>
+        </section>
+      )}
 
       <div className="fm-homegrid">
         <div className="min-w-0">

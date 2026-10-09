@@ -1276,6 +1276,13 @@
   font-size: 15px;
   line-height: 22px;
 }
+.fm-canvas-empty .acts {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  pointer-events: auto;
+}
 .fm-canvas-empty strong {
   display: block;
   font-family: var(--font-display);

@@ -2,7 +2,7 @@
 // Returns plain segments (bold or not) so React, SVG and PDF exports can all render them.
 import { getSmoothStepPath, getStraightPath, Position } from "@xyflow/react";
 import { baseOf, INT_LABEL, typeOf, type Interval } from "../catalog";
-import { money, moneyPer, nf, people as ppl } from "../format";
+import { money, moneyPer, nf, people as ppl, peopleExact, perSuffix } from "../format";
 import { num, type FunnelResult } from "../funnel-math";
 import type { FunnelNode, Side } from "../graph";
 import { curveSides } from "../edge-geometry";
@@ -205,4 +205,40 @@ export function edgePath(look: Pick<ReturnType<typeof edgeLook>, "path">, port: 
   }
   const [d, [mx, my]] = curveSides(sx, sy, s1, tx, ty, t1);
   return [d, mx, my];
+}
+
+/** The one number a block carries (editor-calm brief): its value and what it counts, plus the exact figures for the tooltip. */
+export interface BlockChip {
+  value: string;
+  unit: string;
+  title: string;
+}
+/**
+ * People view: people in (visits on a traffic source). Money view: revenue per period on offers and spend per period on sources, nothing on
+ * other blocks. Clean view and steps without data have no number. Whole people; the modelled average is only in `title`.
+ */
+export function blockChip(n: FunnelNode, R: FunnelResult, cur: string, k: number, view: "clean" | "people" | "money", basis?: "first" | "ltv"): BlockChip | null {
+  if (view === "clean") return null;
+  const T = typeOf(n.type),
+    r = R.N[n.id];
+  if (!T || !r) return null;
+  if (T.cat === "traffic") {
+    if (view === "money") return { value: r.spend > 0 ? money(r.spend * k, cur) : "free", unit: r.spend > 0 ? perSuffix(k) : "", title: r.spend > 0 ? `${money(r.spend * k, cur)} spent ${perSuffix(k)} on this source` : "No spend on this source" };
+    return { value: ppl(r.out * k), unit: "visits", title: `${peopleExact(r.out * k)} visits` };
+  }
+  if (!(r.inflow > 0)) return null;
+  if (view === "money") {
+    if (T.cat !== "offer" || !(r.rev > 0)) return null;
+    return { value: money(r.rev * k, cur), unit: `${perSuffix(k)}${basis === "ltv" ? " LTV" : ""}`, title: `${money(r.rev * k, cur)} revenue ${perSuffix(k)}${basis === "ltv" ? " (lifetime value basis)" : ""}` };
+  }
+  const pageLike = T.cat === "page" || T.cat === "offer";
+  return { value: ppl(r.inflow * k), unit: pageLike ? "people in" : "people", title: `${peopleExact(r.inflow * k)} arrive · ${peopleExact(r.out * k)} continue` };
+}
+
+/** A line's rate for the label: the share of the people who arrive at its source step that take it ("35%"), or null without data. */
+export function edgeRate(fromId: string, flow: number, R: FunnelResult): string | null {
+  const c = edgeConversion(fromId, flow, R);
+  if (c == null || !(flow > 0)) return null;
+  const pct = c * 100;
+  return `${nf(pct, pct < 10 && Math.abs(pct - Math.round(pct)) > 0.05 ? 1 : 0)}%`;
 }

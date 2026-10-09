@@ -5062,14 +5062,6 @@ dialog.fm-sharedlg {
   border-bottom: 1px solid var(--panel2);
   font-size: 12.5px;
 }
-.fm-stage.sim .fm-stagebar,
-.fm-stage.sim .fm-legend,
-.fm-stage.sim .fm-before-badge {
-  top: 52px;
-}
-.fm-stage.sim .fm-simwarn {
-  top: 92px;
-}
 .fm-sbchip {
   display: inline-flex;
   align-items: center;
@@ -7792,4 +7784,139 @@ dialog.fm-exportdlg {
     grid-column: 2;
     margin: 0 0 4px;
   }
+}
+
+/* ===== Editor calm (V3): one number per block, the rate alone on a line, one leak marker ===== */
+/* price is an input (Settings, the Blocks panel), not a second number on the block */
+.fm-price {
+  display: none !important;
+}
+.pgo-m.one {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.pgo-m.one small {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.pgo-m.one strong {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+}
+/* a line says its rate; the sentence ("35% of 2,000 = 700") is for hover and selection */
+.fm-elabel .sent {
+  display: none;
+}
+.fm-elabel.has-sent:hover .sent,
+.fm-elabel.has-sent.sel .sent {
+  display: inline;
+}
+.fm-elabel.has-sent:hover .r,
+.fm-elabel.has-sent.sel .r {
+  display: none;
+}
+.fm-elabel:hover,
+.fm-elabel.sel {
+  z-index: 5;
+}
+.fm-edge.noflow {
+  opacity: 0.35;
+}
+/* the biggest leak: a dashed orange ring and a small chip above-left, never over the name, no number */
+.fm-node.leak {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 2px dashed #f97316;
+  outline-offset: 5px;
+}
+.fm-node.leak.sel {
+  outline-color: var(--brand);
+  outline-style: solid;
+}
+.fm-leak {
+  top: auto;
+  right: auto;
+  left: -4px;
+  bottom: calc(100% + 12px);
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid #f97316;
+  background: rgba(249, 115, 22, 0.16);
+  color: #fdba74;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+:root[data-theme="light"] .fm-leak {
+  background: #ffedd5;
+  color: #c2410c;
+}
+/* a leak with no line to carry it: a short dashed line down from the block and the people lost, once */
+.fm-leakstub {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 5px);
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.fm-leakstub i {
+  display: block;
+  height: 30px;
+  border-left: 2px dashed #f97316;
+}
+.fm-leakstub b {
+  padding: 1px 8px;
+  border-radius: 6px;
+  border: 1px solid #f97316;
+  background: var(--bg);
+  color: #fdba74;
+  font-size: 12px;
+  font-weight: 600;
+}
+:root[data-theme="light"] .fm-leakstub b,
+:root[data-theme="light"] .fm-elabel.leak {
+  color: #c2410c;
+}
+.fm-elabel.leak {
+  border-color: #f97316;
+  color: #fdba74;
+}
+.fm-hide-all .fm-leakstub {
+  display: none;
+}
+
+/* Simulate panel: playback sits beside Before / After; Done is its own 44px target in the footer */
+.fm-sim-view {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fm-sim-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 0 4px;
+  background: linear-gradient(to top, var(--chrome) 70%, transparent);
+}
+.fm-sim-foot .btn {
+  min-height: 44px;
+  min-width: 96px;
+}
+/* a line that runs through other blocks stays quiet until it is hovered or one of its ends is selected */
+.fm-edge.quiet {
+  opacity: 0.18;
+}
+.react-flow__edge:hover .fm-edge.quiet {
+  opacity: 1;
 }

@@ -45,7 +45,7 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
+  useEditor, setMapView, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
@@ -56,7 +56,7 @@ import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
-import { ActualSwitch, EditorRail, LayersMenu, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
+import { ActualSwitch, EditorRail, LayersMenu, ScenarioPill, ViewSwitch } from "./chrome";
 import { Outline } from "./outline";
 import { WorkspaceBlocks } from "./workspace-blocks";
 import { CommentsPanel } from "./comments";
@@ -196,7 +196,7 @@ function EditorInner(props: EditorProps) {
     }
     if (share?.hideNumbers) settings = { ...settings, hideNumbers: true };
     initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit, shared: !owner, viewer: !!props.viewer });
-    if (share?.hideNumbers) setOpt("nums", false);
+    if (share?.hideNumbers) setMapView("clean");
     // deep link: ?view=reports[&section=goals]
     const q = new URLSearchParams(window.location.search);
     if (q.get("view") === "reports" && !share?.hideNumbers) {
@@ -385,7 +385,9 @@ function EditorInner(props: EditorProps) {
       ...(owner ? [{ id: "simulate", label: "Start or leave Simulate", scope: "map" as const, shortcut: "S", icon: "play" as const, words: "simulation what-if", run: () => cmdRef.current.toggleSim(), enabled: () => can() && !useEditor.getState().shared }] : []),
       { id: "export-pdf", label: "Export PDF report", scope: "map", icon: "download", words: "download", run: () => void cmdRef.current.doExport("pdf") },
       { id: "export-png", label: "Export PNG image", scope: "map", icon: "download", words: "download picture", run: () => void cmdRef.current.doExport("png") },
-      { id: "numbers", label: "Show or hide numbers", scope: "view", icon: "hash", words: "performance clean layer", run: () => setOpt("nums", !useEditor.getState().opts.nums) },
+      { id: "view-clean", label: "Clean view (no numbers)", scope: "view", icon: "layers", words: "numbers hide names lines", run: () => setMapView("clean") },
+      { id: "view-people", label: "People view", scope: "view", icon: "users", words: "numbers people performance", run: () => setMapView("people") },
+      { id: "view-money", label: "Money view", scope: "view", icon: "hash", words: "numbers revenue spend", run: () => setMapView("money") },
       { id: "panel-left", label: "Hide or show the blocks panel", scope: "view", shortcut: "[", icon: "panelLeft", run: () => setOpt("hideSide", !useEditor.getState().opts.hideSide) },
       { id: "panel-right", label: "Hide or show the details panel", scope: "view", shortcut: "]", icon: "panelRight", run: () => setOpt("hideInsp", !useEditor.getState().opts.hideInsp) },
     ]);
@@ -706,22 +708,13 @@ function EditorInner(props: EditorProps) {
               <div className="ph">Layers</div>
               {!share?.hideNumbers && (
                 <div className="fm-layer-presets">
-                  <button type="button" role="menuitemcheckbox" aria-checked={!opts.nums && !opts.thick} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
-                    Clean map
-                  </button>
-                  <button type="button" role="menuitemcheckbox" aria-checked={opts.nums && opts.thick} onClick={() => (setOpt("nums", true), setOpt("thick", true))}>
-                    Performance map
-                  </button>
+                  {(["clean", "people", "money"] as const).map((v) => (
+                    <button key={v} type="button" role="menuitemcheckbox" aria-checked={opts.view === v} onClick={() => setMapView(v)}>
+                      {v === "clean" ? "Clean" : v === "people" ? "People" : "Money"}
+                    </button>
+                  ))}
                 </div>
               )}
-              {!share?.hideNumbers && (
-                <label>
-                  <input type="checkbox" checked={opts.nums} onChange={(e) => setOpt("nums", e.target.checked)} /> Numbers on the map
-                </label>
-              )}
-              <label>
-                <input type="checkbox" checked={opts.thick} onChange={(e) => setOpt("thick", e.target.checked)} /> Flow: line thickness shows traffic
-              </label>
               <label>
                 <input type="checkbox" checked={opts.notes} onChange={(e) => setOpt("notes", e.target.checked)} /> Notes
               </label>
@@ -1108,7 +1101,6 @@ function EditorInner(props: EditorProps) {
             <LayersMenu />
           </div>
         )}
-        {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
         {simOn && !reports && <SimBar onOpenChecks={() => (setTab("math"), setShowInsp(true), togglePanel("insp", false))} />}
         {simBefore && !reports && (
           <div className="fm-before-badge" role="status">

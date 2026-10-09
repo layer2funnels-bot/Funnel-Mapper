@@ -18,10 +18,15 @@ export type EditorMode = "map" | "reports";
 export type ReportSection = "overview" | "data" | "sources" | "offers" | "expenses" | "scenarios" | "forecast" | "goals" | "mrr" | "monthly" | "reinvest" | "status";
 export type SaveStatus = "saved" | "dirty" | "saving" | "offline" | "error" | "readonly";
 
+/** The three map views (editor-calm brief): Clean = names, types and lines only; People (default) = one people number per block and one rate per line; Money = one money number per block (revenue on offers, spend on sources) and the same rates. */
+export type MapView = "clean" | "people" | "money";
+
 export interface ViewOpts {
-  /** Layers: numbers on blocks and connections. */
+  /** Which of the three views the map shows. `nums` and `thick` below follow it (kept so exports, Present and the simulation read one switch). */
+  view: MapView;
+  /** Numbers on blocks and connections (every view but Clean). */
   nums: boolean;
-  /** Layers: line thickness shows traffic (flow). */
+  /** Line thickness shows people (every view but Clean). */
   thick: boolean;
   /** Layers: sticky notes and internal-note badges. */
   notes: boolean;
@@ -177,13 +182,16 @@ export interface EditorState {
 }
 
 const OPTS_KEY = "fm-editor-opts";
+const viewFlags = (view: MapView) => ({ view, nums: view !== "clean", thick: view !== "clean" });
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
     if (saved.hideSide === undefined && window.innerWidth <= 1439) d.hideSide = true;
-    return { ...d, ...saved };
+    // the view is the one switch: an older saved nums / thick pair (Clean / Performance) is ignored, People is the default
+    const view: MapView = saved.view === "clean" || saved.view === "money" || saved.view === "people" ? saved.view : "people";
+    return { ...d, ...saved, ...viewFlags(view) };
   } catch {
     return d;
   }
@@ -232,7 +240,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -434,17 +442,15 @@ export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
   if (s.actualView) set({ actualView: null, actualR: null });
-  set({ simBase: { ...takeBase(), prev: { nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
-  setOpt("nums", true);
-  setOpt("thick", true);
+  set({ simBase: { ...takeBase(), prev: { view: s.opts.view, nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
+  if (s.opts.view === "clean") setMapView("people"); // changes read against the baseline, so the numbers have to show
 }
 /** Stop simulating and keep whatever the map says now; the view (layers, period) goes back to what it was. */
 export function stopSim() {
   const prev = get().simBase?.prev;
   set((s) => ({ simBase: null, simPlay: false, simBefore: false, simWalk: null, simAsk: false, spot: s.simWalk != null ? null : s.spot, panel: s.panel === "simulate" ? "inspector" : s.panel }));
   if (prev) {
-    setOpt("nums", prev.nums);
-    setOpt("thick", prev.thick);
+    setMapView(prev.view);
     setOpt("period", prev.period);
   }
 }
@@ -1072,6 +1078,14 @@ export function setView(view: Viewport) {
 }
 export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
   const opts = { ...get().opts, [k]: v };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+}
+/** Switch between Clean, People and Money (sets the numbers and line-weight flags that follow the view). */
+export function setMapView(view: MapView) {
+  const opts = { ...get().opts, ...viewFlags(view) };
   set({ opts });
   try {
     localStorage.setItem(OPTS_KEY, JSON.stringify(opts));

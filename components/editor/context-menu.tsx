@@ -28,6 +28,7 @@ import {
   setInspTab,
   setLocked,
   setOpt,
+  setMapView,
   setReportFocus,
   setSideTab,
   setSection,
@@ -195,8 +196,9 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
       { label: "Select all", kbd: m("Mod+A"), run: () => selectNodes(useEditor.getState().nodes.map((n) => n.id)) },
       { label: "Tidy up", kbd: m("Mod+Shift+L"), icon: "tidy", sep: true, disabled: ro, run: onTidy },
       { label: "Zoom to fit", icon: "fit", run: onFit },
-      { label: "Performance view", icon: "chart", run: () => (setOpt("nums", true), setOpt("thick", true)) },
-      { label: "Clean view", icon: "layers", run: () => (setOpt("nums", false), setOpt("thick", false)) },
+      { label: "People view", icon: "chart", run: () => setMapView("people") },
+      { label: "Money view", icon: "hash", run: () => setMapView("money") },
+      { label: "Clean view", icon: "layers", run: () => setMapView("clean") },
       { label: "Keyboard shortcuts", kbd: "?", icon: "help", sep: true, run: onShortcuts },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps

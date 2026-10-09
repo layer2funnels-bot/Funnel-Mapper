@@ -37,7 +37,8 @@ export function timeAgo(s: string) {
 export function people(v: number): string {
   if (!Number.isFinite(v)) return "–";
   const a = Math.abs(v);
-  if (a > 0 && a < 10 && Math.abs(v - Math.round(v)) > 0.05) return `${nf(v, 1)} avg`;
+  // whole people everywhere on screen; a tiny value reads "<1", never "0.2 avg" (the modelled average lives in peopleExact, for tooltips)
+  if (a > 0 && Math.round(a) === 0) return "<1";
   return nf(Math.round(v));
 }
 export function peopleExact(v: number): string {

@@ -9,7 +9,7 @@ import { typeOf } from "@/lib/catalog";
 import { money, nf, pct, ratio } from "@/lib/format";
 import { nodeStats, subLabel } from "@/lib/editor/labels";
 import { presentStages } from "@/lib/present-stages";
-import { clearSelection, setOpt, setSpot, useEditor } from "@/lib/editor/store";
+import { clearSelection, setMapView, setSpot, useEditor } from "@/lib/editor/store";
 import { periodFactor } from "@/lib/funnel-math";
 
 export function Presenter({ onExit }: { onExit: () => void }) {
@@ -146,10 +146,10 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         </nav>
         {!hideNums && (
           <div className="seg" role="group" aria-label="Map detail">
-            <button type="button" aria-pressed={!showNums} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
+            <button type="button" aria-pressed={!showNums} onClick={() => setMapView("clean")}>
               Clean
             </button>
-            <button type="button" aria-pressed={showNums} onClick={() => (setOpt("nums", true), setOpt("thick", true))}>
+            <button type="button" aria-pressed={showNums} onClick={() => setMapView("people")}>
               Numbers
             </button>
           </div>

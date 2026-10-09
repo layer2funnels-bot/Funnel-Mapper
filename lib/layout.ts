@@ -3,6 +3,7 @@
 // elkLayout() is an alternative using elkjs' layered algorithm with fixed port sides.
 import { NH, NODE_W, PITCH, blockH, blockPivot, isAnnot, nodeW, picRect, typeOf } from "./catalog";
 import type { FunnelEdge, FunnelNode } from "./graph";
+import { sidesOf } from "./edge-geometry";
 
 export interface LayoutOptions {
   /** Measured node heights (notes grow with text). Defaults to NH. */
@@ -159,109 +160,54 @@ export function tidyLayout(nodes: FunnelNode[], edges: FunnelEdge[], opts: Layou
   const D = E.filter((e) => !back.has(e.id));
   D.forEach((e) => inn[e.to].push(e));
 
-  // 2. ranks = longest path from sources
-  const rank: Record<string, number> = {},
-    topo: string[] = [],
-    indeg: Record<string, number> = {};
-  flow.forEach((n) => (indeg[n.id] = inn[n.id].length));
-  const q = flow.filter((n) => !indeg[n.id]).map((n) => n.id);
-  while (q.length) {
-    const id = q.shift()!;
-    topo.push(id);
-    D.filter((e) => e.from === id).forEach((e) => {
-      if (--indeg[e.to] === 0) q.push(e.to);
-    });
-  }
-  topo.forEach((id) => (rank[id] = inn[id].length ? Math.max(...inn[id].map((e) => rank[e.from] + 1)) : 0));
-  // pull sources right, next to their first child
-  topo
-    .slice()
-    .reverse()
-    .forEach((id) => {
-      if (inn[id].length) return;
-      const ch = D.filter((e) => e.from === id).map((e) => rank[e.to]);
-      if (ch.length) rank[id] = Math.min(...ch) - 1;
-    });
-  const minR = Math.min(...topo.map((id) => rank[id]));
-  topo.forEach((id) => (rank[id] -= minR));
-
-  // 3. ordering within columns (barycenter sweeps)
-  const cols: string[][] = [];
-  topo.forEach((id) => (cols[rank[id]] ??= []).push(id));
-  for (let i = 0; i < cols.length; i++) cols[i] ??= [];
-  cols.forEach((c) => c.sort((a, b) => dfsIdx[a] - dfsIdx[b]));
-  const pos: Record<string, number> = {};
-  const setPos = () => cols.forEach((c) => c.forEach((id, i) => (pos[id] = i)));
-  setPos();
-  for (let it = 0; it < 6; it++) {
-    const fwd = it % 2 === 0,
-      range = fwd ? cols.map((_, i) => i).slice(1) : cols.map((_, i) => i).reverse().slice(1);
-    range.forEach((r) => {
-      const key: Record<string, number> = {};
-      cols[r].forEach((id) => {
-        const nb: [number, number][] = fwd
-          ? inn[id].map((e) => [pos[e.from] + (e.port === "alt" ? 0.6 : 0), e.port === "alt" ? 1 : 2])
-          : D.filter((e) => e.from === id).map((e) => [pos[e.to] - (e.port === "alt" ? 0.6 : 0), e.port === "alt" ? 1 : 2]);
-        const w = nb.reduce((s, [, w]) => s + w, 0);
-        key[id] = w ? nb.reduce((s, [p, w]) => s + p * w, 0) / w : pos[id];
-      });
-      cols[r].sort((a, b) => key[a] - key[b] || dfsIdx[a] - dfsIdx[b]);
-      setPos();
-    });
-  }
-
-  // 4. y positions: follow the main parent, alt children sit lower; isotonic fit keeps order + spacing
-  // blocks sit on a 240 x 200 pitch: a page (184 tall) leaves 16px before the next row
-  const GAPY = 16,
-    COLW = opts.colW ?? NODE_W,
-    GAPX = PITCH.x - COLW,
-    y: Record<string, number> = {};
-  // y[] holds each block's PICTURE CENTRE: blocks on a row are aligned on it (pages are taller than sources), so lines stay straight
-  const above = (n: FunnelNode) => blockPivot(n.type);
-  const below = (n: FunnelNode) => nodeH(n) - above(n);
-  const place = (c: string[], desired: number[]) => {
-    const sp = c.map((id, i) => below(B[id]) + above(B[c[i + 1] ?? id]) + GAPY),
-      off = [0];
-    for (let i = 1; i < c.length; i++) off[i] = off[i - 1] + sp[i - 1];
-    // pool adjacent violators on z = y - off
-    const blocks: { sum: number; n: number; start: number }[] = [];
-    c.forEach((_, i) => {
-      blocks.push({ sum: desired[i] - off[i], n: 1, start: i });
-      while (blocks.length > 1 && blocks[blocks.length - 2].sum / blocks[blocks.length - 2].n > blocks[blocks.length - 1].sum / blocks[blocks.length - 1].n) {
-        const b2 = blocks.pop()!,
-          b1 = blocks[blocks.length - 1];
-        b1.sum += b2.sum;
-        b1.n += b2.n;
-      }
-    });
-    blocks.forEach((b) => {
-      for (let i = b.start; i < b.start + b.n; i++) y[c[i]] = b.sum / b.n + off[i];
-    });
+  // 2. a grid guided by the ports, so a funnel keeps the shape people draw: a line that leaves a block's right side
+  // continues to the next column, one that leaves its bottom (the "didn't convert" path, or a follow-up ladder) continues
+  // on the next row. Each block's subtree is laid out on its own and the subtrees are stacked without touching.
+  type Cell = { id: string; c: number; r: number };
+  const goesDown = (e: FunnelEdge) => sidesOf(e)[0] === "bottom";
+  const placed = new Set<string>();
+  const lowest = (cells: Cell[]) => Math.max(...cells.map((x) => x.r));
+  const sub = (id: string): Cell[] => {
+    placed.add(id);
+    const cells: Cell[] = [{ id, c: 0, r: 0 }];
+    const kids = out[id].filter((e) => !back.has(e.id));
+    let bottom = 0,
+      first = true;
+    for (const e of kids.filter((k) => !goesDown(k))) {
+      if (placed.has(e.to)) continue;
+      const s = sub(e.to);
+      const off = first ? 0 : bottom + 1;
+      s.forEach((x) => cells.push({ id: x.id, c: x.c + 1, r: x.r + off }));
+      bottom = Math.max(bottom, off + lowest(s));
+      first = false;
+    }
+    for (const e of kids.filter(goesDown)) {
+      if (placed.has(e.to)) continue;
+      const s = sub(e.to);
+      const off = bottom + 1;
+      s.forEach((x) => cells.push({ id: x.id, c: x.c, r: x.r + off }));
+      bottom = off + lowest(s);
+    }
+    return cells;
   };
-  cols.forEach((c) => {
-    const d = c.map((id, i) => {
-      const ps = inn[id];
-      if (!ps.length) return i * PITCH.y;
-      const w = ps.map((e) => (e.port === "alt" ? 1 : 3)),
-        t = w.reduce((a, b) => a + b, 0);
-      return ps.reduce((s, e, j) => s + (y[e.from] + (e.port === "alt" ? below(B[e.from]) + above(B[id]) + GAPY : 0)) * w[j], 0) / t;
-    });
-    place(c, d);
+  const cell: Record<string, { c: number; r: number }> = {};
+  let nextRow = 0;
+  const roots = startOrder.filter((n) => !E.some((e) => e.to === n.id && !back.has(e.id)));
+  [...roots, ...startOrder].forEach((n) => {
+    if (placed.has(n.id)) return;
+    const s = sub(n.id);
+    s.forEach((x) => (cell[x.id] = { c: x.c, r: x.r + nextRow }));
+    nextRow += lowest(s) + 1;
   });
-  // backward pass: sources and fan-ins centre on their children
-  for (let r = cols.length - 2; r >= 0; r--) {
-    const c = cols[r];
-    const d = c.map((id) => {
-      const ch = D.filter((e) => e.from === id && e.port !== "alt");
-      return inn[id].length || !ch.length ? y[id] : ch.reduce((s, e) => s + y[e.to], 0) / ch.length;
-    });
-    place(c, d);
-  }
-  const minY = Math.min(...topo.map((id) => y[id] - above(B[id])));
-  topo.forEach((id) => {
-    const n = B[id];
-    n.x = snap(80 + rank[id] * (COLW + GAPX) + (COLW - bw(n.type)) / 2);
-    n.y = snap(80 + y[id] - above(n) - minY);
+  const COLW = opts.colW ?? NODE_W,
+    GAPX = PITCH.x - COLW;
+  // each row is aligned on the picture centre (pages are taller than sources), so lines stay straight
+  const ROWC = Math.max(...flow.map((n) => blockPivot(n.type)));
+  flow.forEach((id) => {
+    const n = B[id.id],
+      g = cell[id.id];
+    n.x = snap(80 + g.c * (COLW + GAPX) + (COLW - bw(n.type)) / 2);
+    n.y = snap(80 + g.r * PITCH.y + ROWC - blockPivot(n.type));
   });
 
   // 5. carry annotations along

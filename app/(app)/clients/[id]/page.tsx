@@ -67,7 +67,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
         <Icon name="chevronRight" size={12} />
         <span>{client.name}</span>
       </nav>
-      <header className="mb-6 flex flex-wrap items-center gap-5">
+      <header className="mb-5 flex flex-wrap items-center gap-4">
         {client.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={client.logo_url} alt={`${client.name} logo`} className="h-16 w-16 rounded-2xl border border-line bg-white object-contain" />

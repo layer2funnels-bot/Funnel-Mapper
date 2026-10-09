@@ -79,7 +79,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex gap-1.5 max-sm:-mx-4 max-sm:max-w-[calc(100%+2rem)] max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 sm:flex-wrap" role="group" aria-label="Filter by status">
           <button type="button" className="fm-chip" aria-pressed={!status && !archived} onClick={() => (setStatus(""), setArchived(false))}>
             All <b>{clients.filter((c) => !c.archived_at).length}</b>
@@ -105,7 +105,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
           </button>
         </div>
       </div>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="relative min-w-[220px] flex-1">
           <span className="sr-only">Search clients</span>
           <Icon name="search" size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />

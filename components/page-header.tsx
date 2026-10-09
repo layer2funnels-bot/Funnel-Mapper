@@ -1,6 +1,6 @@
 export function PageHeader({ title, sub, eyebrow, children }: { title: React.ReactNode; sub?: React.ReactNode; eyebrow?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end gap-3">
+    <div className="mb-5 flex flex-wrap items-end gap-3">
       <div className="min-w-0 flex-1">
         {eyebrow && <div className="mb-2 text-[11px] font-semibold tracking-[0.09em] text-muted uppercase">{eyebrow}</div>}
         <h1 className="font-display text-[30px] leading-tight font-semibold tracking-[-0.02em] text-ink">{title}</h1>

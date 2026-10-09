@@ -43,6 +43,8 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByLabel("Conversion rates").fill("0.8");
     await page.getByLabel("Traffic", { exact: true }).fill("1.3");
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
+    // the chips fade in: scan once they are fully opaque (a half-faded chip fails contrast by definition)
+    await expect(page.locator(".fm-simchip").first()).toHaveCSS("opacity", "1");
     await scan(page, `Simulate (${theme})`);
   });
 }

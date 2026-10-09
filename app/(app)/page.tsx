@@ -65,7 +65,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
     sb
       .from("funnels")
       .select(
-        "id, name, status, client_id, summary, settings, graph, updated_at, thumbnail_url",
+        "id, name, status, client_id, summary, settings, updated_at, thumbnail_url",
       )
       .is("deleted_at", null)
       .order("updated_at", { ascending: false }),
@@ -75,6 +75,12 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const fs = (funnels ?? []).filter(
     (f) => clientById[f.client_id] && f.status !== "archived",
   );
+  // saved maps for the few funnels the page draws or checks (the rest are listed from their saved numbers, which keeps this page light)
+  const SHOWN = 12;
+  const { data: maps } = fs.length
+    ? await sb.from("funnels").select("id, graph").in("id", fs.slice(0, SHOWN).map((f) => f.id))
+    : { data: [] as { id: string; graph: unknown }[] };
+  const graphOf = Object.fromEntries((maps ?? []).map((m) => [m.id, m.graph]));
   // recorded actuals in the range (whole periods inside it), for live funnels
   const liveIds = fs.filter((f) => f.status === "live").map((f) => f.id);
   const { data: acts } = liveIds.length
@@ -111,8 +117,8 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const latest = fs[0];
   // health for the funnels people touched most recently (parsed from the saved map, same checks as the editor)
   const checked = fs
-    .slice(0, 40)
-    .map((f) => ({ f, checks: healthChecks(parseGraph(f.graph)) }));
+    .slice(0, SHOWN)
+    .map((f) => ({ f, checks: healthChecks(parseGraph(graphOf[f.id])) }));
   const attention = checked.filter((x) => x.checks.length > 0).slice(0, 3);
   const perClient = (
     ["active", "proposal", "lead", "paused", "past"] as const
@@ -124,7 +130,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
     month: "long",
   });
   const blocks = (f: (typeof fs)[number]) =>
-    parseGraph(f.graph).nodes.filter((n) => typeOf(n.type)?.cat !== "annot")
+    parseGraph(graphOf[f.id]).nodes.filter((n) => typeOf(n.type)?.cat !== "annot")
       .length;
   // other things worth a look, from the saved numbers only: funnels losing money, clients with funnels and no price set
   const losing = fs
@@ -162,6 +168,72 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
         />
       </PageHeader>
 
+      <section aria-label="Totals">
+        <dl className="fm-tot">
+          <div>
+            <dt>Active clients</dt>
+            <dd>{active.length}</dd>
+            <dd className="sub">
+              {pipeline.length} in the pipeline · {cl.length} total
+            </dd>
+          </div>
+          <div>
+            <dt>Live funnels</dt>
+            <dd>{live.length}</dd>
+            <dd className="sub">
+              {proposed.length} proposed · {fs.length} total
+            </dd>
+          </div>
+          <div>
+            <dt>Planned revenue · {range.label}</dt>
+            <dd>
+              {tot(
+                live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })),
+              )}
+            </dd>
+            <dd className="sub">
+              <span className="fm-tag plan">Plan</span> profit{" "}
+              {tot(
+                live.map((f) => ({
+                  cur: curOf(f),
+                  v: (sum(f).profit ?? 0) * k,
+                })),
+              )}
+              {(acts ?? []).length > 0 && (
+                <>
+                  {" "}
+                  · <span className="fm-tag actual">Actual</span>{" "}
+                  {byCurrencyText(
+                    (acts ?? []).map((a) => ({
+                      cur: curOf(fs.find((f) => f.id === a.funnel_id)!),
+                      v: Number(a.revenue ?? 0),
+                    })),
+                  )}
+                </>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Agency fees · {range.label}</dt>
+            <dd>
+              {tot(
+                active.map((c) => ({
+                  cur: c.currency,
+                  v: monthlyValue(c) * k,
+                })),
+              )}
+            </dd>
+            <dd className="sub">
+              MRR{" "}
+              {tot(
+                active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })),
+              )}{" "}
+              / mo
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       {cont ? (
         <section aria-labelledby="resume-h" className="fm-hero">
           <Link
@@ -170,7 +242,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             aria-label={`Open ${cont.name}`}
           >
             <GraphThumb
-              graph={cont.graph}
+              graph={graphOf[cont.id]}
               settings={cont.settings}
               name={cont.name}
               height={190}
@@ -227,72 +299,6 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
           </p>
         </section>
       )}
-
-      <section aria-label="Totals">
-        <dl className="fm-tot">
-          <div>
-            <dt>Active clients</dt>
-            <dd>{active.length}</dd>
-            <small>
-              {pipeline.length} in the pipeline · {cl.length} total
-            </small>
-          </div>
-          <div>
-            <dt>Live funnels</dt>
-            <dd>{live.length}</dd>
-            <small>
-              {proposed.length} proposed · {fs.length} total
-            </small>
-          </div>
-          <div>
-            <dt>Planned revenue · {range.label}</dt>
-            <dd>
-              {tot(
-                live.map((f) => ({ cur: curOf(f), v: (sum(f).rev ?? 0) * k })),
-              )}
-            </dd>
-            <small>
-              <span className="fm-tag plan">Plan</span> profit{" "}
-              {tot(
-                live.map((f) => ({
-                  cur: curOf(f),
-                  v: (sum(f).profit ?? 0) * k,
-                })),
-              )}
-              {(acts ?? []).length > 0 && (
-                <>
-                  {" "}
-                  · <span className="fm-tag actual">Actual</span>{" "}
-                  {byCurrencyText(
-                    (acts ?? []).map((a) => ({
-                      cur: curOf(fs.find((f) => f.id === a.funnel_id)!),
-                      v: Number(a.revenue ?? 0),
-                    })),
-                  )}
-                </>
-              )}
-            </small>
-          </div>
-          <div>
-            <dt>Agency fees · {range.label}</dt>
-            <dd>
-              {tot(
-                active.map((c) => ({
-                  cur: c.currency,
-                  v: monthlyValue(c) * k,
-                })),
-              )}
-            </dd>
-            <small>
-              MRR{" "}
-              {tot(
-                active.map((c) => ({ cur: c.currency, v: monthlyValue(c) })),
-              )}{" "}
-              / mo
-            </small>
-          </div>
-        </dl>
-      </section>
 
       <div className="fm-homegrid">
         <div className="min-w-0">

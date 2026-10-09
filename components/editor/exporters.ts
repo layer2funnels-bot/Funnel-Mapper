@@ -216,7 +216,22 @@ export interface PdfInfo {
   map?: Pick<MapSvgOptions, "heightOf" | "widthOf" | "thick" | "keyLeak" | "goals" | "widgetData">;
   /** Entered actuals next to the plan by month (lib/report-data.ts monthlyPlanVsActual); the page is left out when empty. */
   actualVsPlan?: MonthlyActualRow[];
+  /** Report sections the person switched off in the export step (keys of PDF_SECTIONS). The cover, map and key numbers always print. */
+  omit?: string[];
 }
+
+/** The optional PDF sections, in report order. The export step lists these as checkboxes; the cover page (branding, map, key numbers, steps) always prints. */
+export const PDF_SECTIONS: { key: string; label: string; match: RegExp }[] = [
+  { key: "summary", label: "Executive summary", match: /^Executive summary/ },
+  { key: "scenarios", label: "Scenario comparison", match: /^Scenario comparison/ },
+  { key: "forecast", label: "Revenue and profit forecast, month by month, MRR and reinvestment", match: /^(Revenue & profit forecast|Month by month|MRR forecast|Traffic reinvestment)/ },
+  { key: "sources", label: "Traffic source performance", match: /^Traffic source performance/ },
+  { key: "offers", label: "Offer and product revenue", match: /^Offer & product revenue/ },
+  { key: "expenses", label: "Expenses", match: /^Expenses/ },
+  { key: "goals", label: "Goals and required numbers", match: /^Goals & required numbers/ },
+  { key: "actuals", label: "Actual vs plan by month", match: /^Actual vs plan/ },
+  { key: "status", label: "Build status", match: /^Build status/ },
+];
 
 type RGB = [number, number, number];
 const C = {
@@ -876,8 +891,10 @@ export async function pdfReport(g: { nodes: FunnelNode[]; edges: FunnelEdge[] },
       doc.rect(x, y + 6, 10, 0.6, "F");
     };
     let ys = [TOP, TOP];
-    pageHead();
-    for (const s of sections) {
+    const omitted = new Set(info.omit ?? []);
+    const chosen = sections.filter((s) => !PDF_SECTIONS.some((o) => omitted.has(o.key) && o.match.test(s.title)));
+    if (chosen.length) pageHead();
+    for (const s of chosen) {
       if (s.full) {
         let y = Math.max(...ys);
         if (y + s.h > BOTTOM && y > TOP) {

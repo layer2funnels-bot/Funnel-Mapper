@@ -7669,3 +7669,44 @@ dialog.fm-sharedlg > p {
 .fm-insp p.sub {
   margin-bottom: 12px;
 }
+
+/* Export step dialog */
+dialog.fm-exportdlg {
+  max-width: 560px;
+  width: min(560px, calc(100vw - 32px));
+}
+.fm-exp-sec {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.fm-exp-sec h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fm-exp-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px 16px;
+  grid-template-columns: 1fr;
+}
+.fm-exp-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13.5px;
+}
+.fm-exp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .fm-exp-list label {
+    min-height: 44px;
+  }
+}

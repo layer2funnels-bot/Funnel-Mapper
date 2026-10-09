@@ -143,3 +143,31 @@ test("PDF report: Actual vs plan page appears only with entered actuals and prin
   has(`${money(rows[0].planRev, "GBP").replace("£", "")})`);
   has(`${money(rows[1].planRev, "GBP").replace("£", "")})`);
 });
+
+test("export step: PDF sections can be switched off, and the map image background is chosen there", async ({ page }) => {
+  const g = graph();
+  const { id } = await createFunnel({ graph: g, settings, name: `E2E export step ${Date.now()}` });
+  await openEditor(page, id);
+  await page.getByRole("button", { name: "Funnel menu" }).click();
+  await page.getByRole("menuitem", { name: "Export options…" }).click();
+  const dlg = page.getByRole("dialog", { name: "Export" });
+  await expect(dlg).toBeVisible();
+  // the first page (cover, map, key numbers) is always there
+  await expect(dlg.getByRole("checkbox", { name: /Cover/ })).toBeDisabled();
+  await dlg.getByRole("checkbox", { name: "Expenses" }).uncheck();
+  await dlg.getByRole("checkbox", { name: "Goals and required numbers" }).uncheck();
+  const [dl] = await Promise.all([page.waitForEvent("download"), dlg.getByRole("button", { name: "Export PDF" }).click()]);
+  const text = readFileSync((await dl.path())!).toString("latin1");
+  expect(text.includes("Scenario comparison")).toBe(true);
+  expect(text.includes("Expenses (per month)")).toBe(false);
+  expect(text.includes("Goals & required numbers")).toBe(false);
+  // the image background is chosen in the step: SVG with a transparent background has no solid page fill
+  await page.getByRole("button", { name: "Funnel menu" }).click();
+  await page.getByRole("menuitem", { name: "Export options…" }).click();
+  const dlg2 = page.getByRole("dialog", { name: "Export" });
+  await dlg2.getByRole("button", { name: "SVG" }).click();
+  await dlg2.getByRole("button", { name: "Transparent" }).click();
+  await expect(dlg2.getByRole("button", { name: "Transparent" })).toHaveAttribute("aria-pressed", "true");
+  const [svgDl] = await Promise.all([page.waitForEvent("download"), dlg2.getByRole("button", { name: "Export image" }).click()]);
+  expect(readFileSync((await svgDl.path())!).toString().startsWith("<svg")).toBe(true);
+});

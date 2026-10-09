@@ -76,6 +76,7 @@ import { dataUrlToBlob, encodeUnder } from "@/lib/image-client";
 import { TemplatesPanel } from "./templates-panel";
 import { REPORT_SECTIONS, ReportsView } from "./reports-view";
 import { ShareDialog } from "./share-dialog";
+import { ExportDialog } from "./export-dialog";
 import { TemplateDialog } from "./template-dialog";
 import { ShareComments } from "./share-comments";
 import { saveVersion, VersionsPanel } from "./versions";
@@ -149,6 +150,7 @@ function EditorInner(props: EditorProps) {
   const sheetDrag = useRef<{ y: number; h: number } | null>(null);
   const shareRef = useRef<HTMLDialogElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const tplRef = useRef<HTMLDialogElement>(null);
 
@@ -304,7 +306,7 @@ function EditorInner(props: EditorProps) {
 
   /* ---------- exports ---------- */
   const doExport = useCallback(
-    async (kind: "json" | "csv" | "svg" | "png" | "pdf") => {
+    async (kind: "json" | "csv" | "svg" | "png" | "pdf", omit?: string[]) => {
       const s = useEditor.getState();
       const g = { nodes: s.nodes, edges: s.edges };
       const nums = s.opts.nums && !s.settings.hideNumbers;
@@ -323,7 +325,7 @@ function EditorInner(props: EditorProps) {
           showToast("Building PDF…");
           if (!s.shared) await ensureActuals();
           const actualVsPlan = s.shared ? [] : monthlyPlanVsActual(g, s.R, (useEditor.getState().actuals ?? []) as never);
-          const blob = await pdfReport(g, s.R, { actualVsPlan, funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
+          const blob = await pdfReport(g, s.R, { actualVsPlan, omit, funnelName: s.name, description: funnel.description, clientName: client.name, clientLogo: client.logo_url, agencyName: agency.name, agencyLogo: agency.logo_url, currency: s.settings.currency, basis: s.settings.basis, hideNumbers: !nums, settings: s.settings, map });
           download(fileName(s.name, "pdf"), blob);
         }
       } catch (e) {
@@ -667,6 +669,9 @@ function EditorInner(props: EditorProps) {
                 </>
               )}
               <div className="ph">Export</div>
+              <button type="button" role="menuitem" onClick={() => (close(), setExportOpen(true))}>
+                Export options…
+              </button>
               <button type="button" role="menuitem" onClick={() => (close(), doExport("pdf"))}>
                 PDF report for client
               </button>
@@ -1226,6 +1231,7 @@ function EditorInner(props: EditorProps) {
       />
       <HelpDialog ref={helpRef} />
       <HelpDialog ref={tipsRef} mode="help" />
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} onPdf={(omit) => void doExport("pdf", omit)} onImage={(k) => void doExport(k)} onData={(k) => void doExport(k)} />
       {manage && <ShareDialog ref={shareRef} funnelId={funnel.id} open={shareOpen} clientName={client.name} clientLogo={client.logo_url} agencyName={agency.name} agencyLogo={agency.logo_url} />}
       {manage && props.userId && <TemplateDialog ref={tplRef} userId={props.userId} defaultName={name} description={funnel.description} />}
       {ready && (

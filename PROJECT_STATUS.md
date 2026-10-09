@@ -45,7 +45,7 @@ Converted against `reference/ project/*.dc.html` (boards are visual specs, rende
 - **Access:** invite-only; independent users and multiple workspaces (merged from `main`).
   - Owner / Admin / Editor / Viewer per workspace, enforced in RLS.
   - Funnel notes stay internal unless shared on purpose, enforced in the share RPC.
-- **Not done here, needs the owner:** the 3 new migrations are not yet applied to the demo or production databases.
+- **Migrations (history):** the 3 new migrations were not applied when this was written. Superseded: applied to `arwedmqmxrxllytzriat` on 8 Oct (see "Deployment status (8 Oct 2026)" at the top); verified again on 9 Oct against the live migration list.
   - Production also still lacks migrations 4–9.
   - `docs/deployment.md` has the exact order. The deploy script now handles hand-migrated histories safely.
 
@@ -94,7 +94,7 @@ Converted against `reference/ project/*.dc.html` (boards are visual specs, rende
 | Export: PDF report | PASS | Batch 3 sections plus final V1: Executive summary (year at today's rates, key leak), named goals with required numbers or conversion impact, MRR forecast, traffic reinvestment (only when a rate is chosen), build status. Every figure from `lib/report-data.ts`; checked visually |
 | Locked Emerald UI direction | PASS | Batch 2 `app/globals.css`: dark-first locked tokens (canvas #0B1220, library #0F172A, chrome #111827, panels #1E293B, borders #334155, text #E2E8F0/#94A3B8, Emerald #10B981/#059669/#047857/#34D399, semantic category colours); light theme kept as an option. Layout unchanged |
 | Responsive / accessibility | PASS | e2e tablet/phone checks and an axe scan pass |
-| Deployment | READY (not applied) | `npm run deploy` now matches hand-migrated histories by name and refuses gaps (`MIGRATIONS_BASELINE`), unit-tested. Demo (`arwedmqmxrxllytzriat`) has everything up to `20261009000000_workspace_members`; production (`kyhlhacbmlbkiibvpsel`) has 3 of 12. The 3 V1-completion migrations are not applied to either database: they must go in right before this code (see docs/deployment.md) |
+| Deployment | READY (not applied) | `npm run deploy` now matches hand-migrated histories by name and refuses gaps (`MIGRATIONS_BASELINE`), unit-tested. Demo (`arwedmqmxrxllytzriat`) has everything up to `20261009000000_workspace_members`; production (`kyhlhacbmlbkiibvpsel`) has 3 of 12. Superseded: every migration is applied to `arwedmqmxrxllytzriat` (see the 8 Oct deployment status); `kyhlhacbmlbkiibvpsel` is unused by the deployed domains |
 
 ## C. Gap matrix
 
@@ -284,7 +284,7 @@ The editor, reports, saved summaries (dashboard, client page) and exports all us
   - DB 37/37 and unit 115/115; typecheck, lint and build clean.
   - e2e `workspaces` + `team` + `privacy` 24/24.
 - **Still to do:**
-  - Production (`kyhlhacbmlbkiibvpsel`) still needs the pending migrations, including 20261007 + 20261008, before this code is deployed there.
+  - Superseded: the deployed domains run on `arwedmqmxrxllytzriat`, which has every migration. `kyhlhacbmlbkiibvpsel` (3 migrations) is not used by either domain and was left untouched.
   - Until this follow-up is deployed to the demo, an independent sign-up there leaves its (harmless) pending row behind.
 
 ## Workspace/auth completion pass (done)
@@ -373,7 +373,7 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 ## V2 final completion pass (checkpoint)
 
 See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, unit 209/209, E2E 151/151, typecheck / lint / build clean. Final QA pass: see "Final Phase 1 QA and completion pass" in the same file. Owner actions still open: apply pending migrations (docs/deployment.md), set CAPTURE_URL_TEMPLATE for automatic thumbnails; final Figma 169 visuals not available.
-New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
+Migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): applied to `arwedmqmxrxllytzriat` on 8 Oct, together with trash, actuals_source and image_limit.
 
 ## 9 Oct overnight batch: phone / tablet layouts, desktop polish, Export step
 

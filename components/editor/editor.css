@@ -9020,3 +9020,72 @@ dialog.fm-exportdlg {
 .fm-hide-all .fm-chip {
   display: none;
 }
+/* a line that leaves the bottom of a picture passes behind the name: keep the name readable over it */
+.fm-ntitle > span:first-child,
+.fm-ntitle > small {
+  text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 6px var(--bg);
+}
+
+/* ports (V4): a 2px anchor exactly on the picture's edge, so a line meets the picture, not a circle beside it.
+   The circle people see and grab is drawn around that anchor, and only when it is needed. */
+.fm-stage .react-flow__handle.fm-port {
+  width: 2px;
+  height: 2px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  opacity: 1;
+}
+.fm-stage .react-flow__handle.fm-port.top,
+.fm-stage .react-flow__handle.fm-port.side.top {
+  top: -1px;
+}
+.fm-stage .react-flow__handle.fm-port.bottom,
+.fm-stage .react-flow__handle.fm-port.side.bottom,
+.fm-stage .react-flow__handle.fm-port.alt {
+  bottom: -1px;
+}
+.fm-stage .react-flow__handle.fm-port.left,
+.fm-stage .react-flow__handle.fm-port.side.left,
+.fm-stage .react-flow__handle.fm-port.in {
+  left: -1px;
+}
+.fm-stage .react-flow__handle.fm-port.right,
+.fm-stage .react-flow__handle.fm-port.side.right,
+.fm-stage .react-flow__handle.fm-port.out {
+  right: -1px;
+}
+.fm-stage .react-flow__handle.fm-port::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid #64748b;
+  background: var(--bg);
+  transition: opacity 0.12s;
+}
+.fm-stage .react-flow__handle.fm-port.side::before {
+  opacity: 0;
+}
+.fm-stage .react-flow__node:hover .fm-port.side::before,
+.fm-stage .react-flow__node.selected .fm-port.side::before,
+.fm-stage .react-flow__node:focus-visible .fm-port.side::before,
+.fm-stage.fm-connecting .fm-port.side::before {
+  opacity: 1;
+}
+.fm-stage .react-flow__handle.fm-port:hover::before,
+.fm-stage .react-flow__handle.fm-port.connectingto::before,
+.fm-stage .react-flow__handle.fm-port.valid::before {
+  background: var(--brand);
+  border-color: var(--brand);
+  opacity: 1;
+}
+.fm-readonly .react-flow__handle.fm-port::before {
+  opacity: 0 !important;
+}

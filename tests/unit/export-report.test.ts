@@ -108,7 +108,7 @@ const n = (id: string, type: string, x: number, y: number, extra: Partial<Funnel
 function canvas(): FunnelGraph {
   return {
     nodes: [
-      n("ads", "fbads", 0, 0, { p: { model: "budget", visitors: 1000, spend: 200 }, s: { fill: "#ECFDF5", border: "#10B981", borderW: 2, italic: true, color: "#065F46" } }),
+      n("ads", "fbads", 0, 0, { p: { model: "budget", visitors: 1000, spend: 200 }, s: { accent: "#10B981" } }),
       n("lp", "landing", 320, 0, { p: { cr: 40 } }),
       n("frame", "frame", -40, -60, { w: 640, h: 220, name: "Stage one", p: { color: "#10B981" } }),
       n("ell", "shape", 0, 300, { w: 120, h: 80, p: { shape: "ellipse", text: "Ellipse" } }),
@@ -160,9 +160,7 @@ describe("map SVG export keeps the canvas elements and styles", () => {
   });
 
   it("applies block and text styles", () => {
-    expect(svg).toContain('fill="#ECFDF5" stroke="#10B981" stroke-width="2"');
-    expect(svg).toMatch(/font-style="italic"[^>]*>ads</);
-    expect(svg).toMatch(/fill="#065F46" font-style="italic"/);
+    // blocks are pictures now (V4): the box styles are gone, text styles still apply to headings
     expect(svg).toMatch(/text-anchor="middle"[^>]*text-decoration="underline"[^>]*>A very wide heading</);
   });
 

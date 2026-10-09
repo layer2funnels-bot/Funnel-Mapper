@@ -1,12 +1,13 @@
 // Pure export generators: CSV step report and SVG map (the PNG and the PDF map are rasterised from the SVG).
 import { brandMarkOf } from "./brand-marks";
-import { baseOf, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, fourPorts, isAnnot, nodeW, typeOf, type ColorKey } from "./catalog";
+import { baseOf, blockPivot, CATDARK, CATHEX, NH, WIDGET_SIZES, blockH, fourPorts, isAnnot, nodeW, picRect, typeOf, type ColorKey } from "./catalog";
 import { money, nf, people } from "./format";
 import { num, periodFactor, stepRows, type FunnelResult } from "./funnel-math";
 import type { FunnelEdge, FunnelNode, Goal, Side } from "./graph";
 import { ICONS, type IconName } from "./icons";
-import { edgeConversion, edgePath, sidesOf, edgeRevenue, edgeTag, nodeStats, offerSubtitle, perfLine, priceTab, subLabel } from "./editor/labels";
-import { CARD, FAMILIES, FAMILY_GEOM, hasSplitBar, visualOf, WF_SIZE, WIREFRAMES, type WfPaint, type Wireframe } from "./block-visuals";
+import { blockChip, edgeConversion, edgePath, edgeRate, sidesOf, edgeRevenue, edgeTag, priceTab } from "./editor/labels";
+import { typeCaption, visualOf, WF_SIZE, WIREFRAMES, windowKeyOf, type WfPaint, type Wireframe } from "./block-visuals";
+import { WINDOWS } from "./design-tiles";
 import { DASH, FONT_FAMILIES, edgeLook, shapeGeom } from "./style";
 import { hostOf, isVideoUrl, richToPlain } from "./rich-text";
 import { goalCurrent } from "./report-data";
@@ -119,6 +120,8 @@ export interface MapSvgOptions {
   /** Revenue basis: money on blocks carries the LTV tag when it is "ltv". */
   basis?: "first" | "ltv";
   nums: boolean;
+  /** What the one number on each block shows (Clean none, People people in, Money revenue / spend). Defaults to People when `nums` is on. */
+  view?: "clean" | "people" | "money";
   palette?: SvgPalette;
   /** Rendered height/width of an element (the editor passes its measured sizes). */
   heightOf?: (n: FunnelNode) => number;
@@ -323,14 +326,16 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
 
   /* connections (React Flow draws them under the elements) */
   const maxF = Math.max(1, ...Object.values(R.flows));
+  const PORT_OUT = 1;
   const sideXY = (n: FunnelNode, side: Side): [number, number] => {
-    // handle centres sit 9px outside the block edge (editor.css .fm-port), React Flow anchors on the outer side
-    const w = nodeW(n.type),
-      h = blockH(n.type);
-    if (side === "left") return [n.x - 9, n.y + h / 2];
-    if (side === "bottom") return [n.x + w / 2, n.y + h + 9];
-    if (side === "top") return [n.x + w / 2, n.y - 9];
-    return [n.x + w + 9, n.y + h / 2];
+    // lines attach to the picture or shape; handle centres sit just outside its edge (editor.css .fm-port)
+    const r = picRect(n.type),
+      cy = n.y + blockPivot(n.type),
+      cx = n.x + r.x + r.w / 2;
+    if (side === "left") return [n.x + r.x - PORT_OUT, cy];
+    if (side === "bottom") return [cx, n.y + r.y + r.h + PORT_OUT];
+    if (side === "top") return [cx, n.y + r.y - PORT_OUT];
+    return [n.x + r.x + r.w + PORT_OUT, cy];
   };
   let edges = "",
     labels = "";
@@ -371,7 +376,7 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
     if (L.kind === "nodata") segs.push({ t: "No data", c: P.muted, w: 600 });
     else if (opts.nums) {
       const share = num(e.share ?? 100);
-      segs.push({ t: `${nf(flow)}${share !== 100 ? ` · ${nf(share)}%` : ""}`, c: P.ink, w: 700 });
+      segs.push({ t: `${edgeRate(e.from, flow, R) ?? nf(flow)}${share !== 100 ? ` · ${nf(share)}%` : ""}`, c: P.ink, w: 700 });
       const conv = L.showPct ? edgeConversion(e.from, flow, R) : null;
       if (conv != null) segs.push({ t: `${nf(conv * 100, 1)}% convert`, c: P.muted, w: 600 });
       const rv = L.showRev ? edgeRevenue(e.to, flow, R) : 0;
@@ -571,155 +576,78 @@ export function mapSvg(g: { nodes: FunnelNode[]; edges: FunnelEdge[] }, R: Funne
     }
     if (!T || isAnnot(n.type)) return;
 
-    /* flow block: the same family anatomy as the canvas card (lib/block-visuals.ts FAMILY_GEOM / CARD) */
-    const w = nodeW(n.type),
-      h = blockH(n.type),
-      c = P.cat[T.color ?? T.cat];
-    const V = visualOf(n.type),
-      G = FAMILY_GEOM[V.family],
-      F2 = FAMILIES[V.family];
-    const perf = !!opts.nums && !!opts.thick;
-    // card outline with per-corner radii (a custom radius in the Style tab wins)
-    const [rtl, rtr, rbr, rbl] = s?.radius != null ? [s.radius, s.radius, s.radius, s.radius] : G.radii;
-    const bw = s?.borderW ?? CARD.border;
-    const cardPath = (inset: number) => {
-      const x = n.x + inset,
-        y = n.y + inset,
-        X = n.x + w - inset,
-        Y = n.y + h - inset;
-      const r = (v: number) => Math.max(0, Math.min(v - inset, (h - 2 * inset) / 2, (w - 2 * inset) / 2));
-      const [a1, a2, a3, a4] = [r(rtl), r(rtr), r(rbr), r(rbl)];
-      return `M${n2(x + a1)} ${n2(y)}H${n2(X - a2)}A${n2(a2)} ${n2(a2)} 0 0 1 ${n2(X)} ${n2(y + a2)}V${n2(Y - a3)}A${n2(a3)} ${n2(a3)} 0 0 1 ${n2(X - a3)} ${n2(Y)}H${n2(x + a4)}A${n2(a4)} ${n2(a4)} 0 0 1 ${n2(x)} ${n2(Y - a4)}V${n2(y + a1)}A${n2(a1)} ${n2(a1)} 0 0 1 ${n2(x + a1)} ${n2(y)}Z`;
-    };
-    const dash = s?.borderStyle ? BORDER_DASH[s.borderStyle] : undefined;
+    /* flow block (V4): a picture or shape with its name under it and one number chip, drawn like the canvas */
+    const V = visualOf(n.type);
+    const pr = picRect(n.type),
+      px = n.x + pr.x,
+      py = n.y + pr.y,
+      pw = pr.w,
+      ph = pr.h,
+      pcx = px + pw / 2,
+      pcy = py + ph / 2;
+    const c = n.s?.accent && /^#[0-9a-f]{6}$/i.test(n.s.accent) ? n.s.accent : P.cat[T.color ?? T.cat];
+    const view = opts.view ?? (opts.nums ? "people" : "clean");
+    const perf = view !== "clean";
     const leak = perf && opts.keyLeak === n.id;
-    let o = `<path d="${cardPath(bw / 2)}" fill="${esc(s?.fill ?? P.panel)}" stroke="${esc(s?.border ?? (leak ? P.alt : P.line))}" stroke-width="${bw}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
-    if (G.hatch) {
-      defs += `<pattern id="fm-hatch" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(135)"><rect width="10" height="20" fill="${P.muted}" fill-opacity=".09"/></pattern>`;
-      o += `<path d="${cardPath(bw)}" fill="url(#fm-hatch)"/>`;
-    }
-    if (F2.strip) o += `<rect x="${n2(n.x + 12)}" y="${n2(n.y - 0.5)}" width="${w - 24}" height="3" rx="1.5" fill="${c}"/>`;
-    const [padL, padR] = G.pad;
-    const innerL = n.x + bw + padL,
-      innerR = n.x + w - bw - padR,
-      innerW = innerR - innerL;
-    // stack: head, [strip], [bar], stats; free space is spread between them (flex space-between)
-    const parts: { k: string; h: number }[] = [{ k: "head", h: CARD.head }];
-    if (F2.strip && V.wireframe) parts.push({ k: "strip", h: CARD.strip });
-    if (hasSplitBar(n.type)) parts.push({ k: "split", h: CARD.bar });
-    const PL = perf ? perfLine(n, R, opts.currency, 1, opts.basis) : null;
-    if (PL && PL.ratio != null) parts.push({ k: "conv", h: CARD.bar });
-    const goal = V.family === "goal" ? (opts.goals ?? []).find((g) => g.nodeId === n.id && g.value > 0) : undefined;
-    if (goal) parts.push({ k: "goal", h: CARD.goalBar });
-    const statsH = CARD.stats + (G.dashedStats ? CARD.dashedStats : 0);
-    parts.push({ k: "stats", h: statsH });
-    const inner = h - 2 * bw - 2 * CARD.padY;
-    const gap = parts.length > 1 ? (inner - parts.reduce((a, q) => a + q.h, 0)) / (parts.length - 1) : 0;
-    const top: Record<string, number> = {};
-    let yy = n.y + bw + CARD.padY;
-    parts.forEach((q) => {
-      top[q.k] = yy;
-      yy += q.h + gap;
-    });
-    // head: tile + title + sub-line
-    const ts = G.tileSize,
-      tcy = top.head + CARD.head / 2,
-      tcx = innerL + ts / 2;
+    const edgeCol = P.panel === "#FFFFFF" || P.bg === "#FFFFFF" ? "#D3DBE6" : "#2A3648";
     const tint = V.brand ?? c;
     const ink = V.brand ? "#FFFFFF" : P.catInk;
     const artUrl = s?.icon ? undefined : opts.art?.[n.type];
-    if (artUrl) o += `<image href="${esc(artUrl)}" x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" preserveAspectRatio="xMidYMid meet"/>`;
-    else if (G.tile === "circle") o += `<circle cx="${n2(tcx)}" cy="${n2(tcy)}" r="${ts / 2}" fill="${tint}"/>`;
-    else if (G.tile === "diamond") o += `<rect x="${n2(tcx - ts * 0.41)}" y="${n2(tcy - ts * 0.41)}" width="${n2(ts * 0.82)}" height="${n2(ts * 0.82)}" rx="${G.tileR}" fill="${tint}" transform="rotate(45 ${n2(tcx)} ${n2(tcy)})"/>`;
-    else o += `<rect x="${n2(tcx - ts / 2)}" y="${n2(tcy - ts / 2)}" width="${ts}" height="${ts}" rx="${G.tileR}" fill="${tint}"/>`;
     const mark = s?.icon ? undefined : brandMarkOf(n.type);
-    if (artUrl) {
-      // the artwork carries its own glyph
-    } else if (mark) o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="${ink}"><path d="${mark}"/></svg>`;
-    else {
+    const glyphAt = (cx: number, cy: number, size: number, color: string) => {
+      if (mark) return `<svg x="${n2(cx - size / 2)}" y="${n2(cy - size / 2)}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="${mark}"/></svg>`;
       const icon = ICONS[(s?.icon as IconName) || T.icon] ?? ICONS.page;
-      o += `<svg x="${n2(tcx - 9)}" y="${n2(tcy - 9)}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
-    }
-    const tx = innerL + ts + 10,
-      tw = innerR - tx - 10;
-    const tl = look(s, { size: 14, lh: 18, weight: 700 });
-    o += textBlock([ellipsis(n.name, tw, tl.size, tl.weight, tl.family, measure)], tx, tw, top.head, { ...tl, align: "left" });
-    const sub = { size: 11.5, lh: 15, weight: 500, family: F.sans, color: P.muted, align: "left" as const };
-    if (PL) {
-      const hlW = measure(PL.headline, 14, 700, F.display);
-      o += `<text x="${n2(tx)}" y="${n2(baseline(top.head + 18, { ...sub, size: 14, lh: 15 }))}" font-size="14" font-weight="700" font-family="${esc(F.display)}" fill="${P.ink}">${esc(ellipsis(PL.headline, tw, 14, 700, F.display, measure))}</text>`;
-      o += textBlock([ellipsis(" " + PL.caption, Math.max(0, tw - hlW), sub.size, sub.weight, sub.family, measure)], tx + hlW, Math.max(0, tw - hlW), top.head + 18, sub);
-    } else {
-      const subText = V.family === "offer" ? offerSubtitle(n) : subLabel(n, opts.currency);
-      o += textBlock([ellipsis(subText, tw, sub.size, sub.weight, sub.family, measure)], tx, tw, top.head + 18, sub);
-    }
-    // price tab (offers; hidden with the numbers)
-    if (F2.price && opts.nums) {
-      const pt = priceTab(n, opts.currency);
-      const pw = measure(pt, 10.5, 700, F.sans) + 14;
-      o += `<rect x="${n2(n.x + 12.5)}" y="${n2(n.y - 9.5)}" width="${n2(pw - 1)}" height="19" rx="5" fill="${P.bg === "none" ? P.panel : P.bg}" stroke="${c}" stroke-opacity=".6"/>`;
-      o += `<text x="${n2(n.x + 12 + 7)}" y="${n2(n.y + 0.5 + 3.7)}" font-size="10.5" font-weight="700" font-family="${esc(F.sans)}" fill="${c}">${esc(pt)}</text>`;
-    }
-    // preview strip: captured screenshot, else the semantic wireframe
-    if (top.strip != null && V.wireframe) {
-      const sx = innerL,
-        sw = innerW;
-      o += `<rect x="${n2(sx + 0.5)}" y="${n2(top.strip + 0.5)}" width="${n2(sw - 1)}" height="${CARD.strip - 1}" rx="5" fill="${P.bg === "none" ? P.panel2 : P.bg}" stroke="${P.line}"/>`;
+      return `<svg x="${n2(cx - size / 2)}" y="${n2(cy - size / 2)}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
+    };
+    let o = "";
+    if (V.family === "page" || V.family === "offer") {
+      const win = WINDOWS[windowKeyOf(n.type)];
+      defs += `<clipPath id="fm-p${idx}"><rect x="${n2(px)}" y="${n2(py)}" width="${pw}" height="${ph}" rx="12"/></clipPath>`;
+      o += `<rect x="${n2(px)}" y="${n2(py)}" width="${pw}" height="${ph}" rx="12" fill="#F4F6FA"/>`;
+      o += `<g clip-path="url(#fm-p${idx})">`;
+      if (win) o += `<svg x="${n2(px)}" y="${n2(py)}" width="${pw}" height="${ph}" viewBox="0 0 66 65" preserveAspectRatio="xMidYMin slice">${win}</svg>`;
       const shot = opts.shots?.[n.id];
-      if (shot) {
-        defs += `<clipPath id="fm-s${idx}"><rect x="${n2(sx + 1)}" y="${n2(top.strip + 1)}" width="${n2(sw - 2)}" height="${CARD.strip - 2}" rx="4"/></clipPath>`;
-        o += `<image href="${esc(shot)}" x="${n2(sx + 1)}" y="${n2(top.strip + 1)}" width="${n2(sw - 2)}" height="${CARD.strip - 2}" preserveAspectRatio="xMidYMin slice" clip-path="url(#fm-s${idx})"/>`;
-      } else o += wireframeSvg(V.wireframe, sx + (sw - WF_SIZE.w) / 2, top.strip + (CARD.strip - WF_SIZE.h) / 2, { o: P.line, d: P.line, m: P.edge, a: c, ao: c });
-    }
-    // split bar (Yes/No, A/B)
-    if (top.split != null) {
-      const a = Math.max(0, Math.min(100, Number(n.p.pct) || 0)),
-        g2 = 2,
-        avail = innerW - g2;
-      o += `<rect x="${n2(innerL)}" y="${n2(top.split)}" width="${n2((avail * a) / 100)}" height="${CARD.bar}" rx="2" fill="${P.brand}"/>`;
-      o += `<rect x="${n2(innerL + (avail * a) / 100 + g2)}" y="${n2(top.split)}" width="${n2((avail * (100 - a)) / 100)}" height="${CARD.bar}" rx="2" fill="${baseOf(n.type) === "split" ? P.edge : P.alt}"/>`;
-    }
-    // Performance map: share who move on (rest = people lost)
-    if (top.conv != null && PL?.ratio != null) {
-      o += `<rect x="${n2(innerL)}" y="${n2(top.conv)}" width="${n2(innerW)}" height="${CARD.bar}" rx="2" fill="${P.alt}"/><rect x="${n2(innerL)}" y="${n2(top.conv)}" width="${n2(innerW * PL.ratio)}" height="${CARD.bar}" rx="2" fill="${P.brand}"/>`;
-    }
-    // goal progress (target from the funnel's goals, never invented)
-    if (top.goal != null && goal) {
-      const cur = goalCurrent(g.nodes, R, goal) * (goal.kind === "conversion" ? 1 : periodFactor(goal.period ?? "month"));
-      const p = Number.isFinite(cur) ? Math.max(0, Math.min(1, cur / goal.value)) : 0;
-      o += `<rect x="${n2(innerL)}" y="${n2(top.goal)}" width="${n2(innerW)}" height="${CARD.goalBar}" rx="3" fill="${P.line}"/><rect x="${n2(innerL)}" y="${n2(top.goal)}" width="${n2(innerW * p)}" height="${CARD.goalBar}" rx="3" fill="${P.good}"/>`;
-      o += `<text x="${n2(innerR)}" y="${n2(top.goal - 3)}" text-anchor="end" font-size="10" font-weight="700" font-family="${esc(F.sans)}" fill="${P.muted}">${nf(p * 100)}%</text>`;
-    }
-    // stats row
-    if (opts.nums) {
-      const st = { size: 12, lh: 16, weight: 400, family: F.sans, color: P.muted, align: "left" as const };
-      let sy = top.stats;
-      if (G.dashedStats) {
-        o += `<line x1="${n2(innerL)}" y1="${n2(sy + 0.5)}" x2="${n2(innerR)}" y2="${n2(sy + 0.5)}" stroke="${P.line}" stroke-dasharray="3 3"/>`;
-        sy += CARD.dashedStats;
+      if (shot) o += `<image href="${esc(shot)}" x="${n2(px)}" y="${n2(py)}" width="${pw}" height="${ph}" preserveAspectRatio="xMidYMin slice"/>`;
+      o += `<rect x="${n2(px)}" y="${n2(py + ph - 4)}" width="${pw}" height="4" fill="${c}"/></g>`;
+      o += `<rect x="${n2(px + 0.5)}" y="${n2(py + 0.5)}" width="${pw - 1}" height="${ph - 1}" rx="11.5" fill="none" stroke="${edgeCol}"/>`;
+      o += `<rect x="${n2(px + 6)}" y="${n2(py + 6)}" width="20" height="20" rx="6" fill="${c}"/>` + glyphAt(px + 16, py + 16, 12, P.catInk);
+      if (V.family === "offer" && perf) {
+        const pt = priceTab(n, opts.currency);
+        const rw = measure(pt, 11, 700, F.sans) + 14;
+        o += `<rect x="${n2(px + 6)}" y="${n2(py + ph - 10 - 18)}" width="${n2(rw)}" height="18" rx="6" fill="${c}"/><text x="${n2(px + 6 + rw / 2)}" y="${n2(py + ph - 10 - 5.5)}" text-anchor="middle" font-size="11" font-weight="700" font-family="${esc(F.sans)}" fill="${P.catInk}">${esc(pt)}</text>`;
       }
-      const r0 = R.N[n.id];
-      const nodata = !r0 || (T.cat !== "traffic" && r0.inflow === 0);
-      if (nodata) o += `<text x="${n2(innerL)}" y="${n2(baseline(sy, st))}" font-size="12" font-style="italic" font-family="${esc(F.sans)}" fill="${P.muted}">No data yet</text>`;
-      else {
-        let full = "",
-          tsp = "";
-        for (const sg of nodeStats(n, R, opts.currency, 1, opts.basis)) {
-          const room = innerW - measure(full, 12, 400, F.sans);
-          const t = measure(sg.t, 12, sg.b ? 700 : 400, F.sans) <= room ? sg.t : ellipsis(sg.t, room, 12, sg.b ? 700 : 400, F.sans, measure);
-          full += t;
-          tsp += `<tspan${sg.b ? ` font-weight="700" fill="${P.ink}"` : ""}>${esc(t)}</tspan>`;
-          if (t !== sg.t) break;
-        }
-        o += `<text x="${n2(innerL)}" y="${n2(baseline(sy, st))}" ${textAttrs(st)} xml:space="preserve">${tsp}</text>`;
-      }
+    } else if (artUrl) {
+      o += `<image href="${esc(artUrl)}" x="${n2(px)}" y="${n2(py)}" width="${pw}" height="${ph}" preserveAspectRatio="xMidYMid meet"/>`;
+    } else if (V.family === "source" || V.family === "goal") {
+      o += `<circle cx="${n2(pcx)}" cy="${n2(pcy)}" r="${pw / 2}" fill="${V.family === "goal" ? P.cat.goal : tint}"/>` + glyphAt(pcx, pcy, 28, ink);
+    } else if (V.family === "message") {
+      o += `<path d="M${n2(px + 22)} ${n2(py)}H${n2(px + pw - 22)}a22 22 0 0 1 22 22v${ph - 44}a22 22 0 0 1-22 22H${n2(px + 6)}a6 6 0 0 1-6-6V${n2(py + 22)}a22 22 0 0 1 22-22z" fill="${tint}"/>` + glyphAt(pcx, pcy, 22, ink);
+    } else {
+      const side = V.family === "logic" ? 50 : 44;
+      o += `<rect x="${n2(pcx - side / 2)}" y="${n2(pcy - side / 2)}" width="${side}" height="${side}" rx="${V.family === "logic" ? 10 : 8}" fill="${tint}" transform="rotate(45 ${n2(pcx)} ${n2(pcy)})"/>` + glyphAt(pcx, pcy, 22, ink);
     }
     if (leak) {
-      const lw = measure("Key leak", 10.5, 800, F.sans) + 16;
-      o += `<rect x="${n2(n.x + w - 10 - lw)}" y="${n2(n.y - 11)}" width="${n2(lw)}" height="20" rx="10" fill="${P.alt}"/><text x="${n2(n.x + w - 10 - lw / 2)}" y="${n2(n.y + 2.8)}" text-anchor="middle" font-size="10.5" font-weight="800" font-family="${esc(F.sans)}" fill="#fff">Key leak</text>`;
+      const lw = measure("Biggest leak", 11, 700, F.sans) + 18;
+      o += `<rect x="${n2(px - 6)}" y="${n2(py - 32)}" width="${n2(lw)}" height="22" rx="6" fill="${P.alt}" fill-opacity=".16" stroke="${P.alt}"/><text x="${n2(px - 6 + lw / 2)}" y="${n2(py - 17)}" text-anchor="middle" font-size="11" font-weight="600" font-family="${esc(F.sans)}" fill="${P.alt}">Biggest leak</text>`;
+      o += V.family === "page" || V.family === "offer" ? `<rect x="${n2(px - 5)}" y="${n2(py - 5)}" width="${pw + 10}" height="${ph + 10}" rx="17" fill="none" stroke="${P.alt}" stroke-width="2" stroke-dasharray="7 5"/>` : `<circle cx="${n2(pcx)}" cy="${n2(pcy)}" r="${n2(Math.max(pw, ph) / 2 + 6)}" fill="none" stroke="${P.alt}" stroke-width="2" stroke-dasharray="7 5"/>`;
     }
-    body += group(s, o);
-    boxes.push([n.x, n.y - (F2.price || leak ? 11 : 0), w, h + (F2.price || leak ? 11 : 0)]);
+    // the one number: a chip top-right (People: people in; Money: revenue on offers, spend on sources)
+    const chip = n.s?.hideNum ? null : blockChip(n, R, opts.currency, 1, view, opts.basis);
+    if (chip) {
+      const cw = measure(chip.value, 11.5, 700, F.sans) + 16;
+      o += `<rect x="${n2(px + pw + 12 - cw + 0.5)}" y="${n2(py - 10 + 0.5)}" width="${n2(cw - 1)}" height="21" rx="10.5" fill="${P.panel2}" stroke="${P.line}"/><text x="${n2(px + pw + 12 - cw / 2)}" y="${n2(py - 10 + 14.5)}" text-anchor="middle" font-size="11.5" font-weight="700" font-family="${esc(F.sans)}" fill="${P.ink}">${esc(chip.value)}</text>`;
+    }
+    // name under it: two lines at most, centred; then the subtype
+    const nameW = nodeW(n.type) - 4;
+    const tl: TextLook = { size: 13, lh: 17, weight: 600, family: F.sans, color: P.ink, align: "center" };
+    let lines = wrapText(n.name, nameW, tl.size, tl.weight, tl.family, measure);
+    if (lines.length > 2) lines = [lines[0], ellipsis(lines.slice(1).join(" "), nameW, tl.size, tl.weight, tl.family, measure)];
+    o += textBlock(lines, n.x + 2, nameW, py + ph + 6, tl);
+    const subY = py + ph + 6 + lines.length * tl.lh + 2;
+    const st: TextLook = { size: 11, lh: 14, weight: 400, family: F.sans, color: P.muted, align: "center" };
+    o += textBlock([ellipsis(V.family === "page" || V.family === "offer" ? typeCaption(n.type) : T.label, nameW, st.size, st.weight, st.family, measure)], n.x + 2, nameW, subY, st);
+    body += group(undefined, o);
+    boxes.push([n.x, n.y - (leak ? 32 : 10), nodeW(n.type) + 12, blockH(n.type) + (leak ? 32 : 10)]);
   });
 
   const [x0, y0, x1, y1] = mapBounds(boxes, paths);

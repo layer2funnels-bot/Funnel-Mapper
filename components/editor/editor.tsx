@@ -334,7 +334,7 @@ function EditorInner(props: EditorProps) {
         if (kind === "csv") download(fileName(s.name, "csv"), stepsCsv(g, s.R, s.settings.scenarios.length ? reportData(g, s.settings, s.R).scenarios : []), "text/csv");
         const graphNow = { nodes: s.nodes, edges: s.edges };
         const widgetData = { series: (m: WidgetMetric, v: number) => chartSeries(m, graphNow, s.settings, s.R, v), mrr: (members: FunnelNode[] | null) => mrrDetail(graphNow, s.settings, s.R, members) };
-        const map = { heightOf, widthOf, thick: s.opts.thick, keyLeak: s.keyLeak, goals: s.settings.goals, widgetData };
+        const map = { heightOf, widthOf, view: (s.settings.hideNumbers ? "clean" : s.opts.view) as "clean" | "people" | "money", thick: s.opts.thick, keyLeak: s.keyLeak, goals: s.settings.goals, widgetData };
         const img = { ...map, palette: paletteFor(s.opts.bg) };
         // the map image shows what's on screen: hidden layers (notes, checklists) stay out of it
         const shown = { nodes: s.nodes.filter((n) => (s.opts.notes || n.type !== "note") && (s.opts.checks || n.type !== "checklist")), edges: s.edges };

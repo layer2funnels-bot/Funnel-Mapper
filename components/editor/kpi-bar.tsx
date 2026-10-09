@@ -200,7 +200,7 @@ export function KpiBar() {
           )}
         >
           {() => (
-            <dl className="fm-kgrid">
+            <dl className="fm-ekgrid">
               {rest.map((k) => (
                 <div key={k.id}>
                   <dt>{k.label}</dt>

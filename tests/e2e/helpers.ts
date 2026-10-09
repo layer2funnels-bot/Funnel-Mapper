@@ -114,7 +114,7 @@ export async function addFromPalette(page: Page, label: string) {
 /** Start Simulate on the map: the Simulate group of the Funnel panel (What-if), or the collapsed rail's button. */
 export async function startSimulate(page: Page) {
   // the editor decides what is collapsed once it has mounted: wait for it, or the rail check below races the panel opening
-  await page.waitForSelector(".react-flow__node, .fm-empty");
+  await page.waitForSelector(".react-flow__node, .fm-canvas-empty");
   await page.waitForTimeout(300);
   const rail = page.getByRole("button", { name: "Simulate", exact: true });
   if (await rail.isVisible().catch(() => false)) return rail.click();

@@ -4,9 +4,9 @@ import { Background, BackgroundVariant, ConnectionMode, MiniMap, ReactFlow, Sele
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { CATDARK, SIZED_TYPES, WIDTH_TYPES, fourPorts, isAnnot, portsFor, typeOf } from "@/lib/catalog";
-import { SIDES, type Side } from "@/lib/graph";
+import { SIDES, type FunnelEdge, type Side } from "@/lib/graph";
 import { sidesOf } from "@/lib/editor/labels";
-import { addNode, applyEyedropper, openSettingsBox, openLineMenu, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
+import { addNode, applyEyedropper, openSettingsBox, openLineMenu, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, reconnectEdge, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
@@ -182,10 +182,63 @@ export function Canvas() {
   }, []);
 
   const typeOfId = (id: string) => useEditor.getState().nodes.find((n) => n.id === id)?.type;
-  const isValidConnection = useCallback((c: Connection | Edge) => !!c.source && !!c.target && canConnect(c.source, c.target, portFrom(typeOfId(c.source), c.sourceHandle)), []);
+  // the line whose end is being dragged to another dot: it must not count as its own duplicate
+  const reconnecting = useRef<string | undefined>(undefined);
+  // Pressing a dot that a line ENDS on and dragging moves that end (the line keeps its style, label and share); a dot a line starts
+  // from still draws a new line. { edge, node } while such a drag is on.
+  const moving = useRef<{ edge: string; node: string; handle: string } | null>(null);
+  const startMove = useCallback((p: { nodeId: string | null; handleId: string | null; handleType: string | null }) => {
+    moving.current = null;
+    const st = useEditor.getState();
+    if (st.readOnly || !p.nodeId || !p.handleId) return;
+    const here = st.nodes.find((n) => n.id === p.nodeId);
+    if (!here) return;
+    const endsHere = (e: FunnelEdge) => e.to === here.id && (fourPorts(here.type) ? sidesOf(e)[1] === p.handleId : p.handleId === "in");
+    const startsHere = (e: FunnelEdge) => e.from === here.id && (fourPorts(here.type) ? sidesOf(e)[0] === p.handleId : p.handleId === (e.port === "alt" ? "alt" : "main"));
+    if (st.edges.some(startsHere)) return;
+    const ends = st.edges.filter(endsHere);
+    const pick = ends.find((e) => e.id === st.selEdge) ?? ends[ends.length - 1];
+    if (pick) moving.current = { edge: pick.id, node: here.id, handle: p.handleId };
+  }, []);
+  /** Where the moved end would land for a connection RF reports (the start dot's node is one side of it). */
+  const landing = (c: { source: string; target: string; sourceHandle: string | null; targetHandle: string | null }) => {
+    const m = moving.current!;
+    return c.source === m.node && !(c.target === m.node && c.sourceHandle === c.targetHandle) ? { id: c.target, handle: c.targetHandle } : { id: c.source, handle: c.sourceHandle };
+  };
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => {
+      if (!c.source || !c.target) return false;
+      if (moving.current) {
+        const e = useEditor.getState().edges.find((x) => x.id === moving.current!.edge);
+        const at = landing({ source: c.source, target: c.target, sourceHandle: c.sourceHandle ?? null, targetHandle: c.targetHandle ?? null });
+        const t = useEditor.getState().nodes.find((n) => n.id === at.id);
+        const sameDot = !!e && at.id === e.to && (!t || !fourPorts(t.type) || !isSide(at.handle) || at.handle === sidesOf(e)[1]);
+        return !!e && !sameDot && canConnect(e.from, at.id, e.port, e.id);
+      }
+      return canConnect(c.source, c.target, portFrom(typeOfId(c.source), c.sourceHandle), reconnecting.current);
+    },
+    [],
+  );
+  const onReconnect = useCallback((old: Edge, c: Connection) => {
+    const e = useEditor.getState().edges.find((x) => x.id === old.id);
+    if (!e) return;
+    // an end that did not move keeps what the line already means (Yes / No)
+    const port = c.source === e.from && c.sourceHandle === old.sourceHandle ? e.port : portFrom(typeOfId(c.source), c.sourceHandle);
+    const [sh0, th0] = sidesOf(e);
+    const sh = isSide(c.sourceHandle) ? c.sourceHandle : undefined,
+      th = isSide(c.targetHandle) ? c.targetHandle : undefined;
+    if (!reconnectEdge(e.id, { from: c.source, to: c.target, port, sh: sh ?? (c.source === e.from ? sh0 : undefined), th: th ?? (c.target === e.to ? th0 : undefined) })) showToast("That block can’t take this line");
+  }, []);
   // the line just made by onConnect: onConnectEnd (which knows the pointer) opens its meaning menu there
   const made = useRef<string | null>(null);
   const onConnect = useCallback((c: Connection) => {
+    if (moving.current) {
+      const e = useEditor.getState().edges.find((x) => x.id === moving.current!.edge);
+      const at = landing(c);
+      const t = useEditor.getState().nodes.find((n) => n.id === at.id);
+      if (e && !reconnectEdge(e.id, { from: e.from, to: at.id, port: e.port, sh: e.sh, th: t && fourPorts(t.type) && isSide(at.handle) ? at.handle : undefined })) showToast("That block can’t take this line");
+      return;
+    }
     const fromType = typeOfId(c.source);
     made.current = connect(c.source, portFrom(fromType, c.sourceHandle), c.target, { sh: isSide(c.sourceHandle) ? c.sourceHandle : undefined, th: isSide(c.targetHandle) ? c.targetHandle : undefined });
   }, []);
@@ -201,6 +254,18 @@ export function Canvas() {
         const from = e && st.nodes.find((n) => n.id === e.from);
         if (e && from && fourPorts(from.type) && portsFor(from.type).hasAlt && box) openLineMenu({ id: e.id, sx: pt.clientX - box.left, sy: pt.clientY - box.top });
       };
+      if (moving.current) {
+        // dropped on a block's body (not on a dot): the line's end moves there; on empty canvas nothing happens
+        const m = moving.current;
+        moving.current = null;
+        if (state.isValid) return;
+        const hitNode = document.elementFromPoint(pt.clientX, pt.clientY)?.closest(".react-flow__node")?.getAttribute("data-id");
+        const e = useEditor.getState().edges.find((x) => x.id === m.edge);
+        if (hitNode && e && hitNode !== e.to && hitNode !== m.node) {
+          if (!reconnectEdge(e.id, { from: e.from, to: hitNode, port: e.port, sh: e.sh })) showToast("That block can’t take this line");
+        }
+        return;
+      }
       if (state.isValid) {
         lineMenu(made.current);
         made.current = null;
@@ -344,7 +409,21 @@ export function Canvas() {
         openMenu({ kind: "pane", x: ev.clientX, y: ev.clientY, fx: at.x, fy: at.y });
       }}
       onConnect={onConnect}
-      onConnectStart={() => document.querySelector(".fm-stage")?.classList.add("fm-connecting")}
+      edgesReconnectable={!readOnly}
+      reconnectRadius={16}
+      onReconnectStart={(_, e) => {
+        reconnecting.current = e.id;
+        document.querySelector(".fm-stage")?.classList.add("fm-connecting");
+      }}
+      onReconnect={onReconnect}
+      onReconnectEnd={() => {
+        reconnecting.current = undefined;
+        document.querySelector(".fm-stage")?.classList.remove("fm-connecting");
+      }}
+      onConnectStart={(_, p) => {
+        document.querySelector(".fm-stage")?.classList.add("fm-connecting");
+        startMove(p);
+      }}
       onConnectEnd={(ev, st) => {
         document.querySelector(".fm-stage")?.classList.remove("fm-connecting");
         onConnectEnd(ev, st);
@@ -356,7 +435,7 @@ export function Canvas() {
         if (!(e.target instanceof Element) || !e.target.classList.contains("react-flow__pane")) return;
         const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const at = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-        openQuickAdd({ sx: e.clientX - box.left, sy: e.clientY - box.top, fx: at.x - 105, fy: at.y - 48 });
+        openQuickAdd({ sx: e.clientX - box.left, sy: e.clientY - box.top, fx: at.x, fy: at.y, centre: true });
       }}
       onDrop={onDrop}
       onDragOver={(e) => {

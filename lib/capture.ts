@@ -3,7 +3,7 @@
 // Capture is delegated to an HTTP screenshot service so the app needs no headless browser. Configure it with
 // CAPTURE_URL_TEMPLATE, a URL containing {url} (the page address, URL-encoded), for example
 //   https://screenshots.example.com/v1/shot?key=SECRET&width=1280&url={url}
-// that answers with an image. Without it, capture reports "unavailable" and the editor offers a manual upload instead.
+// that answers with an image. Without it the built-in public services below are used.
 
 export type UrlCheck = { ok: true; url: string } | { ok: false; reason: string };
 
@@ -50,29 +50,51 @@ export class CaptureError extends Error {
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-/** Template-based provider (see the file header). Returns null when none is configured. */
-export function captureProviderFromEnv(env: Record<string, string | undefined> = process.env, fetcher: typeof fetch = fetch): CaptureProvider | null {
+// Without CAPTURE_URL_TEMPLATE the app uses these keyless public screenshot services, tried in order, so "Capture preview"
+// works on a fresh deployment. Only the (already validated, public) page address is sent to them. Set CAPTURE_URL_TEMPLATE
+// to use your own paid service instead; it then replaces this list.
+export const DEFAULT_CAPTURE_TEMPLATES = [
+  "https://image.thum.io/get/width/1280/crop/800/noanimate/{url}",
+  "https://api.microlink.io/?url={url}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=1280&viewport.height=800",
+];
+
+async function fetchShot(tpl: string, url: string, fetcher: typeof fetch) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25_000);
+  try {
+    // thum.io takes the address as a path suffix, so only the query-string templates are URL-encoded
+    const target = /[?&=]\{url\}/.test(tpl) ? encodeURIComponent(url) : url;
+    const res = await fetcher(tpl.replace("{url}", target), { signal: ctrl.signal, redirect: "follow" });
+    if (!res.ok) throw new CaptureError(`The capture service answered ${res.status}`, "failed");
+    const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+    if (type !== "image/png" && type !== "image/jpeg" && type !== "image/webp") throw new CaptureError("The capture service didn’t return an image", "bad_image");
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength > MAX_BYTES) throw new CaptureError("The captured image is too large", "too_large");
+    return { bytes, type } as { bytes: Uint8Array; type: "image/png" | "image/jpeg" | "image/webp" };
+  } catch (e) {
+    if (e instanceof CaptureError) throw e;
+    if (e instanceof Error && e.name === "AbortError") throw new CaptureError("The page took too long to capture", "timeout");
+    throw new CaptureError("The capture service couldn’t be reached", "failed");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The configured template service, else the built-in public ones in order. Always returns a provider. */
+export function captureProviderFromEnv(env: Record<string, string | undefined> = process.env, fetcher: typeof fetch = fetch): CaptureProvider {
   const tpl = env.CAPTURE_URL_TEMPLATE?.trim();
-  if (!tpl || !tpl.includes("{url}")) return null;
+  const templates = tpl && tpl.includes("{url}") ? [tpl] : DEFAULT_CAPTURE_TEMPLATES;
   return {
     async capture(url) {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 25_000);
-      try {
-        const res = await fetcher(tpl.replace("{url}", encodeURIComponent(url)), { signal: ctrl.signal, redirect: "follow" });
-        if (!res.ok) throw new CaptureError(`The capture service answered ${res.status}`, "failed");
-        const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
-        if (type !== "image/png" && type !== "image/jpeg" && type !== "image/webp") throw new CaptureError("The capture service didn’t return an image", "bad_image");
-        const bytes = new Uint8Array(await res.arrayBuffer());
-        if (bytes.byteLength > MAX_BYTES) throw new CaptureError("The captured image is too large", "too_large");
-        return { bytes, type };
-      } catch (e) {
-        if (e instanceof CaptureError) throw e;
-        if (e instanceof Error && e.name === "AbortError") throw new CaptureError("The page took too long to capture", "timeout");
-        throw new CaptureError("The capture service couldn’t be reached", "failed");
-      } finally {
-        clearTimeout(timer);
+      let last: CaptureError = new CaptureError("The page couldn’t be captured", "failed");
+      for (const t of templates) {
+        try {
+          return await fetchShot(t, url, fetcher);
+        } catch (e) {
+          if (e instanceof CaptureError) last = e;
+        }
       }
+      throw last;
     },
   };
 }

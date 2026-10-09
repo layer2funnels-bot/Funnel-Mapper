@@ -84,6 +84,8 @@ export interface QuickAddState {
   sy: number;
   fx: number;
   fy: number;
+  /** `fx`/`fy` is the exact point that was clicked: the new block's picture is centred on it (otherwise it is the block's top-left). */
+  centre?: boolean;
   /** Opened by dragging a connection off a port into empty space: the new block lands at `fx/fy` (its in-port at that point) and is connected. */
   from?: { id: string; port: "main" | "alt"; sh?: Side };
   /** Opened from "Insert step on line": the block goes onto this connection. */
@@ -951,14 +953,28 @@ export function frameMembers(frameId: string): string[] {
 }
 
 /* ---------------- edges ---------------- */
-export function canConnect(from: string, to: string, port: "main" | "alt") {
+export function canConnect(from: string, to: string, port: "main" | "alt", ignoreEdge?: string) {
   const s = get();
   if (from === to) return false;
   const fb = s.nodes.find((n) => n.id === from);
   const tb = s.nodes.find((n) => n.id === to);
   if (!fb || !portsFor(fb.type).hasOut) return false;
   if (!tb || !canReceive(tb.type)) return false;
-  return !s.edges.some((e) => e.from === from && e.to === to && (e.port || "main") === port);
+  return !s.edges.some((e) => e.id !== ignoreEdge && e.from === from && e.to === to && (e.port || "main") === port);
+}
+/**
+ * Move one end of a line to another port or block without deleting it (drag the line's end onto a new dot). The line keeps its
+ * style, label and share; one undo step. Returns false when the new place can't take the line.
+ */
+export function reconnectEdge(id: string, next: { from: string; to: string; port: "main" | "alt"; sh?: Side; th?: Side }) {
+  const e = get().edges.find((x) => x.id === id);
+  if (!e || get().readOnly || !canConnect(next.from, next.to, next.port, id)) return false;
+  const { sh: _sh, th: _th, ...rest } = e;
+  void _sh;
+  void _th;
+  apply({ edges: get().edges.map((x) => (x.id === id ? { ...rest, from: next.from, to: next.to, port: next.port, ...(next.sh ? { sh: next.sh } : {}), ...(next.th ? { th: next.th } : {}) } : x)) }, { discrete: true });
+  selectEdge(id);
+  return true;
 }
 /** Line meanings (V2 four ports): Yes continues, No leaves, Skip step goes past a block, No data has no numbers. */
 export type LineMeaning = "yes" | "no" | "skip" | "nodata";

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { blankGraph } from "../../lib/graph";
+import { LIB_GROUPS, type LibGroup } from "../../lib/catalog";
+import { ITEMS } from "../../lib/library";
 import { centre, createFunnel, drag, node, nodes, openEditor, paletteItem } from "./helpers";
 
 // Quick Add adapts to where it opens and to the screen: a popover that flips and clamps on desktop / tablet, a bottom sheet on a phone.
@@ -62,9 +64,11 @@ test.describe("Quick Add adapts to the screen", () => {
           expect(g.box.y, `${name} top`).toBeGreaterThanOrEqual(g.stage.y - 1);
           expect(g.box.x + g.box.width, `${name} right`).toBeLessThanOrEqual(g.stage.x + g.stage.width + 1);
           expect(g.box.y + g.box.height, `${name} bottom`).toBeLessThanOrEqual(g.stage.y + g.stage.height + 1);
-          expect(g.box.width, `${name} width`).toBeGreaterThanOrEqual(Math.min(300, g.stage.width - 16));
+          expect(g.box.width, `${name} width`).toBeGreaterThanOrEqual(Math.min(360, g.stage.width - 24));
+          expect(g.box.width, `${name} width max`).toBeLessThanOrEqual(421);
+          expect(g.box.height, `${name} height max`).toBeLessThanOrEqual(381);
         }
-        expect(g.list.height, `${name} list height`).toBeGreaterThanOrEqual(90);
+        expect(g.list.height, `${name} list height`).toBeGreaterThanOrEqual(phone ? 90 : 200);
         await expect(quick.getByRole("combobox")).toBeFocused();
         await page.keyboard.press("Escape");
         await expect(quick).toBeHidden();
@@ -74,7 +78,7 @@ test.describe("Quick Add adapts to the screen", () => {
     });
   }
 
-  test("search, categories (also by keyboard), Pinned, Recent and client products all work, and Enter places the block", async ({ page }) => {
+  test("search, the category dropdown, Recent and client products work, and Enter places the block", async ({ page }) => {
     const { id } = await createFunnel({ graph: blankGraph() });
     await openEditor(page, id);
     // Recent: place one block, then it leads the list next time
@@ -85,22 +89,30 @@ test.describe("Quick Add adapts to the screen", () => {
     await expect(nodes(page)).toHaveCount(1);
     await page.locator(".react-flow__pane").dblclick({ position: { x: 700, y: 500 } });
     quick = page.getByRole("dialog", { name: "Add a block" });
-    await expect(quick.getByText("Recent")).toBeVisible();
-    // the categories are reachable with Tab, and focus moving inside the box does not close it
-    await page.keyboard.press("Tab");
-    await expect(quick.getByRole("button", { name: "All", exact: true })).toBeFocused();
-    await expect(quick).toBeVisible();
-    await page.keyboard.press("Tab");
-    await page.keyboard.press("Enter"); // first category chip
-    await expect(quick.getByRole("button", { pressed: true }).first()).toBeVisible();
+    await expect(quick.getByText("Recent", { exact: true })).toBeVisible();
+    // the category dropdown lists every category with its count, all from the registry
+    await quick.getByRole("button", { name: /Change category/ }).click();
+    const menu = quick.getByRole("listbox", { name: "Categories" });
+    await expect(menu.getByRole("option", { name: /All blocks/ })).toContainText(String(ITEMS.length));
+    for (const g of Object.keys(LIB_GROUPS) as LibGroup[]) {
+      const n = ITEMS.filter((it) => it.group === g).length;
+      if (n) await expect(menu.getByRole("option", { name: new RegExp(`^${LIB_GROUPS[g].replace(/[()&]/g, ".")}`) })).toContainText(String(n));
+    }
+    await menu.getByRole("option", { name: /^Pages/ }).click();
+    await expect(quick.getByRole("button", { name: /Category: Pages/ })).toBeVisible();
     await expect(quick.getByRole("option").first()).toBeVisible();
-    // arrow keys move the highlight; End/Home on an empty search jump
+    await expect(quick.getByRole("option")).toHaveCount(ITEMS.filter((it) => it.group === "page").length);
+    // arrow keys move the focused tile; End/Home on an empty search jump
     await quick.getByRole("combobox").focus();
     await page.keyboard.press("End");
     await expect(quick.getByRole("option").last()).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Home");
     await expect(quick.getByRole("option").first()).toHaveAttribute("aria-selected", "true");
-    // tabbing out of the box closes it
+    await page.keyboard.press("ArrowRight");
+    await expect(quick.getByRole("option").nth(1)).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("ArrowDown");
+    await expect(quick.getByRole("option").nth(5)).toHaveAttribute("aria-selected", "true");
+    // Esc closes the menu first, then the popup
     await page.keyboard.press("Escape");
     await expect(quick).toBeHidden();
     await expect(nodes(page)).toHaveCount(1);
@@ -109,6 +121,51 @@ test.describe("Quick Add adapts to the screen", () => {
     await expect(page.getByRole("dialog", { name: "Add a block" })).toBeVisible();
     await page.locator(".react-flow__pane").click({ position: { x: 120, y: 160 } });
     await expect(page.getByRole("dialog", { name: "Add a block" })).toBeHidden();
+  });
+
+  test("searching \"form\" matches several categories with the match highlighted; a block is placed with the keyboard only, centred on the click", async ({ page }) => {
+    const { id } = await createFunnel({ graph: blankGraph() });
+    await openEditor(page, id);
+    await page.locator(".react-flow__pane").dblclick({ position: { x: 600, y: 360 } });
+    const quick = page.getByRole("dialog", { name: "Add a block" });
+    await expect(quick.locator(".fm-qa-ghost")).toHaveCount(0); // (the ghost sits beside the popup, in the canvas)
+    await expect(page.locator(".fm-qa-ghost .box")).toBeVisible();
+    await page.keyboard.type("form");
+    const opts = quick.getByRole("option");
+    expect(await opts.count()).toBeGreaterThan(2);
+    await expect(quick.locator("mark").first()).toHaveText(/form/i);
+    const groups = new Set((await opts.locator("small").allInnerTexts()).filter(Boolean));
+    expect(groups.size).toBeGreaterThan(1);
+    await expect(quick.getByText(/results for “form”/)).toBeVisible();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(quick).toBeHidden();
+    await expect(nodes(page)).toHaveCount(1);
+    // the block's picture is centred on the point that was double-clicked (the ghost's centre), within the grid snap
+    const stage = (await page.locator(".fm-stage").boundingBox())!;
+    const pic = (await nodes(page).first().locator(".fm-pic").boundingBox())!;
+    expect(Math.abs(pic.x + pic.width / 2 - (stage.x + 600))).toBeLessThanOrEqual(12);
+    expect(Math.abs(pic.y + pic.height / 2 - (stage.y + 360))).toBeLessThanOrEqual(12);
+  });
+
+  test("a name that matches nothing offers a Custom block, and Browse all blocks opens the left panel", async ({ page }) => {
+    const { id } = await createFunnel({ graph: blankGraph() });
+    await page.addInitScript(() => localStorage.setItem("fm-editor-opts", JSON.stringify({ hideSide: true })));
+    await openEditor(page, id);
+    await expect(page.locator(".fm-editor")).toHaveClass(/fm-collapse-side/);
+    await page.locator(".react-flow__pane").dblclick({ position: { x: 600, y: 360 } });
+    const quick = page.getByRole("dialog", { name: "Add a block" });
+    await page.keyboard.type("zzqx webinar-thing");
+    await expect(quick.getByText("No block called “zzqx webinar-thing”")).toBeVisible();
+    await expect(quick.getByRole("option", { name: /Add a Custom block named “zzqx webinar-thing”/ })).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(nodes(page)).toHaveCount(1);
+    await expect(node(page, "zzqx webinar-thing")).toBeVisible();
+    await page.locator(".react-flow__pane").dblclick({ position: { x: 700, y: 520 } });
+    await page.getByRole("dialog", { name: "Add a block" }).getByRole("button", { name: "Browse all blocks ›" }).click();
+    await expect(page.getByRole("dialog", { name: "Add a block" })).toBeHidden();
+    await expect(page.locator(".fm-editor")).not.toHaveClass(/fm-collapse-side/);
+    await expect(page.locator("#fm-side")).toBeVisible();
   });
 
   test("dragging a connection out near the right and bottom edges keeps Quick Add on screen, at several zoom levels", async ({ page }) => {

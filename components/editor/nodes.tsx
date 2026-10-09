@@ -242,26 +242,26 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           </div>
         )}
         {showMore && !warn && chipText && (actualOn && canEnter ? (
-          <button type="button" className="fm-chip edit nodrag nopan" title={`${chip?.title}. Click to type the real number`} aria-label={`${chip?.value} ${chip?.unit}. Edit the real number`.trim()} aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
+          <button type="button" className="fm-bchip edit nodrag nopan" title={`${chip?.title}. Click to type the real number`} aria-label={`${chip?.value} ${chip?.unit}. Edit the real number`.trim()} aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
             {chipText}
           </button>
         ) : (
-          <span className="fm-chip" title={chip?.title} aria-label={`${chip?.value} ${chip?.unit}`.trim()}>
+          <span className="fm-bchip" title={chip?.title} aria-label={`${chip?.value} ${chip?.unit}`.trim()}>
             {chipText}
           </span>
         ))}
         {showMore && !warn && !chipText && emptyActual && (canEnter ? (
-          <button type="button" className="fm-chip empty edit nodrag nopan" title="No real numbers entered for these dates. Click to type one" aria-label="No real numbers entered. Type one" aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
+          <button type="button" className="fm-bchip empty edit nodrag nopan" title="No real numbers entered for these dates. Click to type one" aria-label="No real numbers entered. Type one" aria-expanded={chipOpen} onClick={() => setChipOpen((o) => !o)}>
             —
           </button>
         ) : (
-          <span className="fm-chip empty" title="No real numbers entered for these dates" aria-label="No real numbers entered">
+          <span className="fm-bchip empty" title="No real numbers entered for these dates" aria-label="No real numbers entered">
             —
           </span>
         ))}
         {chipOpen && canEnter && <ChipEdit n={n} view={view} onClose={() => setChipOpen(false)} />}
         {warn && (
-          <span className="fm-chip warn" title="Needs a fix: see Checks" aria-label="Needs a fix">
+          <span className="fm-bchip warn" title="Needs a fix: see Checks" aria-label="Needs a fix">
             !
           </span>
         )}

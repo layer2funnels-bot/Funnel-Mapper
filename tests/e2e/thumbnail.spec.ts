@@ -127,7 +127,7 @@ test.describe("Page URL to thumbnail", () => {
     await node(page, "Quiz funnel").locator(".fm-ntitle").hover();
     await page.waitForTimeout(700);
     await expect(page.locator(".fm-peek")).toHaveCount(0);
-    await node(page, "Quiz funnel").locator(".fm-chip").hover();
+    await node(page, "Quiz funnel").locator(".fm-bchip").hover();
     await page.waitForTimeout(700);
     await expect(page.locator(".fm-peek")).toHaveCount(0);
     await node(page, "Quiz funnel").locator(".fm-picwin").hover();

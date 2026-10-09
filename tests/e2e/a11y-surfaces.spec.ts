@@ -43,7 +43,7 @@ for (const theme of ["dark", "light"] as const) {
     test("empty funnel: editor and Reports", async ({ page }) => {
       const { id } = await createFunnel({ graph: blankGraph() });
       await openEditor(page, id);
-      await expect(page.locator(".fm-empty")).toBeVisible();
+      await expect(page.locator(".fm-canvas-empty")).toBeVisible();
       await scan(page, `empty editor (${theme})`);
       await page.goto(`/funnels/${id}?view=reports&section=overview`);
       await expect(page.locator(".fm-rmain")).toBeVisible();

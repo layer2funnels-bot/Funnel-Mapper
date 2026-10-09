@@ -41,7 +41,7 @@ export function ProductLibrary({ clientId, products, currency, readOnly = false 
         <div className="card px-6 py-8 text-center text-sm text-muted">Save this client’s offers once (price, buy rate, billing) and drop them into any funnel from the editor’s palette.</div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="tbl text-sm">
+          <table className="tbl fm-stackrows fm-prodrows text-sm">
             <thead>
               <tr>
                 <th className="pl-4">Product</th>
@@ -60,9 +60,9 @@ export function ProductLibrary({ clientId, products, currency, readOnly = false 
                       {p.name}
                       {!p.client_id && <span className="ml-2 pill bg-brand-soft text-brand">Agency-wide</span>}
                     </td>
-                    <td>{typeOf(p.type)?.label ?? p.type}</td>
-                    <td>{describe(p.type, params, currency)}</td>
-                    <td className="r">{params.cr ?? 0}%</td>
+                    <td data-label="Type">{typeOf(p.type)?.label ?? p.type}</td>
+                    <td data-label="Pricing">{describe(p.type, params, currency)}</td>
+                    <td className="r" data-label="Buy rate">{params.cr ?? 0}%</td>
                     <td className="r pr-4 whitespace-nowrap">
                       {!readOnly && (
                       <>

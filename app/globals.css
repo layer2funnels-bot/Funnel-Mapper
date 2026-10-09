@@ -1768,3 +1768,67 @@ dialog.fm-sheetdlg > .body {
     border-bottom: 0;
   }
 }
+
+/* Templates on phones: compact cards (the preview opens in the drawer) */
+@media (max-width: 639px) {
+  .fm-tcard .fm-tdesc {
+    display: none;
+  }
+  .fm-tcard .fm-fthumb > * {
+    max-height: 84px;
+  }
+}
+
+/* Tables that become stacked rows on phones (no sideways scroll, no clipped columns): the first cell is the title, the others carry their label */
+@media (max-width: 639px) {
+  .tbl.fm-stackrows,
+  .tbl.fm-stackrows tbody {
+    display: block;
+    width: 100%;
+  }
+  .tbl.fm-stackrows thead {
+    display: none;
+  }
+  .tbl.fm-stackrows tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tbl.fm-stackrows tr:last-child {
+    border-bottom: 0;
+  }
+  .tbl.fm-stackrows td {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    min-width: 0;
+  }
+  .tbl.fm-stackrows td:first-child {
+    grid-column: 1 / -1;
+    font-size: 15px;
+  }
+  .tbl.fm-stackrows td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .tbl.fm-stackrows td:last-child:not([data-label]) {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+  .tbl.fm-stackrows td.r {
+    text-align: left;
+  }
+}
+
+/* Funnels table on a 1024-1279px screen (icon rail): the map thumbnail column goes, so Revenue, ROAS and Checks stay visible without sideways scrolling */
+@media (max-width: 1279px) {
+  .fm-funnels .fm-c-map {
+    display: none;
+  }
+}

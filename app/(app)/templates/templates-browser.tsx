@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { GraphThumb } from "@/components/graph-thumb";
+import { Icon } from "@/components/icon";
 import { NewFunnelButton, type TemplateOption } from "@/components/new-funnel-dialog";
 import { DeleteTemplate } from "./delete-template";
 
@@ -22,13 +23,16 @@ export interface TemplateCard {
 /** Templates (V2): built-in and workspace templates, a preview panel, "Use template" and "Use for client". */
 export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }: { cards: TemplateCard[]; clients: { id: string; name: string }[]; options: TemplateOption[]; canEdit: boolean; mineTitle: string }) {
   const [sel, setSel] = useState<string>(cards[0]?.id ?? "");
+  const [find, setFind] = useState("");
   const [open, setOpen] = useState(false); // below 1280px the preview is a drawer that opens on tap
   const [filter, setFilter] = useState<"all" | "builtin" | "mine">("all");
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const cur = cards.find((c) => c.id === sel) ?? cards[0] ?? null;
   const builtins = cards.filter((c) => !c.mine),
     mine = cards.filter((c) => c.mine);
-  const shown = filter === "builtin" ? builtins : filter === "mine" ? mine : cards;
+  const base = filter === "builtin" ? builtins : filter === "mine" ? mine : cards;
+  const needle = find.trim().toLowerCase();
+  const shown = needle ? base.filter((t) => `${t.name} ${t.description} ${t.category}`.toLowerCase().includes(needle)) : base;
   const item = (t: TemplateCard) => (
     <li key={t.id}>
       <button type="button" className={`fm-tcard${cur?.id === t.id ? " on" : ""}`} aria-label={`Preview ${t.name}`} aria-pressed={cur?.id === t.id} onClick={() => (setSel(t.id), setOpen(true))}>
@@ -48,6 +52,11 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
   return (
     <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-0">
       <div className="min-w-0 xl:pr-8">
+        <label className="relative mb-3 block">
+          <span className="sr-only">Search templates</span>
+          <Icon name="search" size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <input className="input pl-9" type="search" placeholder={`Search ${cards.length} templates`} value={find} onChange={(e) => setFind(e.target.value)} />
+        </label>
         <div className="mb-4 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter templates">
           <button type="button" className="fm-chip" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
             All <b>{cards.length}</b>
@@ -59,7 +68,9 @@ export function TemplatesBrowser({ cards, clients, options, canEdit, mineTitle }
             {mineTitle} <b>{mine.length}</b>
           </button>
         </div>
-        {filter === "mine" && mine.length === 0 ? (
+        {shown.length === 0 && needle ? (
+          <p className="fm-empty-line">No templates match “{find}”.</p>
+        ) : filter === "mine" && mine.length === 0 ? (
           <p className="fm-empty-line">{mineTitle === "Team templates" ? "No team templates yet. Open any funnel, then File → Save as template. Everyone on the team can use them." : "No saved templates yet. Open any funnel, then File → Save as template."}</p>
         ) : (
           <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 2xl:grid-cols-3" aria-label="Templates">

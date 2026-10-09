@@ -108,7 +108,7 @@ export function AppNav({ agency, user, role, logo, team, workspaceId, workspaces
   return (
     <>
       <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-side-line bg-side lg:block lg:w-16 xl:w-[232px]">{nav}</aside>
-      <div className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-line bg-panel px-3 lg:hidden">
+      <div className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-line bg-panel px-3 max-sm:hidden lg:hidden">
         <button className="btn icon max-sm:hidden" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
           <Icon name="menu" />
         </button>

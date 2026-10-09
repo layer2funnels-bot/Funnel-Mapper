@@ -30,6 +30,9 @@ describe("block visual system", () => {
     expect(visualOf("cond").family).toBe("logic");
     expect(visualOf("wait").family).toBe("action");
     expect(visualOf("emailone").family).toBe("message");
+    // Deal won sits in Sales & CRM but is an event, drawn as a diamond (Deal lost is a terminal block: a goal capsule)
+    expect(visualOf("won").family).toBe("action");
+    expect(visualOf("lost").family).toBe("goal");
     expect(visualOf("call").family).toBe("message");
     expect(visualOf("unknown-type").family).toBe("note");
   });

@@ -693,8 +693,7 @@ button {
   display: none;
 }
 @media (max-width: 1439px) {
-  .fm-funnels .fm-c-upd,
-  .fm-funnels .fm-c-scen {
+  .fm-funnels .fm-c-upd {
     display: none;
   }
 }
@@ -713,8 +712,8 @@ button {
   .fm-funnels .fm-c-status {
     display: none;
   }
-  .fm-funnels td:nth-child(2) a,
-  .fm-funnels td:nth-child(2) .fm-c-client2 {
+  .fm-funnels .fm-c-name a,
+  .fm-funnels .fm-c-name .fm-c-client2 {
     max-width: 150px !important;
   }
   .fm-funnels .fm-c-map {
@@ -1864,4 +1863,80 @@ dialog.fm-sheetdlg > .body {
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* Funnels list: selection, row menu, bulk bar (V3 funnels list) */
+.fm-funnels .fm-c-pick {
+  width: 36px;
+}
+.fm-funnels .fm-c-act {
+  width: 44px;
+  text-align: right;
+}
+.fm-funnels input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+.fm-funnels tr.picked td {
+  background: var(--brand-soft);
+}
+.fm-funnels .fm-rename {
+  height: 34px;
+  max-width: 260px;
+  font-weight: 700;
+}
+.fm-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+}
+.fm-bulk b {
+  margin-right: 4px;
+}
+.fm-bulk .input {
+  width: auto;
+  height: 34px;
+  padding-block: 0;
+}
+.fm-bulk-x {
+  margin-left: auto;
+}
+.fm-rowmenu kbd {
+  margin-left: auto;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fm-rowmenu .fm-sub {
+  padding-left: 26px;
+}
+.fm-rowmenu button.danger {
+  color: var(--bad);
+}
+@media (max-width: 639px) {
+  .fm-funnels .fm-c-pick {
+    padding-left: 10px;
+  }
+  .fm-funnels input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+  .fm-bulk .btn,
+  .fm-bulk .input {
+    min-height: 44px;
+  }
+}
+.fm-funnels .fm-health-pill {
+  white-space: nowrap;
+}
+.fm-rowmenu button[aria-haspopup] svg {
+  margin-left: auto;
 }

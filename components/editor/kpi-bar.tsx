@@ -58,6 +58,17 @@ export function KpiBar() {
   const actual = useEditor((s) => s.actualView);
   const focus = useFocusBlock();
   const simBase = useEditor((s) => s.simBase);
+  // the strip's real width decides how many figures fit beside the checks chip, "+N more" and the Plan label
+  const bar = useRef<HTMLElement>(null);
+  const [barW, setBarW] = useState(0);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBarW(el.clientWidth));
+    ro.observe(el);
+    setBarW(el.clientWidth); // eslint-disable-line react-hooks/set-state-in-effect -- measuring once on mount
+    return () => ro.disconnect();
+  }, []);
   const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, t])) : null;
   // checks are for the team, not for clients viewing a share link
   const checks = shared ? [] : healthChecks({ nodes, edges });
@@ -92,13 +103,14 @@ export function KpiBar() {
     ) : null;
   const named = nodes.filter((n) => warnIds.has(n.id));
   // visible counts per band (F11); phone shows every figure as scrolling chips, starting with Traffic
-  const visible = band === "phone" ? all.length : band === "tablet" ? 3 : band === "md" ? 4 : sideOpen ? 5 : 6;
+  const roomy = band === "phone" ? all.length : band === "tablet" ? 3 : band === "md" ? 4 : sideOpen ? 5 : 6;
+  const visible = band === "phone" || band === "tablet" || band === "md" || !barW ? roomy : Math.max(3, Math.min(roomy, Math.floor((barW - 380) / 116)));
   const SHOW_MD = ["traffic", "revenue", "profit", "roas"];
   const strip = band === "md" ? all.filter((k) => SHOW_MD.includes(k.id)) : all.slice(0, visible);
   const rest = all.filter((k) => !strip.includes(k));
   const compactChecks = band === "md" || band === "tablet" || band === "phone";
   return (
-    <footer className={`fm-kpis${sim ? " sim" : ""}${before ? " before" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
+    <footer ref={bar} className={`fm-kpis${sim ? " sim" : ""}${before ? " before" : ""}`} aria-label="Funnel numbers" tabIndex={0}>
       {hasTraffic && !shared && (
         <Pop
           label="Model checks"

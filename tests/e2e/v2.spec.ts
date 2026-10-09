@@ -477,7 +477,9 @@ test.describe("V2 Simulate: watching the funnel", () => {
     // Before: the golden numbers everywhere, no change chips, a badge on the canvas
     await panel.getByRole("button", { name: "Before", exact: true }).click();
     await expect(kpis).toContainText("£6,032");
-    await expect(kpis).toContainText("13.4x");
+    await kpis.getByRole("button", { name: /more/ }).click(); // ROAS sits behind "+N more" at this width
+    await expect(page.getByRole("dialog", { name: "More numbers" })).toContainText("13.4x");
+    await page.keyboard.press("Escape");
     await expect(node(page, "Paid membership")).toContainText("£4,199");
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
     await expect(page.locator(".fm-before-badge")).toBeVisible();

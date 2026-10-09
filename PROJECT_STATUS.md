@@ -375,6 +375,19 @@ Details and decisions: `docs/PHASE_1_HANDOFF.md`. Maths, database, RLS, auth, ro
 See `docs/PHASE_1_FINAL_COMPLETION.md` for what was built, decisions and remaining work. DB 52/52, unit 209/209, E2E 151/151, typecheck / lint / build clean. Final QA pass: see "Final Phase 1 QA and completion pass" in the same file. Owner actions still open: apply pending migrations (docs/deployment.md), set CAPTURE_URL_TEMPLATE for automatic thumbnails; final Figma 169 visuals not available.
 New migration `20261013000000_workspace_assets.sql` (style presets, workspace blocks): not yet applied to demo / production.
 
+## 9 Oct overnight batch: phone / tablet layouts, desktop polish, Export step
+
+Branch `claude/vibrant-hypatia-66sckx` (one PR). No maths, database, RLS or auth change; no migration in this batch.
+
+- **Phone / tablet:** one-row app header, Clients filters behind a button, Templates search with compact cards and a drawer below 1280, Funnels table at 1024, tables stack as labelled rows on phone, Map | Reports toggle in the editor header, Blocks library as a bottom sheet on phone, 40px (tablet / touch) and 44px (phone) targets.
+- **Desktop polish:** KPI strip counts the figures that fit its real width (the rest sit behind "+N more"), edge labels sit above blocks, frames are quiet, panel figures use a grid, light-theme shadows and contrast.
+- **Export step** (`components/editor/export-dialog.tsx`, File menu > "Export options..."): choose the PDF sections (cover, map and key numbers always print), the map image format (PNG / SVG) and its background for that export, and the data files. The quick File menu items still export everything.
+- **Shared client view:** the Funnel notes button now shows on desktop when the owner shares the notes (it was only reachable on small screens).
+- **"/"** focuses the Blocks sidebar search (V2 design); help text and the empty-canvas context menu no longer call it quick add (double-click the canvas still opens quick add).
+- **Tests:** unit 263/263, DB 55/55, E2E desktop 158/158 (the full run found three drifted legacy tests, now aligned with V2: KPI "more" popover for ROAS, "/" shortcut, quick-add search term), typecheck clean, lint 0 errors (9 existing warnings), production build clean.
+- **Still open (design):** action diamonds, message capsules and goal capsule details, Trash / States / V2-appearance boards, 768 / 430 board comparisons, Present stage-tag overlap at the smallest widths, block labels at the default phone zoom, phone sheet header height, hatched logic blocks (left as is).
+- **Deployment:** the Vercel preview for this PR is the place to look; production deploys from main when the owner merges. Pending migrations: see "V2 final completion pass" above.
+
 ## I. Recommended order (history)
 
 1. ~~Quick P0 fixes~~ · 2. ~~Client pricing model~~ · 3. ~~Tidy Up~~ (Batch 1) · ~~Emerald reskin~~ · ~~Canvas completeness~~ (Batch 2)

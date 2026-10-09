@@ -6,7 +6,7 @@
 // Sample numbers use the existing example-number mechanism: every block starts with its type's defaults
 // (lib/catalog.ts), and one example traffic source feeds the first step so the numbers flow. "Start with empty numbers"
 // leaves the same structure with zero traffic, rates and prices (and no example source).
-import { blockH, defaultsFor, typeOf, type NodeParams } from "./catalog";
+import { blockPivot, defaultsFor, PITCH, typeOf, type NodeParams } from "./catalog";
 import type { FunnelEdge, FunnelGraph, FunnelNode, Side } from "./graph";
 
 type B = [id: string, type: string, name: string, col: number, row: number, optional?: boolean];
@@ -177,12 +177,12 @@ export function template13Graph(key: string, o: Template13Options = {}): FunnelG
   const t = TEMPLATE13_BY_KEY[key];
   if (!t) throw new Error(`Unknown template ${key}`);
   const pre = o.prefix ?? key;
-  const rowH = (r: number) => Math.max(...t.blocks.filter((b) => b[4] === r).map((b) => blockH(b[1])));
+  // blocks sit on the 240 x 200 pitch and are aligned on their picture centre, so the lines on a row stay straight
+  const rowPivot = (r: number) => Math.max(...t.blocks.filter((b) => b[4] === r).map((b) => blockPivot(b[1])));
   const nodes: FunnelNode[] = t.blocks.map(([id, type, name, c, r, optional]) => {
     const T = typeOf(type);
-    const h = blockH(type);
     const p: NodeParams = { ...defaultsFor(type), ...(o.empty ? Object.fromEntries(Object.keys(ZERO).filter((k) => k in defaultsFor(type)).map((k) => [k, 0])) : {}) };
-    const n: FunnelNode = { id: `${pre}-${id}`, type, name: o.names?.[id]?.trim() || name || T.label, x: 260 + c * 250, y: 40 + r * 150 + (rowH(r) - h) / 2, p };
+    const n: FunnelNode = { id: `${pre}-${id}`, type, name: o.names?.[id]?.trim() || name || T.label, x: 260 + c * PITCH.x, y: 40 + r * PITCH.y + (rowPivot(r) - blockPivot(type)), p };
     if (optional) n.s = { borderStyle: "dashed" };
     if (optional) n.p.optional = true;
     if (o.urls?.[id]?.trim()) n.url = o.urls[id].trim();
@@ -199,7 +199,7 @@ export function template13Graph(key: string, o: Template13Options = {}): FunnelG
     // the example traffic source feeds the first block (column 0, top row)
     const first = t.blocks.slice().sort((x, y) => x[3] - y[3] || x[4] - y[4])[0];
     const fn = nodes.find((n) => n.id === `${pre}-${first[0]}`)!;
-    nodes.unshift({ id: `${pre}-src`, type: SAMPLE_SOURCE.type, name: SAMPLE_SOURCE.name, x: 10, y: fn.y + (blockH(fn.type) - blockH(SAMPLE_SOURCE.type)) / 2, p: { ...defaultsFor(SAMPLE_SOURCE.type), ...SAMPLE_SOURCE.p } });
+    nodes.unshift({ id: `${pre}-src`, type: SAMPLE_SOURCE.type, name: SAMPLE_SOURCE.name, x: 20, y: fn.y + blockPivot(fn.type) - blockPivot(SAMPLE_SOURCE.type), p: { ...defaultsFor(SAMPLE_SOURCE.type), ...SAMPLE_SOURCE.p } });
     edges.unshift({ id: `${pre}-esrc`, from: `${pre}-src`, to: fn.id, share: 100, port: "main" });
   }
   return { nodes, edges, view: { x: 60, y: 40, k: 1 } };

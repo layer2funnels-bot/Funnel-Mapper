@@ -104,7 +104,7 @@ function PagePeek({ path, owner, anchor, onEnter, onLeave, onClose }: { path: st
 }
 
 /** Semantic page wireframe (preview strip). A saved capture replaces it; the wireframe stays whenever there is none (or it fails to load). */
-export function WireframeStrip({ kind, accent, shot, owner, win }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner; /** The design's browser window (inner SVG of a 66 × 65 page): replaces the old strip. */ win?: string }) {
+export function WireframeStrip({ kind, accent, shot, owner, win, pic }: { kind: Wireframe; accent: string; shot?: string; owner?: PeekOwner; /** The design's browser window (inner SVG of a 66 × 65 page): replaces the old strip. */ win?: string; /** Fills a picture-first block (104 × 128): the capture, or the page drawing, anchored to the top. */ pic?: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const openT = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -153,7 +153,7 @@ export function WireframeStrip({ kind, accent, shot, owner, win }: { kind: Wiref
   return (
     <div
       ref={ref}
-      className={`${win ? "pgo-win" : "fm-wf"}${shot ? " has-shot" : ""}`}
+      className={`${pic ? "fm-picwin" : win ? "pgo-win" : "fm-wf"}${shot ? " has-shot" : ""}`}
       style={{ ["--wfa" as string]: accent }}
       aria-hidden={can ? undefined : true}
       tabIndex={can ? 0 : undefined}
@@ -165,7 +165,12 @@ export function WireframeStrip({ kind, accent, shot, owner, win }: { kind: Wiref
       onFocus={can ? (e) => e.currentTarget.matches(":focus-visible") && open(e.currentTarget, 0) : undefined}
       onBlur={can ? () => close(0) : undefined}
     >
-      {win ? (
+      {pic ? (
+        <>
+          {win && <svg viewBox="0 0 66 65" preserveAspectRatio="xMidYMin slice" aria-hidden="true" dangerouslySetInnerHTML={{ __html: win }} />}
+          {shot && <PageShot path={shot} />}
+        </>
+      ) : win ? (
         <>
           <span className="pgo-chrome" aria-hidden="true">
             <i />

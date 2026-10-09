@@ -8717,3 +8717,306 @@ dialog.fm-exportdlg {
 .fm-editor:has(.fm-banner-actual) .fm-before-badge.actual {
   display: none;
 }
+
+/* ===== V4 picture-first blocks (BLOCK_REDESIGN_SPEC): a picture or shape, its name under it, one number chip =====
+   The node is 136px wide: the picture (104 x 128 for pages and offers, a shape for the rest) then the name (two lines at most)
+   and the subtype. Lines attach to the picture (the handles live inside it), never to the name. */
+.fm-blk {
+  position: relative;
+  width: 136px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--ink);
+  cursor: move;
+  user-select: none;
+}
+.fm-pic {
+  position: relative;
+  flex: none;
+}
+.fm-pbody {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid #2a3648;
+  background: #f4f6fa;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+}
+:root[data-theme="light"] .fm-pbody {
+  border-color: #d3dbe6;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+.fm-picwin {
+  position: absolute;
+  inset: 0;
+}
+.fm-picwin svg,
+.fm-picwin .fm-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fm-picwin .fm-shot {
+  object-fit: cover;
+  object-position: top;
+}
+.fm-pglyph,
+.fm-ribbon {
+  position: absolute;
+  background: var(--cc);
+  color: var(--cat-ink);
+}
+.fm-pglyph {
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+.fm-pbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--cc);
+  z-index: 1;
+}
+.fm-ribbon {
+  left: 6px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.fm-shape {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: var(--cc);
+  color: var(--cat-ink);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+.fam-source .fm-shape,
+.fam-goal .fm-shape {
+  inset: 0;
+  border-radius: 50%;
+}
+.fam-message .fm-shape {
+  inset: 0;
+  border-radius: 22px 22px 22px 6px;
+}
+.fam-logic .fm-shape {
+  left: 11px;
+  top: 11px;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  transform: rotate(45deg);
+}
+.fam-action .fm-shape {
+  left: 9px;
+  top: 9px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  transform: rotate(45deg);
+}
+.fam-logic .fm-shape > *,
+.fam-action .fm-shape > * {
+  transform: rotate(-45deg);
+}
+/* the owner's artwork is the whole shape (colour included) */
+.fm-shape.art {
+  background: transparent;
+  box-shadow: none;
+}
+.fm-shape.art .fm-art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.fam-action .fm-shape.art,
+.fam-logic .fm-shape.art {
+  inset: 0;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border-radius: 0;
+}
+.fam-action .fm-shape.art > *,
+.fam-logic .fm-shape.art > * {
+  transform: none;
+}
+.fam-goal .fm-shape {
+  background: var(--c-goal);
+}
+.fm-blk.brand .fm-shape:not(.art) {
+  background: var(--tile);
+  color: #fff;
+}
+/* the number chip: one per block, top-right */
+.fm-chip {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 3;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fm-chip.empty {
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
+}
+.fm-chip.warn {
+  width: 22px;
+  padding: 0;
+  text-align: center;
+  background: var(--attention);
+  border-color: var(--attention);
+  color: #241a03;
+}
+.fm-blk .fm-lock {
+  top: auto;
+  left: auto;
+  right: 6px;
+  bottom: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  z-index: 2;
+}
+.fm-blk .fm-delta {
+  top: -10px;
+  left: -10px;
+  right: auto;
+}
+.fm-blk .fm-leak {
+  left: -4px;
+  bottom: calc(100% + 10px);
+}
+.fm-ntitle {
+  width: 136px;
+  margin-top: 6px;
+  text-align: center;
+}
+.fm-ntitle > span:first-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}
+.fm-ntitle > small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-ntitle .fm-rename {
+  width: 132px;
+  text-align: center;
+}
+.fm-nbadges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+/* states: exactly one extra thing each */
+.fm-blk:hover:not(.sel) .fm-pbody,
+.fm-blk:hover:not(.sel) .fm-shape:not(.art) {
+  outline: 1.5px dashed var(--brand);
+  outline-offset: 3px;
+}
+.fm-blk.sel .fm-pbody,
+.fm-blk.sel .fm-shape:not(.art) {
+  box-shadow: 0 0 0 2px var(--brand), 0 0 0 8px rgba(16, 185, 129, 0.16);
+}
+.fm-blk.sel .fm-shape.art {
+  box-shadow: none;
+}
+.fm-blk.sel .fm-shape.art .fm-art {
+  filter: drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 1px var(--brand)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
+}
+.fm-blk.sel.multi .fm-pbody,
+.fm-blk.sel.multi .fm-shape:not(.art) {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.7);
+}
+.fm-blk.warn .fm-pbody,
+.fm-blk.warn .fm-shape:not(.art) {
+  box-shadow: 0 0 0 1.5px var(--attention);
+}
+.fm-blk.err .fm-pbody,
+.fm-blk.err .fm-shape:not(.art) {
+  box-shadow: 0 0 0 1.5px var(--bad);
+}
+.fm-blk.leak .fm-pbody,
+.fm-blk.leak .fm-shape:not(.art) {
+  outline: 2px dashed #f97316;
+  outline-offset: 5px;
+}
+.fm-blk.leak .fm-shape.art {
+  outline: 2px dashed #f97316;
+  outline-offset: 5px;
+  border-radius: 50%;
+}
+.fm-blk.sim-up .fm-pbody,
+.fm-blk.sim-up .fm-shape:not(.art) {
+  box-shadow: 0 0 0 2px var(--sim-up);
+}
+.fm-blk.sim-down .fm-pbody,
+.fm-blk.sim-down .fm-shape:not(.art) {
+  box-shadow: 0 0 0 2px var(--sim-down);
+}
+.fm-blk.dim {
+  opacity: 0.28;
+}
+.fm-blk.spot .fm-pbody,
+.fm-blk.spot .fm-shape:not(.art) {
+  box-shadow: 0 0 0 3px var(--brand);
+}
+.fm-blk .fm-simchip {
+  top: auto;
+  bottom: calc(100% - 4px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.fm-blk .fm-leakstub {
+  top: 100%;
+}
+.fm-hide-all .fm-chip {
+  display: none;
+}

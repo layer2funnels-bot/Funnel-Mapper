@@ -2,19 +2,19 @@
 import { Handle, NodeResizeControl, NodeResizer, Position, ResizeControlVariant, type NodeProps } from "@xyflow/react";
 import { memo, useState } from "react";
 import { Icon } from "@/components/icon";
-import { baseOf, CATCOLOR, fourPorts, portsFor, typeOf } from "@/lib/catalog";
-import { FAMILIES, hasSplitBar, typeCaption, visualOf, windowKeyOf } from "@/lib/block-visuals";
+import { CATCOLOR, fourPorts, PIC, portsFor, typeOf } from "@/lib/catalog";
+import { typeCaption, visualOf, windowKeyOf } from "@/lib/block-visuals";
 import { WINDOWS } from "@/lib/design-tiles";
 import { brandMarkOf } from "@/lib/brand-marks";
 import { assumptionChanges, lostDots, stepDelta } from "@/lib/simulate";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { SimChip } from "./simulate";
-import { BlockArtImg, BrandGlyph, offerSubtitle, SplitBar, StatusDot, WireframeStrip } from "./block-visual";
+import { BlockArtImg, BrandGlyph, StatusDot, WireframeStrip } from "./block-visual";
 import { artOf } from "@/lib/block-art";
 import type { ChecklistItem, FunnelNode } from "@/lib/graph";
 import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, setChecklist, shownR, startRename, updateNode, useEditor, viewK } from "@/lib/editor/store";
-import { blockChip, perfLine, subLabel } from "@/lib/editor/labels";
+import { blockChip, perfLine, priceTab } from "@/lib/editor/labels";
 import { nf, people as ppl, peopleExact } from "@/lib/format";
 import { waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
@@ -107,7 +107,9 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   // Biggest leak: a dashed ring and a chip above-left (no number); the people lost are on the leak line, once
   const leak = useEditor((s) => s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers);
   const lostHere = useEditor((s) => (s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers && !s.edges.some((e) => e.from === id && e.port === "alt") ? (s.R.N[id]?.non ?? 0) * viewK(s.opts) : 0));
-  const band = useEditor((s) => zoomBand(s.view.k));
+  // the picture-first block shows less at a distance: far = shapes and lines, mid = names, near = number chips and subtype
+  const band = useEditor((s) => (s.view.k < 0.3 ? "far" : s.view.k < 0.5 ? "mid" : "near"));
+  const actualOn = useEditor((s) => !!s.actualView);
   const renaming = useEditor((s) => s.renaming === id);
   const multi = useEditor((s) => s.selNodes.length > 1 && s.selNodes.includes(id));
   const spot = useEditor((s) => s.spot);
@@ -127,8 +129,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const four = fourPorts(n.type);
   const logic = T.cat === "logic";
   const cc = n.s?.accent && /^#[0-9a-f]{6}$/i.test(n.s.accent) ? n.s.accent : CATCOLOR[T.color ?? T.cat];
-  const V = visualOf(n.type),
-    F = FAMILIES[V.family];
+  const V = visualOf(n.type);
   const chip = n.s?.hideNum ? null : blockChip(n, R, cur, k, view, basis);
   const pl = perf ? perfLine(n, R, cur, k, basis) : null;
   const nodata = !R.N[n.id] || (T.cat !== "traffic" && R.N[n.id].inflow === 0);
@@ -141,32 +142,106 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const invalid = n.type === "wait" && !waitValid(n.p);
   const internal = !shared && !!n.desc?.trim();
   const tasks = n.checklist ?? [];
-  const cls = ["fm-node", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", tone && `sim-${tone}`, n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
-  // Clean and Money keep the caption to the block's type: the one number a view shows is the chip (V3 "one number per block")
-  const sub = view !== "people" ? T.label : V.family === "offer" ? offerSubtitle(n) : subLabel(n, cur);
+  const cls = ["fm-blk", `fam-${V.family}`, `zb-${band}`, logic && "logic", V.brand && "brand", selected && "sel", selected && multi && "multi", warn && "warn", invalid && "err", leak && "leak", perf && pl && "perf", tone && `sim-${tone}`, n.locked && "locked", n.status === "done" && "live", (spot ? (spot === id ? "spot" : "dim") : outOfStage ? "dim" : false)].filter(Boolean).join(" ");
+  const fam = V.family;
+  const P = PIC[fam];
+  const isPage = fam === "page" || fam === "offer";
+  const art = !!artOf(n.type) && !n.s?.icon;
+  const glyph = art ? <BlockArtImg k={n.type} /> : brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} size={fam === "source" ? 30 : 22} /> : <Icon name={(n.s?.icon as IconName) || T.icon} size={isPage ? 12 : fam === "source" ? 28 : 22} />;
+  const chipText = chip ? chip.value : null;
+  const emptyActual = !!actualOn && !chip && !n.s?.hideNum && perf;
+  const ribbon = fam === "offer" && view !== "clean" ? priceTab(n, cur) : null;
+  const showName = band !== "far";
+  const showMore = band === "near";
+  const subtype = fam === "page" || fam === "offer" ? typeCaption(n.type) : T.label;
   return (
-    <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null), ...boxCss(n.s) }} aria-label={`${T.label}: ${n.name}`} title={band === "far" || n.name.length > 22 ? n.name : undefined}>
-      {four ? (
-        // V2: four identical ports (hidden at rest; shown on hover, selection and while connecting). The line's meaning is chosen on the line.
-        <>
-          <Handle type="source" position={Position.Top} id="top" className="fm-port side top" title="Drag to connect" />
-          <Handle type="source" position={Position.Right} id="right" className="fm-port side right" title="Drag to connect" />
-          <Handle type="source" position={Position.Bottom} id="bottom" className="fm-port side bottom" title={hasAlt ? "Drag to connect (from here: people who leave)" : "Drag to connect"} />
-          <Handle type="source" position={Position.Left} id="left" className="fm-port side left" title="Drag to connect" />
-        </>
-      ) : (
-        hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />
-      )}
-      <LockBadge n={n} />
-      {changed.length > 0 && (
-        <span className="fm-delta" title={changed.map((c) => `${c.label} ${nf(c.was, 2)} → ${nf(c.now, 2)}`).join(" · ")} role="img" aria-label={`Changed in this simulation: ${changed.map((c) => `${c.label} ${nf(c.was, 2)} to ${nf(c.now, 2)}`).join(", ")}`}>
-          Δ
-        </span>
-      )}
-      {leak && (
-        <span className="fm-leak" title="Biggest leak: the step that loses the most people">
-          Biggest leak
-        </span>
+    <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null) }} aria-label={`${T.label}: ${n.name}`} title={!showName || n.name.length > 22 ? n.name : undefined}>
+      <div className="fm-pic" data-fam={fam} style={{ width: P.w, height: P.h }}>
+        {four ? (
+          // four identical ports (hidden at rest; shown on hover, selection and while connecting). The line's meaning is chosen on the line.
+          <>
+            <Handle type="source" position={Position.Top} id="top" className="fm-port side top" title="Drag to connect" />
+            <Handle type="source" position={Position.Right} id="right" className="fm-port side right" title="Drag to connect" />
+            <Handle type="source" position={Position.Bottom} id="bottom" className="fm-port side bottom" title={hasAlt ? "Drag to connect (from here: people who leave)" : "Drag to connect"} />
+            <Handle type="source" position={Position.Left} id="left" className="fm-port side left" title="Drag to connect" />
+          </>
+        ) : (
+          hasIn && <Handle type="target" position={Position.Left} id="in" className="fm-port in" />
+        )}
+        {!four && hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
+        {!four && hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
+        {isPage ? (
+          <div className="fm-pbody" style={{ ["--cc" as string]: cc }}>
+            <WireframeStrip pic kind={V.wireframe!} accent={cc} win={WINDOWS[windowKeyOf(n.type)]} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />
+            <span className="fm-pglyph" aria-hidden="true">
+              <Icon name={(n.s?.icon as IconName) || T.icon} size={12} />
+            </span>
+            <i className="fm-pbar" aria-hidden="true" />
+            {ribbon && <span className="fm-ribbon">{ribbon}</span>}
+          </div>
+        ) : (
+          <div className={`fm-shape${art ? " art" : ""}`} aria-hidden="true">
+            {glyph}
+          </div>
+        )}
+        {showMore && !warn && chipText && (
+          <span className="fm-chip" title={chip?.title} aria-label={`${chip?.value} ${chip?.unit}`.trim()}>
+            {chipText}
+          </span>
+        )}
+        {showMore && !warn && !chipText && emptyActual && (
+          <span className="fm-chip empty" title="No real numbers entered for these dates" aria-label="No real numbers entered">
+            —
+          </span>
+        )}
+        {warn && (
+          <span className="fm-chip warn" title="Needs a fix: see Checks" aria-label="Needs a fix">
+            !
+          </span>
+        )}
+        {n.locked && (
+          <span className="fm-lock" title="Locked" aria-hidden="true">
+            <Icon name="lock" size={11} />
+          </span>
+        )}
+        {changed.length > 0 && (
+          <span className="fm-delta" title={changed.map((c) => `${c.label} ${nf(c.was, 2)} → ${nf(c.now, 2)}`).join(" · ")} role="img" aria-label={`Changed in this simulation: ${changed.map((c) => `${c.label} ${nf(c.was, 2)} to ${nf(c.now, 2)}`).join(", ")}`}>
+            Δ
+          </span>
+        )}
+        {leak && (
+          <span className="fm-leak" title="Biggest leak: the step that loses the most people">
+            Biggest leak
+          </span>
+        )}
+        {playing && !calm && perf && T.cat !== "traffic" && !altWired && !nodata && (
+          <span className="fm-lostfx" aria-hidden="true">
+            {Array.from({ length: lostDots(R.N[n.id]?.non ?? 0, R.N[n.id]?.inflow ?? 0) }, (_, j) => (
+              <i key={j} style={{ animationDelay: `${j * 0.45}s` }} />
+            ))}
+          </span>
+        )}
+      </div>
+      {showName && (
+        <div className="fm-ntitle">
+          {renaming ? <RenameInput id={n.id} value={n.name} /> : <span>{n.name}</span>}
+          {showMore && <small>{subtype}</small>}
+          {(internal || tasks.length > 0 || (!shared && build)) && (
+            <span className="fm-nbadges">
+              {!shared && build && <StatusDot status={n.status} />}
+              {internal && (
+                <span className="fm-nnote" title="Has internal notes (Notes tab)">
+                  <Icon name="note" size={11} />
+                </span>
+              )}
+              {tasks.length > 0 && (
+                <span className="fm-ntasks" title="Checklist">
+                  ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
       )}
       {lostHere >= 0.5 && (
         <span className="fm-leakstub" title={`${peopleExact(lostHere)} people leave here`}>
@@ -174,93 +249,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
           <b>−{ppl(lostHere)}</b>
         </span>
       )}
-      {(V.family === "page" || V.family === "offer") && V.wireframe ? (
-        // V2 page / offer object (196 × 112): the page window, name and numbers, then a type caption with the status dot
-        <div className="pgo">
-          <div className="pgo-top">
-            <WireframeStrip kind={V.wireframe} accent={cc} win={WINDOWS[windowKeyOf(n.type)]} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />
-            <div className="pgo-info">
-              {renaming ? <RenameInput id={n.id} value={n.name} /> : <span className="pgo-title" style={textCss(n.s)}>{n.name}</span>}
-              {chip && (
-                <div className="pgo-m one" title={chip.title}>
-                  {!chip.unit.startsWith("/") && <small>{chip.unit}</small>}
-                  <strong>
-                    {chip.value}
-                    {chip.unit.startsWith("/") && <small> {chip.unit}</small>}
-                  </strong>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="pgo-cap">
-            <span className="pgo-ty" style={{ "--cc": cc } as React.CSSProperties}>
-              <span className="pgo-ic" style={{ background: cc }}>
-                <Icon name={(n.s?.icon as IconName) || T.icon} size={9} />
-              </span>
-              {typeCaption(n.type)}
-            </span>
-            {!shared && build && <StatusDot status={n.status} />}
-            {internal && (
-              <span className="fm-nnote" title="Has internal notes (Plan tab)">
-                <Icon name="note" size={11} />
-              </span>
-            )}
-            {tasks.length > 0 && (
-              <span className="fm-ntasks" title="Checklist">
-                ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-      {F.strip && V.wireframe && <WireframeStrip kind={V.wireframe} accent={cc} shot={shared ? undefined : n.shot} owner={{ id: n.id, name: n.name, type: n.type, url: n.url }} />}
-      {!shared && build && <StatusDot status={n.status} />}
-      <div className="fm-nhead">
-        {artOf(n.type) && !n.s?.icon ? (
-          <span className="fm-nicon art">
-            <BlockArtImg k={n.type} />
-          </span>
-        ) : (
-          <span className="fm-nicon">{brandMarkOf(n.type) && !n.s?.icon ? <BrandGlyph type={n.type} /> : <Icon name={(n.s?.icon as IconName) || T.icon} />}</span>
-        )}
-        <div className="fm-ntitle">
-          {renaming ? <RenameInput id={n.id} value={n.name} /> : <span style={textCss(n.s)}>{n.name}</span>}
-          <small title={chip?.title}>{chip ? `${chip.value} ${chip.unit}`.trim() : sub}</small>
-        </div>
-      </div>
-      {(internal || tasks.length > 0) && (
-        <div className="fm-nstats badges">
-          {internal && (
-            <span className="fm-nnote" title="Has internal notes (Plan tab)">
-              <Icon name="note" size={11} />
-            </span>
-          )}
-          {tasks.length > 0 && (
-            <span className="fm-ntasks" title="Checklist">
-              ✓ {tasks.filter((t) => t.done).length}/{tasks.length}
-            </span>
-          )}
-        </div>
-      )}
-      {hasSplitBar(n.type) && view !== "clean" && <SplitBar pct={Number(n.p.pct) || 0} test={baseOf(n.type) === "split"} />}
-        </>
-      )}
       {sd && <SimChip d={sd} k={k} cur={cur} source={T.cat === "traffic"} />}
-      {playing && !calm && perf && T.cat !== "traffic" && !altWired && !nodata && (
-        <span className="fm-lostfx" aria-hidden="true">
-          {Array.from({ length: lostDots(R.N[n.id]?.non ?? 0, R.N[n.id]?.inflow ?? 0) }, (_, j) => (
-            <i key={j} style={{ animationDelay: `${j * 0.45}s` }} />
-          ))}
-        </span>
-      )}
-      {!four && hasOut && <Handle type="source" position={Position.Right} id="main" className="fm-port out" title={`${labels ? labels[0] : "Converted"}: drag to connect`} />}
-      {!four && hasAlt && <Handle type="source" position={Position.Bottom} id="alt" className="fm-port alt" title={`${labels ? labels[1] : "Didn’t convert"}: drag to connect`} />}
-      {labels && (
-        <span className="fm-plabel out" aria-hidden="true">
-          {labels[0]}
-        </span>
-      )}
     </div>
   );
 });

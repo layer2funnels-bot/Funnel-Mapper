@@ -2,7 +2,7 @@
 // Editor state (Zustand). Holds the funnel graph + settings, selection, undo/redo history and view options.
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
-import { blockH, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
+import { blockH, blockPivot, picRect, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
 import { compute, periodFactor, warnNodeIds, type FunnelResult } from "../funnel-math";
 import { monthRange, rangeLabel, rangeScale, type DateRange } from "../range";
 import { NEUTRAL_WHATIF } from "../scenario-label";
@@ -1062,7 +1062,7 @@ export function addConnectedNode(from: { id: string; port: "main" | "alt"; sh?: 
   const T = typeOf(type);
   const src = get().nodes.find((n) => n.id === from.id);
   if (!T || !src || !canFollowType(type) || get().readOnly) return null;
-  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
+  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(x), y: snapV(y - blockPivot(type)), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
   const e: FunnelEdge = { id: "e" + nid(), from: from.id, to: n.id, share: 100, port: from.port, ...(from.sh && fourPorts(src.type) ? { sh: from.sh } : {}) };
   apply({ nodes: [...get().nodes, n], edges: [...get().edges, e] }, { discrete: true });
   selectNodes([n.id]);
@@ -1077,12 +1077,15 @@ export function insertStepOnEdge(edgeId: string, type: string, extra: { p?: Node
     b = e && s.nodes.find((n) => n.id === e.to);
   const T = typeOf(type);
   if (!e || !a || !b || !T || !canInsertType(type) || s.readOnly) return null;
-  const ax = a.x + nodeW(a.type),
-    ay = a.y + heightOf(a) / 2,
-    by = b.y + heightOf(b) / 2;
-  const mx = (ax + b.x) / 2,
+  // lines run between the pictures: the middle of the gap between them, at the pictures' centre line
+  const pa = picRect(a.type),
+    pb = picRect(b.type);
+  const ax = a.x + pa.x + pa.w,
+    ay = a.y + blockPivot(a.type),
+    by = b.y + blockPivot(b.type);
+  const mx = (ax + b.x + pb.x) / 2,
     my = e.port === "alt" ? Math.max(a.y + heightOf(a) + 70, (ay + by) / 2) : (ay + by) / 2;
-  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(mx - nodeW(type) / 2), y: snapV(my - blockH(type) / 2), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
+  const n: FunnelNode = { id: nid(), type, name: extra.name ?? T.label, x: snapV(mx - nodeW(type) / 2), y: snapV(my - blockPivot(type)), p: { ...defaultsFor(type), ...(extra.p ?? {}) } };
   const first: FunnelEdge = { ...e, to: n.id };
   const second: FunnelEdge = { id: "e" + nid(), from: n.id, to: b.id, share: 100, port: "main" };
   apply({ nodes: [...s.nodes, n], edges: [...s.edges.filter((x) => x.id !== e.id), first, second] }, { discrete: true });

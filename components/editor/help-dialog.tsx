@@ -25,7 +25,7 @@ const KEYS: [string, string][] = [
   ["]", "Hide or show the details panel"],
   ["S", "Start or leave Simulate"],
   ["Space", "Play or pause the people flow while simulating"],
-  ["/", "Quick add a block (also: double-click the canvas)"],
+  ["/", "Search the Blocks sidebar (double-click the canvas to quick-add a block)"],
   ["Esc", "Cancel, close, or clear the selection"],
   ["?", "This list"],
 ];

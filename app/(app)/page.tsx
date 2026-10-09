@@ -150,7 +150,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
             </div>
             {fs.length === 0 ? null : (
               <div className="fm-tblwrap" tabIndex={0} role="region" aria-label="Recent funnels (scrolls sideways when it is wider than the screen)">
-                <table className="tbl">
+                <table className="tbl fm-stackrows">
                   <thead>
                     <tr>
                       <th>Funnel</th>
@@ -170,14 +170,14 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
                             {f.name}
                           </Link>
                         </td>
-                        <td className="text-muted">{clientById[f.client_id]?.name}</td>
-                        <td>
+                        <td className="text-muted" data-label="Client">{clientById[f.client_id]?.name}</td>
+                        <td data-label="Status">
                           <StatusPill status={f.status} />
                         </td>
-                        <td className="r">{money(sum(f).rev, curOf(f))}</td>
-                        <td className={`r ${(sum(f).profit ?? 0) < 0 ? "text-neg" : "text-good"}`}>{money(sum(f).profit, curOf(f))}</td>
-                        <td className="r">{ratio(sum(f).roas)}</td>
-                        <td className="r text-muted">{timeAgo(f.updated_at)}</td>
+                        <td className="r" data-label="Revenue / mo">{money(sum(f).rev, curOf(f))}</td>
+                        <td className={`r ${(sum(f).profit ?? 0) < 0 ? "text-neg" : "text-good"}`} data-label="Profit / mo">{money(sum(f).profit, curOf(f))}</td>
+                        <td className="r" data-label="ROAS">{ratio(sum(f).roas)}</td>
+                        <td className="r text-muted" data-label="Updated">{timeAgo(f.updated_at)}</td>
                       </tr>
                     ))}
                   </tbody>

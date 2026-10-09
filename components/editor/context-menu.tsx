@@ -180,7 +180,6 @@ export function ContextMenu({ onTidy, onFit, onShortcuts, onWidget }: { onTidy: 
     return [
       {
         label: "Add block…",
-        kbd: "/",
         icon: "plus",
         disabled: ro,
         run: () => {

@@ -50,6 +50,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
   const [pricing, setPricing] = useState("");
   const [sort, setSort] = useState<Sort>("updated");
   const [archived, setArchived] = useState(false);
+  const [showF, setShowF] = useState(false); // phones: the extra filters sit behind a Filters button
   const archivedCount = clients.filter((c) => c.archived_at).length;
   const [view, setView] = useViewPref();
   const niches = useMemo(() => [...new Set(clients.map((c) => c.niche).filter(Boolean))].sort(), [clients]);
@@ -79,7 +80,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by status">
+        <div className="flex gap-1.5 max-sm:-mx-4 max-sm:max-w-[calc(100%+2rem)] max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 sm:flex-wrap" role="group" aria-label="Filter by status">
           <button type="button" className="fm-chip" aria-pressed={!status && !archived} onClick={() => (setStatus(""), setArchived(false))}>
             All <b>{clients.filter((c) => !c.archived_at).length}</b>
           </button>
@@ -110,6 +111,10 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
           <Icon name="search" size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
           <input className="input pl-9" type="search" placeholder="Search name, email, niche, tag…" value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
+        <button type="button" className="btn md:hidden" aria-expanded={showF} onClick={() => setShowF((v) => !v)}>
+          Filters
+        </button>
+        <div className={`${showF ? "flex" : "hidden"} w-full flex-wrap gap-2 md:contents`}>
         <select className="input w-auto" aria-label="Filter by niche" value={niche} onChange={(e) => setNiche(e.target.value)}>
           <option value="">All niches</option>
           {niches.map((n) => (
@@ -137,6 +142,7 @@ export function ClientsBrowser({ clients, initialStatus = "", initialQuery = "" 
           <option value="value">Highest value</option>
           <option value="funnels">Most funnels</option>
         </select>
+        </div>
       </div>
 
       {list.length === 0 ? (

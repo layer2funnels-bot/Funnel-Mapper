@@ -7639,3 +7639,74 @@ dialog.fm-sharedlg > p {
     display: none;
   }
 }
+
+/* edge labels ("40% of 150 = 60") sit above the blocks they pass, so a long label is never cut off by the neighbouring card */
+.react-flow__edgelabel-renderer {
+  z-index: 1000;
+}
+
+/* Stage frames: quiet containers (V2 boards). The frame's colour is a thin accent, not a saturated fill. */
+.fm-frame {
+  border: 1.5px dashed color-mix(in srgb, var(--fc) 40%, var(--line));
+  background: color-mix(in srgb, var(--fc) 3%, transparent);
+}
+.fm-frame .ftitle {
+  border: 1px solid color-mix(in srgb, var(--fc) 45%, var(--line));
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Right panel figure groups (Track > Forecast and others): a two-column grid with real gutters, and room under the intro line */
+.fm-insp .statbox {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.fm-insp .statbox > div {
+  min-width: 0;
+}
+.fm-insp p.sub {
+  margin-bottom: 12px;
+}
+
+/* Export step dialog */
+dialog.fm-exportdlg {
+  max-width: 560px;
+  width: min(560px, calc(100vw - 32px));
+}
+.fm-exp-sec {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.fm-exp-sec h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.fm-exp-list {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px 16px;
+  grid-template-columns: 1fr;
+}
+.fm-exp-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13.5px;
+}
+.fm-exp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .fm-exp-list label {
+    min-height: 44px;
+  }
+}

@@ -16,7 +16,7 @@ import type { IconName } from "@/lib/icons";
 import { checklistOf, moveNodes, openSettingsBox, setChecklist, shownR, startRename, updateNode, useEditor, viewK } from "@/lib/editor/store";
 import { blockChip, perfLine, priceTab } from "@/lib/editor/labels";
 import { nf, people as ppl, peopleExact } from "@/lib/format";
-import { waitValid } from "@/lib/wait";
+import { waitLabel, waitValid } from "@/lib/wait";
 import { boxCss, shapeGeom, textCss } from "@/lib/style";
 import { hostOf, isVideoUrl } from "@/lib/rich-text";
 import { RichText } from "@/components/rich-text";
@@ -162,7 +162,7 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const leak = useEditor((s) => s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers);
   const lostHere = useEditor((s) => (s.keyLeak === id && s.opts.view !== "clean" && !s.settings.hideNumbers && !s.edges.some((e) => e.from === id && e.port === "alt") ? (s.R.N[id]?.non ?? 0) * viewK(s.opts) : 0));
   // the picture-first block shows less at a distance: far = shapes and lines, mid = names, near = number chips and subtype
-  const band = useEditor((s) => (s.view.k < 0.3 ? "far" : s.view.k < 0.5 ? "mid" : "near"));
+  const band = useEditor((s) => (s.view.k < 0.22 ? "far" : s.view.k < 0.3 ? "mid" : "near"));
   const actualOn = useEditor((s) => !!s.actualView);
   const canEnter = useEditor((s) => !!s.actualView && !s.readOnly && !s.shared && !(s.nodes.find((x) => x.id === id)?.locked));
   const [chipOpen, setChipOpen] = useState(false);
@@ -209,7 +209,8 @@ export const BlockNode = memo(function BlockNode({ id, selected }: P) {
   const ribbon = fam === "offer" && view !== "clean" ? priceTab(n, cur) : null;
   const showName = band !== "far";
   const showMore = band === "near";
-  const subtype = fam === "page" || fam === "offer" ? typeCaption(n.type) : T.label;
+  // a Wait's duration is an input it shows under its name (not in Clean, which carries no numbers)
+  const subtype = n.type === "wait" && view !== "clean" ? waitLabel(n.p) : fam === "page" || fam === "offer" ? typeCaption(n.type) : T.label;
   return (
     <div className={cls} style={{ ["--cc" as string]: cc, ...(V.brand ? { ["--tile" as string]: V.brand } : null) }} aria-label={`${T.label}: ${n.name}`} title={!showName || n.name.length > 22 ? n.name : undefined}>
       <div className="fm-pic" data-fam={fam} style={{ width: P.w, height: P.h }}>

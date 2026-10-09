@@ -239,6 +239,18 @@ export function Canvas() {
     [rf],
   );
 
+  // names and number chips grow a little as the map zooms out, so they stay readable (CSS vars on the stage; nothing re-renders)
+  useEffect(() => {
+    const set = (k: number) => {
+      const el = document.querySelector<HTMLElement>(".fm-stage");
+      if (!el) return;
+      el.style.setProperty("--ck", String(Math.max(1, Math.min(1.7, 0.7 / k))));
+      el.style.setProperty("--ckn", String(Math.max(1, Math.min(1.4, 0.55 / k))));
+    };
+    set(useEditor.getState().view.k);
+    return useEditor.subscribe((s, p) => s.view.k !== p.view.k && set(s.view.k));
+  }, []);
+
   // touch: a long press opens the same menus as a right-click
   useEffect(() => {
     const root = document.querySelector<HTMLElement>(".fm-stage .react-flow");

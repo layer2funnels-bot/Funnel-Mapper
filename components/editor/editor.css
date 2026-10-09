@@ -9153,3 +9153,16 @@ dialog.fm-exportdlg {
   font: inherit;
   cursor: pointer;
 }
+/* the anchor sits on the picture's edge: keep it above the picture so a drag from the port starts a line, not a block move */
+.fm-stage .react-flow__handle.fm-port {
+  z-index: 4;
+}
+/* zoomed out, the name and the number chip grow a little (the stage sets --ck / --ckn from the zoom) so they stay readable */
+.fm-chip {
+  transform: scale(var(--ck, 1));
+  transform-origin: 100% 100%;
+}
+.fm-ntitle {
+  transform: scale(var(--ckn, 1));
+  transform-origin: 50% 0;
+}

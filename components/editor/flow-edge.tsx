@@ -3,7 +3,7 @@ import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
 import { memo, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { money, nf, people } from "@/lib/format";
-import { isAnnot, picRect } from "@/lib/catalog";
+import { blockH, isAnnot, nodeW, picRect } from "@/lib/catalog";
 import { num } from "@/lib/funnel-math";
 import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
 import { edgePath, edgeRate, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
@@ -42,7 +42,10 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
     s.nodes.some((m) => {
       if (m.type === "frame" || isAnnot(m.type)) return false;
       const r = picRect(m.type);
-      return mx > m.x + r.x - 24 && mx < m.x + r.x + r.w + 24 && my > m.y - 12 && my < m.y + r.y + r.h + 12;
+      // over the picture (with a margin) or over the name under it: a label never sits on either
+      const onPic = mx > m.x + r.x - 24 && mx < m.x + r.x + r.w + 24 && my > m.y - 12 && my < m.y + r.y + r.h + 12;
+      const onName = mx > m.x - 30 && mx < m.x + nodeW(m.type) + 30 && my > m.y + r.y + r.h - 4 && my < m.y + blockH(m.type) + 12;
+      return onPic || onName;
     }),
   );
   // a loop or skip line that runs through other blocks is drawn quietly (faded, no label) until it is hovered or one of its ends is selected

@@ -234,8 +234,9 @@ test.describe("funnel editor", () => {
     // locked Emerald dark tokens; V2 board: the right panel sits on the workspace chrome #111827
     const bg = await page.locator(".fm-insp").evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(bg).toBe("rgb(17, 24, 39)");
-    const nodeBg = await page.locator(".fm-node").first().evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(nodeBg).toBe("rgb(17, 24, 39)");
+    // a block's name sits straight on the canvas (no box): light ink on the dark canvas
+    const ink = await page.locator(".fm-ntitle > span").first().evaluate((el) => getComputedStyle(el).color);
+    expect(ink).toBe("rgb(226, 232, 240)");
     await page.screenshot({ path: "test-results/editor-dark.png" });
     // persists across reloads
     await page.reload();

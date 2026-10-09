@@ -12,7 +12,7 @@ import { healthChecks } from "@/lib/health";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
 import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { chartSeries, mrrDetail, type WidgetMetric } from "@/lib/widget-data";
-import { elkLayout, tidyLayout } from "@/lib/layout";
+import { elkLayout, layoutMetrics, tidyLayout } from "@/lib/layout";
 import { FUNNEL_STATUSES, STATUS_LABEL } from "@/lib/schemas";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { clearDraft, readDraft, useAutosave, type SaveFn } from "@/lib/editor/saver";
@@ -322,6 +322,16 @@ function EditorInner(props: EditorProps) {
     },
     [rf],
   );
+
+  // blocks carry their name underneath now: a funnel laid out for the old, smaller blocks may have them close together (offered once per open)
+  const spaceHint = useRef(false);
+  useEffect(() => {
+    if (!ready || spaceHint.current || readOnly || !manage) return;
+    spaceHint.current = true;
+    const st = useEditor.getState();
+    const flow = st.nodes.filter((n) => !isAnnot(n.type) && n.type !== "frame");
+    if (flow.length > 1 && layoutMetrics(flow, st.edges).overlaps > 0) showToast("Blocks have their names underneath now, so a few sit close together.", "Tidy up", () => void runTidy());
+  }, [ready, readOnly, manage, runTidy]);
 
   /* ---------- exports ---------- */
   const doExport = useCallback(

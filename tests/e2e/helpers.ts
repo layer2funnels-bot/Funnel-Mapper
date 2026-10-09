@@ -44,7 +44,7 @@ export async function openEditor(page: Page, id: string, opts: { panel?: boolean
 }
 
 export const nodes = (page: Page) => page.locator(".react-flow__node");
-export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle span, .pgo-title", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
+export const node = (page: Page, name: string) => page.locator(".react-flow__node", { has: page.locator(".fm-ntitle > span:first-child", { hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
 export const edgeLabels = (page: Page) => page.locator(".fm-elabel");
 
 /** Flow-space position of a node from React Flow's transform. */
@@ -113,6 +113,9 @@ export async function addFromPalette(page: Page, label: string) {
 
 /** Start Simulate on the map: the Simulate group of the Funnel panel (What-if), or the collapsed rail's button. */
 export async function startSimulate(page: Page) {
+  // the editor decides what is collapsed once it has mounted: wait for it, or the rail check below races the panel opening
+  await page.waitForSelector(".react-flow__node, .fm-empty");
+  await page.waitForTimeout(300);
   const rail = page.getByRole("button", { name: "Simulate", exact: true });
   if (await rail.isVisible().catch(() => false)) return rail.click();
   const tab = page.getByRole("tab", { name: "Simulate", exact: true });

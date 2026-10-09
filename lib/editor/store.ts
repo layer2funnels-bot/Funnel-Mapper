@@ -313,7 +313,8 @@ const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSet
   return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R), compareBase: compareOf(nodes, edges, settings) };
 };
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
-export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)));
+// a funnel block always reserves its full footprint (picture + two-line name + subtype), whatever its name measures, so layouts are the same everywhere
+export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : !isAnnot(n.type) ? blockH(n.type) : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : NH));
 export const widthOf = (n: FunnelNode) => n.w ?? get().dims[n.id]?.width ?? (n.type === "label" ? 300 : nodeW(n.type));
 
 let histTimer: ReturnType<typeof setTimeout> | undefined;

@@ -23,11 +23,11 @@ async function snapshot(page: Page) {
     const out: { nodes: { id: string; title: string; text: string; box: DOMRect; titleBox: DOMRect | null }[]; labels: { text: string; box: DOMRect }[] } = { nodes: [], labels: [] };
     document.querySelectorAll<HTMLElement>(".react-flow__node").forEach((el) => {
       if (/react-flow__node-(frame|note|label|shape|image|checklist|widget)/.test(el.className)) return;
-      const t = el.querySelector<HTMLElement>(".fm-ntitle span, .pgo-title");
+      const t = el.querySelector<HTMLElement>(".fm-ntitle > span:first-child");
       const clone = el.cloneNode(true) as HTMLElement;
-      // the leak chip and its "−N" stub are the funnel's one leak label, counted with the lines
-      clone.querySelectorAll(".fm-leak, .fm-leakstub, .fm-nstats.badges, .fm-ntasks, .react-flow__handle").forEach((x) => x.remove());
-      clone.querySelectorAll(".fm-ntitle span, .pgo-title").forEach((x) => x.remove());
+      // the leak chip and its "-N" stub are the funnel's one leak label; an offer's price is an input drawn on its picture, not the view's number
+      clone.querySelectorAll(".fm-leak, .fm-leakstub, .fm-nbadges, .fm-ribbon, .react-flow__handle").forEach((x) => x.remove());
+      clone.querySelectorAll(".fm-ntitle > span:first-child").forEach((x) => x.remove());
       out.nodes.push({ id: el.dataset.id ?? "", title: t?.textContent ?? "", text: clone.innerText, box: el.getBoundingClientRect(), titleBox: t?.getBoundingClientRect() ?? null });
     });
     document.querySelectorAll<HTMLElement>(".fm-elabel").forEach((el) => {

@@ -6,5 +6,7 @@ setup("sign in as the demo user", async ({ page }) => {
   await page.getByLabel("Password").fill("demo-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
+  // most specs work in the full details panel; it starts collapsed to a rail for new users (calm.spec covers that default)
+  await page.evaluate(() => localStorage.setItem("fm-editor-opts", JSON.stringify({ hideInsp: false })));
   await page.context().storageState({ path: "tests/e2e/.auth/demo.json" });
 });

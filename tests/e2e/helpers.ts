@@ -35,7 +35,9 @@ export async function createFunnel(opts: { template?: string; graph?: FunnelGrap
   return { id: data.id as string, graph, sb };
 }
 
-export async function openEditor(page: Page, id: string) {
+/** Specs start with the details panel open (see auth.setup). Pass { panel: false } to see the collapsed rail new users get. */
+export async function openEditor(page: Page, id: string, opts: { panel?: boolean } = {}) {
+  if (opts.panel === false) await page.addInitScript(() => localStorage.removeItem("fm-editor-opts"));
   await page.goto(`/funnels/${id}`);
   await expect(page.locator(".fm-editor")).toBeVisible();
   await expect(page.locator(".fm-saved")).toContainText(/Saved|View only/);
@@ -78,6 +80,7 @@ const MAILPIT = "http://127.0.0.1:54324";
 export async function signIn(browser: Browser, email: string, password = "demo-password") {
   const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
+  await page.addInitScript(() => localStorage.setItem("fm-editor-opts", JSON.stringify({ hideInsp: false }))); // specs work in the full details panel
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);

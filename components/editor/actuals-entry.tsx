@@ -37,9 +37,9 @@ export function recentPeriods(type: PeriodType, today = new Date()): { start: st
   });
 }
 
-export function ActualsEntry({ rows, onSaved, onClose }: { rows: ActualRowDb[]; onSaved: () => void; onClose: () => void }) {
+export function ActualsEntry({ rows, onSaved, onClose, initialTab = "type" }: { rows: ActualRowDb[]; onSaved: () => void; onClose: () => void; initialTab?: "type" | "csv" }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [tab, setTab] = useState<"type" | "csv">("type");
+  const [tab, setTab] = useState<"type" | "csv">(initialTab);
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();

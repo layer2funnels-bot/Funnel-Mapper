@@ -24,7 +24,7 @@ import {
   stopSim,
   updateParams,
   useEditor,
-  keyLeakOf, setSimBefore, setSimPlay,
+  keyLeakOf, setSimBefore, setSimPlay, setSimSpeed, setSimWalk,
 } from "@/lib/editor/store";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useFocusBlock } from "./focus";
@@ -195,6 +195,8 @@ export function SimulatePanel() {
   const focus = useFocusBlock();
   const [name, setName] = useState("");
   const playing = useEditor((x) => x.simPlay);
+  const speed = useEditor((x) => x.simSpeed);
+  const walk = useEditor((x) => x.simWalk);
   const before = useEditor((x) => x.simBefore);
   const calm = useReducedMotion();
   const w = settings.whatif;
@@ -224,7 +226,6 @@ export function SimulatePanel() {
   const baseLeak = keyLeakOf(base.nodes, base.R);
   const leakNode = nodes.find((n) => n.id === leak);
   const leakNow = leak ? R.N[leak]?.non : undefined;
-  const leakWas = leak ? base.R.N[leak]?.non : undefined;
   const at = new Date(base.at).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -275,33 +276,8 @@ export function SimulatePanel() {
               {at}.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn sm"
-            onClick={stopSim}
-            title="Close Simulate and keep the map as it is now"
-          >
-            Done
-          </button>
         </div>
 
-        <div
-          className="fm-sim-key"
-          role="group"
-          aria-label="Revenue, profit and ROAS"
-        >
-          {totals
-            .filter(
-              (t) => t.key === "rev" || t.key === "profit" || t.key === "roas",
-            )
-            .map((t) => (
-              <div key={t.key}>
-                <span>{t.label}</span>
-                <b>{fmtTotal[t.key](t.value, cur)}</b>
-                <DeltaChip t={t} cur={cur} compact />
-              </div>
-            ))}
-        </div>
         <div className="fm-sim-view">
           <div className="seg" role="group" aria-label="Show the map">
             <button type="button" aria-pressed={!before} onClick={() => setSimBefore(false)}>
@@ -314,6 +290,16 @@ export function SimulatePanel() {
           <button type="button" className={`btn sm fm-playbtn${playing ? " on" : ""}`} aria-pressed={playing} disabled={calm} onClick={() => setSimPlay(!playing)} title={calm ? "Your device asks for less motion, so the flow animation is off" : "Watch people move through the funnel"}>
             <Icon name={playing ? "pause" : "play"} size={14} /> {playing ? "Pause flow" : "Play flow"}
           </button>
+          <div className="seg fm-simspeed" role="group" aria-label="Flow speed">
+            {([1, 2, 4] as const).map((x) => (
+              <button key={x} type="button" aria-pressed={speed === x} onClick={() => setSimSpeed(x)}>
+                {x}×
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn sm" aria-pressed={walk != null} onClick={() => setSimWalk(walk == null ? 0 : null)} title="Step through the funnel one stage at a time (← →)">
+            Walk-through
+          </button>
         </div>
         <p className="sr-only" role="status" aria-live="polite">
           {before ? "Showing the map before your changes" : "Showing the map with your changes"}
@@ -322,43 +308,36 @@ export function SimulatePanel() {
         {playing && !before && <p className="fm-sim-note">Each dot is a share of the people on that line, so busier lines carry more. Orange dots are people lost at a step.</p>}
       </div>
 
-      <section aria-label="Result" className="fm-sim-sec fm-sim-result">
-        <h4>Result</h4>
-        <dl className="fm-sim-tot">
-          {totals
-            .filter(
-              (t) => t.key !== "rev" && t.key !== "profit" && t.key !== "roas",
-            )
-            .map((t) => (
-              <div key={t.key}>
-                <dt>{t.label}</dt>
-                <dd>
-                  <b>{fmtTotal[t.key](t.value, cur)}</b>
-                  <DeltaChip t={t} cur={cur} />
-                </dd>
-              </div>
-            ))}
-        </dl>
-        {leakNode && leakNow != null && (
+      <section aria-label="What changed" className="fm-sim-sec fm-sim-result">
+        <h4>What changed</h4>
+        {totals.some((t) => t.tone !== "same") ? (
+          <dl className="fm-sim-tot">
+            {totals
+              .filter((t) => t.tone !== "same")
+              .map((t) => (
+                <div key={t.key}>
+                  <dt>{t.label}</dt>
+                  <dd>
+                    <DeltaChip t={t} cur={cur} />
+                  </dd>
+                </div>
+              ))}
+          </dl>
+        ) : (
+          <p className="sub">Nothing yet. Move a lever or change a block and the difference shows here.</p>
+        )}
+        {leakNode && leakNow != null && baseLeak && baseLeak !== leak && (
           <p className="fm-sim-leak">
-            Biggest leak:{" "}
-            <button
-              type="button"
-              className="link"
-              onClick={() => focus(leakNode.id)}
-            >
+            The biggest leak moved to{" "}
+            <button type="button" className="link" onClick={() => focus(leakNode.id)}>
               {leakNode.name}
-            </button>{" "}
-            loses {people(leakNow)} people
-            {leakWas != null && Math.abs(leakNow - leakWas) > 1e-9
-              ? ` (was ${people(leakWas)})`
-              : ""}
-            {baseLeak && baseLeak !== leak
-              ? ", a different step than before"
-              : ""}
+            </button>
             .
           </p>
         )}
+        <p className="sub">
+          Totals stay in the strip below; Reports has the full picture.
+        </p>
       </section>
 
       {sel ? blockSection : null}
@@ -524,6 +503,11 @@ export function SimulatePanel() {
           </p>
         )}
       </section>
+      <footer className="fm-sim-foot">
+        <button type="button" className="btn primary" onClick={stopSim} title="Close Simulate and keep the map as it is now">
+          Done
+        </button>
+      </footer>
     </div>
   );
 }

@@ -2,12 +2,13 @@
 import "./editor.css";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark, Icon } from "@/components/icon";
 import { Menu } from "@/components/menu";
 import { toggleTheme } from "@/components/theme-toggle";
 import { isAnnot } from "@/lib/catalog";
 import { CURRENCIES, CURRENCY_CODES, exportFunnelFile, importFunnelFile, isCurrency, type FunnelGraph, type FunnelNode, type FunnelSettings } from "@/lib/graph";
+import { healthChecks } from "@/lib/health";
 import { fileName, paletteFor, stepsCsv } from "@/lib/export";
 import { monthlyPlanVsActual, reportData } from "@/lib/report-data";
 import { chartSeries, mrrDetail, type WidgetMetric } from "@/lib/widget-data";
@@ -45,7 +46,7 @@ import {
   setTab,
   showToast,
   undo,
-  useEditor, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
+  useEditor, setMapView, setFunnelCtl, setSideTab, openSettingsBox, reorder, setLocked, setMode, openQuickAdd, setProducts, setSection, startSim, stopSim, leaveSim, setSimPlay, setSimWalk, type ReportSection } from "@/lib/editor/store";
 import { Canvas, ZoomControls } from "./canvas";
 import { kbd } from "@/lib/platform";
 import { useBand } from "@/lib/use-band";
@@ -56,7 +57,11 @@ import { ensureActuals, loadAssets } from "./assets";
 import { ContextMenu } from "./context-menu";
 import { FloatingToolbar } from "./floating-toolbar";
 import { TypePicker } from "./type-picker";
-import { ActualSwitch, EditorRail, LayersMenu, PerfLegend, ScenarioPill, ViewSwitch } from "./chrome";
+import { EditorRail, LayersMenu, ViewSwitch } from "./chrome";
+import { EditingBanner, PlanControl } from "./plan-control";
+import { ActualsHost } from "./actuals-host";
+import { SettingsBox } from "./settings-box";
+import { RangePicker } from "./range-picker";
 import { Outline } from "./outline";
 import { WorkspaceBlocks } from "./workspace-blocks";
 import { CommentsPanel } from "./comments";
@@ -136,6 +141,17 @@ function EditorInner(props: EditorProps) {
     if (presenting) stopSim();
   }, [presenting]);
   const [status, setStatus] = useState(funnel.status);
+  const changeStatus = useCallback(
+    async (st: string) => {
+      setStatus(st);
+      const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
+      if (error) showToast("Couldn’t change status");
+    },
+    [funnel.id],
+  );
+  useEffect(() => {
+    setFunnelCtl(status, manage ? changeStatus : null);
+  }, [status, manage, changeStatus]);
   const [commentCount, setCommentCount] = useState(props.unresolvedComments ?? 0);
   const helpRef = useRef<HTMLDialogElement>(null);
   const tipsRef = useRef<HTMLDialogElement>(null);
@@ -145,6 +161,9 @@ function EditorInner(props: EditorProps) {
   const selEdgeId = useEditor((s) => s.selEdge);
   const band = useBand();
   const sharedView = useEditor((s) => s.shared);
+  const nodesForChecks = useEditor((s) => s.nodes);
+  const edgesForChecks = useEditor((s) => s.edges);
+  const checkCount = useMemo(() => (sharedView ? 0 : healthChecks({ nodes: nodesForChecks, edges: edgesForChecks }).length), [sharedView, nodesForChecks, edgesForChecks]);
   const hasWidgets = useEditor((s) => s.nodes.some((n) => n.type === "widget"));
   const [sheetH, setSheetH] = useState(50);
   const sheetDrag = useRef<{ y: number; h: number } | null>(null);
@@ -196,7 +215,7 @@ function EditorInner(props: EditorProps) {
     }
     if (share?.hideNumbers) settings = { ...settings, hideNumbers: true };
     initEditor({ funnelId: funnel.id, clientId: funnel.client_id, name: nm, graph, settings, readOnly: !canEdit, shared: !owner, viewer: !!props.viewer });
-    if (share?.hideNumbers) setOpt("nums", false);
+    if (share?.hideNumbers) setMapView("clean");
     // deep link: ?view=reports[&section=goals]
     const q = new URLSearchParams(window.location.search);
     if (q.get("view") === "reports" && !share?.hideNumbers) {
@@ -385,7 +404,9 @@ function EditorInner(props: EditorProps) {
       ...(owner ? [{ id: "simulate", label: "Start or leave Simulate", scope: "map" as const, shortcut: "S", icon: "play" as const, words: "simulation what-if", run: () => cmdRef.current.toggleSim(), enabled: () => can() && !useEditor.getState().shared }] : []),
       { id: "export-pdf", label: "Export PDF report", scope: "map", icon: "download", words: "download", run: () => void cmdRef.current.doExport("pdf") },
       { id: "export-png", label: "Export PNG image", scope: "map", icon: "download", words: "download picture", run: () => void cmdRef.current.doExport("png") },
-      { id: "numbers", label: "Show or hide numbers", scope: "view", icon: "hash", words: "performance clean layer", run: () => setOpt("nums", !useEditor.getState().opts.nums) },
+      { id: "view-clean", label: "Clean view (no numbers)", scope: "view", icon: "layers", words: "numbers hide names lines", run: () => setMapView("clean") },
+      { id: "view-people", label: "People view", scope: "view", icon: "users", words: "numbers people performance", run: () => setMapView("people") },
+      { id: "view-money", label: "Money view", scope: "view", icon: "hash", words: "numbers revenue spend", run: () => setMapView("money") },
       { id: "panel-left", label: "Hide or show the blocks panel", scope: "view", shortcut: "[", icon: "panelLeft", run: () => setOpt("hideSide", !useEditor.getState().opts.hideSide) },
       { id: "panel-right", label: "Hide or show the details panel", scope: "view", shortcut: "]", icon: "panelRight", run: () => setOpt("hideInsp", !useEditor.getState().opts.hideInsp) },
     ]);
@@ -457,6 +478,16 @@ function EditorInner(props: EditorProps) {
         ev.preventDefault();
         startRename(useEditor.getState().selNodes[0]);
         return;
+      }
+      // Enter on one selected block opens its settings box (double-click does too)
+      if (ev.key === "Enter" && !mod && !ev.shiftKey && !ev.altKey && !useEditor.getState().settingsBox && useEditor.getState().selNodes.length === 1 && !useEditor.getState().shared) {
+        const st = useEditor.getState();
+        const sel1 = st.nodes.find((x) => x.id === st.selNodes[0]);
+        if (sel1 && !isAnnot(sel1.type) && sel1.type !== "widget") {
+          ev.preventDefault();
+          openSettingsBox(sel1.id);
+          return;
+        }
       }
       if (mod && k === "a") {
         ev.preventDefault();
@@ -706,39 +737,19 @@ function EditorInner(props: EditorProps) {
               <div className="ph">Layers</div>
               {!share?.hideNumbers && (
                 <div className="fm-layer-presets">
-                  <button type="button" role="menuitemcheckbox" aria-checked={!opts.nums && !opts.thick} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
-                    Clean map
-                  </button>
-                  <button type="button" role="menuitemcheckbox" aria-checked={opts.nums && opts.thick} onClick={() => (setOpt("nums", true), setOpt("thick", true))}>
-                    Performance map
-                  </button>
+                  {(["clean", "people", "money"] as const).map((v) => (
+                    <button key={v} type="button" role="menuitemcheckbox" aria-checked={opts.view === v} onClick={() => setMapView(v)}>
+                      {v === "clean" ? "Clean" : v === "people" ? "People" : "Money"}
+                    </button>
+                  ))}
                 </div>
               )}
-              {!share?.hideNumbers && (
-                <label>
-                  <input type="checkbox" checked={opts.nums} onChange={(e) => setOpt("nums", e.target.checked)} /> Numbers on the map
-                </label>
-              )}
-              <label>
-                <input type="checkbox" checked={opts.thick} onChange={(e) => setOpt("thick", e.target.checked)} /> Flow: line thickness shows traffic
-              </label>
               <label>
                 <input type="checkbox" checked={opts.notes} onChange={(e) => setOpt("notes", e.target.checked)} /> Notes
               </label>
               <label>
                 <input type="checkbox" checked={opts.checks} onChange={(e) => setOpt("checks", e.target.checked)} /> Checklists
               </label>
-              {!share?.hideNumbers && (
-                <label className="fm-layer-period">
-                  Forecast: numbers per
-                  <select value={opts.period} onChange={(e) => setOpt("period", e.target.value as typeof opts.period)} aria-label="Numbers on the map per">
-                    <option value="day">Day</option>
-                    <option value="week">Week</option>
-                    <option value="month">Month</option>
-                    <option value="year">Year</option>
-                  </select>
-                </label>
-              )}
               {canEdit && (
                 <label className="fm-layer-period">
                   Currency
@@ -873,9 +884,7 @@ function EditorInner(props: EditorProps) {
                           aria-checked={status === st}
                           onClick={async () => {
                             close();
-                            setStatus(st);
-                            const { error } = await supabaseBrowser().from("funnels").update({ status: st }).eq("id", funnel.id);
-                            if (error) showToast("Couldn’t change status");
+                            await changeStatus(st);
                           }}
                         >
                           {STATUS_LABEL[st]}
@@ -891,7 +900,6 @@ function EditorInner(props: EditorProps) {
               )}
             </Menu>
           </span>
-          {owner && !share?.hideNumbers && <ScenarioPill onOpen={() => (setMode("map"), setTab("scenarios"), clearSelection(), setPanel("inspector"), setShowInsp(true), togglePanel("insp", false))} />}
           <span className="fm-saved fm-hide-md" data-s={saveStatus} role="status" aria-live="polite">
             <span className="dot" aria-hidden="true" />
             {saveLabel[saveStatus]}
@@ -916,7 +924,18 @@ function EditorInner(props: EditorProps) {
           </div>
         )}
         <span className="flex-1" />
-        {!sharedView && !reports && !share?.hideNumbers && <ActualSwitch />}
+        {owner && !sharedView && !share?.hideNumbers && (
+          <PlanControl
+            showActual={!reports}
+            onNewScenario={() => {
+              if (!useEditor.getState().simBase) startSim();
+              setMode("map");
+              setShowInsp(true);
+              togglePanel("insp", false);
+              setPanel("simulate");
+            }}
+          />
+        )}
         {canEdit && (
           <span className="fm-edit-tools fm-hide-phone">
             <button type="button" className="btn icon ghost" aria-label="Undo" title={`Undo (${kbd("Mod+Z")})`} onClick={undo} disabled={readOnly || !canUndo}>
@@ -1096,6 +1115,7 @@ function EditorInner(props: EditorProps) {
             <b>You’re offline.</b> Changes are kept on this device and will save when you’re back.
           </div>
         )}
+        {ready && !reports && owner && !share?.hideNumbers && <EditingBanner />}
         {ready && !reports && !share?.hideNumbers && (
           <div className="fm-stagebar">
             {!readOnly && (
@@ -1104,11 +1124,11 @@ function EditorInner(props: EditorProps) {
               </button>
             )}
             <ViewSwitch />
+            <RangePicker />
             <span className="fm-vr" aria-hidden="true" />
             <LayersMenu />
           </div>
         )}
-        {ready && !reports && !share?.hideNumbers && opts.nums && opts.thick && hasNodes && <PerfLegend />}
         {simOn && !reports && <SimBar onOpenChecks={() => (setTab("math"), setShowInsp(true), togglePanel("insp", false))} />}
         {simBefore && !reports && (
           <div className="fm-before-badge" role="status">
@@ -1136,12 +1156,9 @@ function EditorInner(props: EditorProps) {
         )}
         <ZoomControls />
         <QuickAdd />
+        <SettingsBox />
+        <ActualsHost />
         <LineMenu />
-        {opts.period !== "month" && opts.nums && !share?.hideNumbers && (
-          <button type="button" className="fm-period-badge" onClick={() => setOpt("period", "month")} title="Show monthly numbers">
-            Numbers per {opts.period} · <u>back to monthly</u>
-          </button>
-        )}
       </section>
 
       {collapsed.insp && !reports && !clientView && (
@@ -1149,8 +1166,17 @@ function EditorInner(props: EditorProps) {
           <button type="button" aria-label="Expand details panel" title="Show details panel (])" onClick={() => togglePanel("insp", false)}>
             <Icon name="chevronLeft" size={15} />
           </button>
-          <button type="button" aria-label="Funnel" title="Funnel" onClick={() => (setPanel("inspector"), togglePanel("insp", false))}>
+          <button type="button" aria-label="Funnel" title={checkCount ? `Funnel · ${checkCount} to fix` : "Funnel"} className="fm-irail-checks" onClick={() => (setPanel("inspector"), togglePanel("insp", false))}>
             <Icon name="sliders" size={15} />
+            {checkCount > 0 && <i aria-hidden="true">{checkCount}</i>}
+          </button>
+          {owner && !sharedView && (
+            <button type="button" aria-label="Goals" title="Goals" onClick={() => setSection("goals")}>
+              <Icon name="target" size={15} />
+            </button>
+          )}
+          <button type="button" aria-label="Outline" title="Outline of the funnel" onClick={() => (setSideTab("outline"), togglePanel("side", false))}>
+            <Icon name="list" size={15} />
           </button>
           {owner && !readOnly && !sharedView && (
             <button type="button" aria-label="Simulate" title="Simulate (S)" onClick={() => (simOn ? setPanel("simulate") : toggleSim(), togglePanel("insp", false))}>

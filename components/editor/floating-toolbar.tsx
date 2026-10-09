@@ -51,7 +51,8 @@ export function FloatingToolbar() {
       r = Math.max(...sel.map((n) => n.x + widthOf(n))) * vp.zoom + vp.x;
       b = Math.max(...sel.map((n) => n.y + heightOf(n))) * vp.zoom + vp.y;
     }
-    const gap = 14;
+    // clear of the block's top port, and of the "Biggest leak" chip when this block carries it
+    const gap = 24 + (kind === "block" && sel[0] && useEditor.getState().keyLeak === sel[0].id ? 30 : 0);
     let left = (l + r) / 2 - w / 2;
     if (left + w > stage.width - 8) left = r - w; // would overflow on the right: align to the selection's right edge
     if (left < 8) left = Math.min(l, stage.width - w - 8); // overflow on the left: align to its left edge

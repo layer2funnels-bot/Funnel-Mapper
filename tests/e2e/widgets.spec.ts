@@ -95,7 +95,7 @@ test.describe("Widgets", () => {
     const chip = page.locator('.react-flow__node-widget[data-id="wa"] .fm-widget');
     await expect(chip).toBeVisible();
     expect((await chip.boundingBox())!.width).toBeLessThanOrEqual(152);
-    await page.getByRole("button", { name: "Reports" }).click().catch(async () => {
+    await page.getByRole("button", { name: "Reports", exact: true }).click().catch(async () => {
       await page.getByRole("button", { name: "Reports", exact: true }).click();
     });
     const card = page.locator(".fm-rwidgets .fm-widget").first();

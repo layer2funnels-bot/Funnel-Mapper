@@ -3,7 +3,9 @@
 // All maths comes from lib/funnel-math; this file only orchestrates state.
 import { create } from "zustand";
 import { blockH, DEFAULT_SIZE, defaultsFor, fourPorts, retypeTargets, FRAME_COLORS, isAnnot, nodeW, NH, portsFor, SIZED_TYPES, typeOf, canReceive, type NodeParams } from "../catalog";
-import { compute, warnNodeIds, type FunnelResult } from "../funnel-math";
+import { compute, periodFactor, warnNodeIds, type FunnelResult } from "../funnel-math";
+import { monthRange, rangeLabel, rangeScale, type DateRange } from "../range";
+import { NEUTRAL_WHATIF } from "../scenario-label";
 import type { ActualRowDb } from "../schemas";
 import type { ChecklistItem, FunnelEdge, FunnelGraph, FunnelNode, FunnelSettings, Side, Viewport } from "../graph";
 import { tidyLayout } from "../layout";
@@ -18,17 +20,28 @@ export type EditorMode = "map" | "reports";
 export type ReportSection = "overview" | "data" | "sources" | "offers" | "expenses" | "scenarios" | "forecast" | "goals" | "mrr" | "monthly" | "reinvest" | "status";
 export type SaveStatus = "saved" | "dirty" | "saving" | "offline" | "error" | "readonly";
 
+/** The three map views (editor-calm brief): Clean = names, types and lines only; People (default) = one people number per block and one rate per line; Money = one money number per block (revenue on offers, spend on sources) and the same rates. */
+export type MapView = "clean" | "people" | "money";
+
 export interface ViewOpts {
-  /** Layers: numbers on blocks and connections. */
+  /** Which of the three views the map shows. `nums` and `thick` below follow it (kept so exports, Present and the simulation read one switch). */
+  view: MapView;
+  /** Numbers on blocks and connections (every view but Clean). */
   nums: boolean;
-  /** Layers: line thickness shows traffic (flow). */
+  /** Line thickness shows people (every view but Clean). */
   thick: boolean;
   /** Layers: sticky notes and internal-note badges. */
   notes: boolean;
   /** Layers: checklist elements and checklist badges. */
   checks: boolean;
-  /** Forecast layer: numbers on the map per day / week / month / year (the funnel models a month). */
+  /** Older "numbers per day / week / month / year" choice. The calendar range below replaces it; kept so saved options still load. */
   period: "day" | "week" | "month" | "year";
+  /** The calendar range the Plan numbers cover (null = this calendar month). Actual mode shows the real entries for the same dates. */
+  range: DateRange | null;
+  /** Optional layer: each block shows its build status (planned, in progress, live); several selected blocks are set together. */
+  build: boolean;
+  /** Compare with Baseline: when a scenario is active, blocks and the strip show the change from Baseline (off by default). */
+  compare: boolean;
   /** Background of exported map images (PNG / SVG). */
   bg: "light" | "dark" | "transparent";
   snap: boolean;
@@ -114,6 +127,14 @@ export interface EditorState {
   assetsStatus: "idle" | "loading" | "ready" | "error";
   /** Simulate: the map as it was when simulating started (null = not simulating). Everything shown as a change is live minus this. */
   simBase: SimBase | null;
+  /** The block whose settings box is open (double-click or Enter on a selected block). */
+  settingsBox: string | null;
+  /** The "Enter numbers" dialog (Type it in, or Import CSV) opened from the Actual banner. */
+  actualsEntry: "type" | "csv" | null;
+  /** The funnel's own status (Draft / Proposed / Live / Archived) and how to change it; set can be null for viewers and share links. */
+  funnelCtl: { status: string; set: ((status: string) => void) | null };
+  /** The Baseline run (what-if levers at neutral) while Compare with Baseline is on and a scenario is active. */
+  compareBase: SimBase | null;
   /** Simulate: the people-flow animation is running. */
   simPlay: boolean;
   /** Simulate: the map shows the baseline (before your changes) instead of now. */
@@ -177,13 +198,16 @@ export interface EditorState {
 }
 
 const OPTS_KEY = "fm-editor-opts";
+const viewFlags = (view: MapView) => ({ view, nums: view !== "clean", thick: view !== "clean" });
 const loadOpts = (): ViewOpts => {
-  const d: ViewOpts = { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false };
+  const d: ViewOpts = { ...viewFlags("people"), notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: true };
   try {
     const saved = JSON.parse(localStorage.getItem(OPTS_KEY) || "{}");
     // V2: below 1440px the library starts collapsed to the rail (it opens as an overlay); a saved choice wins
     if (saved.hideSide === undefined && window.innerWidth <= 1439) d.hideSide = true;
-    return { ...d, ...saved };
+    // the view is the one switch: an older saved nums / thick pair (Clean / Performance) is ignored, People is the default
+    const view: MapView = saved.view === "clean" || saved.view === "money" || saved.view === "people" ? saved.view : "people";
+    return { ...d, ...saved, ...viewFlags(view) };
   } catch {
     return d;
   }
@@ -217,6 +241,10 @@ export const useEditor = create<EditorState>(() => ({
   workspaceBlocks: [],
   assetsStatus: "idle",
   simBase: null,
+  funnelCtl: { status: "draft", set: null },
+  settingsBox: null,
+  actualsEntry: null,
+  compareBase: null,
   simPlay: false,
   simBefore: false,
   menu: null,
@@ -232,7 +260,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: "math",
   panel: "inspector",
   inspTab: "details",
-  opts: { nums: true, thick: false, notes: true, checks: true, period: "month", bg: "light", snap: true, mini: true, hideSide: false, hideInsp: false },
+  opts: { view: "people", nums: true, thick: true, notes: true, checks: true, period: "month", range: null, compare: false, build: false, bg: "light", snap: true, mini: true, hideSide: false, hideInsp: true },
   readOnly: false,
   saveStatus: "saved",
   rev: 0,
@@ -273,9 +301,16 @@ export function keyLeakOf(nodes: FunnelNode[], R: FunnelResult): string | null {
   }
   return best;
 }
+const isNeutral = (w: FunnelSettings["whatif"]) => w.traffic === 1 && w.conv === 1 && w.price === 1 && w.cost === 1;
+/** Baseline run for "Compare with Baseline": the same map with the what-if levers at neutral. */
+const compareOf = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings): SimBase | null => {
+  if (!get().opts.compare || isNeutral(settings.whatif)) return null;
+  const base = { ...settings, whatif: { ...NEUTRAL_WHATIF } };
+  return { R: compute({ nodes, edges }, base), nodes, edges, settings: base, at: Date.now() };
+};
 const recompute = (nodes: FunnelNode[], edges: FunnelEdge[], settings: FunnelSettings) => {
   const R = compute({ nodes, edges }, settings);
-  return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R) };
+  return { R, warnIds: warnNodeIds({ nodes, edges }), keyLeak: keyLeakOf(nodes, R), compareBase: compareOf(nodes, edges, settings) };
 };
 export const snapV = (v: number) => (get().opts.snap ? Math.round(v / GRID) * GRID : Math.round(v));
 export const heightOf = (n: FunnelNode) => (SIZED_TYPES.has(n.type) && n.h ? n.h : get().dims[n.id]?.height ?? (n.type === "label" ? 40 : isAnnot(n.type) ? NH : blockH(n.type)));
@@ -356,6 +391,7 @@ export function initEditor(p: { funnelId: string; clientId: string; name: string
     simBefore: false,
     panel: "inspector",
   });
+  set({ compareBase: compareOf(p.graph.nodes, p.graph.edges, p.settings) }); // Compare with Baseline may have been left on
 }
 
 /** Replace the whole graph/settings (version restore, import). Undoable. */
@@ -364,6 +400,27 @@ export function replaceContent(graph: Pick<FunnelGraph, "nodes" | "edges">, sett
   apply({ nodes: graph.nodes, edges: graph.edges, settings: settings ?? get().settings, ...(name != null ? { name } : {}) }, { discrete: true });
   set({ selNodes: [], selEdge: null });
   commitHistory();
+}
+
+/* ---------------- block settings box ---------------- */
+type BoxSnap = Pick<FunnelNode, "p" | "name" | "s" | "desc" | "url" | "checklist" | "type">;
+let boxSnap: { id: string; snap: BoxSnap } | null = null;
+/** Open the settings box of one block (not for notes, shapes or widgets). Remembers how the block was, so Esc can put it back. */
+export function openSettingsBox(id: string) {
+  const n = get().nodes.find((x) => x.id === id);
+  if (!n || isAnnot(n.type) || n.type === "widget") return;
+  boxSnap = { id, snap: { p: { ...n.p }, name: n.name, s: n.s ? { ...n.s } : undefined, desc: n.desc, url: n.url, checklist: n.checklist ? n.checklist.map((c) => ({ ...c })) : undefined, type: n.type } };
+  set({ settingsBox: id, selNodes: [id], selEdge: null });
+}
+/** Close the settings box. `revert` puts the block back as it was when the box opened (Esc); Enter and clicking away keep the edits. */
+export function closeSettingsBox(revert = false) {
+  const b = boxSnap;
+  boxSnap = null;
+  if (revert && b && !get().readOnly) {
+    // the type is never changed by a revert (a page type change is its own undo step)
+    apply({ nodes: get().nodes.map((x) => (x.id === b.id ? { ...x, p: b.snap.p, name: b.snap.name, s: b.snap.s, desc: b.snap.desc, url: b.snap.url, checklist: b.snap.checklist } : x)) });
+  }
+  set({ settingsBox: null });
 }
 
 /* ---------------- history ---------------- */
@@ -434,17 +491,15 @@ export function startSim() {
   const s = get();
   if (s.readOnly || s.shared) return;
   if (s.actualView) set({ actualView: null, actualR: null });
-  set({ simBase: { ...takeBase(), prev: { nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
-  setOpt("nums", true);
-  setOpt("thick", true);
+  set({ simBase: { ...takeBase(), prev: { view: s.opts.view, nums: s.opts.nums, thick: s.opts.thick, period: s.opts.period }, vs: null }, simPlay: false, simBefore: false, simWalk: null, simAsk: false, panel: "simulate" });
+  if (s.opts.view === "clean") setMapView("people"); // changes read against the baseline, so the numbers have to show
 }
 /** Stop simulating and keep whatever the map says now; the view (layers, period) goes back to what it was. */
 export function stopSim() {
   const prev = get().simBase?.prev;
   set((s) => ({ simBase: null, simPlay: false, simBefore: false, simWalk: null, simAsk: false, spot: s.simWalk != null ? null : s.spot, panel: s.panel === "simulate" ? "inspector" : s.panel }));
   if (prev) {
-    setOpt("nums", prev.nums);
-    setOpt("thick", prev.thick);
+    setMapView(prev.view);
     setOpt("period", prev.period);
   }
 }
@@ -1077,6 +1132,40 @@ export function setOpt<K extends keyof ViewOpts>(k: K, v: ViewOpts[K]) {
     localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
   } catch {}
 }
+/** The factor the calendar puts on Plan numbers (the funnel models one month): 1 for this month, 3 for a quarter, 7 days = 7 × 12 / 365. */
+export function viewK(o: Pick<ViewOpts, "range" | "period">): number {
+  return o.range ? rangeScale(o.range) : periodFactor(o.period);
+}
+/** The dates the calendar shows (this calendar month until a range is chosen). */
+export const viewRange = (o: Pick<ViewOpts, "range">): DateRange => o.range ?? monthRange(new Date());
+/** Choose the dates the numbers cover. Actual mode follows (it shows the real entries for the same dates). */
+export function setRange(range: DateRange | null) {
+  const opts = { ...get().opts, range, period: "month" as const };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+  const av = get().actualView;
+  if (av) setActualView({ ...av, ...viewRange(opts), label: rangeLabel(viewRange(opts)) });
+}
+/** Compare with Baseline on or off (the Baseline run is computed only while it is on and a scenario is active). */
+export function setCompare(on: boolean) {
+  const opts = { ...get().opts, compare: on };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+  const s = get();
+  set({ compareBase: compareOf(s.nodes, s.edges, s.settings) });
+}
+/** Switch between Clean, People and Money (sets the numbers and line-weight flags that follow the view). */
+export function setMapView(view: MapView) {
+  const opts = { ...get().opts, ...viewFlags(view) };
+  set({ opts });
+  try {
+    localStorage.setItem(OPTS_KEY, JSON.stringify(opts));
+  } catch {}
+}
 export function setReadOnly(readOnly: boolean) {
   if (!readOnly && get().viewer) return;
   set({ readOnly, saveStatus: readOnly ? "readonly" : get().rev ? "dirty" : "saved", ...(readOnly ? { simBase: null, simPlay: false, simBefore: false, panel: get().panel === "simulate" ? "inspector" : get().panel } : {}) });
@@ -1100,4 +1189,15 @@ export function setSpot(spot: string | null) {
 /** Force a save of the current content (e.g. after restoring a local draft). */
 export function markDirty() {
   set((s) => ({ rev: s.rev + 1, saveStatus: s.readOnly ? s.saveStatus : "dirty" }));
+}
+
+export function setFunnelCtl(status: string, set: ((status: string) => void) | null) {
+  useEditor.setState({ funnelCtl: { status, set } });
+}
+
+export function openActualsEntry(tab: "type" | "csv" = "type") {
+  useEditor.setState({ actualsEntry: tab });
+}
+export function closeActualsEntry() {
+  useEditor.setState({ actualsEntry: null });
 }

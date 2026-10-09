@@ -9,8 +9,7 @@ import { typeOf } from "@/lib/catalog";
 import { money, nf, pct, ratio } from "@/lib/format";
 import { nodeStats, subLabel } from "@/lib/editor/labels";
 import { presentStages } from "@/lib/present-stages";
-import { clearSelection, setOpt, setSpot, useEditor } from "@/lib/editor/store";
-import { periodFactor } from "@/lib/funnel-math";
+import { clearSelection, setMapView, setSpot, useEditor, viewK } from "@/lib/editor/store";
 
 export function Presenter({ onExit }: { onExit: () => void }) {
   const rf = useReactFlow();
@@ -20,10 +19,10 @@ export function Presenter({ onExit }: { onExit: () => void }) {
   const basis = useEditor((s) => s.settings.basis);
   const hideNums = useEditor((s) => s.settings.hideNumbers);
   const showNums = useEditor((s) => s.opts.nums);
-  const period = useEditor((s) => s.opts.period);
+  const k = useEditor((s) => viewK(s.opts));
   const picked = useEditor((s) => (s.selNodes.length === 1 ? s.nodes.find((n) => n.id === s.selNodes[0]) : undefined));
   const nums = showNums && !hideNums;
-  const stages = useMemo(() => presentStages(nodes, R, cur, periodFactor(period)), [nodes, R, cur, period]);
+  const stages = useMemo(() => presentStages(nodes, R, cur, k), [nodes, R, cur, k]);
   const [i, setI] = useState(-1); // -1 = overview, stages.length = the result
   const at = useRef(-1);
   const touch = useRef<{ x: number; y: number } | null>(null);
@@ -122,7 +121,7 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         <div className="fp-obj">
           <b>{obj.name}</b> <span className="text-muted">· {typeOf(obj.type).label}</span>
           <div className="text-muted">{subLabel(obj, cur)}</div>
-          {nums && <div>{nodeStats(obj, R, cur, periodFactor(period), basis).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
+          {nums && <div>{nodeStats(obj, R, cur, k, basis).map((s, k) => (s.b ? <b key={k}>{s.t}</b> : <span key={k}>{s.t}</span>))}</div>}
         </div>
       )}
       <footer className="fp-bar">
@@ -146,10 +145,10 @@ export function Presenter({ onExit }: { onExit: () => void }) {
         </nav>
         {!hideNums && (
           <div className="seg" role="group" aria-label="Map detail">
-            <button type="button" aria-pressed={!showNums} onClick={() => (setOpt("nums", false), setOpt("thick", false))}>
+            <button type="button" aria-pressed={!showNums} onClick={() => setMapView("clean")}>
               Clean
             </button>
-            <button type="button" aria-pressed={showNums} onClick={() => (setOpt("nums", true), setOpt("thick", true))}>
+            <button type="button" aria-pressed={showNums} onClick={() => setMapView("people")}>
               Numbers
             </button>
           </div>

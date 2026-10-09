@@ -250,7 +250,33 @@ export async function duplicateFunnelAction(id: string) {
     summary: f.summary,
   });
   if (error) throw new Error(error.message);
-  revalidatePath(`/clients/${f.client_id}`);
+  revalidateLists(f.client_id);
+}
+
+/** Rename a funnel from the list (F2 inline rename). */
+export async function renameFunnelAction(id: string, name: string): Promise<ActionResult> {
+  const { sb } = await requireEditor();
+  const n = name.trim().slice(0, 120);
+  if (!n) return { error: "A funnel needs a name" };
+  const { data, error } = await sb.from("funnels").update({ name: n }).eq("id", uuid.parse(id)).select("client_id").single();
+  if (error) return { error: error.message };
+  revalidateLists(data.client_id);
+  return { ok: true };
+}
+
+/** Move a funnel to another client of the same workspace (RLS rejects any other client). */
+export async function moveFunnelAction(id: string, clientId: string): Promise<ActionResult> {
+  const { sb } = await requireEditor();
+  const fid = uuid.parse(id);
+  const cid = uuid.parse(clientId);
+  const { data: before } = await sb.from("funnels").select("client_id").eq("id", fid).single();
+  const { data: client } = await sb.from("clients").select("id").eq("id", cid).is("deleted_at", null).single();
+  if (!client) return { error: "That client isn’t available" };
+  const { error } = await sb.from("funnels").update({ client_id: cid }).eq("id", fid);
+  if (error) return { error: error.message };
+  revalidateLists(cid);
+  if (before?.client_id) revalidatePath(`/clients/${before.client_id}`);
+  return { ok: true };
 }
 
 export async function setFunnelStatusAction(id: string, status: string) {
@@ -258,8 +284,7 @@ export async function setFunnelStatusAction(id: string, status: string) {
   const s = z.enum(FUNNEL_STATUSES).parse(status);
   const { data, error } = await sb.from("funnels").update({ status: s }).eq("id", uuid.parse(id)).select("client_id").single();
   if (error) throw new Error(error.message);
-  revalidatePath(`/clients/${data.client_id}`);
-  revalidatePath("/");
+  revalidateLists(data.client_id);
 }
 
 /* ---------------- templates ---------------- */

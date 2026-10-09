@@ -4,14 +4,13 @@ import { PageHeader } from "@/components/page-header";
 import type { FunnelSummary } from "@/lib/funnel-math";
 import { parseGraph, parseSettings } from "@/lib/graph";
 import { healthChecks } from "@/lib/health";
-import { scenarioLabel } from "@/lib/scenario-label";
 import { requireUser } from "@/lib/supabase/server";
 import { FunnelsBrowser, type FunnelListItem } from "./funnels-browser";
 
 export const metadata: Metadata = { title: "Funnels" };
 
 export default async function FunnelsPage({ searchParams }: PageProps<"/funnels">) {
-  const { sb, workspace } = await requireUser();
+  const { sb, workspace, canEdit } = await requireUser();
   const sp = await searchParams;
   const [{ data: funnels }, { data: clients }] = await Promise.all([
     sb.from("funnels").select("id, name, status, client_id, summary, settings, graph, updated_at").is("deleted_at", null).order("updated_at", { ascending: false }),
@@ -30,7 +29,6 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
         clientId: f.client_id,
         client: byClient[f.client_id].name,
         currency: settings.currency || byClient[f.client_id].currency || workspace.default_currency,
-        scenario: scenarioLabel(settings),
         rev: sum.rev ?? null,
         profit: sum.profit ?? null,
         roas: sum.roas ?? null,
@@ -43,7 +41,7 @@ export default async function FunnelsPage({ searchParams }: PageProps<"/funnels"
   return (
     <>
       <PageHeader title="Funnels" sub="Every funnel in the workspace, with its numbers and health." />
-      <FunnelsBrowser items={items} initialStatus={first(sp.status)} initialClient={first(sp.client)} initialAttention={first(sp.attention) === "1"} />
+      <FunnelsBrowser items={items} canEdit={canEdit} initialStatus={first(sp.status)} initialClient={first(sp.client)} initialAttention={first(sp.attention) === "1"} />
     </>
   );
 }

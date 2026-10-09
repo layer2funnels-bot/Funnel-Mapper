@@ -6,7 +6,7 @@ import { Icon } from "@/components/icon";
 import { CATDARK, SIZED_TYPES, WIDTH_TYPES, fourPorts, isAnnot, portsFor, typeOf } from "@/lib/catalog";
 import { SIDES, type Side } from "@/lib/graph";
 import { sidesOf } from "@/lib/editor/labels";
-import { addNode, applyEyedropper, openLineMenu, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
+import { addNode, applyEyedropper, openSettingsBox, openLineMenu, openMenu, openQuickAdd, setDragging, startRename, canConnect, clearSelection, connect, frameMembers, layerOf, moveNodes, selectEdge, selectNodes, setDims, setOpt, setView, showToast, useEditor } from "@/lib/editor/store";
 import { edgeTypes } from "./flow-edge";
 import { nodeTypes } from "./nodes";
 
@@ -304,8 +304,11 @@ export function Canvas() {
         if (st.selectMode) selectNodes(st.selNodes.includes(node.id) ? st.selNodes.filter((x) => x !== node.id) : [...st.selNodes, node.id]);
       }}
       onNodeDoubleClick={(_, node) => {
-        const n = useEditor.getState().nodes.find((x) => x.id === node.id);
-        if (n && !isAnnot(n.type)) startRename(n.id);
+        const st0 = useEditor.getState();
+        const n = st0.nodes.find((x) => x.id === node.id);
+        // double-click opens the block's settings box (F2 or "Rename" in the menu renames it)
+        if (n && !isAnnot(n.type) && n.type !== "widget" && !st0.shared) openSettingsBox(n.id);
+        else if (n && !isAnnot(n.type)) startRename(n.id);
       }}
       onNodeContextMenu={(ev, node) => {
         ev.preventDefault();

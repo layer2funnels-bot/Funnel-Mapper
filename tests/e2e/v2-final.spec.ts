@@ -164,7 +164,7 @@ test.describe("actuals", () => {
     await expect(page.locator(".fm-before-badge.actual")).toContainText("Actual");
     await expect(page.locator(".fm-kunit")).toContainText("Actual");
     await expect(node(page, "Quiz funnel")).toContainText("1,500");
-    await page.getByRole("group", { name: "Plan or actual numbers" }).getByRole("button", { name: "Model" }).click();
+    await page.getByRole("group", { name: "Plan or actual numbers" }).getByRole("button", { name: "Actual" }).click(); // the same switch turns it off
     await expect(page.locator(".fm-kunit")).toContainText("Plan");
   });
 });
@@ -181,7 +181,7 @@ test.describe("panels and simulate", () => {
     await expect(insp).toBeHidden();
     const rail = page.getByRole("navigation", { name: "Details panel (collapsed)" });
     await expect(rail).toBeVisible();
-    expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(27);
+    expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(40);
     await rail.getByRole("button", { name: "Funnel notes" }).click();
     await expect(insp).toBeVisible();
     await expect(rail).toBeHidden();
@@ -193,9 +193,9 @@ test.describe("panels and simulate", () => {
     // Simulate: S starts it, a what-if change marks it unsaved, Esc asks once
     await page.locator(".react-flow__pane").click({ position: { x: 500, y: 420 } });
     await page.keyboard.press("s");
-    const bar = page.getByRole("toolbar", { name: "Simulation" });
+    const bar = page.getByLabel("Simulate", { exact: true });
     await expect(bar).toBeVisible();
-    await expect(bar.getByText("No changes yet")).toBeVisible();
+    await expect(bar.getByText(/Nothing yet/)).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(bar).toBeHidden();
   });

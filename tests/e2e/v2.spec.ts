@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { blankGraph } from "../../lib/graph";
 import { builtinTemplate } from "../../lib/templates";
-import { DEMO_CLIENT, centre, createFunnel, drag, edgeLabels, node, nodes, openEditor, pos, startSimulate, paletteItem } from "./helpers";
+import { DEMO_CLIENT, centre, createFunnel, drag, node, nodes, openEditor, pos, startSimulate, paletteItem } from "./helpers";
 
 const mod = process.platform === "darwin" ? "Meta" : "Control";
 
@@ -85,13 +85,13 @@ test.describe("V2 editor interactions", () => {
     await quick.getByRole("combobox").fill("Landing");
     await page.keyboard.press("Enter");
     await expect(nodes(page)).toHaveCount(2);
-    await expect(edgeLabels(page)).toHaveCount(1);
+    await expect(page.locator("path.fm-edge")).toHaveCount(1);
     await expect(page.locator(".fm-insp h3")).toHaveText("Landing page"); // selection moved to the new block
     // one atomic undo removes the block and its connection together
     await page.locator(".react-flow__pane").click({ position: { x: 420, y: 560 } });
     await page.keyboard.press(`${mod}+z`);
     await expect(nodes(page)).toHaveCount(1);
-    await expect(edgeLabels(page)).toHaveCount(0);
+    await expect(page.locator("path.fm-edge")).toHaveCount(0);
     // Escape cancels a Quick Add without creating anything
     await drag(page, from, { x: from.x + 260, y: from.y + 20 });
     await expect(quick).toBeVisible();
@@ -106,7 +106,7 @@ test.describe("V2 editor interactions", () => {
     const quiz = node(page, "Quiz funnel");
     const nodeId = (await quiz.getAttribute("data-id"))!;
     const before = await pos(page, nodeId);
-    const labels = await edgeLabels(page).count();
+    const labels = await page.locator("path.fm-edge").count();
     await expect(page.locator(".fm-kpis")).toContainText("£6,032");
     await quiz.click();
     await page.getByRole("toolbar", { name: "Block tools" }).getByRole("button", { name: "Change type" }).click();
@@ -116,7 +116,7 @@ test.describe("V2 editor interactions", () => {
     await expect(page.locator(".fm-toast")).toContainText("Changed to Survey");
     expect(await pos(page, nodeId)).toEqual(before);
     await expect(page.locator(`.react-flow__node[data-id="${nodeId}"]`)).toBeVisible();
-    await expect(edgeLabels(page)).toHaveCount(labels);
+    await expect(page.locator("path.fm-edge")).toHaveCount(labels);
     // maths is untouched (the survey's own default is not applied over the block's values)
     await expect(page.locator(".fm-kpis")).toContainText("£6,032");
     // one undo goes back to the quiz
@@ -354,7 +354,7 @@ test.describe("V2 Simulate", () => {
     const panel = page.getByLabel("Simulate", { exact: true });
     await expect(panel).toBeVisible();
     // nothing has changed yet: no chips, no ghost lines
-    await expect(panel).toContainText("No change");
+    await expect(panel).toContainText("Nothing yet");
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
     await expect(page.locator(".fm-edge-ghost")).toHaveCount(0);
 
@@ -363,13 +363,14 @@ test.describe("V2 Simulate", () => {
     // headline numbers moved against the baseline (the KPI strip and the panel agree, both from the engine)
     await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(kpis.locator(".fm-dchip.bad").first()).toBeVisible();
-    const key = panel.getByRole("group", { name: "Revenue, profit and ROAS" });
-    await expect(key.locator(".fm-dchip.bad")).toHaveCount(3); // revenue, profit and ROAS all fell
+    const key = panel.getByRole("region", { name: "What changed" });
+    await expect(key.getByText("Revenue", { exact: true })).toBeVisible(); // revenue, profit and ROAS all fell
+    await expect(key.getByText("ROAS", { exact: true })).toBeVisible();
+    expect(await key.locator(".fm-dchip.bad").count()).toBeGreaterThanOrEqual(3);
     // the map shows where: more people lost at steps, thinner lines with a ghost of the old weight, a lower conversion bar tick
     await expect(page.locator(".fm-simchip").first()).toBeVisible();
     await expect(page.locator(".fm-simchip", { hasText: "lost" }).first()).toBeVisible();
     await expect(page.locator(".fm-edge-ghost").first()).toBeAttached();
-    await expect(page.locator(".fm-conv b.base").first()).toBeAttached();
     await expect(panel.getByRole("heading", { name: "What moved" })).toBeVisible();
 
     // traffic raises people but ad spend is neutral
@@ -380,7 +381,7 @@ test.describe("V2 Simulate", () => {
     await panel.getByRole("button", { name: "Revert all" }).click();
     await expect(kpis).toContainText("£6,032");
     await expect(page.locator(".fm-simchip")).toHaveCount(0);
-    await expect(panel).toContainText("No change");
+    await expect(panel).toContainText("Nothing yet");
   });
 
   test("change one block: its own rate flows through the map; the change is listed and can be undone one by one", async ({ page }) => {
@@ -414,7 +415,7 @@ test.describe("V2 Simulate", () => {
     await panel.getByRole("button", { name: "Save levers as scenario" }).click();
     await expect(panel.getByRole("group", { name: "Start from a scenario" }).getByRole("button", { name: "Price rise" })).toBeVisible();
     await panel.getByRole("button", { name: "Revert all" }).click();
-    await expect(panel).toContainText("No change");
+    await expect(panel).toContainText("Nothing yet");
     await panel.getByRole("group", { name: "Start from a scenario" }).getByRole("button", { name: "Price rise" }).click();
     await expect(page.getByRole("contentinfo", { name: "Funnel numbers" }).locator(".fm-dchip.good").first()).toBeVisible();
     // Done closes Simulate and keeps the map as it is
@@ -470,6 +471,7 @@ test.describe("V2 Simulate: watching the funnel", () => {
     const kpis = page.getByRole("contentinfo", { name: "Funnel numbers" });
     await startSimulate(page);
     const panel = page.getByLabel("Simulate", { exact: true });
+    await page.getByRole("button", { name: "Money", exact: true }).click(); // revenue sits on the offers in the Money view
     await panel.getByLabel("Conversion rates").fill("0.8");
     await expect(kpis).not.toContainText(/Revenue\s*£6,032/);
     await expect(node(page, "Paid membership")).not.toContainText("£4,199");

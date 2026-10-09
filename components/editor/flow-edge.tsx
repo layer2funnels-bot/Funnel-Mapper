@@ -1,12 +1,13 @@
 "use client";
 import { EdgeLabelRenderer, type EdgeProps } from "@xyflow/react";
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { money, nf, people } from "@/lib/format";
-import { num, periodFactor } from "@/lib/funnel-math";
+import { blockH, isAnnot, nodeW } from "@/lib/catalog";
+import { num } from "@/lib/funnel-math";
 import { dotSeconds, edgeDelta, flowDots } from "@/lib/simulate";
-import { edgeConversion, edgePath, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
-import { selectEdge, shownR, useEditor } from "@/lib/editor/store";
+import { edgePath, edgeRate, edgeRevenue, edgeSentence, edgeTag } from "@/lib/editor/labels";
+import { selectEdge, shownR, useEditor, viewK } from "@/lib/editor/store";
 import { DASH, edgeLook, type EdgeStyle } from "@/lib/style";
 import type { Side } from "@/lib/graph";
 
@@ -14,9 +15,9 @@ type Data = { port: "main" | "alt"; fromType?: string; from?: string; to?: strin
 
 export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected, data }: EdgeProps & { data: Data }) {
   const flow0 = useEditor((s) => shownR(s).flows[id] ?? 0);
-  const k = useEditor((s) => periodFactor(s.opts.period));
+  const k = useEditor((s) => viewK(s.opts));
   const flow = flow0 * k;
-  const simBase = useEditor((s) => s.simBase);
+  const simBase = useEditor((s) => s.simBase ?? s.compareBase); // the simulation start, or Baseline while Compare with Baseline is on
   // while simulating, line weight is on one scale for "now" and "before", so a thicker or thinner line is a real change
   const maxF = useEditor((s) => Math.max(1, ...Object.values(s.R.flows), ...(s.simBase ? Object.values(s.simBase.R.flows) : [])));
   // people-flow dots: paused while dragging or panning
@@ -27,11 +28,37 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const crowded = useEditor((s) => s.edges.length > 37);
   const calm = useReducedMotion();
   const thick = useEditor((s) => s.opts.thick);
+  const view = useEditor((s) => (s.settings.hideNumbers ? "clean" : s.opts.view));
+  // the one leak label: the people lost on the dashed line that leaves the biggest-leak step
+  const lost = useEditor((s) => (data?.from && data.port === "alt" && s.keyLeak === data.from && view !== "clean" ? (s.R.N[data.from]?.non ?? 0) * viewK(s.opts) : 0));
   const cur = useEditor((s) => s.settings.currency);
   const R = useEditor(shownR);
   const port = data?.port ?? "main";
   const look = edgeLook(data?.s);
   const [d, mx, my] = edgePath(look, port, sourceX, sourceY, targetX, targetY, sourcePosition as Side, targetPosition as Side);
+  // a label never sits on a block: it goes at the midpoint, and hides when the line is too short or the midpoint is over a block (the leak label always wins)
+  const length = Math.hypot(targetX - sourceX, targetY - sourceY);
+  const overBlock = useEditor((s) => s.nodes.some((m) => m.type !== "frame" && !isAnnot(m.type) && mx > m.x - 24 && mx < m.x + nodeW(m.type) + 24 && my > m.y - 12 && my < m.y + blockH(m.type) + 12));
+  // a loop or skip line that runs through other blocks is drawn quietly (faded, no label) until it is hovered or one of its ends is selected
+  const pathEl = useRef<SVGPathElement>(null);
+  const nodesAll = useEditor((s) => s.nodes);
+  const endSelected = useEditor((s) => !!data && (s.selNodes.includes(data.from ?? "") || s.selNodes.includes(data.to ?? "")));
+  const [crosses, setCrosses] = useState(false);
+  useEffect(() => {
+    const el = pathEl.current;
+    const len = el?.getTotalLength?.() ?? 0;
+    if (!el || !(len > 0)) return;
+    const rects = nodesAll
+      .filter((m) => m.id !== data?.from && m.id !== data?.to && m.type !== "frame" && !isAnnot(m.type))
+      .map((m) => ({ l: m.x + 6, r: m.x + nodeW(m.type) - 6, t: m.y + 6, b: m.y + blockH(m.type) - 6 }));
+    let hit = false;
+    for (let i = 1; i < 24 && !hit; i++) {
+      const pt = el.getPointAtLength((len * i) / 24);
+      hit = rects.some((r) => pt.x > r.l && pt.x < r.r && pt.y > r.t && pt.y < r.b);
+    }
+    setCrosses(hit); // measured from the drawn path
+  }, [d, nodesAll, data?.from, data?.to]);
+  const quiet = crosses && !selected && !endSelected;
   const wOf = (f: number) => look.width ?? (thick ? 2 + 6 * Math.sqrt(f / maxF) : 2);
   const w = wOf(flow0);
   const ed = simBase && thick && !before ? edgeDelta(id, R, simBase.R) : null;
@@ -42,7 +69,11 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
   const dur = dotSeconds(Math.hypot(targetX - sourceX, targetY - sourceY) * 1.15) / speed;
   // zoom levels (V2): far = line thickness only, mid = the number, near = the sentence and every label
   const band = useEditor((s) => (s.view.k < 0.4 ? "far" : s.view.k <= 0.75 ? "mid" : "near"));
-  const sentence = band === "near" && data?.from ? edgeSentence(data.from, flow0, R, k) : null;
+  const sentence = data?.from ? edgeSentence(data.from, flow0, R, k) : null;
+  const rate = view !== "clean" && data?.from ? edgeRate(data.from, flow0, R) : null;
+  const noFlow = view !== "clean" && look.kind !== "nodata" && !(flow0 * k >= 0.5);
+  // Clean shows no labels; People and Money show the rate only (people on hover); no flow, no label
+  const showLabel = selected || (!quiet && band !== "far" && view !== "clean" && (look.kind === "nodata" || lost > 0 || (rate != null && length >= 44 && !overBlock)));
   const marker = look.arrow !== "none" ? `fm-arrow-${id}` : null;
   const style: React.CSSProperties = { strokeWidth: w, ...(look.opacity != null ? { opacity: look.opacity } : {}), ...(look.color && !selected ? { stroke: look.color } : {}), ...(look.dash ? { strokeDasharray: DASH[look.dash] ?? "none" } : {}) };
   return (
@@ -56,8 +87,9 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
       )}
       {moved && ed && <path className="fm-edge-ghost" d={d} style={{ strokeWidth: wOf(ed.was!) + 3 }} aria-hidden="true" />}
       <path
-        className={`fm-edge${port === "alt" ? " alt" : ""}${selected ? " sel" : ""}${look.kind !== "flow" ? ` ${look.kind}` : ""}${moved ? ` sim-${moved}` : ""}`}
+        className={`fm-edge${port === "alt" ? " alt" : ""}${selected ? " sel" : ""}${look.kind !== "flow" ? ` ${look.kind}` : ""}${moved ? ` sim-${moved}` : ""}${noFlow ? " noflow" : ""}${quiet ? " quiet" : ""}`}
         d={d}
+        ref={pathEl}
         style={style}
         markerEnd={marker ? `url(#${marker})` : undefined}
         markerStart={marker && look.arrow === "both" ? `url(#${marker})` : undefined}
@@ -72,14 +104,15 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
         </g>
       )}
       <path className="react-flow__edge-interaction" d={d} fill="none" strokeOpacity={0} strokeWidth={16} />
-      {(band !== "far" || selected) && (
+      {showLabel && (
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`fm-elabel nodrag nopan${selected ? " sel" : ""}${look.kind === "nodata" ? " nodata" : ""}`}
+          className={`fm-elabel nodrag nopan${sentence ? " has-sent" : ""}${selected ? " sel" : ""}${look.kind === "nodata" ? " nodata" : ""}${lost > 0 ? " leak" : ""}`}
           data-edge={id}
           style={{ left: mx, top: my }}
           onClick={() => selectEdge(id)}
+          title={sentence ? `${sentence} people` : undefined}
           aria-label={look.kind === "nodata" ? "Connection without data" : sentence ? `Connection: ${sentence} people` : `Connection carrying ${people(flow)} people`}
         >
           {tag && <span className={`tag${tag.alt ? " alt" : ""}`}>{tag.text}</span>}
@@ -87,9 +120,12 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
           {look.label && <span className="tag">{look.label}</span>}
           {look.kind === "nodata" ? (
             <span className="n">No data</span>
+          ) : lost > 0 && !selected ? (
+            <span className="n">−{people(lost)}</span>
           ) : (
             <span className="n">
-              {sentence ?? people(flow)}
+              <span className="r">{rate ?? people(flow)}</span>
+              {sentence && <span className="sent">{sentence}</span>}
               {share !== 100 ? ` · ${nf(share)}%` : ""}
               {moved && ed && (
                 <span className={`sd ${moved}`}>
@@ -100,7 +136,6 @@ export const FlowEdge = memo(function FlowEdge({ id, sourceX, sourceY, targetX, 
               )}
             </span>
           )}
-          {look.kind !== "nodata" && look.showPct && !sentence && data?.from && edgeConversion(data.from, flow0, R) != null && <span className="n pct"> · {nf(edgeConversion(data.from, flow0, R)! * 100, 1)}% convert</span>}
           {look.kind !== "nodata" && look.showRev && band === "near" && data?.to && edgeRevenue(data.to, flow0, R) > 0 && <span className="n rev"> · {money(edgeRevenue(data.to, flow0, R) * k, cur)}</span>}
         </button>
       </EdgeLabelRenderer>

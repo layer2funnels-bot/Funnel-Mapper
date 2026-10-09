@@ -6,7 +6,7 @@ import { money, nf, pct, perSuffix, ratio, sym, people } from "@/lib/format";
 import { compute, computeScenario, goalSeek, num, project, sourceRows, stepRows, targetPlan, type SeekLever, type SeekMetric } from "@/lib/funnel-math";
 import { healthChecks, performanceChecks } from "@/lib/health";
 import { useFocusBlock } from "./focus";
-import type { Expense, Scenario } from "@/lib/graph";
+import { CURRENCY_CODES, type CurrencyCode, type Expense, type Scenario } from "@/lib/graph";
 import { nid, setSection, setSettings, setTab, startSim, useEditor, type ReportTab } from "@/lib/editor/store";
 import { Actuals } from "./actuals";
 import { Field, NumInput, Seg } from "./fields";
@@ -54,7 +54,7 @@ export function Report() {
       <header className="fm-scopehead fm-fscope">
         <span className="eyebrow">Funnel</span>
         <h3 title={name}>{name}</h3>
-        <p className="sub">Nothing selected — click a block to edit it.</p>
+        <p className="sub">Whole-funnel settings. Click a block to edit it.</p>
       </header>
       <div className="seg full fm-groupseg" role="tablist" aria-label="Funnel tools">
         {groups.map((g) => (
@@ -72,7 +72,7 @@ export function Report() {
         ))}
       </div>
       <div id="rbody" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === "math" && <MathTab />}
+        {tab === "math" && <FunnelLevel />}
         {tab === "steps" && <StepsTab />}
         {tab === "sources" && <SourcesTab />}
         {tab === "plan" && <WhatIfTab />}
@@ -85,73 +85,29 @@ export function Report() {
   );
 }
 
-/** Figures in the Funnel tab whose formula can be shown with this map's numbers (F9 "?"). */
-const FIGURE_KEYS: Record<string, FigureKey> = { Revenue: "rev", "Ad spend": "spend", Profit: "profit", ROI: "roi", ROAS: "roas", CPA: "cpa", AOV: "aov", "LTV per customer": "ltvc", CPL: "cpl", CPC: "cpc", EPC: "epc", "Conversion rate": "conv", "Lead rate": "leadRate" };
-
 const useM = () => {
   const cur = useEditor((s) => s.settings.currency);
   return (v: number) => money(v, cur);
 };
 
-function MathTab() {
+const STATUS_NAMES: Record<string, string> = { draft: "Draft", proposed: "Proposed", live: "Live", archived: "Archived" };
+
+/** Funnel level (nothing selected): the checks, the one biggest-leak sentence, and the few settings that belong to the whole funnel. Numbers live in the strip and in Reports. */
+function FunnelLevel() {
   const R = useEditor((s) => s.R);
   const nodes = useEditor((s) => s.nodes);
   const edges = useEditor((s) => s.edges);
   const settings = useEditor((s) => s.settings);
   const basis = useEditor((s) => s.settings.basis);
-  const fixed = useEditor((s) => s.settings.fixed);
   const cur = useEditor((s) => s.settings.currency);
   const ro = useEditor((s) => s.readOnly);
+  const ctl = useEditor((s) => s.funnelCtl);
   const m = useM();
   const shared = useEditor((s) => s.shared);
   const w = useMemo(() => (shared ? [] : healthChecks({ nodes, edges })), [nodes, edges, shared]);
   const performance = useMemo(() => (shared ? [] : performanceChecks({ nodes, edges }, settings, R)), [nodes, edges, settings, R, shared]);
   const focus = useFocusBlock();
-  const [why, setWhy] = useState<string | null>(null);
-  const rows: [string, React.ReactNode, string][] = [
-    ["Revenue", m(R.rev), basis === "ltv" ? "Lifetime value of every sale, after refunds" : "First payment of every sale, after refunds"],
-    ["Ad spend", m(R.spend), "Total spent on traffic"],
-    ["Other costs", m(R.actCost + R.cogs + R.fixed + R.perSale), "Follow-up costs, delivery, affiliate commission, fixed costs and expenses"],
-    ["Profit", <span key="p" className={R.profit >= 0 ? "pos" : "neg"}>{m(R.profit)}</span>, "Revenue − all costs"],
-    ["ROI", pct(R.roi), "Profit ÷ all costs"],
-    ["ROAS", ratio(R.roas), "Revenue ÷ ad spend"],
-    ["Break-even ROAS", ratio(R.beroas), "ROAS you need to cover every cost"],
-    ["CPA", m(R.cpa), "Ad spend ÷ new customers"],
-    ["Break-even CPA", m(R.becpa), "Most you can pay per customer without losing money"],
-    ["AOV", m(R.aov), "Revenue ÷ new customers"],
-    ["LTV per customer", m(R.ltvc), "Lifetime revenue ÷ new customers"],
-    ["MRR", m(R.mrr), "Monthly recurring revenue from subscriptions"],
-    ["CPL", m(R.cpl), "Ad spend ÷ leads"],
-    ["CPC", m(R.cpc), "Ad spend ÷ paid visitors"],
-    ["EPC", m(R.epc), "Revenue ÷ all visitors"],
-    ["Conversion rate", pct(R.conv), "New customers ÷ visitors"],
-    ["Lead rate", pct(R.leadRate), "Leads ÷ visitors"],
-    ["Orders", people(R.orders), "Every purchase, including bumps and upsells"],
-    ["Calls attended", people(R.calls), "People who showed up to sales calls"],
-    ["Goal completions", people(R.goals), "People reaching Goal blocks"],
-    ...(R.oneTime > 0 ? ([["Payback period", Number.isFinite(R.payback) ? `${nf(R.payback, 1)} periods` : "Never", `Time to earn back ${m(R.oneTime)} of one-time costs`]] as [string, string, string][]) : []),
-  ];
-  const main = rows.filter(([a]) => ["Revenue", "Ad spend", "Other costs", "Profit"].includes(a));
-  const more = rows.filter(([a]) => !["Revenue", "Ad spend", "Other costs", "Profit"].includes(a));
-  const unit = perSuffix(1).replace("/ ", "per ").replace("per mo", "per month");
-  const line = ([a, b, c]: [string, React.ReactNode, string]) => {
-    const f = FIGURE_KEYS[a] ? formulaFor(FIGURE_KEYS[a], R, cur) : null;
-    return (
-      <div className="fm-mrow" key={a}>
-        <span className="k">
-          {a}
-          {f && (
-            <button type="button" className="fm-why" aria-expanded={why === a} aria-label={`How ${a} is worked out`} title="Show the formula" onClick={() => setWhy(why === a ? null : a)}>
-              ?
-            </button>
-          )}
-        </span>
-        <b>{b}</b>
-        {(why === a || !f) && <small>{f && why === a ? f.words : c}</small>}
-        {f && why === a && <span className="fm-whysum">{f.sum}</span>}
-      </div>
-    );
-  };
+  const leak = performance[0];
   return (
     <>
       {!shared && (
@@ -190,6 +146,36 @@ function MathTab() {
           )}
         </section>
       )}
+      {!shared && (
+        <section className="fm-sec">
+          <div className="fm-sh">
+            <h4>Biggest leak</h4>
+          </div>
+          {!leak ? (
+            <p className="fm-ok">
+              <Icon name="check" size={14} /> {R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}
+            </p>
+          ) : (
+            <>
+              <p className="fm-leakp">
+                <b>{leak.text}:</b> {people(leak.lost)} of {people(leak.inflow)} people ({pct(leak.dropPct)}) don’t continue. 10% better here adds about <b>{m(leak.profitGain)} / mo</b>.
+              </p>
+              <div className="fm-leakacts">
+                {leak.nodeId && (
+                  <button type="button" className="btn sm" onClick={() => focus(leak.nodeId!)}>
+                    Locate
+                  </button>
+                )}
+                {!ro && (
+                  <button type="button" className="btn sm" onClick={() => (startSim(), setTab("plan"))}>
+                    Run what-if
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      )}
       <fieldset disabled={ro} className="m-0 min-w-0 border-0 p-0">
         <section className="fm-sec">
           <div className="fm-sh">
@@ -205,49 +191,39 @@ function MathTab() {
             onChange={(v) => setSettings({ basis: v })}
           />
         </section>
-      </fieldset>
-      <section className="fm-sec">
-        <div className="fm-sh">
-          <h4>Money · {unit}</h4>
-          {basis === "ltv" && <span className="fm-ltv">LTV</span>}
-        </div>
-        {main.map(line)}
-        <details className="fm-more">
-          <summary>More numbers</summary>
-          {more.map(line)}
-        </details>
-      </section>
-      {!shared && (
         <section className="fm-sec">
           <div className="fm-sh">
-            <h4>Biggest leak</h4>
-            {performance[0]?.nodeId && (
-              <button type="button" className="fm-sa" onClick={() => focus(performance[0].nodeId!)}>
-                Locate
-              </button>
-            )}
+            <h4>Funnel</h4>
           </div>
-          {performance.length === 0 ? (
-            <p className="fm-ok">
-              <Icon name="check" size={14} /> {R.traffic > 0 ? "No modeled losses at pages, offers, or actions." : "Add traffic to measure step performance."}
-            </p>
-          ) : (
-            performance.map((item) => (
-              <p className="fm-leakp" key={item.id}>
-                <b>{item.text}</b> — {people(item.lost)} of {people(item.inflow)} people ({pct(item.dropPct)}) {item.rank === "largest-loss" ? "don’t continue" : "don’t continue, the weakest step"}. 10% better here adds about <b>{m(item.profitGain)} / mo</b>.
-              </p>
-            ))
+          {!shared && (
+            <Field label="Funnel status">
+              {(id) => (
+                <select id={id} className="input" value={ctl.status} disabled={!ctl.set} onChange={(e) => ctl.set?.(e.target.value)}>
+                  {Object.entries(STATUS_NAMES).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
           )}
+          <Field label="Currency">
+            {(id) => (
+              <select id={id} className="input" value={cur} onChange={(e) => setSettings({ currency: e.target.value as CurrencyCode })}>
+                {CURRENCY_CODES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
         </section>
-      )}
-      <section className="fm-sec">
-        <div className="fm-sh">
-          <h4>Fixed costs</h4>
-        </div>
-        <Field label={`Other costs per period (${sym(cur).trim()})`} help="Software, studio, staff. Included in profit and break-even numbers. Itemise them in the Costs tab.">
-          {(id) => <NumInput id={id} value={fixed} min={0} disabled={ro} onChange={(v) => setSettings({ fixed: v })} />}
-        </Field>
-      </section>
+      </fieldset>
+      <button type="button" className="fm-linkbtn" onClick={() => setSection("overview")}>
+        All numbers in Reports ›
+      </button>
     </>
   );
 }
@@ -463,6 +439,9 @@ function CostsTab() {
   return (
     <fieldset disabled={ro} className="m-0 border-0 p-0">
       <p className="sub">Itemise the costs of running this funnel. Recurring and per-order costs reduce profit; one-time costs show a payback period.</p>
+      <Field label={`Other costs per period (${sym(s.currency).trim()})`} help="Software, studio, staff. Included in profit and break-even numbers.">
+        {(id) => <NumInput id={id} value={s.fixed} min={0} disabled={ro} onChange={(v) => setSettings({ fixed: v })} />}
+      </Field>
       {list.map((e) => (
         <div key={e.id} className="mb-3 rounded-xl border border-line p-3">
           <div className="flex gap-2">

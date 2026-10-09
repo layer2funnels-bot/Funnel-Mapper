@@ -3,9 +3,9 @@ import { useBand } from "@/lib/use-band";
 import { useFocusBlock } from "./focus";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { money, pct, people, peopleExact, ratio } from "@/lib/format";
+import { money, pct, people, peopleExact, perSuffix, perWord, ratio } from "@/lib/format";
 import { healthChecks } from "@/lib/health";
-import { setTab, clearSelection, shownR, useEditor } from "@/lib/editor/store";
+import { setTab, clearSelection, shownR, useEditor, viewK } from "@/lib/editor/store";
 import { totalsDelta } from "@/lib/simulate";
 import { DeltaChip, fmtTotal } from "./simulate";
 
@@ -57,7 +57,8 @@ export function KpiBar() {
   const sideOpen = useEditor((s) => !s.opts.hideSide && !s.readOnly);
   const actual = useEditor((s) => s.actualView);
   const focus = useFocusBlock();
-  const simBase = useEditor((s) => s.simBase);
+  const simBase = useEditor((s) => s.simBase ?? s.compareBase); // the simulation baseline, or Baseline while Compare with Baseline is on
+  const rangeK = useEditor((s) => viewK(s.opts));
   // the strip's real width decides how many figures fit beside the checks chip, "+N more" and the Plan label
   const bar = useRef<HTMLElement>(null);
   const [barW, setBarW] = useState(0);
@@ -69,7 +70,11 @@ export function KpiBar() {
     setBarW(el.clientWidth); // eslint-disable-line react-hooks/set-state-in-effect -- measuring once on mount
     return () => ro.disconnect();
   }, []);
-  const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, t])) : null;
+  const k = actual ? 1 : rangeK; // Plan numbers cover the calendar range; Actual numbers are the real totals for it
+  const sfx = perSuffix(k);
+  const FLOW = new Set(["traffic", "leads", "cust", "rev", "spend", "profit"]);
+  const scaled = (t: ReturnType<typeof totalsDelta>[number]) => (k !== 1 && FLOW.has(t.key) ? { ...t, value: t.value * k, was: t.was * k, delta: t.delta * k } : t);
+  const sim = simBase && !before ? Object.fromEntries(totalsDelta(liveR, simBase.R).map((t) => [t.key, scaled(t)])) : null;
   // checks are for the team, not for clients viewing a share link
   const checks = shared ? [] : healthChecks({ nodes, edges });
   const hasTraffic = nodes.some((n) => n.type !== "frame" && n.type !== "note" && n.type !== "label");
@@ -78,19 +83,19 @@ export function KpiBar() {
   const neg = (v: number, node: React.ReactNode) => <span className={v >= 0 ? "pos" : "neg"}>{node}</span>;
   type K = { id: string; /** Label in the strip, where the unit sits at the right ("per month · USD"). */ short?: React.ReactNode; label: React.ReactNode; text: string; value: React.ReactNode; title?: string; sim?: "traffic" | "leads" | "cust" | "rev" | "profit" | "roas" | "spend" | "cpa" };
   const all: K[] = [
-    { id: "traffic", short: "Traffic", label: "Traffic / mo", text: "Traffic", value: people(R.traffic), title: peopleExact(R.traffic), sim: "traffic" },
-    { id: "revenue", short: <>Revenue {ltv}</>, label: <>Revenue / mo {ltv}</>, text: "Revenue", value: m(R.rev), sim: "rev" },
-    { id: "profit", short: <>Profit {ltv}</>, label: <>Profit / mo {ltv}</>, text: "Profit", value: neg(R.profit, m(R.profit)), sim: "profit" },
-    { id: "customers", short: "Customers", label: "Customers / mo", text: "Customers", value: people(R.cust), title: peopleExact(R.cust), sim: "cust" },
+    { id: "traffic", short: "Traffic", label: `Traffic ${sfx}`, text: "Traffic", value: people(R.traffic * k), title: peopleExact(R.traffic * k), sim: "traffic" },
+    { id: "revenue", short: <>Revenue {ltv}</>, label: <>Revenue {sfx} {ltv}</>, text: "Revenue", value: m(R.rev * k), sim: "rev" },
+    { id: "profit", short: <>Profit {ltv}</>, label: <>Profit {sfx} {ltv}</>, text: "Profit", value: neg(R.profit, m(R.profit * k)), sim: "profit" },
+    { id: "customers", short: "Customers", label: `Customers ${sfx}`, text: "Customers", value: people(R.cust * k), title: peopleExact(R.cust * k), sim: "cust" },
     { id: "roas", label: <>ROAS {ltv}</>, text: "ROAS", value: ratio(R.roas), sim: "roas" },
-    { id: "leads", short: "Leads", label: "Leads / mo", text: "Leads", value: people(R.leads), title: peopleExact(R.leads), sim: "leads" },
+    { id: "leads", short: "Leads", label: `Leads ${sfx}`, text: "Leads", value: people(R.leads * k), title: peopleExact(R.leads * k), sim: "leads" },
     { id: "roi", label: "ROI", text: "ROI", value: pct(R.roi) },
     { id: "aov", label: "AOV", text: "AOV", value: m(R.aov) },
     { id: "cpa", label: "CPA", text: "CPA", value: m(R.cpa), sim: "cpa" },
     { id: "cpl", label: "CPL", text: "CPL", value: m(R.cpl) },
     { id: "epc", label: "EPC", text: "EPC", value: m(R.epc) },
     { id: "conv", label: "Conversion rate", text: "Conversion rate", value: pct(R.conv) },
-    { id: "spend", short: "Ad spend", label: "Ad spend / mo", text: "Ad spend", value: m(R.spend), sim: "spend" },
+    { id: "spend", short: "Ad spend", label: `Ad spend ${sfx}`, text: "Ad spend", value: m(R.spend * k), sim: "spend" },
     { id: "mrr", label: "MRR", text: "MRR", value: m(R.mrr) },
     { id: "ltvc", label: "LTV / customer", text: "LTV / customer", value: m(R.ltvc) },
   ];
@@ -221,7 +226,7 @@ export function KpiBar() {
             <span className="fm-tag plan" title="Modelled numbers from the map (the plan)">
               Plan
             </span>{" "}
-            per month · {cur}
+            {perWord(k)} · {cur}
             {basis === "ltv" ? " · lifetime value" : ""}
           </>
         )}

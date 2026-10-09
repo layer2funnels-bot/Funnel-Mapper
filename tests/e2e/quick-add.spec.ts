@@ -174,7 +174,7 @@ test.describe("Quick Add adapts to the screen", () => {
     await quick.getByRole("combobox").fill("Landing");
     await quick.getByRole("option", { name: /Landing page/ }).first().click();
     await expect(nodes(page)).toHaveCount(2);
-    await expect(page.locator(".fm-elabel")).toHaveCount(1);
+    await expect(page.locator("path.fm-edge")).toHaveCount(1);
     await expect(quick).toBeHidden();
   });
 });

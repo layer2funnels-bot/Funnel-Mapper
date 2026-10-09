@@ -1,100 +1,27 @@
 "use client";
-// Editor chrome pieces (V2 D2): scenario pill, Clean | Performance switch, left tool rail.
+// Editor chrome pieces: the Clean | People | Money switch, Layers, and the left tool rail (the Plan control is in plan-control.tsx).
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
-import { setActualView, setOpt, setSideTab, showToast, useEditor } from "@/lib/editor/store";
-import { actualMonths } from "@/lib/actual-result";
-import { ensureActuals } from "./assets";
-import { BASELINE, scenarioLabel } from "@/lib/scenario-label";
-
-/** Which scenario the map is showing, derived from the what-if multipliers (no new state). Opens the Scenarios tab. */
-export function ScenarioPill({ onOpen }: { onOpen: () => void }) {
-  const w = useEditor((s) => s.settings.whatif);
-  const list = useEditor((s) => s.settings.scenarios);
-  const label = scenarioLabel({ whatif: w, scenarios: list });
-  return (
-    <button type="button" className="fm-scen" onClick={onOpen} aria-label={`Scenario: ${label}${label !== BASELINE ? " vs Baseline" : ""}`} title="Choose a scenario">
-      <i aria-hidden="true" />
-      <span className="lbl">Scenario:</span> {label}
-      {label !== BASELINE && <span className="vs"> vs Baseline</span>}
-    </button>
-  );
-}
+import { setMapView, setOpt, setSideTab, useEditor } from "@/lib/editor/store";
 
 /**
- * Clean | Performance map (V2 "Editor-default"): Clean keeps the numbers on blocks and lines at one even weight; Performance
- * adds the headline figures, conversion bars, line weight by people and the key leak. "Names only" lives in Layers.
+ * Clean | People | Money (editor-calm brief): Clean = names, types and lines, no numbers at all. People (default) = one people
+ * number per block and one rate per line. Money = one money number per block (revenue on offers, spend on sources) and the
+ * same rates. "Layers" keeps notes, checklists and the forecast badges.
  */
 export function ViewSwitch() {
-  const nums = useEditor((s) => s.opts.nums);
-  const thick = useEditor((s) => s.opts.thick);
-  const set = (perf: boolean) => (setOpt("nums", true), setOpt("thick", perf));
+  const view = useEditor((s) => s.opts.view);
   return (
     <div className="seg fm-viewswitch" role="group" aria-label="Map view">
-      <button type="button" aria-pressed={!thick} onClick={() => set(false)} title="Numbers on blocks and lines, one even weight">
+      <button type="button" aria-pressed={view === "clean"} onClick={() => setMapView("clean")} title="Names, types and lines. No numbers">
         Clean
       </button>
-      <button type="button" aria-pressed={nums && thick} onClick={() => set(true)} title="Headline numbers, conversion bars, line thickness shows traffic, key leak">
-        Performance
+      <button type="button" aria-pressed={view === "people"} onClick={() => setMapView("people")} title="One people number on each block, one rate on each line">
+        People
       </button>
-    </div>
-  );
-}
-
-const monthView = (m: string) => {
-  const [y, mo] = m.split("-").map(Number);
-  const start = `${m}-01`,
-    end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
-  const days = Number(end.slice(8));
-  return { start, end, label: `${new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" })} · ${days} days` };
-};
-
-/** Model | Actual (F4): Actual draws the same map with the numbers entered or imported for a month. */
-export function ActualSwitch() {
-  const view = useEditor((s) => s.actualView);
-  const rows = useEditor((s) => s.actuals);
-  const months = actualMonths(rows ?? []);
-  const toActual = async () => {
-    await ensureActuals();
-    const ms = actualMonths(useEditor.getState().actuals ?? []);
-    if (!ms.length) return showToast("No actuals yet. Add them in the funnel panel: Track › Actuals.");
-    setActualView(monthView(ms[0]));
-  };
-  return (
-    <div className="seg fm-actswitch" role="group" aria-label="Plan or actual numbers">
-      <button type="button" aria-pressed={!view} onClick={() => setActualView(null)} title="The modelled plan">
-        Model
+      <button type="button" aria-pressed={view === "money"} onClick={() => setMapView("money")} title="Revenue on offers, spend on sources, and the same rates">
+        Money
       </button>
-      <button type="button" aria-pressed={!!view} onClick={toActual} title="Numbers you entered or imported">
-        Actual
-      </button>
-      {view && months.length > 1 && (
-        <select className="fm-actmonth" aria-label="Month of actuals" value={view.start.slice(0, 7)} onChange={(e) => setActualView(monthView(e.target.value))}>
-          {months.map((m) => (
-            <option key={m} value={m}>
-              {monthView(m).label.split(" · ")[0]}
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-}
-
-/** Performance map legend (top-right of the canvas): how to read line weight, orange lines and the conversion bar. */
-export function PerfLegend() {
-  return (
-    <div className="fm-legend" role="note" aria-label="Reading this view">
-      <b>Reading this view</b>
-      <span>
-        <i className="w" aria-hidden="true" /> Line weight = people
-      </span>
-      <span>
-        <i className="lost" aria-hidden="true" /> Didn’t convert
-      </span>
-      <span>
-        <i className="bar" aria-hidden="true" /> Conversion at the step
-      </span>
     </div>
   );
 }
@@ -150,14 +77,11 @@ export function EditorRail({ readOnly, sideCollapsed, onToggleSide, showNotes, n
   );
 }
 
-/** Layers: Map is always on; Numbers, Flow, Forecast, Notes and Checklist switch the same view options as the View menu. */
+/** Layers: Map is always on; Forecast, Notes and Checklist switch view options. Numbers and line weight follow the Clean / People / Money view. */
 export function LayersMenu() {
-  const nums = useEditor((s) => s.opts.nums);
-  const thick = useEditor((s) => s.opts.thick);
   const notes = useEditor((s) => s.opts.notes);
   const checks = useEditor((s) => s.opts.checks);
-  const period = useEditor((s) => s.opts.period);
-  const hideNums = useEditor((s) => s.settings.hideNumbers);
+  const build = useEditor((s) => s.opts.build);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -181,24 +105,14 @@ export function LayersMenu() {
           <label>
             <input type="checkbox" checked disabled /> Map
           </label>
-          {!hideNums && (
-            <>
-              <label>
-                <input type="checkbox" checked={nums} onChange={(e) => setOpt("nums", e.target.checked)} /> Numbers
-              </label>
-              <label>
-                <input type="checkbox" checked={period !== "month"} onChange={(e) => setOpt("period", e.target.checked ? "week" : "month")} /> Forecast (per week)
-              </label>
-            </>
-          )}
-          <label>
-            <input type="checkbox" checked={thick} onChange={(e) => setOpt("thick", e.target.checked)} /> Flow (line weight)
-          </label>
           <label>
             <input type="checkbox" checked={notes} onChange={(e) => setOpt("notes", e.target.checked)} /> Notes
           </label>
           <label>
             <input type="checkbox" checked={checks} onChange={(e) => setOpt("checks", e.target.checked)} /> Checklist
+          </label>
+          <label title="Planned, in progress or live on each block. Select several blocks to set them together.">
+            <input type="checkbox" checked={build} onChange={(e) => setOpt("build", e.target.checked)} /> Build status
           </label>
         </div>
       )}

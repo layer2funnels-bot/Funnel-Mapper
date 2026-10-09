@@ -20,7 +20,7 @@ export interface SimBase {
   /** When the baseline was taken (ms). */
   at: number;
   /** The view before simulating (restored on leaving). */
-  prev?: { nums: boolean; thick: boolean; period: "day" | "week" | "month" | "year" };
+  prev?: { view: "clean" | "people" | "money"; nums: boolean; thick: boolean; period: "day" | "week" | "month" | "year" };
   /** What the map is compared with: the baseline (current map), or a saved scenario's id. */
   vs?: string | null;
 }

@@ -199,7 +199,8 @@ test.describe("V2 pages", () => {
   test("Home shows the resume card and the client pipeline; Templates preview and Settings nav work", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
-    await expect(page.getByText("Pick up where you left off")).toBeVisible();
+    await expect(page.getByText("Continue where you left off")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Continue mapping/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Client pipeline" })).toBeVisible();
     await page.goto("/?range=year");
     await expect(page.getByRole("region", { name: "Totals" })).toContainText("This year");
